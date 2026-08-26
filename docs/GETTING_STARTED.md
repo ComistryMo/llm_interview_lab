@@ -4,7 +4,7 @@
 
 ## 1. 选择正确的仓库方式
 
-公共仓库的普通 fork 适合贡献公共框架，不适合保存私人训练。GitHub 明确说明[公开 upstream 的 fork 仍是公开的，且 fork 不能单独改变可见性](https://docs.github.com/en/pull-requests/reference/forks)。当前版本尚未启用 Template Repository；请用生成器从已提交的公共 HEAD 创建独立 workspace。它会移除维护者 fixture、恢复无答案 starter、生成新的 H0/`not_started` ledger，并保留只读 `upstream` 历史。
+公共仓库的普通 fork 适合贡献公共框架，不适合保存私人训练。GitHub 明确说明[公开 upstream 的 fork 仍是公开的，且 fork 不能单独改变可见性](https://docs.github.com/en/pull-requests/reference/forks)。当前版本尚未启用 Template Repository；请用生成器从已提交的公共 HEAD 创建独立 workspace。它会移除维护者 fixture、恢复无答案 starter、生成新的 H0/`not_started` ledger，随后丢弃公共提交历史并建立全新的 `main` 分支。公共仓库只作为禁止 push 的 `upstream` 地址保留。
 
 ```bash
 git clone https://github.com/ComistryMo/llm_interview_lab.git llm-interview-lab-upstream
@@ -14,7 +14,7 @@ cd ../my-llm-interview-lab
 git status --short
 ```
 
-生成器拒绝已有目标、带 tracked 修改的源仓库和源仓库内部目标；不会添加 `origin`，并把 `upstream` 的 push URL 设为 `DISABLED`。此时先不要填写个人信息或推送，继续完成环境与状态验证。
+生成器拒绝已有目标、带 tracked 修改的源仓库和源仓库内部目标；不会添加 `origin`，并把 `upstream` 的 push URL 设为 `DISABLED`。生成结果没有 commit，所有基线文件已暂存供审查。此时先不要填写个人信息或推送，继续完成环境与状态验证。
 
 ## 2. 创建环境
 
@@ -35,6 +35,7 @@ python -m venv .venv
 ```bash
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+git diff --cached --check
 python scripts/check_environment.py
 python -m pytest -q
 python scripts/validate_state.py
@@ -42,10 +43,9 @@ python scripts/validate_state.py
 
 环境检查失败与训练题失败是两类问题。默认 pytest 和状态校验必须绿色；当前 Task 的定向测试可以在实现过程中为红。
 
-全部健康检查通过后，在 GitHub 新建一个 **empty + private** repository。先审查生成器产生的 reset diff，再建立私人基线：
+全部健康检查通过后，在 GitHub 新建一个 **empty + private** repository。逐文件审查已暂存的全新基线，再提交并推送：
 
 ```bash
-git add --all
 git diff --cached --check
 git commit -m "initialize private learner workspace"
 git remote add origin <your-empty-private-repository-url>

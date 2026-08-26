@@ -134,6 +134,10 @@ SECRET_PATTERNS = (
         "OpenAI-style token",
         re.compile(r"\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b"),
     ),
+    (
+        "Hugging Face token",
+        re.compile(r"\bhf_[A-Za-z0-9]{20,}\b"),
+    ),
     ("AWS access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("Google API key", re.compile(r"\bAIza[0-9A-Za-z_-]{30,}\b")),
     ("Slack token", re.compile(r"\bxox[baprs]-[0-9A-Za-z-]{10,}\b")),
@@ -144,8 +148,10 @@ SECRET_PATTERNS = (
     (
         "credential assignment",
         re.compile(
-            r"(?im)^\s*(?:api[_-]?key|access[_-]?token|password|passwd|secret)"
-            r"\s*[:=]\s*['\"]?"
+            r"(?im)^\s*['\"]?"
+            r"(?:(?:[A-Za-z][A-Za-z0-9]*[_-])*(?:api[_-]?key|access[_-]?token)"
+            r"|(?:[A-Za-z][A-Za-z0-9]*[_-])*(?:password|passwd|secret))"
+            r"['\"]?\s*[:=]\s*['\"]?"
             r"(?!<|\$\{|your[_-]|example|dummy|fake|redacted|none|null|\*{3})"
             r"\S{8,}"
         ),

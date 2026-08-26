@@ -1,8 +1,9 @@
 """Create a private learner workspace from the committed public baseline.
 
-The source checkout is never modified. The command clones its committed HEAD
-into a new sibling directory, keeps the public repository as ``upstream``,
-and replaces the maintainer fixture with an answer-free Stage 00 starter.
+The source checkout is never modified. The command copies its committed HEAD
+through a temporary clone, replaces the maintainer fixture with an answer-free
+Stage 00 starter, and then creates a fresh Git history. The public repository
+is kept only as a fetch URL named ``upstream``; pushing to it is disabled.
 """
 
 from __future__ import annotations
@@ -249,13 +250,31 @@ def _replace_fixture(workspace: Path, recorded_at: datetime) -> None:
     _write_text(workspace, "config/export/handoff.json", _starter_allowlist())
 
 
+def _initialize_fresh_history(workspace: Path) -> None:
+    """Discard the temporary clone history and stage a reviewable baseline."""
+
+    git_directory = workspace / ".git"
+    if not git_directory.is_dir() or _is_link_or_reparse(git_directory):
+        raise WorkspaceError("temporary Git metadata is not a regular directory")
+
+    # ``workspace`` is a freshly-created directory inside the validated target
+    # parent. Removing only its exact ``.git`` directory prevents the public
+    # fixture commit from remaining discoverable in the learner repository.
+    shutil.rmtree(git_directory)
+    _run_git(workspace, "init", "--quiet")
+    _run_git(workspace, "symbolic-ref", "HEAD", "refs/heads/main")
+    _run_git(workspace, "remote", "add", "upstream", PUBLIC_UPSTREAM_URL)
+    _run_git(workspace, "remote", "set-url", "--push", "upstream", "DISABLED")
+    _run_git(workspace, "add", "--all")
+
+
 def create_private_workspace(
     *,
     source_root: Path,
     target: Path,
     recorded_at: datetime | None = None,
 ) -> Path:
-    """Clone committed public HEAD and replace the maintainer fixture safely."""
+    """Create an answer-free workspace with an independent Git history."""
 
     source = _validate_source_checkout(source_root)
     destination = _validate_target(source, target)
@@ -280,16 +299,13 @@ def create_private_workspace(
         )
         if result.returncode != 0:
             raise WorkspaceError("Git could not clone the committed public baseline")
-        _run_git(temporary, "remote", "rename", "origin", "upstream")
-        _run_git(temporary, "remote", "set-url", "upstream", PUBLIC_UPSTREAM_URL)
-        _run_git(temporary, "remote", "set-url", "--push", "upstream", "DISABLED")
-        _run_git(temporary, "branch", "--unset-upstream")
         _replace_fixture(temporary, timestamp)
         validate_repository_state(
             repo_root=temporary,
             ledger_path=temporary / "state" / "TASK_LEDGER.jsonl",
             current_task_path=temporary / "state" / "CURRENT_TASK.md",
         )
+        _initialize_fresh_history(temporary)
         os.replace(temporary, destination)
         completed = True
         return destination
@@ -326,7 +342,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         created = create_private_workspace(source_root=source, target=target)
         print(f"Created private-workspace starter: {created.name}")
         print("No origin remote was added. Confirm a private remote before personalizing.")
-        print("The public repository is configured as upstream.")
+        print("A fresh Git history is staged for review; no commit was created.")
+        print("The public repository is configured as fetch-only upstream.")
         return 0
     except WorkspaceError as error:
         print(f"ERROR: {error}", file=sys.stderr)

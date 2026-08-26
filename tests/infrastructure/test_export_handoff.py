@@ -349,8 +349,11 @@ def test_sensitive_or_non_text_filenames_are_rejected(
         "-----BEGIN " + "PRIVATE KEY-----\n",
         "gh" + "p_" + "A" * 30,
         "sk-" + "B" * 30,
+        "hf_" + "C" * 30,
         "AKIA" + "C" * 16,
         "api_key = " + "D" * 24,
+        "WANDB_API_KEY=" + "E" * 32,
+        '"access_token": "' + "F" * 24 + '"',
         "https://user:password@example.invalid/resource",
         "C:\\Users\\RealName\\private.txt",
         "/home/realname/private.txt",
@@ -415,8 +418,8 @@ def test_file_symlink_is_rejected(tmp_path: Path) -> None:
     link = tmp_path / "linked.md"
     try:
         os.symlink(outside, link)
-    except (NotImplementedError, OSError) as error:
-        pytest.skip(f"symlink creation unavailable: {error}")
+    except (NotImplementedError, OSError):
+        pytest.skip("symlink creation unavailable on this platform")
     _write_allowlist(tmp_path, ["linked.md"])
 
     with pytest.raises(ExportError, match="links and reparse"):
@@ -434,8 +437,8 @@ def test_symlinked_parent_directory_is_rejected(tmp_path: Path) -> None:
     link = tmp_path / "linked"
     try:
         os.symlink(outside, link, target_is_directory=True)
-    except (NotImplementedError, OSError) as error:
-        pytest.skip(f"directory symlink creation unavailable: {error}")
+    except (NotImplementedError, OSError):
+        pytest.skip("directory symlink creation unavailable on this platform")
     _write_allowlist(tmp_path, ["linked/file.md"])
 
     with pytest.raises(ExportError, match="links and reparse"):

@@ -6,7 +6,7 @@
 
 一个以“独立实现、证据审查、间隔复测”为核心的大模型算法面试训练实验室。它把 AI 放在教练席，而不是代写席。
 
-> Project status: **v0.1 alpha**. B00 基础设施与 Task 00A-1 流程 fixture 可用；00A-2 之后的 Stage 00 内容仍是 draft。仓库目前保留一个脱敏维护者 fixture，因此尚未启用 GitHub Template。新用户必须先生成无答案的私人 workspace，不能把 fixture 当作自己的训练证据。
+> Project status: **v0.1 alpha**. B00 基础设施与 Task 00A-1 流程 fixture 可用；00A-2 之后的 Stage 00 内容仍是 draft。仓库目前保留一个脱敏但与维护者公开账号关联的 fixture，因此尚未启用 GitHub Template。新用户必须先生成无答案的私人 workspace，不能把 fixture 当作自己的训练证据。
 
 ## 它解决什么问题
 
@@ -63,7 +63,7 @@ python scripts/validate_state.py
 
 `python -m pytest -q` 只运行基础设施与已验收回归，必须全绿。当前训练题使用 `state/CURRENT_TASK.md` 里的定向命令；训练中的红灯是反馈，不等于仓库损坏。
 
-生成器只读取已提交的公共 HEAD，不复制源 checkout 的未提交文件；它清除 fixture、恢复无答案 starter、创建新的 `not_started` ledger，并禁用对 `upstream` 的 push。添加私人 `origin` 和填写档案前，按[开始使用](docs/GETTING_STARTED.md)完成安全检查。
+生成器只读取已提交的公共 HEAD，不复制源 checkout 的未提交文件；它清除 fixture、恢复无答案 starter、创建新的 `not_started` ledger，并丢弃公共 Git 历史。结果是一个全新、尚未提交但已暂存待审查的 `main` 分支；`upstream` 只可 fetch、不可 push。添加私人 `origin` 和填写档案前，按[开始使用](docs/GETTING_STARTED.md)完成安全检查。
 
 ## 与 AI 协作
 

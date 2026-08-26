@@ -5,7 +5,7 @@
 ```text
 public upstream
 ├── 课程、协议、模板、测试基础设施、虚构示例
-├── 一个明确标注、去身份化的维护者流程 fixture
+├── 一个明确标注、脱敏但与维护者公共账号关联的流程 fixture
 └── 除该 fixture 外不接收任何人的真实训练材料
 
 private learner repository
@@ -13,9 +13,9 @@ private learner repository
 └── v0.1 只挑选公共基础设施补丁，不直接 merge fixture 路径
 ```
 
-当前 v0.1 alpha 的 fixture 用于验证状态和审查流程；它不是 starter。`create_private_workspace.py` 会从公共 HEAD 生成无答案私人 workspace，但公共 starter 尚未物理拆成独立发行树，因此暂不启用 GitHub Template。
+当前 v0.1 alpha 的 fixture 用于验证状态和审查流程；它不是 starter。`create_private_workspace.py` 会从公共 HEAD 生成无答案私人 workspace，并在替换 fixture 后丢弃公共 Git 历史、初始化全新 `main`。公共 starter 尚未物理拆成独立发行树，因此暂不启用 GitHub Template。
 
-生成器会取消分支对 upstream 的跟踪并禁用 upstream push。由于 v0.1 的 `src/state/reviews/progress` 仍与公共 fixture 共用路径，私人仓库不要直接 merge 或 pull upstream；只在审查 diff 后挑选与个人路径无关的基础设施提交。物理分离和安全同步工具属于 v0.2。
+生成器只保存 upstream 的 fetch URL，禁用 upstream push，且不建立共同历史。由于 v0.1 的 `src/state/reviews/progress` 仍与公共 fixture 共用路径，私人仓库不要直接 merge 或 pull upstream；只在审查 diff 后挑选与个人路径无关的基础设施提交。物理分离和安全同步工具属于 v0.2。
 
 ## 目录边界
 

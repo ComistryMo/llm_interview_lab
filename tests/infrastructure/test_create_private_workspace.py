@@ -67,6 +67,7 @@ def test_creates_answer_free_valid_private_workspace(tmp_path: Path) -> None:
     source = _source_repository(tmp_path)
     target = tmp_path / "private-workspace"
     recorded_at = datetime(2026, 8, 26, 12, 0, tzinfo=timezone.utc)
+    public_head = _git(source, "rev-parse", "HEAD").stdout.decode().strip()
 
     created = create_private_workspace(
         source_root=source,
@@ -100,6 +101,21 @@ def test_creates_answer_free_valid_private_workspace(tmp_path: Path) -> None:
         "https://github.com/ComistryMo/llm_interview_lab.git"
     )
     assert _git(target, "remote", "get-url", "--push", "upstream").stdout.decode().strip() == "DISABLED"
+    assert _git(
+        target,
+        "rev-parse",
+        "--verify",
+        "HEAD",
+        check=False,
+    ).returncode != 0
+    assert _git(target, "symbolic-ref", "--short", "HEAD").stdout.decode().strip() == "main"
+    assert _git(
+        target,
+        "cat-file",
+        "-e",
+        f"{public_head}^{{commit}}",
+        check=False,
+    ).returncode != 0
     upstream = _git(
         target,
         "rev-parse",
@@ -109,7 +125,9 @@ def test_creates_answer_free_valid_private_workspace(tmp_path: Path) -> None:
         check=False,
     )
     assert upstream.returncode != 0
-    assert _git(target, "status", "--porcelain=v1").stdout
+    status_lines = _git(target, "status", "--porcelain=v1").stdout.decode().splitlines()
+    assert status_lines
+    assert all(line.startswith("A  ") for line in status_lines)
 
 
 def test_refuses_existing_or_nested_target(tmp_path: Path) -> None:
