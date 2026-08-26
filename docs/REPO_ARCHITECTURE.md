@@ -28,6 +28,7 @@ private learner repository
 | `curriculum/` | Task Card 与依赖 | 课程维护者 | 否 |
 | `curriculum/catalog.json` | 公共任务发现、runtime、测试节点和路由元数据 | 课程维护者 | 否 |
 | `curriculum/NAVIGATION.md` | catalog 的确定性生成视图 | 自动生成 | 否 |
+| `curriculum/external/` | 第三方课程固定版本的兼容元数据、导航与原创教练 Task Card；不含上游材料 | 课程维护者/自动生成 | 否 |
 | `hints/` | 按 Task/等级隔离的正式提示；v0.1 仅有规则 | 课程维护者 | 不放 H5 |
 | `state/` | 当前快照、ledger、错误 | 私人副本中的学习者/教练 | 否 |
 | `reviews/` | 有证据的正式审查 | 教练 | 可引用少量 diff，不放答案全文 |
@@ -52,6 +53,7 @@ private learner repository
 - 跨任务发现、依赖边和运行策略以 `curriculum/catalog.json` 为准；
 - `curriculum/NAVIGATION.md` 是生成视图，不是第二份手工事实；
 - 外部设计影响与许可证证据以 `references/registry.json` 为准；
+- 外部课程的 problem/test/runtime 覆盖以对应 manifest 为准；`curriculum/external/NAVIGATION.md` 只是生成视图；
 - AI 行为以 `COACHING_PROTOCOL.md` 为准。
 
 校验器必须发现而不是掩盖这些文件的漂移。
@@ -59,6 +61,10 @@ private learner repository
 ## 依赖与测试
 
 基础设施只有 Python 3.10+ 与 pytest。Torch 是阶段依赖，不进入最小安装。默认 pytest 不收集当前或锁定训练题；显式定向命令负责训练反馈。每张 task 声明最低 runtime 与 GPU 验收策略；达到 `validated` 的 CPU 任务不能靠 CUDA 缺失整体跳过。Makefile 只是快捷方式，权威文档始终给出跨平台 Python 命令。
+
+`.external/` 是被忽略的第三方 checkout 根目录，不是仓库内容层。通用安装器固定 commit、拒绝覆盖、禁用官方远端 push，且不执行第三方代码。安装器不写 learner ledger；学习者正式选择一个外部 problem-group Task 时，必须通过教练/状态流程把它登记为唯一 `CURRENT_TASK`，而不是并行开启第二条 Implementation Lane。详见[外部课程包](EXTERNAL_COURSE_PACKS.md)。
+
+`scripts/run_current_task.py` 从已校验 ledger 和 catalog 动态选择原生 pytest nodes，不读取或执行 Markdown 中的 shell。若当前任务属于外部课程，它只给出当前 problem group 的人工审阅入口并返回退出码 2（表示需要人工动作，不表示仓库测试失败），不自动运行第三方命令。`scripts/select_current_task.py` 默认只预览；显式应用时只追加必要的注册事件并重建当前快照，不产生实现或掌握证据。
 
 ## 生命周期
 

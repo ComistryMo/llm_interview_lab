@@ -59,7 +59,29 @@ git push -u origin main
 
 复制 `templates/LEARNER_PROFILE.md` 的字段到你的私人 `state/LEARNER_PROFILE.md`。只写求职方向、时间预算、可公开能力基线和帮助上限。项目事实使用 `templates/PROJECT_CLAIM.md`，不要把原始证据放入仓库。
 
-按照 [CUSTOMIZATION.md](CUSTOMIZATION.md) 选择一项当前任务，确保 `state/CURRENT_TASK.md` 与 ledger 一致。
+新生成的私人 workspace 已把 `00A-1` 注册为唯一当前任务。首次使用不要手改 ledger 或跳题；先按 [CUSTOMIZATION.md](CUSTOMIZATION.md) 调整非敏感档案，并完成当前 Gate。可以用只读预览确认路由：
+
+```bash
+python scripts/select_current_task.py 00A-1
+```
+
+当前任务至少 `reviewed` 后，再预览下一项；确认机器前置、Task Card 中的人类/资源 Gate 与唯一任务边界后才应用：
+
+```bash
+python scripts/select_current_task.py <TASK-ID>
+python scripts/select_current_task.py <TASK-ID> --apply --acknowledge-human-gates
+```
+
+选择器默认 dry-run；`--apply` 只在需要时追加 `task_registered` 事件并重建 `state/CURRENT_TASK.md`，不执行答案或测试。若确需暂停一个尚未 `reviewed` 的任务，必须额外写出原因并显式使用 `--acknowledge-paused-current`；它不会把旧任务判为通过。当前外部 pack 的状态是 `inventory-audited`，原生 readiness 尚未形成机器映射，因此外部 canonical ID 只能 Preview，不能用布尔声明绕过 Gate；后续任务包把它升级为 `implementation-ready` 后才允许应用。
+
+用结构化元数据动态检查或运行当前原生任务，避免复制过期测试命令：
+
+```bash
+python scripts/run_current_task.py --dry-run
+python scripts/run_current_task.py
+```
+
+若当前任务是外部课程 problem group，脚本会拒绝自动执行第三方代码并指向人工审阅入口。
 
 ## 4. 启动 AI 教练
 
@@ -77,7 +99,20 @@ docs/COACHING_PROTOCOL.md 和当前任务卡。运行定向测试但不要修改
 
 实现后发送“提交当前 Task，只审查不要改答案”。教练应给证据、最多三个问题和一个下一步。首次全绿不是 mastery；按照状态模型完成口述、D+2 和 D+7。
 
-## 6. 导出前检查
+## 6. 可选外部课程包
+
+当前外部 pack 处于 `inventory-audited`，只允许安装、检查和 Preview；原生 readiness 尚未形成可校验映射，因此现在不能把外部任务应用到 Implementation Lane。你仍可先完成对应原生前置 Gate，再从[外部课程导航](../curriculum/external/NAVIGATION.md)预览一个 canonical problem-group Task。外部 pack 不会自动替你更改当前任务；安装只准备固定 checkout。
+
+```bash
+python scripts/manage_external_course.py list
+python scripts/manage_external_course.py show EXT-CS336-A1
+python scripts/manage_external_course.py show-group EXT-CS336-A1-tokenizer-core
+python scripts/select_current_task.py EXT-CS336-A1-tokenizer-core
+```
+
+最后一条是只读预览，并会明确报告尚未机器解锁的 readiness。未来 pack 升级为 `implementation-ready` 后，正式实施仍须把该 group 登记为私人 ledger 中唯一的 `CURRENT_TASK`，同时暂停原生 Implementation Lane。安装前必须阅读[许可证、学术诚信和资源边界](EXTERNAL_COURSE_PACKS.md)。官方 assignment 的 AI 上限与原生任务不同，不得用“允许直接实现”绕过官方政策。
+
+## 7. 导出前检查
 
 先编辑精确 allowlist，再运行：
 

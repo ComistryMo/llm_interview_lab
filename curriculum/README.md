@@ -5,6 +5,7 @@
 - `stage00/`：真实小任务中的 Python/PyTorch 基础；
 - `catalog.json`：机器可读的任务发现、依赖、runtime、测试和参考暴露元数据；
 - `NAVIGATION.md`：由 catalog 确定性生成的依赖轴 × 岗位轴导航；
+- `external/`：第三方课程的固定版本兼容元数据与本项目原创教练层，不镜像上游内容；安装和 Preview 不自动进入状态机，正式选择一个 canonical problem group 时才显式替代唯一当前任务；
 - `CORE_40.md`：长期核心手撕索引，不等于全部已实现；
 - 当前唯一任务以 `state/CURRENT_TASK.md` 为准。
 
@@ -15,4 +16,5 @@ Task Card 是任务契约的权威来源，catalog 是跨任务索引的权威�
 ```bash
 python scripts/validate_curriculum.py --write-navigation
 python scripts/validate_curriculum.py
+python scripts/validate_external_courses.py
 ```

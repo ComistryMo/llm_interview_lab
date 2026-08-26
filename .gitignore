@@ -17,6 +17,8 @@ Thumbs.db
 .idea/
 .vscode/
 *.code-workspace
+.external/
+/state/.task-selection.lock
 private/
 data/private/
 state/local/

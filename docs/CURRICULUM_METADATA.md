@@ -2,6 +2,10 @@
 
 `curriculum/catalog.json` 是公共课程的机器可读索引，`curriculum/NAVIGATION.md` 是它的确定性派生视图。Task Card 仍是任务要求的权威来源；catalog 只承载发现、依赖、运行和公开成熟度信息。
 
+第三方课程不进入这个原生 catalog。`curriculum/external/catalog.json` 只发现外部 pack，各 pack manifest 登记固定上游版本、全量 problem、接口、测试证据、资源层级和原创 companion Task Card。两套 schema 物理分离，避免把“可检出一份官方作业”误写成“学习者已解锁本项目任务”。
+
+外部 assignment ID 是聚合 inventory；`<assignment-id>-<group-id>` 才是未来可以登记进私人 ledger 的实施单元。`integration_status=inventory-audited` 仅表示来源清单审计完成并保持 Preview-only；只有 readiness 与依赖机器映射完成后才可升级。`completion_role` 区分公共最低闭环、可移植选修、官方资源路径和可选 capstone；`prerequisite_group_ids` 定义本 companion 的小步训练 DAG，不冒充上游官方规则。validator 要求 group 依赖无环、portable group 不依赖 non-portable group，且证据命令与 companion runtime 一致。
+
 ## 三种不能混淆的状态
 
 | 概念 | 权威来源 | 回答的问题 |
@@ -47,7 +51,8 @@
 ```bash
 python scripts/validate_curriculum.py --write-navigation
 python scripts/validate_curriculum.py
+python scripts/validate_external_courses.py
 python -m pytest tests/infrastructure/test_validate_curriculum.py -q
 ```
 
-校验器离线工作，检查严格字段、UTF-8、重复 JSON key、精确大小写路径、测试节点、依赖 DAG、stage 顺序、runtime/GPU 组合、参考引用和生成页漂移。它不会联网判断上游仓库是否更新；升级参考版本必须人工重新审计并提交 registry diff。
+校验器离线工作，检查严格字段、UTF-8、重复 JSON key、精确大小写路径、测试节点、依赖 DAG、stage 顺序、runtime/GPU 组合、参考引用、许可证审计方法和生成页漂移。它不会联网判断上游仓库是否更新；升级参考版本必须人工重新审计并提交 registry diff。

@@ -45,6 +45,10 @@
 
 使用 H3 后需新闭卷变式；H4/H5 后必须更换输入或结构，且使用新的 `variant_id`。Retention 与 mastery 证据必须 H0。
 
+### 外部官方作业的覆盖规则
+
+`curriculum/external/` Task Card 与上游课程当前政策可以把帮助上限收紧。Stanford CS336 companion assignment 最高 H2，且禁止 AI 写代码/伪代码、补 TODO、自动编辑、代跑命令或计算待提交答案；用户的 H5 授权不生效。越权帮助使该次官方实现证据作废，必须改用不同接口、数据和测试的 clean-room 变式重新取证。
+
 ## 4. 单任务闭环
 
 1. 确认任务、前置 Gate 与允许帮助；

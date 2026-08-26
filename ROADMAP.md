@@ -17,6 +17,8 @@ Roadmap 描述公共项目建设，不代表任何学习者已经解锁相应课
 - [x] 建立依赖轴 × 岗位轴课程导航；
 - [x] 为现有 Task 登记公共成熟度、runtime、GPU 策略和精确测试节点；
 - [x] 建立固定 revision 的外部参考与许可证边界登记；
+- [x] 建立不镜像内容的外部课程包协议，并全量登记 CS336 Spring 2026 五份作业；
+- [x] 提供固定版本检出、来源验证、资源分层与 D+2/D+7 companion Task Card；
 - [x] 在跨平台 CI 中离线校验依赖 DAG、导航漂移和 reference exposure；
 - [ ] 使用公开 issue 收集导航可理解性反馈。
 

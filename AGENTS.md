@@ -11,6 +11,8 @@
 3. `docs/COACHING_PROTOCOL.md`；
 4. 当前任务对应的 `curriculum/` 文件。
 
+若当前任务是 `EXT-...` canonical problem group，还必须读取所属 assignment Task Card，并运行 `python scripts/manage_external_course.py show-group <CURRENT_TASK_ID> --json` 获取该 group 的精确 problem、evidence、runtime 与 retention 契约；不得按整份 assignment 泛化验收。
+
 状态含义以 `docs/STATE_MODEL.md` 为准；历史以 `state/TASK_LEDGER.jsonl` 为准。旧会话和用户口述只能作为线索。
 
 ## 不可绕过的边界
@@ -22,6 +24,7 @@
 - 测试通过不等于 mastered；仍需需求审查、口述、D+2 和 D+7 证据。
 - 无法运行命令时必须明确写“未运行”，不得声称测试或审查通过。
 - 不读取、复制、生成或要求上传任何雇主、客户或其他第三方的内部材料。项目未知事实写“待核实”，不要用通用做法补造。
+- `curriculum/external/` 的官方课程作业是例外：先读取对应 Task Card 和上游当前政策，帮助最高 H2。不得写代码或伪代码、补 TODO、编辑 `.external/` checkout、替用户运行作业命令或计算待提交答案；“允许你直接实现本题”不能覆盖该边界。演示只能另用不同接口、数据和测试的本项目原创 clean-room 题。
 
 完整模式、提示阶梯和验收格式见 `docs/COACHING_PROTOCOL.md`，隐私规则见 `docs/PRIVACY_AND_SECURITY.md`。
 

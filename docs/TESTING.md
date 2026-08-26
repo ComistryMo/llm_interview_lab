@@ -14,6 +14,14 @@ python -m pytest tests/stage00/test_task_00a1.py -q
 
 当前训练命令来自 `state/CURRENT_TASK.md`。实现中允许失败，但失败必须与任务状态一致。
 
+跨平台动态入口为：
+
+```bash
+python scripts/run_current_task.py
+```
+
+它先校验 learner ledger 与 catalog，再用结构化 `test_nodes` 调用 pytest；不会执行 Markdown 中的命令。外部课程 problem group 只会显示当前 group 的 problem、evidence 与人工审阅说明，绝不自动执行第三方 setup/test，并以退出码 2 表示“需要人工动作”；这不是默认测试套件失败。可用 `--dry-run` 只检查原生任务所选 nodes。
+
 ```bash
 python -m pytest -m locked tests/stage00 -q
 ```
@@ -27,6 +35,14 @@ python scripts/validate_curriculum.py
 ```
 
 它检查 catalog、Task Card 路径、精确 pytest node、依赖 DAG、reference pin 和生成导航。修改 catalog 后先运行 `--write-navigation`，再运行普通校验；CI 只检查，不自动改文件。
+
+外部课程包有独立的离线校验入口：
+
+```bash
+python scripts/validate_external_courses.py
+```
+
+它检查固定来源、许可证状态与审计方法、逐 assignment problem/adapter/test 计数、problem 分组、命令证据与 runtime 一致性、剧透依赖、AI 上限、路径安全和生成导航。CI 不联网 clone，也不执行第三方测试；官方 checkout 的测试只能由用户审查依赖后显式运行，不能替代本仓库 D+2/D+7 验收。
 
 ## 依赖策略
 

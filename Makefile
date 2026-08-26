@@ -1,10 +1,10 @@
-.PHONY: check current test regression locked curriculum state handoff
+.PHONY: check current test regression locked curriculum external state handoff verify
 
 check:
 	python scripts/check_environment.py
 
 current:
-	python -m pytest tests/stage00/test_task_00a1.py -q
+	python scripts/run_current_task.py
 
 test:
 	python -m pytest -q
@@ -18,8 +18,13 @@ locked:
 curriculum:
 	python scripts/validate_curriculum.py
 
+external:
+	python scripts/validate_external_courses.py
+
 state:
 	python scripts/validate_state.py
 
 handoff:
 	python scripts/export_handoff.py --dry-run
+
+verify: curriculum external state test

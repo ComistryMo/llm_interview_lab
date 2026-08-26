@@ -16,6 +16,18 @@
 
 学习者提供：教练协议、去敏的 learner profile、当前 Task Card、答案 diff、测试摘要。助手只做离线审查与口述，不维护仓库状态；结果通过 handoff 交回有文件权限的教练。
 
+### 外部官方作业
+
+先读取对应 `curriculum/external/` Task Card 和上游当前政策。Stanford CS336 companion assignment 的最高帮助为 H2：助手可以解释非步骤化概念、低层 API 或错误类别，但不得生成代码/伪代码、补 TODO、编辑外部 checkout、替用户执行作业命令或计算待提交答案。用户对原生任务的 H5 授权不能覆盖这一限制。
+
+助手只能核对用户亲自提供的命令、环境和结果；未运行的 GPU、服务或数据实验必须写 `not_run`。若要演示相同概念，改用不同接口、不同数据和独立测试的 clean-room 原生题。
+
+五个 assignment ID 只是聚合 Gate。AI 应从生成导航选择一个 canonical problem-group ID，并在用户明确开始后确认它是私人 ledger 的唯一 `CURRENT_TASK`；不得把安装 checkout 当成开始任务、通过前置或掌握。A2/A4 含 A1 staff material，未确认 A1 Gate 与 spoiler 风险时必须停止安装指导。
+
+需要发现外部任务时，优先运行 `python scripts/manage_external_course.py list --json`、`show <assignment-id> --json`，再以 `show-group <canonical-id> --json` 取得当前 group 的 problem、capability、evidence、runtime 与 retention 契约；不要从人类可读表格猜字段，也不要把整份 assignment 当成一个 Task。机器输出不含本机绝对路径，也不能取代用户对上游政策与依赖的人工阅读。
+
+AI 不应手改 append-only ledger。具备终端权限的教练只能先调用 `python scripts/select_current_task.py <task-id>` 预览。当前 CS336 assignments 为 `inventory-audited`，原生 readiness 尚未机器映射，外部 canonical ID 必须 fail closed、不得加参数绕过；只有后续受审查元数据把它升级为 `implementation-ready` 后，才可按选择器提示申请显式应用。选择器只登记任务，不生成实现证据。外部状态始终只表示 companion runtime；official runtime 的执行结果必须另行审查，不能由 `mastered` 推定。
+
 ## 最小上下文集合
 
 1. `docs/COACHING_PROTOCOL.md`；

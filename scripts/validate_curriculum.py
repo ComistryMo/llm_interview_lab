@@ -62,6 +62,9 @@ REFERENCE_KEYS = {
     "repository_url",
     "pinned_revision",
     "audited_on",
+    "license_status",
+    "license_audit_url",
+    "license_audit_method",
     "licenses",
     "influence",
     "excluded_material",
@@ -91,7 +94,13 @@ LEARNER_STATUSES = {
     "retained_7d",
     "mastered",
 }
-REFERENCE_USAGES = {"design-reference-only", "review-material", "adapted-content"}
+REFERENCE_USAGES = {
+    "design-reference-only",
+    "review-material",
+    "adapted-content",
+    "external-course-source",
+}
+LICENSE_STATUSES = {"verified", "not-found"}
 
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*$")
 TEST_NAME_PATTERN = re.compile(r"^test_[A-Za-z0-9_]+$")
@@ -317,18 +326,54 @@ def _validate_test_node(repo_root: Path, value: Any, task_id: str) -> tuple[str,
 
 def _validate_url(value: Any, context: str) -> str:
     url = _require_string(value, context)
-    parsed = urlparse(url)
-    if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
+    try:
+        parsed = urlparse(url)
+        # Accessing these parsed properties performs additional validation (for
+        # example, rejecting non-numeric or out-of-range ports).
+        parsed.port
+        username = parsed.username
+        password = parsed.password
+    except ValueError as error:
+        raise CurriculumValidationError(f"{context} must be a valid public HTTPS URL") from error
+    if (
+        parsed.scheme != "https"
+        or not parsed.netloc
+        or username
+        or password
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
         raise CurriculumValidationError(f"{context} must be a public HTTPS URL without credentials")
     return url
+
+
+def _require_repository_url(
+    candidate_url: str,
+    repository_url: str,
+    context: str,
+) -> None:
+    candidate = urlparse(candidate_url)
+    repository = urlparse(repository_url)
+    repository_path = repository.path.rstrip("/")
+    if repository_path.endswith(".git"):
+        repository_path = repository_path[:-4]
+    if (
+        candidate.netloc.casefold() != repository.netloc.casefold()
+        or not repository_path
+        or not candidate.path.startswith(repository_path + "/")
+    ):
+        raise CurriculumValidationError(
+            f"{context} must belong to the registered repository"
+        )
 
 
 def validate_reference_registry(registry: Mapping[str, Any]) -> set[str]:
     """Validate reference provenance and return all registered IDs."""
 
     _require_exact_keys(registry, REFERENCE_TOP_LEVEL_KEYS, "reference registry")
-    if registry["schema_version"] != 1:
-        raise CurriculumValidationError("reference registry schema_version must be 1")
+    if registry["schema_version"] != 2:
+        raise CurriculumValidationError("reference registry schema_version must be 2")
     references = _require_list(registry["references"], "references", allow_empty=True)
     seen_ids: set[str] = set()
     for index, raw_reference in enumerate(references):
@@ -341,7 +386,10 @@ def validate_reference_registry(registry: Mapping[str, Any]) -> set[str]:
         if reference["kind"] != "external-repository":
             raise CurriculumValidationError(f"reference {reference_id} kind is unsupported")
         _require_string(reference["title"], f"reference {reference_id} title")
-        _validate_url(reference["repository_url"], f"reference {reference_id} repository_url")
+        repository_url = _validate_url(
+            reference["repository_url"],
+            f"reference {reference_id} repository_url",
+        )
         revision = _require_string(
             reference["pinned_revision"],
             f"reference {reference_id} pinned_revision",
@@ -359,7 +407,42 @@ def validate_reference_registry(registry: Mapping[str, Any]) -> set[str]:
             raise CurriculumValidationError(
                 f"reference {reference_id} audited_on must be YYYY-MM-DD"
             ) from error
-        licenses = _require_list(reference["licenses"], f"reference {reference_id} licenses")
+        license_status = _require_enum(
+            reference["license_status"],
+            LICENSE_STATUSES,
+            f"reference {reference_id} license_status",
+        )
+        license_audit_url = _validate_url(
+            reference["license_audit_url"],
+            f"reference {reference_id} license_audit_url",
+        )
+        _require_repository_url(
+            license_audit_url,
+            repository_url,
+            f"reference {reference_id} license_audit_url",
+        )
+        _require_string(
+            reference["license_audit_method"],
+            f"reference {reference_id} license_audit_method",
+        )
+        license_audit_path = urlparse(license_audit_url).path
+        if (
+            f"/blob/{revision}/" not in license_audit_path
+            and f"/tree/{revision}" not in license_audit_path
+            and not license_audit_path.endswith(f"/commit/{revision}")
+        ):
+            raise CurriculumValidationError(
+                f"reference {reference_id} license audit must use its pinned revision"
+            )
+        licenses = _require_list(
+            reference["licenses"],
+            f"reference {reference_id} licenses",
+            allow_empty=license_status == "not-found",
+        )
+        if license_status == "not-found" and licenses:
+            raise CurriculumValidationError(
+                f"reference {reference_id} cannot declare licenses when license_status is not-found"
+            )
         license_scopes: set[str] = set()
         for license_index, raw_license in enumerate(licenses):
             license_record = _require_object(
@@ -392,6 +475,11 @@ def validate_reference_registry(registry: Mapping[str, Any]) -> set[str]:
                 license_record["evidence_url"],
                 f"reference {reference_id} license evidence_url",
             )
+            _require_repository_url(
+                evidence_url,
+                repository_url,
+                f"reference {reference_id} license evidence_url",
+            )
             evidence_path = urlparse(evidence_url).path
             if (
                 f"/blob/{revision}/" not in evidence_path
@@ -405,11 +493,15 @@ def validate_reference_registry(registry: Mapping[str, Any]) -> set[str]:
             reference["excluded_material"],
             f"reference {reference_id} excluded_material",
         )
-        _require_enum(
+        usage = _require_enum(
             reference["usage"],
             REFERENCE_USAGES,
             f"reference {reference_id} usage",
         )
+        if license_status == "not-found" and usage == "adapted-content":
+            raise CurriculumValidationError(
+                f"reference {reference_id} without a verified license cannot be adapted-content"
+            )
     return seen_ids
 
 

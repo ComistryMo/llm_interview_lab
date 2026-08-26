@@ -46,7 +46,8 @@ def test_public_catalog_and_generated_navigation_are_current() -> None:
     catalog, registry, expected = validate_repository(repo_root=REPO_ROOT)
 
     assert len(catalog["tasks"]) == 4
-    assert len(registry["references"]) == 1
+    assert registry["schema_version"] == 2
+    assert len(registry["references"]) == 6
     assert (REPO_ROOT / NAVIGATION_RELATIVE).read_text(encoding="utf-8") == expected
     assert "state/CURRENT_TASK.md" in expected
     assert "尚无已登记任务" in expected
@@ -124,6 +125,68 @@ def test_reference_registry_requires_full_pin_and_pinned_license_evidence() -> N
     )
     with pytest.raises(CurriculumValidationError, match="pinned revision"):
         validate_reference_registry(floating_evidence)
+
+    unrelated_audit = copy.deepcopy(_registry())
+    revision = unrelated_audit["references"][0]["pinned_revision"]
+    unrelated_audit["references"][0]["license_audit_url"] = (
+        f"https://github.com/unrelated/project/tree/{revision}"
+    )
+    with pytest.raises(CurriculumValidationError, match="registered repository"):
+        validate_reference_registry(unrelated_audit)
+
+    unrelated_evidence = copy.deepcopy(_registry())
+    unrelated_evidence["references"][0]["licenses"][0]["evidence_url"] = (
+        f"https://github.com/unrelated/project/blob/{revision}/LICENSE"
+    )
+    with pytest.raises(CurriculumValidationError, match="registered repository"):
+        validate_reference_registry(unrelated_evidence)
+
+    invalid_port = copy.deepcopy(_registry())
+    invalid_port["references"][0]["repository_url"] = (
+        "https://github.com:not-a-port/datawhalechina/llm-algo-leetcode"
+    )
+    with pytest.raises(CurriculumValidationError, match="valid public HTTPS URL"):
+        validate_reference_registry(invalid_port)
+
+    query_token = copy.deepcopy(_registry())
+    query_token["references"][0]["repository_url"] = (
+        "https://github.com/datawhalechina/llm-algo-leetcode?access_token=secret"
+    )
+    with pytest.raises(CurriculumValidationError, match="without credentials"):
+        validate_reference_registry(query_token)
+
+
+def test_reference_registry_treats_missing_license_as_no_redistribution_permission() -> None:
+    registry = _registry()
+    missing_license = next(
+        reference
+        for reference in registry["references"]
+        if reference["id"] == "stanford-cs336-assignment5-alignment"
+    )
+    assert missing_license["license_status"] == "not-found"
+    assert missing_license["licenses"] == []
+    assert missing_license["usage"] == "external-course-source"
+    assert "recursively" in missing_license["license_audit_method"]
+    assert "not legal advice" in missing_license["license_audit_method"]
+
+    false_positive = copy.deepcopy(registry)
+    altered = next(
+        reference
+        for reference in false_positive["references"]
+        if reference["id"] == "stanford-cs336-assignment5-alignment"
+    )
+    altered["licenses"] = [
+        {
+            "scope": "entire repository",
+            "spdx": "MIT",
+            "evidence_url": (
+                "https://github.com/stanford-cs336/assignment5-alignment/blob/"
+                f"{altered['pinned_revision']}/LICENSE"
+            ),
+        }
+    ]
+    with pytest.raises(CurriculumValidationError, match="cannot declare licenses"):
+        validate_reference_registry(false_positive)
 
 
 def test_generated_tables_escape_pipes_and_math_backslashes() -> None:

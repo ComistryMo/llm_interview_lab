@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "references": [
     {
       "id": "datawhale-llm-algo-leetcode",
@@ -8,6 +8,9 @@
       "repository_url": "https://github.com/datawhalechina/llm-algo-leetcode",
       "pinned_revision": "c7a81f957c170c88c01ec71dfd1a838cee90b4a4",
       "audited_on": "2026-08-26",
+      "license_status": "verified",
+      "license_audit_url": "https://github.com/datawhalechina/llm-algo-leetcode/blob/c7a81f957c170c88c01ec71dfd1a838cee90b4a4/README.md",
+      "license_audit_method": "Inspected the fixed-revision README license section and recorded its separate declarations for notebook tutorial text and code.",
       "licenses": [
         {
           "scope": "tutorial-text-in-notebooks",
@@ -33,6 +36,140 @@
         "未在本仓库独立核验的基准结果"
       ],
       "usage": "design-reference-only"
+    },
+    {
+      "id": "stanford-cs336-assignment1-basics",
+      "kind": "external-repository",
+      "title": "stanford-cs336/assignment1-basics",
+      "repository_url": "https://github.com/stanford-cs336/assignment1-basics",
+      "pinned_revision": "a158843b20107949f1a8d7df1b05cd33b9166712",
+      "audited_on": "2026-08-26",
+      "license_status": "verified",
+      "license_audit_url": "https://github.com/stanford-cs336/assignment1-basics/blob/a158843b20107949f1a8d7df1b05cd33b9166712/LICENSE",
+      "license_audit_method": "Verified the repository-root LICENSE file at the fixed revision.",
+      "licenses": [
+        {
+          "scope": "repository-material-declared-by-root-license",
+          "spdx": "MIT",
+          "evidence_url": "https://github.com/stanford-cs336/assignment1-basics/blob/a158843b20107949f1a8d7df1b05cd33b9166712/LICENSE"
+        }
+      ],
+      "influence": [
+        "登记从 tokenizer 到 Transformer、optimizer 和训练循环的完整上游能力边界",
+        "提供固定版本的外部自学作业兼容入口"
+      ],
+      "excluded_material": [
+        "作业 PDF 与正文",
+        "starter、tests、snapshots、fixtures 和参考实现",
+        "数据、训练产物、排行榜结果与学生答案"
+      ],
+      "usage": "external-course-source"
+    },
+    {
+      "id": "stanford-cs336-assignment2-systems",
+      "kind": "external-repository",
+      "title": "stanford-cs336/assignment2-systems",
+      "repository_url": "https://github.com/stanford-cs336/assignment2-systems",
+      "pinned_revision": "ca8bc81a59b70516f7ebb2da4808daade877c736",
+      "audited_on": "2026-08-26",
+      "license_status": "verified",
+      "license_audit_url": "https://github.com/stanford-cs336/assignment2-systems/blob/ca8bc81a59b70516f7ebb2da4808daade877c736/LICENSE",
+      "license_audit_method": "Verified the repository-root LICENSE file at the fixed revision.",
+      "licenses": [
+        {
+          "scope": "repository-material-declared-by-root-license",
+          "spdx": "MIT",
+          "evidence_url": "https://github.com/stanford-cs336/assignment2-systems/blob/ca8bc81a59b70516f7ebb2da4808daade877c736/LICENSE"
+        }
+      ],
+      "influence": [
+        "登记 profiling、FlashAttention、分布式训练和状态分片的上游能力边界",
+        "提供固定版本的外部自学作业兼容入口"
+      ],
+      "excluded_material": [
+        "作业 PDF 与正文",
+        "官方 A1 实现、starter、tests、fixtures 和 benchmark 数值",
+        "Triton、DDP、FSDP 或 optimizer 的实现与学生答案"
+      ],
+      "usage": "external-course-source"
+    },
+    {
+      "id": "stanford-cs336-assignment3-scaling",
+      "kind": "external-repository",
+      "title": "stanford-cs336/assignment3-scaling",
+      "repository_url": "https://github.com/stanford-cs336/assignment3-scaling",
+      "pinned_revision": "03e9372992e913061b9e78b5cfcb62ad8a87de35",
+      "audited_on": "2026-08-26",
+      "license_status": "verified",
+      "license_audit_url": "https://github.com/stanford-cs336/assignment3-scaling/blob/03e9372992e913061b9e78b5cfcb62ad8a87de35/LICENSE",
+      "license_audit_method": "Verified the repository-root LICENSE file at the fixed revision.",
+      "licenses": [
+        {
+          "scope": "repository-material-declared-by-root-license",
+          "spdx": "MIT",
+          "evidence_url": "https://github.com/stanford-cs336/assignment3-scaling/blob/03e9372992e913061b9e78b5cfcb62ad8a87de35/LICENSE"
+        }
+      ],
+      "influence": [
+        "登记 IsoFLOPs 实验、训练服务查询和 scaling-law 拟合的上游能力边界",
+        "提供固定版本的外部自学作业兼容入口"
+      ],
+      "excluded_material": [
+        "作业 PDF 与正文",
+        "API 服务、dashboard、notebook、tests 和示例输出",
+        "课程凭据、训练结果、预测值与学生答案"
+      ],
+      "usage": "external-course-source"
+    },
+    {
+      "id": "stanford-cs336-assignment4-data",
+      "kind": "external-repository",
+      "title": "stanford-cs336/assignment4-data",
+      "repository_url": "https://github.com/stanford-cs336/assignment4-data",
+      "pinned_revision": "0555bea66369872d912652debf10b115ca0688c8",
+      "audited_on": "2026-08-26",
+      "license_status": "verified",
+      "license_audit_url": "https://github.com/stanford-cs336/assignment4-data/blob/0555bea66369872d912652debf10b115ca0688c8/LICENSE",
+      "license_audit_method": "Verified the repository-root LICENSE file at the fixed revision.",
+      "licenses": [
+        {
+          "scope": "repository-material-declared-by-root-license",
+          "spdx": "MIT",
+          "evidence_url": "https://github.com/stanford-cs336/assignment4-data/blob/0555bea66369872d912652debf10b115ca0688c8/LICENSE"
+        }
+      ],
+      "influence": [
+        "登记网页抽取、语言识别、PII、质量过滤和去重的数据流水线能力边界",
+        "提供固定版本的外部自学作业兼容入口"
+      ],
+      "excluded_material": [
+        "作业 PDF 与正文",
+        "官方训练实现、starter、tests、fixtures、配置和数据",
+        "过滤阈值答案、模型产物、排行榜结果与学生答案"
+      ],
+      "usage": "external-course-source"
+    },
+    {
+      "id": "stanford-cs336-assignment5-alignment",
+      "kind": "external-repository",
+      "title": "stanford-cs336/assignment5-alignment",
+      "repository_url": "https://github.com/stanford-cs336/assignment5-alignment",
+      "pinned_revision": "c2734a26308710949fe13226960a1e8cece94b7e",
+      "audited_on": "2026-08-26",
+      "license_status": "not-found",
+      "license_audit_url": "https://github.com/stanford-cs336/assignment5-alignment/tree/c2734a26308710949fe13226960a1e8cece94b7e",
+      "license_audit_method": "Inspected the complete fixed-revision Git tree recursively for files named LICENSE, COPYING, or NOTICE; none were found. This is a negative audit result, not legal advice or a grant of permission.",
+      "licenses": [],
+      "influence": [
+        "只登记 SFT、DPO、GRPO 及评测接口的事实性兼容清单",
+        "仅允许用户从官方仓库固定版本本地检出，不在本仓库再分发或改编"
+      ],
+      "excluded_material": [
+        "仓库中的全部作业正文、代码、tests、prompts、数据和模型文件",
+        "任何改编、翻译、镜像、快照、fixture、答案和训练结果",
+        "未由版权方明确授予的再分发权"
+      ],
+      "usage": "external-course-source"
     }
   ]
 }

@@ -1,0 +1,1958 @@
+{
+  "schema_version": 1,
+  "pack_id": "stanford-cs336-2026",
+  "title": "Stanford CS336 Spring 2026 Companion Track",
+  "provider": "Stanford University CS336",
+  "offering": "Spring 2026",
+  "official_course_url": "https://cs336.stanford.edu/",
+  "audited_on": "2026-08-26",
+  "source_mode": "external-pinned-checkout",
+  "install_root": ".external/stanford-cs336",
+  "non_affiliation_notice": "Independent compatibility and coaching metadata; not affiliated with, endorsed by, or certified by Stanford University.",
+  "academic_integrity": {
+    "policy_url": "https://cs336.stanford.edu/",
+    "maximum_ai_help": "H2",
+    "direct_implementation_allowed": false,
+    "notice": "Official assignment mode permits only low-level API help and non-stepwise high-level concepts; no code, pseudocode, TODO completion, automated editing, or solution generation."
+  },
+  "vendored_material": [],
+  "expected_assignment_count": 5,
+  "assignments": [
+    {
+      "id": "EXT-CS336-A1",
+      "order": 1,
+      "title": "Basics: tokenizer, Transformer, optimizer, and training",
+      "reference_id": "stanford-cs336-assignment1-basics",
+      "upstream_offering_note": "The Spring 2026 course site links this repository, while the pinned repository README labels Assignment 1 as Spring 2025",
+      "checkout_directory": "assignment1-basics",
+      "task_card": "curriculum/external/stanford_cs336/TASK_A1.md",
+      "prerequisites": [],
+      "spoiler_for": [],
+      "native_readiness": [
+        "Gate 0 Python mastered",
+        "Loss and optimizer retained_7d",
+        "Transformer components reviewed"
+      ],
+      "handouts": [
+        {
+          "id": "main",
+          "path": "cs336_assignment1_basics.pdf"
+        }
+      ],
+      "adapter_functions": [
+        "run_linear",
+        "run_embedding",
+        "run_swiglu",
+        "run_scaled_dot_product_attention",
+        "run_multihead_self_attention",
+        "run_multihead_self_attention_with_rope",
+        "run_rope",
+        "run_transformer_block",
+        "run_transformer_lm",
+        "run_rmsnorm",
+        "run_silu",
+        "run_get_batch",
+        "run_softmax",
+        "run_cross_entropy",
+        "run_gradient_clipping",
+        "get_adamw_cls",
+        "run_get_lr_cosine_schedule",
+        "run_save_checkpoint",
+        "run_load_checkpoint",
+        "get_tokenizer",
+        "run_train_bpe"
+      ],
+      "test_nodes": [
+        "tests/test_data.py::test_get_batch",
+        "tests/test_model.py::test_linear",
+        "tests/test_model.py::test_embedding",
+        "tests/test_model.py::test_swiglu",
+        "tests/test_model.py::test_scaled_dot_product_attention",
+        "tests/test_model.py::test_4d_scaled_dot_product_attention",
+        "tests/test_model.py::test_multihead_self_attention",
+        "tests/test_model.py::test_multihead_self_attention_with_rope",
+        "tests/test_model.py::test_transformer_lm",
+        "tests/test_model.py::test_transformer_lm_truncated_input",
+        "tests/test_model.py::test_transformer_block",
+        "tests/test_model.py::test_rmsnorm",
+        "tests/test_model.py::test_rope",
+        "tests/test_model.py::test_silu_matches_pytorch",
+        "tests/test_nn_utils.py::test_softmax_matches_pytorch",
+        "tests/test_nn_utils.py::test_cross_entropy",
+        "tests/test_nn_utils.py::test_gradient_clipping",
+        "tests/test_optimizer.py::test_adamw",
+        "tests/test_optimizer.py::test_get_lr_cosine_schedule",
+        "tests/test_serialization.py::test_checkpointing",
+        "tests/test_tokenizer.py::test_roundtrip_empty",
+        "tests/test_tokenizer.py::test_empty_matches_tiktoken",
+        "tests/test_tokenizer.py::test_roundtrip_single_character",
+        "tests/test_tokenizer.py::test_single_character_matches_tiktoken",
+        "tests/test_tokenizer.py::test_roundtrip_single_unicode_character",
+        "tests/test_tokenizer.py::test_single_unicode_character_matches_tiktoken",
+        "tests/test_tokenizer.py::test_roundtrip_ascii_string",
+        "tests/test_tokenizer.py::test_ascii_string_matches_tiktoken",
+        "tests/test_tokenizer.py::test_roundtrip_unicode_string",
+        "tests/test_tokenizer.py::test_unicode_string_matches_tiktoken",
+        "tests/test_tokenizer.py::test_roundtrip_unicode_string_with_special_tokens",
+        "tests/test_tokenizer.py::test_unicode_string_with_special_tokens_matches_tiktoken",
+        "tests/test_tokenizer.py::test_overlapping_special_tokens",
+        "tests/test_tokenizer.py::test_address_roundtrip",
+        "tests/test_tokenizer.py::test_address_matches_tiktoken",
+        "tests/test_tokenizer.py::test_german_roundtrip",
+        "tests/test_tokenizer.py::test_german_matches_tiktoken",
+        "tests/test_tokenizer.py::test_tinystories_sample_roundtrip",
+        "tests/test_tokenizer.py::test_tinystories_matches_tiktoken",
+        "tests/test_tokenizer.py::test_encode_special_token_trailing_newlines",
+        "tests/test_tokenizer.py::test_encode_special_token_double_newline_non_whitespace",
+        "tests/test_tokenizer.py::test_encode_iterable_tinystories_sample_roundtrip",
+        "tests/test_tokenizer.py::test_encode_iterable_tinystories_matches_tiktoken",
+        "tests/test_tokenizer.py::test_encode_iterable_memory_usage",
+        "tests/test_tokenizer.py::test_encode_memory_usage",
+        "tests/test_train_bpe.py::test_train_bpe_speed",
+        "tests/test_train_bpe.py::test_train_bpe",
+        "tests/test_train_bpe.py::test_train_bpe_special_tokens"
+      ],
+      "setup_commands": [
+        "uv sync"
+      ],
+      "test_commands": [
+        {
+          "id": "all",
+          "command": "uv run pytest",
+          "scope": "student-contract",
+          "runtime_tier": "cpu-contract"
+        }
+      ],
+      "runtime_tiers": [
+        {
+          "id": "cpu-contract",
+          "title": "CPU correctness and micro-training",
+          "availability": "local-cpu",
+          "completion_role": "portable-required"
+        },
+        {
+          "id": "single-gpu",
+          "title": "Training and controlled ablations",
+          "availability": "local-cuda",
+          "completion_role": "official-full"
+        },
+        {
+          "id": "leaderboard-compute",
+          "title": "Large-corpus optional capstone",
+          "availability": "multi-gpu",
+          "completion_role": "optional"
+        }
+      ],
+      "expected_problem_count": 38,
+      "expected_adapter_count": 21,
+      "expected_test_node_count": 48,
+      "problems": [
+        {
+          "id": "unicode1",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "unicode2",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "train_bpe",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "train_bpe_tinystories",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "train_bpe_expts_owt",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "tokenizer",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "tokenizer_experiments",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "linear",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "embedding",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "rmsnorm",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "positionwise_feedforward",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "rope",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "softmax",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "scaled_dot_product_attention",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "multihead_self_attention",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "transformer_block",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "transformer_lm",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "transformer_accounting",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "cross_entropy",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "learning_rate_tuning",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "adamw",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "adamw_accounting",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "learning_rate_schedule",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "gradient_clipping",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "data_loading",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "checkpointing",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "training_together",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "decoding",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "experiment_log",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "learning_rate",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "batch_size_experiment",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "generate",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "layer_norm_ablation",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "pre_norm_ablation",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "no_pos_emb",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "swiglu_ablation",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "main_experiment",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "leaderboard",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        }
+      ],
+      "problem_groups": [
+        {
+          "id": "unicode-foundations",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "cpu-contract",
+          "completion_role": "portable-elective",
+          "problem_ids": [
+            "unicode1",
+            "unicode2"
+          ],
+          "evidence": [
+            "artifact:unicode-behavior-notes",
+            "oral:encoding-and-invalid-byte-boundaries"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P1",
+          "capabilities": [
+            "Unicode and UTF-8 behavior",
+            "runtime error analysis"
+          ]
+        },
+        {
+          "id": "tokenizer-core",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "cpu-contract",
+          "completion_role": "portable-required",
+          "problem_ids": [
+            "train_bpe",
+            "train_bpe_tinystories",
+            "train_bpe_expts_owt",
+            "tokenizer",
+            "tokenizer_experiments"
+          ],
+          "evidence": [
+            "test-command:all",
+            "artifact:tokenizer-profile-and-provenance",
+            "oral:bpe-invariants-and-streaming"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P0",
+          "capabilities": [
+            "deterministic byte-level BPE",
+            "special-token boundaries",
+            "streaming encode and serialization"
+          ]
+        },
+        {
+          "id": "transformer-core",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "cpu-contract",
+          "completion_role": "portable-required",
+          "problem_ids": [
+            "linear",
+            "embedding",
+            "rmsnorm",
+            "positionwise_feedforward",
+            "rope",
+            "softmax",
+            "scaled_dot_product_attention",
+            "multihead_self_attention",
+            "transformer_block",
+            "transformer_lm"
+          ],
+          "evidence": [
+            "test-command:all",
+            "oral:shape-dtype-device-mask-gradient-ledger"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P0",
+          "capabilities": [
+            "from-scratch Transformer components",
+            "numerical stability",
+            "state-dict alignment"
+          ]
+        },
+        {
+          "id": "resource-accounting",
+          "prerequisite_group_ids": [
+            "transformer-core"
+          ],
+          "official_runtime_tier": "cpu-contract",
+          "completion_role": "portable-elective",
+          "problem_ids": [
+            "transformer_accounting"
+          ],
+          "evidence": [
+            "artifact:parameter-flop-memory-accounting",
+            "oral:compute-and-memory-bottlenecks"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P1",
+          "capabilities": [
+            "parameter and FLOP accounting",
+            "activation and memory estimation"
+          ]
+        },
+        {
+          "id": "optimization-and-training",
+          "prerequisite_group_ids": [
+            "tokenizer-core",
+            "transformer-core"
+          ],
+          "official_runtime_tier": "cpu-contract",
+          "completion_role": "portable-required",
+          "problem_ids": [
+            "cross_entropy",
+            "learning_rate_tuning",
+            "adamw",
+            "adamw_accounting",
+            "learning_rate_schedule",
+            "gradient_clipping",
+            "data_loading",
+            "checkpointing",
+            "training_together",
+            "experiment_log"
+          ],
+          "evidence": [
+            "test-command:all",
+            "artifact:resume-and-reproducibility-report",
+            "oral:optimizer-state-and-training-order"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P0",
+          "capabilities": [
+            "stable loss and AdamW",
+            "scheduler and clipping",
+            "checkpointable training loop"
+          ]
+        },
+        {
+          "id": "generation-and-ablations",
+          "prerequisite_group_ids": [
+            "optimization-and-training"
+          ],
+          "official_runtime_tier": "single-gpu",
+          "completion_role": "official-only",
+          "problem_ids": [
+            "decoding",
+            "learning_rate",
+            "batch_size_experiment",
+            "generate",
+            "layer_norm_ablation",
+            "pre_norm_ablation",
+            "no_pos_emb",
+            "swiglu_ablation",
+            "main_experiment",
+            "leaderboard"
+          ],
+          "evidence": [
+            "artifact:controlled-generation-and-ablation-report",
+            "oral:causal-interpretation-and-stop-rules"
+          ],
+          "runtime_tier": "single-gpu",
+          "priority": "P1",
+          "capabilities": [
+            "sampling and perplexity",
+            "controlled experiments",
+            "architecture ablations"
+          ]
+        }
+      ],
+      "integration_status": "inventory-audited"
+    },
+    {
+      "id": "EXT-CS336-A2",
+      "order": 2,
+      "title": "Systems: profiling, FlashAttention, and distributed training",
+      "reference_id": "stanford-cs336-assignment2-systems",
+      "upstream_offering_note": "The pinned repository README labels Assignment 2 as Spring 2026",
+      "checkout_directory": "assignment2-systems",
+      "task_card": "curriculum/external/stanford_cs336/TASK_A2.md",
+      "prerequisites": [
+        "EXT-CS336-A1"
+      ],
+      "spoiler_for": [
+        "EXT-CS336-A1"
+      ],
+      "native_readiness": [
+        "Stable attention retained_7d",
+        "Autograd and AMP reviewed",
+        "Distributed process-group lab completed"
+      ],
+      "handouts": [
+        {
+          "id": "main",
+          "path": "cs336_assignment2_systems.pdf"
+        }
+      ],
+      "adapter_functions": [
+        "get_flashattention_autograd_function_pytorch",
+        "get_flashattention_autograd_function_triton",
+        "get_ddp",
+        "ddp_on_after_backward",
+        "get_fsdp",
+        "fsdp_on_after_backward",
+        "fsdp_gather_full_params",
+        "get_sharded_optimizer"
+      ],
+      "test_nodes": [
+        "tests/test_attention.py::test_flash_forward_pass_pytorch",
+        "tests/test_attention.py::test_flash_forward_pass_triton",
+        "tests/test_attention.py::test_flash_backward_pytorch",
+        "tests/test_attention.py::test_flash_backward_triton",
+        "tests/test_ddp.py::test_DistributedDataParallel",
+        "tests/test_fsdp.py::test_fsdp_correctness",
+        "tests/test_fsdp.py::test_fsdp_gradient_sync",
+        "tests/test_sharded_optimizer.py::test_sharded_optimizer"
+      ],
+      "setup_commands": [
+        "uv sync"
+      ],
+      "test_commands": [
+        {
+          "id": "all",
+          "command": "uv run pytest",
+          "scope": "student-contract",
+          "runtime_tier": "cpu-contract"
+        },
+        {
+          "id": "cuda-attention",
+          "command": "uv run pytest tests/test_attention.py",
+          "scope": "student-contract",
+          "runtime_tier": "single-cuda"
+        }
+      ],
+      "runtime_tiers": [
+        {
+          "id": "cpu-contract",
+          "title": "CPU benchmark and Gloo distributed correctness",
+          "availability": "local-cpu",
+          "completion_role": "portable-required"
+        },
+        {
+          "id": "single-cuda",
+          "title": "Triton and CUDA profiler correctness",
+          "availability": "local-cuda",
+          "completion_role": "official-full"
+        },
+        {
+          "id": "multi-gpu",
+          "title": "Collective and sharding experiments",
+          "availability": "multi-gpu",
+          "completion_role": "official-full"
+        },
+        {
+          "id": "b200-capstone",
+          "title": "Hardware-specific optimization capstone",
+          "availability": "multi-gpu",
+          "completion_role": "optional"
+        }
+      ],
+      "expected_problem_count": 27,
+      "expected_adapter_count": 8,
+      "expected_test_node_count": 8,
+      "problems": [
+        {
+          "id": "benchmarking_script",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "nsys_profile",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "mixed_precision_accumulation",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "benchmarking_mixed_precision",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "memory_profiling",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "gradient_checkpointing",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "pytorch_attention",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "torch_compile",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "flash_forward",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "flash_backward",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "flash_benchmarking",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "distributed_communication_single_node",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "naive_ddp",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "naive_ddp_benchmarking",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "minimal_ddp_flat_benchmarking",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "ddp_overlap_individual_parameters",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "ddp_overlap_individual_parameters_benchmarking",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "optimizer_state_sharding",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "optimizer_state_sharding_accounting",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "fsdp",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "fsdp_accounting",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "alternate_ring_all_reduce",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "data_parallel_calcs",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "fsdp_calcs",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "tp_calcs",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "fsdp_tp_calcs",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "leaderboard",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        }
+      ],
+      "problem_groups": [
+        {
+          "id": "measurement-and-memory",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "single-cuda",
+          "completion_role": "official-only",
+          "problem_ids": [
+            "benchmarking_script",
+            "nsys_profile",
+            "mixed_precision_accumulation",
+            "benchmarking_mixed_precision",
+            "memory_profiling",
+            "gradient_checkpointing"
+          ],
+          "evidence": [
+            "artifact:reproducible-benchmark-protocol",
+            "artifact:profiler-and-memory-evidence",
+            "oral:measurement-bias-and-numerical-risk"
+          ],
+          "runtime_tier": "single-cuda",
+          "priority": "P1",
+          "capabilities": [
+            "synchronized GPU benchmarking",
+            "mixed-precision audit",
+            "activation memory control"
+          ]
+        },
+        {
+          "id": "flash-attention",
+          "prerequisite_group_ids": [
+            "measurement-and-memory"
+          ],
+          "official_runtime_tier": "single-cuda",
+          "completion_role": "official-only",
+          "problem_ids": [
+            "pytorch_attention",
+            "torch_compile",
+            "flash_forward",
+            "flash_backward",
+            "flash_benchmarking"
+          ],
+          "evidence": [
+            "test-command:cuda-attention",
+            "artifact:correctness-and-performance-matrix",
+            "oral:online-softmax-and-io-complexity"
+          ],
+          "runtime_tier": "single-cuda",
+          "priority": "P1",
+          "capabilities": [
+            "online softmax",
+            "custom autograd and recomputation",
+            "Triton kernel measurement"
+          ]
+        },
+        {
+          "id": "ddp",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "multi-gpu",
+          "completion_role": "portable-elective",
+          "problem_ids": [
+            "distributed_communication_single_node",
+            "naive_ddp",
+            "naive_ddp_benchmarking",
+            "minimal_ddp_flat_benchmarking",
+            "ddp_overlap_individual_parameters",
+            "ddp_overlap_individual_parameters_benchmarking"
+          ],
+          "evidence": [
+            "test-command:all",
+            "artifact:collective-and-overlap-profile",
+            "oral:broadcast-allreduce-hooks-and-failure-cleanup"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P1",
+          "capabilities": [
+            "collective communication",
+            "DDP synchronization",
+            "communication overlap"
+          ]
+        },
+        {
+          "id": "sharding",
+          "prerequisite_group_ids": [
+            "ddp"
+          ],
+          "official_runtime_tier": "multi-gpu",
+          "completion_role": "portable-elective",
+          "problem_ids": [
+            "optimizer_state_sharding",
+            "optimizer_state_sharding_accounting",
+            "fsdp",
+            "fsdp_accounting"
+          ],
+          "evidence": [
+            "test-command:all",
+            "artifact:state-memory-and-full-parameter-report",
+            "oral:zero1-fsdp-gather-reducescatter"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P1",
+          "capabilities": [
+            "optimizer-state sharding",
+            "parameter sharding",
+            "mixed-precision FSDP"
+          ]
+        },
+        {
+          "id": "parallelism-accounting",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "cpu-contract",
+          "completion_role": "portable-required",
+          "problem_ids": [
+            "alternate_ring_all_reduce",
+            "data_parallel_calcs",
+            "fsdp_calcs",
+            "tp_calcs",
+            "fsdp_tp_calcs"
+          ],
+          "evidence": [
+            "artifact:communication-and-memory-derivation",
+            "oral:parallelism-tradeoffs"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P1",
+          "capabilities": [
+            "collective algebra",
+            "DP FSDP TP accounting",
+            "2D parallelism decisions"
+          ]
+        },
+        {
+          "id": "optimization-capstone",
+          "prerequisite_group_ids": [
+            "flash-attention",
+            "sharding",
+            "parallelism-accounting"
+          ],
+          "official_runtime_tier": "b200-capstone",
+          "completion_role": "optional-capstone",
+          "problem_ids": [
+            "leaderboard"
+          ],
+          "evidence": [
+            "artifact:hardware-normalized-capstone-report",
+            "oral:fairness-reproducibility-and-stop-rule"
+          ],
+          "runtime_tier": "b200-capstone",
+          "priority": "P2",
+          "capabilities": [
+            "full-step optimization",
+            "hardware-normalized reporting"
+          ]
+        }
+      ],
+      "integration_status": "inventory-audited"
+    },
+    {
+      "id": "EXT-CS336-A3",
+      "order": 3,
+      "title": "Scaling: IsoFLOPs fitting and budgeted experimentation",
+      "reference_id": "stanford-cs336-assignment3-scaling",
+      "upstream_offering_note": "The pinned repository README labels Assignment 3 as Spring 2026",
+      "checkout_directory": "assignment3-scaling",
+      "task_card": "curriculum/external/stanford_cs336/TASK_A3.md",
+      "prerequisites": [
+        "EXT-CS336-A1"
+      ],
+      "spoiler_for": [],
+      "native_readiness": [
+        "Experiment JSON schema mastered",
+        "Transformer compute accounting reviewed",
+        "Log-log regression and diagnostics explainable"
+      ],
+      "handouts": [
+        {
+          "id": "main",
+          "path": "cs336_assignment3_scaling.pdf"
+        }
+      ],
+      "adapter_functions": [],
+      "test_nodes": [
+        "tests/test_api.py::test_dashboard_serves_html",
+        "tests/test_api.py::test_budget",
+        "tests/test_api.py::test_submit_jobs",
+        "tests/test_api.py::test_submit_rejects_duplicate_training_config",
+        "tests/test_api.py::test_final_submission_accepts_training_config_and_predicted_loss",
+        "tests/test_scheduler.py::test_select_experiments_for_dispatch_orders_by_running_count_then_queue_time",
+        "tests/test_scheduler.py::test_select_experiments_for_dispatch_counts_running_jobs_without_capacity"
+      ],
+      "setup_commands": [
+        "uv sync"
+      ],
+      "test_commands": [
+        {
+          "id": "service-tests",
+          "command": "uv run pytest",
+          "scope": "upstream-infrastructure",
+          "runtime_tier": "cpu-analysis"
+        }
+      ],
+      "runtime_tiers": [
+        {
+          "id": "cpu-analysis",
+          "title": "Offline fitting, diagnostics, and planner tests",
+          "availability": "local-cpu",
+          "completion_role": "portable-required"
+        },
+        {
+          "id": "hosted-b200",
+          "title": "Authorized Stanford training service",
+          "availability": "hosted-course-service",
+          "completion_role": "official-full"
+        }
+      ],
+      "expected_problem_count": 2,
+      "expected_adapter_count": 0,
+      "expected_test_node_count": 7,
+      "problems": [
+        {
+          "id": "chinchilla_isoflops",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "scaling_laws",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        }
+      ],
+      "problem_groups": [
+        {
+          "id": "isoflops",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "cpu-analysis",
+          "completion_role": "portable-required",
+          "problem_ids": [
+            "chinchilla_isoflops"
+          ],
+          "evidence": [
+            "artifact:fit-plot-residuals-and-extrapolation",
+            "oral:selection-bias-and-extrapolation-risk"
+          ],
+          "runtime_tier": "cpu-analysis",
+          "priority": "P1",
+          "capabilities": [
+            "IsoFLOPs reduction",
+            "power-law fitting",
+            "holdout and residual diagnostics"
+          ]
+        },
+        {
+          "id": "budgeted-search",
+          "prerequisite_group_ids": [
+            "isoflops"
+          ],
+          "official_runtime_tier": "hosted-b200",
+          "completion_role": "official-only",
+          "problem_ids": [
+            "scaling_laws"
+          ],
+          "evidence": [
+            "artifact:budget-ledger-experiment-code-and-decision-memo",
+            "oral:budget-state-machine-and-stop-rule"
+          ],
+          "runtime_tier": "hosted-b200",
+          "priority": "P1",
+          "capabilities": [
+            "budgeted experimental design",
+            "configuration validity",
+            "loss prediction under uncertainty"
+          ]
+        }
+      ],
+      "integration_status": "inventory-audited"
+    },
+    {
+      "id": "EXT-CS336-A4",
+      "order": 4,
+      "title": "Data: filtering, deduplication, provenance, and pretraining",
+      "reference_id": "stanford-cs336-assignment4-data",
+      "upstream_offering_note": "The pinned repository README labels Assignment 4 as Spring 2026",
+      "checkout_directory": "assignment4-data",
+      "task_card": "curriculum/external/stanford_cs336/TASK_A4.md",
+      "prerequisites": [
+        "EXT-CS336-A1"
+      ],
+      "spoiler_for": [
+        "EXT-CS336-A1"
+      ],
+      "native_readiness": [
+        "Streaming files and JSONL retained_7d",
+        "Hashing and Union-Find reviewed",
+        "Data leakage and provenance audit explainable"
+      ],
+      "handouts": [
+        {
+          "id": "main",
+          "path": "cs336_assignment4_data.pdf"
+        }
+      ],
+      "adapter_functions": [
+        "run_extract_text_from_html_bytes",
+        "run_identify_language",
+        "run_mask_emails",
+        "run_mask_phone_numbers",
+        "run_mask_ips",
+        "run_classify_nsfw",
+        "run_classify_toxic_speech",
+        "run_classify_quality",
+        "run_gopher_quality_filter",
+        "run_exact_line_deduplication",
+        "run_minhash_deduplication"
+      ],
+      "test_nodes": [
+        "tests/test_deduplication.py::test_exact_line_deduplication",
+        "tests/test_deduplication.py::test_minhash_deduplication_exact_duplicates",
+        "tests/test_deduplication.py::test_minhash_deduplication_fuzzy_duplicates",
+        "tests/test_extract.py::test_extract_text_from_html_bytes",
+        "tests/test_langid.py::test_identify_language_english",
+        "tests/test_langid.py::test_identify_language_chinese_simplified",
+        "tests/test_pii.py::test_mask_emails_single",
+        "tests/test_pii.py::test_mask_emails_multiple",
+        "tests/test_pii.py::test_mask_emails_existing_string",
+        "tests/test_pii.py::test_mask_phones_single",
+        "tests/test_pii.py::test_mask_ips",
+        "tests/test_quality.py::test_classify_quality",
+        "tests/test_quality.py::test_gopher_valid_input",
+        "tests/test_quality.py::test_gopher_less_than_50_non_symbol_words",
+        "tests/test_quality.py::test_gopher_more_than_100000_non_symbol_words",
+        "tests/test_quality.py::test_gopher_average_word_length_less_than_3",
+        "tests/test_quality.py::test_gopher_average_word_length_greater_than_10",
+        "tests/test_quality.py::test_gopher_more_than_30_percent_lines_ending_with_ellipsis",
+        "tests/test_quality.py::test_gopher_less_than_80_percent_words_with_alphabetic_character",
+        "tests/test_toxicity.py::test_classify_nsfw",
+        "tests/test_toxicity.py::test_classify_toxic_speech"
+      ],
+      "setup_commands": [
+        "uv sync"
+      ],
+      "test_commands": [
+        {
+          "id": "all",
+          "command": "uv run pytest",
+          "scope": "student-contract",
+          "runtime_tier": "cpu-contract"
+        }
+      ],
+      "runtime_tiers": [
+        {
+          "id": "cpu-contract",
+          "title": "Hermetic primitives and synthetic pipeline",
+          "availability": "local-cpu",
+          "completion_role": "portable-required"
+        },
+        {
+          "id": "external-assets",
+          "title": "Public model and data integrations with provenance",
+          "availability": "manual",
+          "completion_role": "official-full"
+        },
+        {
+          "id": "multi-b200",
+          "title": "Full filtering and LM training experiment",
+          "availability": "multi-gpu",
+          "completion_role": "official-full"
+        }
+      ],
+      "expected_problem_count": 13,
+      "expected_adapter_count": 11,
+      "expected_test_node_count": 21,
+      "problems": [
+        {
+          "id": "look_at_cc",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "extract_text",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "language_identification",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "mask_pii",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "harmful_content",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "gopher_quality_filters",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "quality_classifier",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "exact_deduplication",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "minhash_deduplication",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "filter_data",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "inspect_filtered_data",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "tokenize_data",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "train_model",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        }
+      ],
+      "problem_groups": [
+        {
+          "id": "inspection-and-extraction",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "cpu-contract",
+          "completion_role": "portable-elective",
+          "problem_ids": [
+            "look_at_cc",
+            "extract_text"
+          ],
+          "evidence": [
+            "test-command:all",
+            "artifact:document-inspection-and-encoding-report",
+            "oral:warc-wet-html-failure-boundaries"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P1",
+          "capabilities": [
+            "document sampling",
+            "bytes-to-text extraction",
+            "encoding failure policy"
+          ]
+        },
+        {
+          "id": "classification-and-privacy",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "external-assets",
+          "completion_role": "portable-required",
+          "problem_ids": [
+            "language_identification",
+            "mask_pii",
+            "harmful_content"
+          ],
+          "evidence": [
+            "test-command:all",
+            "artifact:threshold-fp-fn-and-pii-report",
+            "oral:score-calibration-and-privacy-boundaries"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P0",
+          "capabilities": [
+            "injectable classifiers",
+            "PII masking",
+            "threshold and error analysis"
+          ]
+        },
+        {
+          "id": "quality",
+          "prerequisite_group_ids": [
+            "inspection-and-extraction"
+          ],
+          "official_runtime_tier": "external-assets",
+          "completion_role": "portable-elective",
+          "problem_ids": [
+            "gopher_quality_filters",
+            "quality_classifier"
+          ],
+          "evidence": [
+            "test-command:all",
+            "artifact:rule-and-model-quality-comparison",
+            "oral:selection-bias-and-calibration"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P1",
+          "capabilities": [
+            "deterministic quality rules",
+            "quality classifier training",
+            "human audit"
+          ]
+        },
+        {
+          "id": "deduplication",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "cpu-contract",
+          "completion_role": "portable-required",
+          "problem_ids": [
+            "exact_deduplication",
+            "minhash_deduplication"
+          ],
+          "evidence": [
+            "test-command:all",
+            "artifact:collision-threshold-and-cluster-report",
+            "oral:minhash-lsh-jaccard-unionfind"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P0",
+          "capabilities": [
+            "exact corpus deduplication",
+            "MinHash and LSH",
+            "deterministic transitive clustering"
+          ]
+        },
+        {
+          "id": "end-to-end-data",
+          "prerequisite_group_ids": [
+            "classification-and-privacy",
+            "deduplication"
+          ],
+          "official_runtime_tier": "multi-b200",
+          "completion_role": "portable-required",
+          "problem_ids": [
+            "filter_data",
+            "inspect_filtered_data",
+            "tokenize_data",
+            "train_model"
+          ],
+          "evidence": [
+            "artifact:stage-counters-provenance-leakage-and-ab-report",
+            "oral:pipeline-order-data-budget-and-stop-rule"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P0",
+          "capabilities": [
+            "streaming filter pipeline",
+            "leakage audit",
+            "token serialization",
+            "tiny-to-scale LM comparison"
+          ]
+        }
+      ],
+      "integration_status": "inventory-audited"
+    },
+    {
+      "id": "EXT-CS336-A5",
+      "order": 5,
+      "title": "Alignment: SFT, DPO, GRPO, evaluation, and safety",
+      "reference_id": "stanford-cs336-assignment5-alignment",
+      "upstream_offering_note": "The pinned repository README labels Assignment 5 as Spring 2026",
+      "checkout_directory": "assignment5-alignment",
+      "task_card": "curriculum/external/stanford_cs336/TASK_A5.md",
+      "prerequisites": [
+        "EXT-CS336-A1"
+      ],
+      "spoiler_for": [],
+      "native_readiness": [
+        "Sequence log-prob and response masks retained_7d",
+        "SFT and DPO reviewed",
+        "Reward advantage clipping and KL explainable"
+      ],
+      "handouts": [
+        {
+          "id": "main",
+          "path": "cs336_spring2026_assignment5_alignment.pdf"
+        },
+        {
+          "id": "supplement",
+          "path": "cs336_spring2026_assignment5_supplement_safety_rlhf.pdf"
+        }
+      ],
+      "adapter_functions": [
+        "run_tokenize_prompt_and_output",
+        "run_get_response_log_probs",
+        "run_compute_rollout_rewards",
+        "run_compute_group_normalized_rewards",
+        "run_compute_policy_gradient_loss",
+        "run_aggregate_loss_across_microbatch",
+        "run_grpo_train_step",
+        "get_packed_sft_dataset",
+        "run_iterate_batches",
+        "run_parse_mmlu_response",
+        "run_parse_gsm8k_response",
+        "run_compute_per_instance_dpo_loss"
+      ],
+      "test_nodes": [
+        "tests/test_data.py::test_packed_sft_dataset",
+        "tests/test_data.py::test_iterate_batches",
+        "tests/test_dpo.py::test_per_instance_dpo_loss",
+        "tests/test_grpo.py::test_tokenize_prompt_and_output",
+        "tests/test_grpo.py::test_get_response_log_probs",
+        "tests/test_grpo.py::test_compute_rollout_rewards",
+        "tests/test_grpo.py::test_compute_group_normalized_rewards_grpo",
+        "tests/test_grpo.py::test_compute_group_normalized_rewards_drgrpo",
+        "tests/test_grpo.py::test_compute_group_normalized_rewards_maxrl",
+        "tests/test_grpo.py::test_compute_policy_gradient_loss_on_policy",
+        "tests/test_grpo.py::test_compute_policy_gradient_loss_off_policy",
+        "tests/test_grpo.py::test_compute_policy_gradient_loss_off_policy_gspo",
+        "tests/test_grpo.py::test_aggregate_loss_across_microbatch_sequence",
+        "tests/test_grpo.py::test_aggregate_loss_across_microbatch_constant",
+        "tests/test_grpo.py::test_grpo_train_step_standard_on_policy",
+        "tests/test_grpo.py::test_grpo_train_step_variants_on_policy",
+        "tests/test_grpo.py::test_grpo_train_step_off_policy",
+        "tests/test_metrics.py::test_parse_mmlu_response",
+        "tests/test_metrics.py::test_parse_mmlu_response_unknown",
+        "tests/test_metrics.py::test_parse_gsm8k_response",
+        "tests/test_metrics.py::test_parse_gsm8k_response_unknown"
+      ],
+      "setup_commands": [
+        "uv sync --no-install-package flash-attn",
+        "uv sync"
+      ],
+      "test_commands": [
+        {
+          "id": "grpo",
+          "command": "uv run pytest tests/test_grpo.py",
+          "scope": "student-contract",
+          "runtime_tier": "cpu-contract"
+        },
+        {
+          "id": "data-metrics",
+          "command": "uv run pytest tests/test_data.py tests/test_metrics.py",
+          "scope": "student-contract",
+          "runtime_tier": "cpu-contract"
+        },
+        {
+          "id": "dpo-supplement",
+          "command": "uv run pytest tests/test_dpo.py",
+          "scope": "optional-supplement",
+          "runtime_tier": "cpu-contract"
+        }
+      ],
+      "runtime_tiers": [
+        {
+          "id": "cpu-contract",
+          "title": "Tiny-model SFT DPO GRPO correctness",
+          "availability": "local-cpu",
+          "completion_role": "portable-required"
+        },
+        {
+          "id": "single-b200",
+          "title": "Rollout, training, and evaluation experiments",
+          "availability": "local-cuda",
+          "completion_role": "official-full"
+        },
+        {
+          "id": "external-evaluator",
+          "title": "Optional external evaluation services",
+          "availability": "manual",
+          "completion_role": "optional"
+        }
+      ],
+      "expected_problem_count": 44,
+      "expected_adapter_count": 12,
+      "expected_test_node_count": 21,
+      "problems": [
+        {
+          "id": "prompting_baselines",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "baseline_calcs",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "tokenize_prompt_and_output",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "get_response_log_probs",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "compute_rollout_rewards",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "compute_group_normalized_rewards_grpo",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "compute_policy_gradient_loss_on_policy",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "aggregate_loss_across_microbatch_sequence",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "grpo_train_step_standard_on_policy",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "grpo_experiments_standard_on_policy",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "grpo_learning_rate",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "grpo_prompt_ablation",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "think_about_length_normalization",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "compute_group_normalized_rewards_drgrpo",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "aggregate_loss_across_microbatch_constant",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "think_about_rft",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "derive_difficulty_reweightings",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "think_about_advantage_normalization",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "compute_group_normalized_rewards_maxrl",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "grpo_train_step_variants_on_policy",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "grpo_experiments_variants_on_policy",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "derive_surrogate_objectives",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "compute_policy_gradient_loss_off_policy",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "think_about_importance_reweighting",
+          "kind": "analysis",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "compute_policy_gradient_loss_off_policy_gspo",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "grpo_train_step_off_policy",
+          "kind": "coding",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "grpo_experiments_off_policy",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "try_your_own",
+          "kind": "experiment",
+          "required": true,
+          "handout_id": "main"
+        },
+        {
+          "id": "mmlu_baseline",
+          "kind": "experiment",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "gsm8k_baseline",
+          "kind": "experiment",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "alpaca_eval_baseline",
+          "kind": "experiment",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "sst_baseline",
+          "kind": "experiment",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "look_at_sft",
+          "kind": "analysis",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "data_loading",
+          "kind": "coding",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "sft_script",
+          "kind": "coding",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "sft",
+          "kind": "experiment",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "mmlu_sft",
+          "kind": "experiment",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "gsm8k_sft",
+          "kind": "experiment",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "alpaca_eval_sft",
+          "kind": "experiment",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "sst_sft",
+          "kind": "experiment",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "red_teaming",
+          "kind": "experiment",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "look_at_hh",
+          "kind": "analysis",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "dpo_loss",
+          "kind": "coding",
+          "required": false,
+          "handout_id": "supplement"
+        },
+        {
+          "id": "dpo_training",
+          "kind": "experiment",
+          "required": false,
+          "handout_id": "supplement"
+        }
+      ],
+      "problem_groups": [
+        {
+          "id": "prompting-and-baseline",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "single-b200",
+          "completion_role": "official-only",
+          "problem_ids": [
+            "prompting_baselines",
+            "baseline_calcs"
+          ],
+          "evidence": [
+            "artifact:baseline-results-and-variance-derivation",
+            "oral:estimator-variance-and-evaluation-validity"
+          ],
+          "runtime_tier": "single-b200",
+          "priority": "P1",
+          "capabilities": [
+            "prompted reasoning baseline",
+            "policy-gradient variance"
+          ]
+        },
+        {
+          "id": "grpo-core",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "cpu-contract",
+          "completion_role": "portable-required",
+          "problem_ids": [
+            "tokenize_prompt_and_output",
+            "get_response_log_probs",
+            "compute_rollout_rewards",
+            "compute_group_normalized_rewards_grpo",
+            "compute_policy_gradient_loss_on_policy",
+            "aggregate_loss_across_microbatch_sequence",
+            "grpo_train_step_standard_on_policy"
+          ],
+          "evidence": [
+            "test-command:grpo",
+            "oral:shape-mask-gradient-and-reduction-ledger"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P0",
+          "capabilities": [
+            "response tokenization and log-prob",
+            "reward and group signal",
+            "on-policy GRPO train step"
+          ]
+        },
+        {
+          "id": "standard-grpo-experiments",
+          "prerequisite_group_ids": [
+            "prompting-and-baseline",
+            "grpo-core"
+          ],
+          "official_runtime_tier": "single-b200",
+          "completion_role": "official-only",
+          "problem_ids": [
+            "grpo_experiments_standard_on_policy",
+            "grpo_learning_rate",
+            "grpo_prompt_ablation",
+            "think_about_length_normalization"
+          ],
+          "evidence": [
+            "artifact:controlled-grpo-experiment-report",
+            "oral:length-bias-learning-rate-and-prompt-effects"
+          ],
+          "runtime_tier": "single-b200",
+          "priority": "P0",
+          "capabilities": [
+            "controlled RL experiments",
+            "length normalization analysis"
+          ]
+        },
+        {
+          "id": "on-policy-variants",
+          "prerequisite_group_ids": [
+            "grpo-core"
+          ],
+          "official_runtime_tier": "single-b200",
+          "completion_role": "portable-elective",
+          "problem_ids": [
+            "compute_group_normalized_rewards_drgrpo",
+            "aggregate_loss_across_microbatch_constant",
+            "think_about_rft",
+            "derive_difficulty_reweightings",
+            "think_about_advantage_normalization",
+            "compute_group_normalized_rewards_maxrl",
+            "grpo_train_step_variants_on_policy",
+            "grpo_experiments_variants_on_policy"
+          ],
+          "evidence": [
+            "test-command:grpo",
+            "artifact:variant-comparison-and-zero-variance-report",
+            "oral:implicit-reweighting-and-normalization"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P1",
+          "capabilities": [
+            "Dr.GRPO RFT MaxRL variants",
+            "normalization and weighting",
+            "zero-variance handling"
+          ]
+        },
+        {
+          "id": "off-policy-and-gspo",
+          "prerequisite_group_ids": [
+            "grpo-core"
+          ],
+          "official_runtime_tier": "single-b200",
+          "completion_role": "portable-elective",
+          "problem_ids": [
+            "derive_surrogate_objectives",
+            "compute_policy_gradient_loss_off_policy",
+            "think_about_importance_reweighting",
+            "compute_policy_gradient_loss_off_policy_gspo",
+            "grpo_train_step_off_policy",
+            "grpo_experiments_off_policy",
+            "try_your_own"
+          ],
+          "evidence": [
+            "test-command:grpo",
+            "artifact:off-policy-bias-clipping-and-experiment-report",
+            "oral:importance-ratio-token-vs-sequence"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P1",
+          "capabilities": [
+            "off-policy clipped objectives",
+            "GSPO sequence weighting",
+            "estimator design"
+          ]
+        },
+        {
+          "id": "supplement-baselines",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "single-b200",
+          "completion_role": "official-only",
+          "problem_ids": [
+            "mmlu_baseline",
+            "gsm8k_baseline",
+            "alpaca_eval_baseline",
+            "sst_baseline"
+          ],
+          "evidence": [
+            "artifact:optional-baseline-provenance-and-results",
+            "oral:evaluation-leakage-and-judge-limitations"
+          ],
+          "runtime_tier": "single-b200",
+          "priority": "P1",
+          "capabilities": [
+            "knowledge reasoning preference and safety evaluation"
+          ]
+        },
+        {
+          "id": "supplement-sft",
+          "prerequisite_group_ids": [],
+          "official_runtime_tier": "single-b200",
+          "completion_role": "portable-elective",
+          "problem_ids": [
+            "look_at_sft",
+            "data_loading",
+            "sft_script",
+            "sft",
+            "mmlu_sft",
+            "gsm8k_sft",
+            "alpaca_eval_sft",
+            "sst_sft",
+            "red_teaming"
+          ],
+          "evidence": [
+            "test-command:data-metrics",
+            "artifact:optional-sft-data-training-evaluation-and-redteam-report",
+            "oral:label-mask-packing-and-safety-tradeoffs"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P0",
+          "capabilities": [
+            "packed SFT data",
+            "instruction tuning",
+            "multi-benchmark evaluation and red teaming"
+          ]
+        },
+        {
+          "id": "supplement-dpo",
+          "prerequisite_group_ids": [
+            "supplement-sft"
+          ],
+          "official_runtime_tier": "single-b200",
+          "completion_role": "portable-elective",
+          "problem_ids": [
+            "look_at_hh",
+            "dpo_loss",
+            "dpo_training"
+          ],
+          "evidence": [
+            "test-command:dpo-supplement",
+            "artifact:optional-preference-data-and-dpo-report",
+            "oral:reference-policy-margin-and-data-quality"
+          ],
+          "runtime_tier": "cpu-contract",
+          "priority": "P0",
+          "capabilities": [
+            "preference-data audit",
+            "DPO objective",
+            "preference training"
+          ]
+        }
+      ],
+      "integration_status": "inventory-audited"
+    }
+  ]
+}

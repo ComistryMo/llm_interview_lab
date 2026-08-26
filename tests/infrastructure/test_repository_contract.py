@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import stat
 import subprocess
@@ -16,30 +16,41 @@ MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 TEXT_SUFFIXES = {".md", ".py", ".toml", ".txt", ".json", ".jsonl", ".yml", ".yaml"}
 
 
-def _tracked_candidate_files() -> list[Path]:
+def _repository_candidate_names() -> list[str]:
     result = subprocess.run(
-        ["git", "-C", str(REPO_ROOT), "ls-files", "-z"],
+        [
+            "git",
+            "-C",
+            str(REPO_ROOT),
+            "ls-files",
+            "-z",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+        ],
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
     try:
-        names = result.stdout.decode("utf-8").split("\x00")
+        names = [name for name in result.stdout.decode("utf-8").split("\x00") if name]
     except UnicodeDecodeError as error:
         raise AssertionError("Git returned a non-UTF-8 tracked path") from error
+    assert names, "repository contract requires tracked files"
+    return names
+
+
+def _repository_candidate_files() -> list[Path]:
     files: list[Path] = []
-    for name in names:
-        if not name:
-            continue
+    for name in _repository_candidate_names():
         path = REPO_ROOT.joinpath(*name.split("/"))
         file_stat = os.lstat(path)
         reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
         attributes = getattr(file_stat, "st_file_attributes", 0)
-        assert not stat.S_ISLNK(file_stat.st_mode), f"tracked symlink: {name}"
-        assert not attributes & reparse_flag, f"tracked reparse path: {name}"
-        assert stat.S_ISREG(file_stat.st_mode), f"tracked non-file: {name}"
+        assert not stat.S_ISLNK(file_stat.st_mode), f"repository symlink: {name}"
+        assert not attributes & reparse_flag, f"repository reparse path: {name}"
+        assert stat.S_ISREG(file_stat.st_mode), f"repository non-file: {name}"
         files.append(path)
-    assert files, "repository contract requires tracked files"
     return files
 
 
@@ -71,12 +82,20 @@ def test_authoritative_public_documents_exist() -> None:
         "docs/STATE_MODEL.md",
         "docs/PRIVACY_AND_SECURITY.md",
         "docs/REFERENCE_POLICY.md",
+        "docs/EXTERNAL_COURSE_PACKS.md",
         "docs/AI_COACH_ADAPTER.md",
         "docs/CUSTOMIZATION.md",
         "curriculum/catalog.json",
         "curriculum/NAVIGATION.md",
+        "curriculum/external/catalog.json",
+        "curriculum/external/NAVIGATION.md",
+        "curriculum/external/stanford_cs336/manifest.json",
         "references/registry.json",
         "scripts/validate_curriculum.py",
+        "scripts/validate_external_courses.py",
+        "scripts/manage_external_course.py",
+        "scripts/run_current_task.py",
+        "scripts/select_current_task.py",
         "scripts/create_private_workspace.py",
         "templates/starter/src/stage00/hard_sample_miner.py",
     }
@@ -85,9 +104,28 @@ def test_authoritative_public_documents_exist() -> None:
     assert not missing, f"missing authoritative documents: {missing}"
 
 
+def test_external_checkout_root_has_no_tracked_files() -> None:
+    tracked_external = sorted(
+        name
+        for name in _repository_candidate_names()
+        if ".external" in PurePosixPath(name).parts
+    )
+
+    assert not tracked_external, (
+        "external course checkouts must remain untracked:\n" + "\n".join(tracked_external)
+    )
+
+
+def test_transient_external_and_state_lock_paths_are_ignored() -> None:
+    ignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+    assert ".external/" in ignore
+    assert "/state/.task-selection.lock" in ignore
+
+
 def test_relative_markdown_links_resolve_with_exact_case() -> None:
     failures: list[str] = []
-    for document in _tracked_candidate_files():
+    for document in _repository_candidate_files():
         if document.suffix.lower() != ".md":
             continue
         text = document.read_text(encoding="utf-8")
@@ -120,7 +158,7 @@ def test_public_text_is_utf8_and_has_no_known_private_identifiers() -> None:
         "Tele" + "AI",
     )
     findings: list[str] = []
-    for path in _tracked_candidate_files():
+    for path in _repository_candidate_files():
         if path.suffix.lower() not in TEXT_SUFFIXES:
             continue
         text = path.read_text(encoding="utf-8")
@@ -142,9 +180,28 @@ def test_readme_commands_and_metadata_are_consistent() -> None:
     assert 'license = "Apache-2.0"' in pyproject
 
 
+def test_external_task_selection_language_is_unambiguous() -> None:
+    curriculum_readme = (REPO_ROOT / "curriculum" / "README.md").read_text(
+        encoding="utf-8"
+    )
+    external_guide = (REPO_ROOT / "docs" / "EXTERNAL_COURSE_PACKS.md").read_text(
+        encoding="utf-8"
+    )
+    generated_navigation = (
+        REPO_ROOT / "curriculum" / "external" / "NAVIGATION.md"
+    ).read_text(encoding="utf-8")
+
+    assert "安装和 Preview 不自动进入状态机" in curriculum_readme
+    assert "scripts/select_current_task.py" in external_guide
+    assert "learner ledger 中 canonical task 的状态**只描述 companion runtime**" in external_guide
+    assert "安装与 Preview 不会改变 `state/CURRENT_TASK.md`" in generated_navigation
+    assert "只有 assignment 升级为 `implementation-ready` 后" in generated_navigation
+    assert "当前 `inventory-audited` 项目 fail closed" in generated_navigation
+
+
 def test_removed_duplicate_reports_do_not_return() -> None:
     forbidden_names = {
         "CODEX_TRAINING_REPORT.md",
     }
-    names = {path.name for path in _tracked_candidate_files()}
+    names = {path.name for path in _repository_candidate_files()}
     assert names.isdisjoint(forbidden_names)

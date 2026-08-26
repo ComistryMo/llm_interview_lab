@@ -18,6 +18,7 @@ python -m pip install -r requirements.txt
 python scripts/check_environment.py
 python -m pytest -q
 python scripts/validate_curriculum.py
+python scripts/validate_external_courses.py
 python scripts/validate_state.py
 python scripts/export_handoff.py --dry-run
 ```
@@ -37,6 +38,8 @@ PR 应只解决一个清楚的问题，并写明：
 课程贡献必须保持 `src/` starter 与参考答案分离。H4/H5 内容不能藏在测试名、错误消息、注释或提示文件里。新增或修改 Task 后更新 `curriculum/catalog.json`，运行 `python scripts/validate_curriculum.py --write-navigation`，不要手工编辑生成导航。
 
 若外部项目实质影响设计或课程材料，按[来源治理](docs/REFERENCE_POLICY.md)登记固定 revision 和许可证边界。默认只吸收抽象机制；复制、翻译或改编内容必须另行证明授权、署名和独立审查，不能混在普通课程 PR 中。
+
+外部课程 pack 贡献还必须逐项登记上游 problem、adapter、测试或人工证据、runtime tier 和固定版本来源。pack 只能保存兼容元数据与本项目原创教练层，不得提交上游 checkout、handout、测试、fixture、数据、模型或答案。更新 pin 必须重新审计许可证和题目漂移，并运行 `python scripts/validate_external_courses.py --write-navigation`；禁止为了通过校验虚构空 problem 或把昂贵实验标成已完成。
 
 ## Git 习惯
 
