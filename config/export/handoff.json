@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "files": [
+    "AGENTS.md",
+    "README.md",
+    "curriculum/stage00/TASK_00A1.md",
+    "docs/COACHING_PROTOCOL.md",
+    "progress/test_runs/2026-08-26_task00a1.txt",
+    "prompts/HANDOFF_FOR_EXTERNAL_REVIEW.md",
+    "pyproject.toml",
+    "requirements.txt",
+    "reviews/TASK_00A1_REVIEW_2026-08-26.md",
+    "src/stage00/hard_sample_miner.py",
+    "state/CURRENT_TASK.md",
+    "state/HANDOFF.md",
+    "state/MISTAKE_LOG.md",
+    "state/PROGRESS.md",
+    "tests/stage00/test_task_00a1.py"
+  ]
+}

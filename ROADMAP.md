@@ -1,0 +1,30 @@
+# Project Roadmap
+
+Roadmap 描述公共项目建设，不代表任何学习者已经解锁相应课程。
+
+## v0.1 alpha — Foundation
+
+- [x] Stage 00 原型与当前任务示例；
+- [x] 环境检查、默认健康测试与可选 Torch 依赖；
+- [x] 状态模型、ledger 与校验；
+- [x] 隐私模板与 fail-closed handoff 导出；
+- [x] 公共文档、治理文件与基础 CI；
+- [x] 拒绝覆盖、禁用 upstream push 的私人 workspace 生成器；
+- [ ] 收集首次跨平台使用反馈。
+
+## v0.2 — Starter/workspace split
+
+- 分离只读公共 starter 与个人 workspace；
+- 提供路径受限的 upstream 同步与 workspace 迁移工具；
+- 验证 private repository 创建路径后再评估 GitHub Template；
+- 将 current/regression/locked 测试物理分层。
+
+## v0.3 — Stage 00 curriculum quality
+
+- 完成 Python 任务卡 schema、提示隔离和变式测试；
+- 建立 Task PR 质量检查；
+- 由至少两名新用户完成冷启动可用性测试。
+
+## Later
+
+Tensor/Autograd、Loss、Optimizer 等课程包只在前一 Gate 的教学与测试基础设施稳定后增量加入。不会一次创建大量空任务，也不会把完整参考答案放进公共学员路径。

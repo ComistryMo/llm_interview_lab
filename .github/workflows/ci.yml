@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-health:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Install minimal dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Check environment
+        run: python scripts/check_environment.py
+
+      - name: Run repository health tests
+        run: python -m pytest -q
+
+      - name: Validate training state
+        run: python scripts/validate_state.py
+
+      - name: Verify ledger history is append-only
+        if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        shell: bash
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.sha }}"
+          git show "${{ github.event.pull_request.base.sha }}:state/TASK_LEDGER.jsonl" > "$RUNNER_TEMP/base-ledger.jsonl"
+          python scripts/validate_state.py --base-ledger "$RUNNER_TEMP/base-ledger.jsonl"
+
+      - name: Verify pushed ledger history is append-only
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' && matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        shell: bash
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.event.before }}"
+          git show "${{ github.event.before }}:state/TASK_LEDGER.jsonl" > "$RUNNER_TEMP/base-ledger.jsonl"
+          python scripts/validate_state.py --base-ledger "$RUNNER_TEMP/base-ledger.jsonl"
+
+      - name: Validate handoff policy without writing an archive
+        run: python scripts/export_handoff.py --dry-run

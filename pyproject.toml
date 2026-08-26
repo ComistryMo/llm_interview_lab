@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-interview-lab"
+version = "0.1.0"
+description = "A gate-based, AI-assisted training lab for LLM algorithm interviews"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "ComistryMo" }]
+keywords = ["llm", "interview", "pytorch", "post-training", "learning"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0,<9"]
+torch = ["torch>=2.2"]
+dev = ["pytest>=8.0,<9"]
+
+[project.urls]
+Homepage = "https://github.com/ComistryMo/llm_interview_lab"
+Repository = "https://github.com/ComistryMo/llm_interview_lab"
+Issues = "https://github.com/ComistryMo/llm_interview_lab/issues"
+
+[tool.setuptools]
+packages = []
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests/infrastructure", "tests/regression"]
+pythonpath = ["."]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+markers = [
+    "infrastructure: repository tooling tests run by default",
+    "training: learner-facing task tests excluded from the default suite",
+    "current: tests for the one active implementation task",
+    "regression: accepted-task regression tests",
+    "locked: tests for tasks that are not yet unlocked",
+    "requires_torch: requires the optional PyTorch dependency",
+    "requires_cuda: requires a CUDA-capable PyTorch environment",
+]

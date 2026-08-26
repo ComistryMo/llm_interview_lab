@@ -1,0 +1,37 @@
+name: Curriculum proposal
+description: Propose one bounded training task or improve an existing task
+title: "[Curriculum]: "
+labels: [curriculum]
+body:
+  - type: input
+    id: task
+    attributes:
+      label: Task ID or proposed ID
+      placeholder: LOSS-001
+    validations:
+      required: true
+  - type: textarea
+    id: gap
+    attributes:
+      label: Learning gap and prerequisites
+      description: Describe the observable gap and the Gate that should unlock this task.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Deliverable and acceptance evidence
+      description: Specify implementation scope, tests, oral questions, and D+2/D+7 variants.
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution confirmation
+      options:
+        - label: The proposal contains no complete solution or answer-leaking test.
+          required: true
+        - label: It contains no employer/client data, logs, paths, metrics, or internal identifiers.
+          required: true
+        - label: I will not create empty future task files without tested content.
+          required: true
