@@ -105,6 +105,7 @@ python -m pytest tests/stage00/test_task_00a1.py -q
 - 2026-08-26：只登记现有四张任务卡；长期路线继续留在 Master Plan，不制造空任务。
 - 2026-08-26：参考仓库只作设计级来源，固定 commit 并记录双许可证声明，不复制其内容。
 - 2026-08-26：GPU 验收策略按任务声明；不能用粗粒度环境 skip 掩盖 CPU 必跑任务。
+- 2026-08-26：远端验证发现旧 action 的 Node 20 弃用警告；核对官方 release 后升级到固定 SHA 的 checkout v6.0.2 与 setup-python v6.2.0，CI #4 无警告通过。
 
 ## 8. 当前进度
 
@@ -112,9 +113,36 @@ python -m pytest tests/stage00/test_task_00a1.py -q
 - [x] 审计现有课程、测试节点与参考仓库固定版本；
 - [x] M1 模型与治理；
 - [x] M2 导航与校验；
-- [ ] M3 集成与验证（本地验证完成，待 committed-HEAD workspace smoke 与远端 CI）；
-- [ ] 最终复盘并移动到 `plans/completed/`。
+- [x] M3 集成与验证；
+- [x] 最终复盘并移动到 `plans/completed/`。
 
 ## 9. 最终复盘
 
-待完成后填写。
+### 交付资产
+
+- `curriculum/catalog.json`：只登记现有 4 张 Stage 00 Task Card；
+- `curriculum/NAVIGATION.md`：依赖轴、岗位轴、runtime 与参考暴露的生成视图；
+- `references/registry.json`：1 个固定 commit 的设计级参考；
+- `scripts/validate_curriculum.py`：无第三方运行依赖的离线严格校验与导航生成器；
+- `tests/infrastructure/test_validate_curriculum.py`：9 个专门测试；
+- README、架构、测试、贡献、issue/PR 模板、Makefile 和 CI 的统一入口。
+
+### 验证证据
+
+- B00e 功能提交：`9bcce6f`；CI #3 成功，Ubuntu/Windows × Python 3.10/3.12 共 4 个 job；
+- action pin 提交：`bf0c80e`；CI #4 成功，4 个 job 且无 Node 20 弃用 warning；
+- 本地 curriculum 校验：4 tasks、1 stage、4 job routes、1 reference；
+- 本地默认测试：121 passed, 2 skipped；skip 仅为当前 Windows 账户不可创建符号链接；
+- 00A-1 定向测试：5 passed, 1 failed，仍是学习者尚未处理非整数 prediction；
+- 状态校验：`00A-1 / needs_revision / H1`，证明 B00e 未修改学习者状态；
+- committed-HEAD 私人 workspace smoke：H0/`not_started`、121 passed/2 skipped、无公共 HEAD、无 origin、upstream push=`DISABLED`；
+- `git diff -- src` 为空；未增加答案、未来空 Task 或第三方内容。
+
+全量测试首轮曾在既有 workspace 测试删除临时 `.git/logs/HEAD` 时遇到一次 Windows `WinError 32`；该单测立即复跑通过，随后同文件 3 项和全量 121 项均通过，判断为瞬时文件锁，未扩大 B00e 范围修改生成器。
+
+### 已知限制
+
+- 当前 catalog 只覆盖真实存在的 4 张任务卡；00A-2、00B、00C 仍准确标为 `draft`；
+- reference 校验离线验证固定格式与本地一致性，不声称持续监控上游；升级 SHA 必须重新人工审计；
+- v1 test node 契约只接受顶层 `test_*` 函数，未来需要 class/parameter node 时应先升级 schema 与测试；
+- 本机 Python 3.9.2 不在支持范围，受支持的 3.10/3.12 由远端四矩阵 CI 验证。
