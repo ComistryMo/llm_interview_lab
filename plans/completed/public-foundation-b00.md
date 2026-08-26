@@ -162,8 +162,33 @@ python scripts/export_handoff.py --dry-run
 - [x] M2 B00b；
 - [x] M3 B00c；
 - [x] M4 B00d/开源化；
-- [ ] M5 验证和推送。
+- [x] M5 验证和推送。
 
 ## 9. 最终复盘
 
-待完成后填写：最终测试、公开 URL、提交 SHA、已知限制、后续 B01 建议。
+### 发布证据
+
+- 公开仓库：`https://github.com/ComistryMo/llm_interview_lab`；
+- B00 功能发布候选：`31cbb5f2e295506b397b0d048f2aad65f5e22332`；
+- 首轮 GitHub Actions：Ubuntu/Windows × Python 3.10/3.12 共 4 个 job 全部成功；
+- 本地默认与严格告警测试：112 passed, 2 skipped；两个 skip 仅因当前 Windows 账户不能创建符号链接，Ubuntu CI 已实际执行对应分支；
+- 状态校验：`00A-1 / needs_revision / H1`，ledger 与 CURRENT_TASK 一致；
+- 当前学习题定向测试仍为 5 passed, 1 failed，证明 B00 没有替学习者修答案；
+- handoff tracked-only dry-run：15 个精确 allowlist 文件，工作树干净，未生成归档；
+- 私人 workspace 真实 smoke：`H0/not_started`、无公共 commit/object、无 `origin`、upstream push=`DISABLED`、无答案 starter、112 passed, 2 skipped；
+- committed tree 未发现雇主标识、内部项目名、真实凭据、本机绝对路径、符号链接或 reparse 文件；
+- Git author/committer 使用 GitHub noreply 地址。
+
+### 已知限制
+
+- 本机只有 Python 3.9.2，因此环境检查按设计失败；受支持的 Python 3.10/3.12 已由 CI 验证；
+- 00A-2 之后的 Stage 00 仍是 draft，B01 才补齐完整 Task Card、测试和隔离提示；
+- v0.1 私人 workspace 与公共上游没有共同历史，也不支持自动 merge/pull；只能审查后挑选基础设施补丁；
+- GitHub private vulnerability reporting 需要在仓库设置中启用并人工验证；
+- 公开 fixture 已去除姓名、雇主、分数和耗时，但仍通过仓库所有者账号与维护者关联，README 已明确披露。
+
+### 后续唯一课程批次
+
+B01：完善 Stage 00 Python 任务包。不得在 B00 发布收尾中提前实现学习者答案，也不得继续扩张状态/导出抽象。
+
+本完成提交以 `v0.1.0` 标记；标签创建后不重写发布历史。
