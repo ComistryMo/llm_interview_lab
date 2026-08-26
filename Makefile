@@ -1,4 +1,4 @@
-.PHONY: check current test regression locked state handoff
+.PHONY: check current test regression locked curriculum state handoff
 
 check:
 	python scripts/check_environment.py
@@ -14,6 +14,9 @@ regression:
 
 locked:
 	python -m pytest -m locked tests/stage00 -q
+
+curriculum:
+	python scripts/validate_curriculum.py
 
 state:
 	python scripts/validate_state.py

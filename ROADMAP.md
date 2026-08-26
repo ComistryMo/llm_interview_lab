@@ -12,6 +12,14 @@ Roadmap 描述公共项目建设，不代表任何学习者已经解锁相应课
 - [x] 拒绝覆盖、禁用 upstream push 的私人 workspace 生成器；
 - [ ] 收集首次跨平台使用反馈。
 
+## v0.1.x — Curriculum discovery and provenance
+
+- [x] 建立依赖轴 × 岗位轴课程导航；
+- [x] 为现有 Task 登记公共成熟度、runtime、GPU 策略和精确测试节点；
+- [x] 建立固定 revision 的外部参考与许可证边界登记；
+- [x] 在跨平台 CI 中离线校验依赖 DAG、导航漂移和 reference exposure；
+- [ ] 使用公开 issue 收集导航可理解性反馈。
+
 ## v0.2 — Starter/workspace split
 
 - 分离只读公共 starter 与个人 workspace；

@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "catalog_id": "llm-interview-lab-public-curriculum",
+  "stages": [
+    {
+      "id": "stage00",
+      "title": "真实小任务中的 Python 与 PyTorch",
+      "order": 0,
+      "gate": "Gate 0"
+    }
+  ],
+  "job_routes": [
+    {
+      "id": "shared-foundation",
+      "title": "共同基础",
+      "description": "所有算法岗位都需要的实现、测试、调试与解释能力。",
+      "order": 0
+    },
+    {
+      "id": "vlm-post-training",
+      "title": "VLM / 多模态后训练",
+      "description": "多模态数据流、SFT、偏好优化、奖励与评测方向。",
+      "order": 1
+    },
+    {
+      "id": "agent-gui",
+      "title": "Agent / GUI Agent",
+      "description": "工具调用、轨迹、环境、评测与 GUI 动作方向。",
+      "order": 2
+    },
+    {
+      "id": "training-frameworks",
+      "title": "训练框架与算法工程",
+      "description": "手写组件之后的框架调用链、状态与工程调试方向。",
+      "order": 3
+    }
+  ],
+  "tasks": [
+    {
+      "id": "00A-1",
+      "title": "统计错误预测次数",
+      "stage_id": "stage00",
+      "order": 1,
+      "task_file": "curriculum/stage00/TASK_00A1.md",
+      "prerequisites": [],
+      "gate_requirements": [
+        "能够说明函数输入、输出和空列表边界"
+      ],
+      "priority": "P0",
+      "difficulty": "introductory",
+      "estimated_minutes": {
+        "minimum": 45,
+        "maximum": 90
+      },
+      "learning_objectives": [
+        "在真实筛选语境中练习循环、异常和类型标注",
+        "解释不修改输入、不可达代码和复杂度"
+      ],
+      "interview_value": "恢复清晰、可解释的 Python 小函数实现能力。",
+      "public_maturity": "validated",
+      "public_portfolio_candidate": false,
+      "runtime_profile": "python-cpu",
+      "gpu_acceptance_policy": "not-applicable",
+      "job_routes": [
+        "shared-foundation",
+        "vlm-post-training"
+      ],
+      "reference_exposure": "none",
+      "reference_ids": [],
+      "math_prerequisites": [
+        "计数与 O(n) 复杂度"
+      ],
+      "visible_test_count": 6,
+      "test_nodes": [
+        "tests/stage00/test_task_00a1.py::test_counts_mixed_predictions",
+        "tests/stage00/test_task_00a1.py::test_counts_all_correct",
+        "tests/stage00/test_task_00a1.py::test_counts_all_wrong",
+        "tests/stage00/test_task_00a1.py::test_rejects_empty_predictions",
+        "tests/stage00/test_task_00a1.py::test_rejects_non_integer_prediction",
+        "tests/stage00/test_task_00a1.py::test_does_not_mutate_input"
+      ]
+    },
+    {
+      "id": "00A-2",
+      "title": "筛选困难样本",
+      "stage_id": "stage00",
+      "order": 2,
+      "task_file": "curriculum/stage00/TASK_00A2.md",
+      "prerequisites": [
+        {
+          "task_id": "00A-1",
+          "minimum_status": "implemented"
+        }
+      ],
+      "gate_requirements": [
+        "能够解释列表、字典、函数复用与浅层输入不变性"
+      ],
+      "priority": "P0",
+      "difficulty": "introductory",
+      "estimated_minutes": {
+        "minimum": 60,
+        "maximum": 120
+      },
+      "learning_objectives": [
+        "处理 list[dict]、字段缺失和阈值异常",
+        "复用已验收函数并保持顺序与输入不变"
+      ],
+      "interview_value": "把 Python 容器和异常处理落到困难样本数据流。",
+      "public_maturity": "draft",
+      "public_portfolio_candidate": false,
+      "runtime_profile": "python-cpu",
+      "gpu_acceptance_policy": "not-applicable",
+      "job_routes": [
+        "shared-foundation",
+        "vlm-post-training"
+      ],
+      "reference_exposure": "none",
+      "reference_ids": [],
+      "math_prerequisites": [
+        "阈值比较与 O(n) 复杂度"
+      ],
+      "visible_test_count": 4,
+      "test_nodes": [
+        "tests/stage00/test_hard_sample_miner.py::test_select_hard_samples_keeps_order",
+        "tests/stage00/test_hard_sample_miner.py::test_select_hard_samples_does_not_mutate_input",
+        "tests/stage00/test_hard_sample_miner.py::test_select_hard_samples_rejects_invalid_threshold",
+        "tests/stage00/test_hard_sample_miner.py::test_select_hard_samples_rejects_missing_fields"
+      ]
+    },
+    {
+      "id": "00B",
+      "title": "困难样本统计",
+      "stage_id": "stage00",
+      "order": 3,
+      "task_file": "curriculum/stage00/TASK_00B.md",
+      "prerequisites": [
+        {
+          "task_id": "00A-2",
+          "minimum_status": "implemented"
+        }
+      ],
+      "gate_requirements": [
+        "能够解释字典计数、比例和除零边界"
+      ],
+      "priority": "P0",
+      "difficulty": "introductory",
+      "estimated_minutes": {
+        "minimum": 60,
+        "maximum": 120
+      },
+      "learning_objectives": [
+        "构造字段稳定的统计结果",
+        "处理空输入、标签不平衡与未知标签"
+      ],
+      "interview_value": "训练数据统计、边界处理与可复用逻辑组织。",
+      "public_maturity": "draft",
+      "public_portfolio_candidate": false,
+      "runtime_profile": "python-cpu",
+      "gpu_acceptance_policy": "not-applicable",
+      "job_routes": [
+        "shared-foundation",
+        "vlm-post-training"
+      ],
+      "reference_exposure": "none",
+      "reference_ids": [],
+      "math_prerequisites": [
+        "比例、除零与 O(n) 复杂度"
+      ],
+      "visible_test_count": 2,
+      "test_nodes": [
+        "tests/stage00/test_hard_sample_miner.py::test_summarize_hard_samples",
+        "tests/stage00/test_hard_sample_miner.py::test_summarize_empty_samples"
+      ]
+    },
+    {
+      "id": "00C",
+      "title": "最后有效 Token 分类头",
+      "stage_id": "stage00",
+      "order": 4,
+      "task_file": "curriculum/stage00/TASK_00C.md",
+      "prerequisites": [
+        {
+          "task_id": "00A-2",
+          "minimum_status": "implemented"
+        },
+        {
+          "task_id": "00B",
+          "minimum_status": "implemented"
+        }
+      ],
+      "gate_requirements": [
+        "能够解释 [B, T, H]、[B, T] 与 [B, C] 的 shape",
+        "能够区分有效 token 与 padding"
+      ],
+      "priority": "P0",
+      "difficulty": "intermediate",
+      "estimated_minutes": {
+        "minimum": 90,
+        "maximum": 180
+      },
+      "learning_objectives": [
+        "使用批量 Tensor 索引选择最后有效 token",
+        "检查 shape、mask、device 与梯度流"
+      ],
+      "interview_value": "连接 Python 基础、Tensor shape 与 VLM 分类头语境。",
+      "public_maturity": "draft",
+      "public_portfolio_candidate": false,
+      "runtime_profile": "pytorch-cpu",
+      "gpu_acceptance_policy": "cpu-required-gpu-optional",
+      "job_routes": [
+        "shared-foundation",
+        "vlm-post-training",
+        "training-frameworks"
+      ],
+      "reference_exposure": "none",
+      "reference_ids": [],
+      "math_prerequisites": [
+        "Tensor shape、mask 与批量索引"
+      ],
+      "visible_test_count": 4,
+      "test_nodes": [
+        "tests/stage00/test_classification_head.py::test_output_shape",
+        "tests/stage00/test_classification_head.py::test_uses_last_valid_token",
+        "tests/stage00/test_classification_head.py::test_gradient_flows_to_selected_hidden_state",
+        "tests/stage00/test_classification_head.py::test_rejects_all_padding_sequence"
+      ]
+    }
+  ]
+}

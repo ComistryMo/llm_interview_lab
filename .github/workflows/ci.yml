@@ -39,6 +39,9 @@ jobs:
       - name: Run repository health tests
         run: python -m pytest -q
 
+      - name: Validate curriculum catalog and generated navigation
+        run: python scripts/validate_curriculum.py
+
       - name: Validate training state
         run: python scripts/validate_state.py
 

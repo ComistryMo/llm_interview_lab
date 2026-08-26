@@ -24,6 +24,13 @@ body:
       description: Specify implementation scope, tests, oral questions, and D+2/D+7 variants.
     validations:
       required: true
+  - type: textarea
+    id: metadata
+    attributes:
+      label: Runtime, route, and reference exposure
+      description: State the job route, CPU/Torch/CUDA minimum, GPU acceptance policy, and whether external material is preview-safe or post-review-only.
+    validations:
+      required: true
   - type: checkboxes
     id: contribution
     attributes:
@@ -34,4 +41,6 @@ body:
         - label: It contains no employer/client data, logs, paths, metrics, or internal identifiers.
           required: true
         - label: I will not create empty future task files without tested content.
+          required: true
+        - label: Any external design influence is independently written and registered at a fixed revision.
           required: true

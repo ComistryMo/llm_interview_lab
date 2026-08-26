@@ -5,7 +5,7 @@
 ## 贡献类型
 
 - 基础设施或文档：说明用户问题、变更范围和验证命令；
-- Curriculum Task：必须有唯一 ID、前置任务、目标、starter、可见测试、边界、提示阶梯、D+2/D+7 变式；
+- Curriculum Task：必须有唯一 ID、前置任务、目标、starter、可见测试、边界、提示阶梯、D+2/D+7 变式，并同步 catalog；
 - 测试修复：说明原需求、此前漏检和为什么不会泄露答案；
 - 安全问题：按 [SECURITY.md](SECURITY.md) 私下报告。
 
@@ -17,6 +17,7 @@
 python -m pip install -r requirements.txt
 python scripts/check_environment.py
 python -m pytest -q
+python scripts/validate_curriculum.py
 python scripts/validate_state.py
 python scripts/export_handoff.py --dry-run
 ```
@@ -33,7 +34,9 @@ PR 应只解决一个清楚的问题，并写明：
 4. 是否使用 AI，以及贡献者如何核验准确性；
 5. 隐私、许可证和答案泄露检查结果。
 
-课程贡献必须保持 `src/` starter 与参考答案分离。H4/H5 内容不能藏在测试名、错误消息、注释或提示文件里。
+课程贡献必须保持 `src/` starter 与参考答案分离。H4/H5 内容不能藏在测试名、错误消息、注释或提示文件里。新增或修改 Task 后更新 `curriculum/catalog.json`，运行 `python scripts/validate_curriculum.py --write-navigation`，不要手工编辑生成导航。
+
+若外部项目实质影响设计或课程材料，按[来源治理](docs/REFERENCE_POLICY.md)登记固定 revision 和许可证边界。默认只吸收抽象机制；复制、翻译或改编内容必须另行证明授权、署名和独立审查，不能混在普通课程 PR 中。
 
 ## Git 习惯
 

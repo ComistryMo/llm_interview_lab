@@ -54,4 +54,4 @@
 
 P0 是 Python/Tensor/Loss/Optimizer/训练循环/Attention/SFT-DPO/Agent loop 的核心链；P1 是 VLM 深化、RL、源码调用链与项目连续追问；P2 是 MoE、量化、分布式设计和性能原理。FlashAttention CUDA、完整训练框架和多个框架同时深读在前置 Gate 未通过前暂缓。
 
-核心手撕清单见 [curriculum/CORE_40.md](../curriculum/CORE_40.md)，当前唯一任务见 [state/CURRENT_TASK.md](../state/CURRENT_TASK.md)。
+当前已落地任务可按[依赖轴 × 岗位轴](../curriculum/NAVIGATION.md)浏览，核心手撕清单见 [curriculum/CORE_40.md](../curriculum/CORE_40.md)，当前唯一任务见 [state/CURRENT_TASK.md](../state/CURRENT_TASK.md)。长期路线中的名称不表示已经有可执行 Task Card。

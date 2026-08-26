@@ -26,6 +26,8 @@ private learner repository
 | `tests/regression/` | 已验收公共回归 | 维护者 | 不泄露完整答案 |
 | `tests/stage00/` | 当前/锁定训练测试 | 教练与维护者 | 不泄露完整答案 |
 | `curriculum/` | Task Card 与依赖 | 课程维护者 | 否 |
+| `curriculum/catalog.json` | 公共任务发现、runtime、测试节点和路由元数据 | 课程维护者 | 否 |
+| `curriculum/NAVIGATION.md` | catalog 的确定性生成视图 | 自动生成 | 否 |
 | `hints/` | 按 Task/等级隔离的正式提示；v0.1 仅有规则 | 课程维护者 | 不放 H5 |
 | `state/` | 当前快照、ledger、错误 | 私人副本中的学习者/教练 | 否 |
 | `reviews/` | 有证据的正式审查 | 教练 | 可引用少量 diff，不放答案全文 |
@@ -34,6 +36,7 @@ private learner repository
 | `templates/` | 私人副本初始化模板 | 维护者 | 否 |
 | `prompts/` | 可复制短指令 | 维护者 | 否 |
 | `scripts/` | 环境、状态、导出工具 | 维护者 | 否 |
+| `references/` | 固定 revision 的外部来源登记，不镜像内容 | 维护者 | 否 |
 | `plans/` | 重大跨目录 ExecPlan | 维护者 | 否 |
 | `.github/` | CI 与贡献入口 | 维护者 | 否 |
 
@@ -46,13 +49,16 @@ private learner repository
 - `PROGRESS.md` 与 handoff 是派生视图；
 - `MISTAKE_LOG.md` 保存定性复盘，不决定状态；
 - 任务要求以对应 `curriculum/` 文件为准；
+- 跨任务发现、依赖边和运行策略以 `curriculum/catalog.json` 为准；
+- `curriculum/NAVIGATION.md` 是生成视图，不是第二份手工事实；
+- 外部设计影响与许可证证据以 `references/registry.json` 为准；
 - AI 行为以 `COACHING_PROTOCOL.md` 为准。
 
 校验器必须发现而不是掩盖这些文件的漂移。
 
 ## 依赖与测试
 
-基础设施只有 Python 3.10+ 与 pytest。Torch 是阶段依赖，不进入最小安装。默认 pytest 不收集当前或锁定训练题；显式定向命令负责训练反馈。Makefile 只是快捷方式，权威文档始终给出跨平台 Python 命令。
+基础设施只有 Python 3.10+ 与 pytest。Torch 是阶段依赖，不进入最小安装。默认 pytest 不收集当前或锁定训练题；显式定向命令负责训练反馈。每张 task 声明最低 runtime 与 GPU 验收策略；达到 `validated` 的 CPU 任务不能靠 CUDA 缺失整体跳过。Makefile 只是快捷方式，权威文档始终给出跨平台 Python 命令。
 
 ## 生命周期
 

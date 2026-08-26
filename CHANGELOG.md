@@ -4,7 +4,12 @@
 
 ## [Unreleased]
 
-尚无变更。
+### Added
+
+- 依赖阶段 × 岗位方向的生成式课程导航；
+- 现有 Task 的机器可读公共元数据、runtime/GPU 策略和精确测试节点；
+- 固定 commit 的外部参考与许可证范围登记；
+- curriculum、依赖 DAG、reference exposure 和导航漂移的离线校验。
 
 ## [0.1.0] - 2026-08-26
 

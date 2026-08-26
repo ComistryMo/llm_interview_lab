@@ -17,7 +17,7 @@
 
 ## 任务选择规则
 
-先画依赖，再选最小阻塞点。同一时刻只有一个 Implementation Lane Task；Preview Lane 可以领先 2–4 周，但只看公式、shape、输入输出和官方资料。
+先从[课程双轴导航](../curriculum/NAVIGATION.md)按目标岗位找到候选项，再沿依赖边选择最小阻塞点。同一时刻只有一个 Implementation Lane Task；Preview Lane 可以领先 2–4 周，但只看公式、shape、输入输出和官方资料。
 
 任务卡至少要有 ID、前置、输入输出、第一版范围、明确不做、可见/变式测试、提示阶梯、验收问题、D+2/D+7 和降级任务。没有这些字段时先补任务卡，不先写答案。
 

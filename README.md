@@ -21,7 +21,10 @@
 - `tests/` 把正常、边界、异常和性质要求变成可执行证据；
 - `state/TASK_LEDGER.jsonl` 记录帮助等级和状态迁移；
 - `curriculum/`、`hints/` 将任务文字、分级提示与完整答案分开；
+- 课程可按依赖阶段或岗位方向浏览，runtime、GPU 策略和可见测试均有机器可读登记；
 - 通用教练协议可供具备终端能力、只读文件能力或纯聊天能力的 AI 使用。
+
+它与“答案型算法教程”的边界很明确：这里不把完整答案与当前练习放在一起，核心产物是受控 AI 帮助下的独立实现、审查、D+2/D+7 复测和迁移证据。外部优秀项目只作为固定版本的设计参考，不作为课程内容镜像。
 
 ## 适合与不适合
 
@@ -58,6 +61,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python scripts/check_environment.py
 python -m pytest -q
+python scripts/validate_curriculum.py
 python scripts/validate_state.py
 ```
 
@@ -90,6 +94,7 @@ python scripts/validate_state.py
 | 创建私人 workspace | `python scripts/create_private_workspace.py <new-directory>` |
 | 默认健康测试 | `python -m pytest -q` |
 | 当前任务 | 读取 `state/CURRENT_TASK.md` 中的命令 |
+| 课程目录一致性 | `python scripts/validate_curriculum.py` |
 | 状态一致性 | `python scripts/validate_state.py` |
 | 导出预检 | `python scripts/export_handoff.py --dry-run` |
 | 可选 Torch 环境 | `python -m pip install -r requirements-torch.txt` |
@@ -104,7 +109,10 @@ python scripts/validate_state.py
 - [AI 接入](docs/AI_COACH_ADAPTER.md)
 - [测试边界](docs/TESTING.md)
 - [仓库架构](docs/REPO_ARCHITECTURE.md)
+- [课程双轴导航](curriculum/NAVIGATION.md)
+- [课程元数据契约](docs/CURRICULUM_METADATA.md)
 - [课程路线](docs/MASTER_TRAINING_PLAN.md)
+- [外部参考与来源治理](docs/REFERENCE_POLICY.md)
 - [贡献指南](CONTRIBUTING.md)
 - [安全政策](SECURITY.md)
 

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "references": [
+    {
+      "id": "datawhale-llm-algo-leetcode",
+      "kind": "external-repository",
+      "title": "datawhalechina/llm-algo-leetcode",
+      "repository_url": "https://github.com/datawhalechina/llm-algo-leetcode",
+      "pinned_revision": "c7a81f957c170c88c01ec71dfd1a838cee90b4a4",
+      "audited_on": "2026-08-26",
+      "licenses": [
+        {
+          "scope": "tutorial-text-in-notebooks",
+          "spdx": "CC-BY-4.0",
+          "evidence_url": "https://github.com/datawhalechina/llm-algo-leetcode/blob/c7a81f957c170c88c01ec71dfd1a838cee90b4a4/README.md"
+        },
+        {
+          "scope": "executable-code-in-notebooks",
+          "spdx": "Apache-2.0",
+          "evidence_url": "https://github.com/datawhalechina/llm-algo-leetcode/blob/c7a81f957c170c88c01ec71dfd1a838cee90b4a4/README.md"
+        }
+      ],
+      "influence": [
+        "同时提供依赖顺序和目标导向入口",
+        "公开标注运行环境与硬件要求",
+        "用统一校验入口维护课程资产一致性",
+        "实验结果应记录工作负载、环境和决策边界"
+      ],
+      "excluded_material": [
+        "教程正文、公式说明和图示",
+        "代码单元、完整答案和测试实现",
+        "Notebook、站点镜像和目录命名",
+        "未在本仓库独立核验的基准结果"
+      ],
+      "usage": "design-reference-only"
+    }
+  ]
+}
