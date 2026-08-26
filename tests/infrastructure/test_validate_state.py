@@ -796,14 +796,17 @@ def test_repository_current_state_is_consistent() -> None:
         ledger_path=REPO_ROOT / "state" / "TASK_LEDGER.jsonl",
         current_task_path=REPO_ROOT / "state" / "CURRENT_TASK.md",
     )
+    current = parse_current_task_state(
+        (REPO_ROOT / "state" / "CURRENT_TASK.md").read_text(encoding="utf-8")
+    )
 
-    assert event_count == 1
-    assert task_count == 1
-    assert snapshot.task_id == "00A-1"
-    assert snapshot.status.value == "needs_revision"
-    assert snapshot.assistance_level.value == "H1"
-    assert not snapshot.demonstration_only
-    assert not snapshot.requires_independent_variant
+    assert event_count >= 1
+    assert task_count >= 1
+    assert snapshot.task_id == current.task_id
+    assert snapshot.status == current.status
+    assert snapshot.assistance_level == current.assistance_level
+    assert snapshot.demonstration_only == current.demonstration_only
+    assert snapshot.requires_independent_variant == current.requires_independent_variant
 
 
 def test_repository_validation_rejects_missing_evidence_artifact(
@@ -901,14 +904,21 @@ def test_append_only_validation_accepts_append_and_rejects_rewrite() -> None:
 def test_cli_json_is_machine_readable_and_does_not_expose_repo_path(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    current = parse_current_task_state(
+        (REPO_ROOT / "state" / "CURRENT_TASK.md").read_text(encoding="utf-8")
+    )
     exit_code = main(["--json"])
     output = capsys.readouterr().out
     payload = json.loads(output)
 
     assert exit_code == 0
     assert payload["ok"] is True
-    assert payload["current_task"]["status"] == "needs_revision"
-    assert payload["current_task"]["requires_independent_variant"] is False
+    assert payload["current_task"]["task_id"] == current.task_id
+    assert payload["current_task"]["status"] == current.status.value
+    assert (
+        payload["current_task"]["requires_independent_variant"]
+        == current.requires_independent_variant
+    )
     assert str(REPO_ROOT) not in output
 
 
