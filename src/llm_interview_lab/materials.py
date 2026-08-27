@@ -25,7 +25,20 @@ from .workspace import (
 
 MAX_MATERIAL_BYTES = 20 * 1024 * 1024
 MATERIAL_KINDS = frozenset(
-    {"resume", "experience", "research", "job_description", "portfolio", "other"}
+    {
+        "resume",
+        "career_intent",
+        "internship",
+        "project",
+        "paper",
+        "competition",
+        "interview_question",
+        "experience",
+        "research",
+        "job_description",
+        "portfolio",
+        "other",
+    }
 )
 TEXT_SUFFIXES = frozenset({".md", ".txt", ".json", ".yaml", ".yml"})
 OPAQUE_SUFFIXES = frozenset({".pdf", ".docx"})

@@ -5,7 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
+import stat
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -56,7 +58,12 @@ class Problem:
         value = self.raw["retention"].get(stage)
         if not isinstance(value, dict) or value.get("oracle_validated") is not True:
             return None
-        root = _repository_path(repo_root, value["assets"]["root"], f"{self.id} {stage} retention")
+        root = _repository_path(
+            repo_root,
+            value["assets"]["root"],
+            f"{self.id} {stage} retention",
+            required_root=repo_root / "curriculum/retention",
+        )
         return root / value["assets"]["starter"], root / value["assets"]["public_tests"], value["interface"]["symbol"]
 
 
@@ -136,16 +143,69 @@ def _yaml_object(path: Path) -> dict[str, Any]:
     return value
 
 
-def _repository_path(repo_root: Path, value: str, label: str) -> Path:
+def _is_obvious_link(path: Path) -> bool:
+    try:
+        value = os.lstat(path)
+    except OSError:
+        return False
+    attributes = getattr(value, "st_file_attributes", 0)
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return stat.S_ISLNK(value.st_mode) or bool(attributes & reparse_flag)
+
+
+def _reject_linked_components(path: Path, boundary: Path, label: str) -> None:
+    lexical = path.absolute()
+    root = boundary.absolute()
+    try:
+        relative = lexical.relative_to(root)
+    except ValueError as error:
+        raise CatalogError(f"path escapes repository for {label}") from error
+    current = root
+    if _is_obvious_link(current):
+        raise CatalogError(f"linked path is not allowed for {label}")
+    for part in relative.parts:
+        current /= part
+        if _is_obvious_link(current):
+            raise CatalogError(f"linked path is not allowed for {label}")
+
+
+def _repository_path(
+    repo_root: Path,
+    value: str,
+    label: str,
+    *,
+    required_root: Path | None = None,
+) -> Path:
     pure = PurePosixPath(value)
     if pure.is_absolute() or not pure.parts or "\\" in value or any(part in {"", ".", ".."} for part in pure.parts):
         raise CatalogError(f"unsafe repository-relative path for {label}")
-    resolved = repo_root.joinpath(*pure.parts).resolve()
+    lexical = repo_root.joinpath(*pure.parts)
+    _reject_linked_components(lexical, repo_root, label)
+    resolved = lexical.resolve()
     try:
         resolved.relative_to(repo_root.resolve())
     except ValueError as error:
         raise CatalogError(f"path escapes repository for {label}") from error
+    if required_root is not None:
+        try:
+            lexical.absolute().relative_to(required_root.absolute())
+            resolved.relative_to(required_root.resolve())
+        except ValueError as error:
+            raise CatalogError(f"path is outside the fixed curriculum root for {label}") from error
     return resolved
+
+
+def _regular_repository_file(path: Path, repo_root: Path, label: str) -> Path:
+    """Return one regular file without following a link or reparse component."""
+
+    _reject_linked_components(path, repo_root, label)
+    try:
+        value = os.lstat(path)
+    except OSError as error:
+        raise CatalogError(f"{label} cannot be read") from error
+    if not stat.S_ISREG(value.st_mode):
+        raise CatalogError(f"{label} must be a regular, unlinked file")
+    return path.resolve()
 
 
 def _validate_shard(data: dict[str, Any], schema: dict[str, Any], name: str) -> None:
@@ -158,7 +218,12 @@ def _validate_shard(data: dict[str, Any], schema: dict[str, Any], name: str) -> 
 def _problem(repo_root: Path, item: dict[str, Any]) -> Problem:
     if item["status"] == "planned":
         return Problem(item["id"], item["title"], "planned", tuple(item["prerequisites"]), None, None, None, None, None, item)
-    problem_dir = _repository_path(repo_root, item["assets"]["problem_dir"], f"{item['id']} problem_dir")
+    problem_dir = _repository_path(
+        repo_root,
+        item["assets"]["problem_dir"],
+        f"{item['id']} problem_dir",
+        required_root=repo_root / "curriculum/problems",
+    )
     constraints = item["constraints"]
     return Problem(
         item["id"], item["title"], item["status"], tuple(item["prerequisites"]), problem_dir,
@@ -182,23 +247,39 @@ def _validate_assets(repo_root: Path, problems: dict[str, Problem]) -> None:
         assert problem.problem_dir is not None and problem.public_tests is not None
         if not problem.problem_dir.is_dir():
             raise CatalogError(f"problem assets are missing: {problem.id}")
+        if any(_is_obvious_link(path) for path in problem.problem_dir.iterdir()):
+            raise CatalogError(f"problem assets must be regular, unlinked files: {problem.id}")
         actual = {p.name for p in problem.problem_dir.iterdir() if p.name != "__pycache__" and p.suffix != ".pyc"}
         if actual != PROBLEM_ASSETS:
             raise CatalogError(f"problem assets mismatch for {problem.id}; missing={sorted(PROBLEM_ASSETS - actual)}, extra={sorted(actual - PROBLEM_ASSETS)}")
         if not problem.public_tests.is_file():
             raise CatalogError(f"public test file is missing: {problem.id}")
+        if any(
+            not (problem.problem_dir / name).is_file()
+            for name in PROBLEM_ASSETS
+        ):
+            raise CatalogError(f"problem assets must be regular files: {problem.id}")
         for stage in ("d2", "d7"):
             value = problem.raw["retention"][stage]
             if not isinstance(value, dict):
                 continue
-            root = _repository_path(repo_root, value["assets"]["root"], f"{problem.id} {stage} retention")
+            root = _repository_path(
+                repo_root,
+                value["assets"]["root"],
+                f"{problem.id} {stage} retention",
+                required_root=repo_root / "curriculum/retention",
+            )
             if root.parts[-2:] != (problem.id, stage):
                 raise CatalogError(f"retention assets do not match problem and stage: {problem.id}/{stage}")
             if not root.is_dir():
                 raise CatalogError(f"retention assets are missing: {problem.id}/{stage}")
+            if any(_is_obvious_link(path) for path in root.iterdir()):
+                raise CatalogError(f"retention assets must be regular, unlinked files: {problem.id}/{stage}")
             actual = {p.name for p in root.iterdir() if p.name != "__pycache__" and p.suffix != ".pyc"}
             if actual != RETENTION_ASSETS:
                 raise CatalogError(f"retention assets mismatch for {problem.id}/{stage}")
+            if any(not (root / name).is_file() for name in RETENTION_ASSETS):
+                raise CatalogError(f"retention assets must be regular files: {problem.id}/{stage}")
         ready_dirs.add(problem.problem_dir.resolve())
     problems_root = repo_root / "curriculum/problems"
     if problems_root.exists():
@@ -223,7 +304,12 @@ def compute_problem_fingerprint(repo_root: Path, problem: Problem) -> str:
     for stage in ("d2", "d7"):
         value = problem.raw["retention"].get(stage)
         if isinstance(value, dict):
-            root = _repository_path(repo_root, value["assets"]["root"], f"{problem.id} {stage} retention")
+            root = _repository_path(
+                repo_root,
+                value["assets"]["root"],
+                f"{problem.id} {stage} retention",
+                required_root=repo_root / "curriculum/retention",
+            )
             asset_paths.extend((root / value["assets"]["starter"], root / value["assets"]["public_tests"]))
     for path in asset_paths:
         try:
@@ -252,8 +338,28 @@ def _validate_fingerprints(repo_root: Path, problems: dict[str, Problem]) -> Non
 
 
 def load_catalog(repo_root: Path, *, verify_validation: bool = True) -> Catalog:
-    schema = _json_object(repo_root / "curriculum/schema/catalog.schema.json", "catalog schema")
-    paths = sorted((repo_root / "curriculum/catalog").glob("*.yaml"))
+    schema_path = _repository_path(
+        repo_root,
+        "curriculum/schema/catalog.schema.json",
+        "catalog schema",
+        required_root=repo_root / "curriculum/schema",
+    )
+    schema = _json_object(
+        _regular_repository_file(schema_path, repo_root, "catalog schema"),
+        "catalog schema",
+    )
+    catalog_root = _repository_path(
+        repo_root,
+        "curriculum/catalog",
+        "catalog root",
+        required_root=repo_root / "curriculum/catalog",
+    )
+    if not catalog_root.is_dir():
+        raise CatalogError("catalog root is missing")
+    paths = sorted(
+        _regular_repository_file(path, repo_root, f"catalog shard {path.name}")
+        for path in catalog_root.glob("*.yaml")
+    )
     if not paths:
         raise CatalogError("catalog has no YAML shards")
     problems: dict[str, Problem] = {}

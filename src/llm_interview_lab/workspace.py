@@ -11,7 +11,7 @@ from pathlib import Path
 import re
 import stat
 import subprocess
-from typing import Any, TYPE_CHECKING
+from typing import Any, Mapping, TYPE_CHECKING
 
 from jsonschema import Draft202012Validator
 import yaml
@@ -132,6 +132,58 @@ def load_profile(paths: ProfilePaths, repo_root: Path) -> dict[str, Any]:
     return validated
 
 
+def _atomic_write_profile(
+    repo_root: Path,
+    profile_id: str,
+    path: Path,
+    value: Mapping[str, Any],
+) -> None:
+    """Replace one validated Profile file without exposing a partial write."""
+
+    ensure_profile_path_is_safe(repo_root, profile_id, path, must_exist=True)
+    temporary = path.with_name(f".{path.name}.{os.urandom(8).hex()}.tmp")
+    ensure_profile_path_is_safe(repo_root, profile_id, temporary)
+    try:
+        content = yaml.safe_dump(
+            dict(value), sort_keys=False, allow_unicode=True
+        ).encode("utf-8")
+        with temporary.open("xb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    except (OSError, UnicodeError, yaml.YAMLError) as error:
+        raise WorkspaceError("profile.yaml could not be written atomically") from error
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def update_career_intent(
+    repo_root: Path,
+    profile_id: str,
+    career_intent: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Atomically replace the optional career intent in one explicit Profile.
+
+    ``profile.yaml`` remains the current configuration source of truth.  This
+    operation deliberately does not append a Practice event or rewrite any
+    learning history.
+    """
+
+    if not isinstance(career_intent, Mapping):
+        raise WorkspaceError("career intent must be an object")
+    paths = profile_paths(repo_root, profile_id)
+    ensure_profile_is_ignored(repo_root, profile_id)
+    profile = load_profile(paths, repo_root)
+    updated = {**profile, "career_intent": dict(career_intent)}
+    validate_profile_data(updated, repo_root)
+    _atomic_write_profile(repo_root, profile_id, paths.profile_file, updated)
+    return updated
+
+
 def _git_path_is_ignored(repo_root: Path, candidate: Path) -> bool:
     relative = candidate.relative_to(repo_root).as_posix()
     result = subprocess.run(["git", "-C", str(repo_root), "check-ignore", "-q", "--", relative], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -141,8 +193,19 @@ def _git_path_is_ignored(repo_root: Path, candidate: Path) -> bool:
 
 
 def ensure_profile_is_ignored(repo_root: Path, profile_id: str) -> None:
-    if not _git_path_is_ignored(repo_root, profile_paths(repo_root, profile_id).events_file):
-        raise WorkspaceError("workspace profile path is not ignored by Git")
+    paths = profile_paths(repo_root, profile_id)
+    probes = (
+        paths.root,
+        paths.profile_file,
+        paths.events_file,
+        paths.materials_root / "manifest.json",
+        paths.interviews_root / "privacy-probe" / "session.json",
+        paths.submissions_root / "privacy-probe" / "submission.py",
+    )
+    if not all(_git_path_is_ignored(repo_root, candidate) for candidate in probes):
+        raise WorkspaceError(
+            "workspace Profile is not fully ignored by Git; refusing private writes"
+        )
 
 
 def _ensure_profile_subdirectories(repo_root: Path, paths: ProfilePaths) -> None:
@@ -305,6 +368,21 @@ def start_problem(repo_root: Path, profile_id: str, problem: "Problem") -> Start
     paths = profile_paths(repo_root, profile_id)
     load_profile(paths, repo_root)
     state = reduce_events(read_events(paths.events_file, event_schema_path(repo_root)))
+    blocking = sorted(
+        {
+            attempt.problem_id
+            for attempt in state.attempts.values()
+            if attempt.retention_stage is None
+            and attempt.problem_id != problem.id
+            and state.problem_status(attempt.problem_id)
+            in {"in_progress", "implemented"}
+        }
+    )
+    if blocking:
+        raise WorkspaceError(
+            "finish the current implementation or review before starting another: "
+            + ", ".join(blocking)
+        )
     initial = [attempt for attempt in state.attempts_for(problem.id) if attempt.retention_stage is None]
     if state.problem_implemented(problem.id):
         raise WorkspaceError("problem is already implemented; use retain after review")

@@ -91,6 +91,43 @@ class AppendResult:
     appended: bool
 
 
+@dataclass(frozen=True)
+class MistakeFailure:
+    """One historical failure, retained even after later evidence recovers it."""
+
+    event_id: str
+    problem_id: str
+    attempt_id: str
+    failed_at: datetime
+    failure_kind: str
+    recovered: bool
+
+
+@dataclass(frozen=True)
+class MistakeSummary:
+    """A problem-level view derived from events without becoming a new fact source."""
+
+    problem_id: str
+    failure_count: int
+    last_failed_at: datetime
+    last_failed_sequence: int
+    last_failure_kind: str
+    current_evidence_recovered: bool
+    failure_history: tuple[MistakeFailure, ...]
+
+
+@dataclass
+class _PendingMistakeFailure:
+    event_id: str
+    problem_id: str
+    attempt_id: str
+    failed_at: datetime
+    sequence: int
+    failure_kind: str
+    evidence_channel: str
+    recovered: bool = False
+
+
 def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -249,6 +286,127 @@ def reduce_events(events: Iterable[Mapping[str, Any]]) -> WorkspaceState:
         elif event_type == "task_mastered":
             state.mastered.add(problem_id)
     return state
+
+
+def _mistake_timestamp(event: Mapping[str, Any]) -> datetime:
+    try:
+        value = datetime.fromisoformat(str(event["timestamp"]))
+    except (KeyError, TypeError, ValueError) as error:
+        raise EventError("mistake history contains an invalid timestamp") from error
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise EventError("mistake history timestamp must include a timezone")
+    return value
+
+
+def _review_failure_kind(payload: Mapping[str, Any]) -> str | None:
+    failed = [
+        name
+        for name, field_name in (("contract", "contract_status"), ("oral", "oral_status"))
+        if payload.get(field_name) == "failed"
+    ]
+    return f"review_{'_and_'.join(failed)}_failed" if failed else None
+
+
+def summarize_mistakes(events: Iterable[Mapping[str, Any]]) -> tuple[MistakeSummary, ...]:
+    """Reduce failure evidence in physical event order.
+
+    A later passing public test recovers public-test and generic task failures for the
+    same attempt. A passing review similarly recovers review and generic task failures.
+    Mastery recovers every historical failure for that problem. Recovered failures stay
+    in ``failure_history`` so this projection never erases the learner's error history.
+    """
+
+    history = tuple(events)
+    reduce_events(history)  # Reuse canonical profile/attempt sequence validation.
+    failures_by_problem: dict[str, list[_PendingMistakeFailure]] = {}
+    pending: dict[tuple[str, str, str], list[_PendingMistakeFailure]] = {}
+
+    def record(
+        event: Mapping[str, Any],
+        failure_kind: str,
+        evidence_channel: str,
+        sequence: int,
+    ) -> None:
+        problem_id = str(event["problem_id"])
+        attempt_id = str(event["attempt_id"])
+        failure = _PendingMistakeFailure(
+            event_id=str(event["event_id"]),
+            problem_id=problem_id,
+            attempt_id=attempt_id,
+            failed_at=_mistake_timestamp(event),
+            sequence=sequence,
+            failure_kind=failure_kind,
+            evidence_channel=evidence_channel,
+        )
+        failures_by_problem.setdefault(problem_id, []).append(failure)
+        pending.setdefault((problem_id, attempt_id, evidence_channel), []).append(failure)
+
+    def recover(problem_id: str, attempt_id: str, *channels: str) -> None:
+        for channel in channels:
+            for failure in pending.pop((problem_id, attempt_id, channel), []):
+                failure.recovered = True
+
+    for sequence, event in enumerate(history):
+        event_type = str(event["event_type"])
+        if event_type == "profile_created":
+            continue
+        problem_id = str(event["problem_id"])
+        attempt_id = str(event["attempt_id"])
+        payload = event["payload"]
+        if event_type == "public_tests_run":
+            status = str(payload["status"])
+            if status == "passed":
+                recover(problem_id, attempt_id, "public_tests", "task")
+            elif status in {"failed", "timed_out", "import_error"}:
+                record(
+                    event,
+                    f"public_tests_{status}",
+                    "public_tests",
+                    sequence,
+                )
+        elif event_type == "review_completed":
+            failure_kind = _review_failure_kind(payload)
+            if failure_kind is None:
+                recover(problem_id, attempt_id, "review", "task")
+            else:
+                record(event, failure_kind, "review", sequence)
+        elif event_type == "task_failed":
+            record(event, "task_failed", "task", sequence)
+        elif event_type == "task_implemented":
+            recover(problem_id, attempt_id, "task")
+        elif event_type == "task_mastered":
+            for failure in failures_by_problem.get(problem_id, []):
+                failure.recovered = True
+            for key in tuple(pending):
+                if key[0] == problem_id:
+                    pending.pop(key)
+
+    summaries: list[MistakeSummary] = []
+    for problem_id, failures in failures_by_problem.items():
+        history_view = tuple(
+            MistakeFailure(
+                event_id=failure.event_id,
+                problem_id=failure.problem_id,
+                attempt_id=failure.attempt_id,
+                failed_at=failure.failed_at,
+                failure_kind=failure.failure_kind,
+                recovered=failure.recovered,
+            )
+            for failure in failures
+        )
+        latest = history_view[-1]
+        summaries.append(
+            MistakeSummary(
+                problem_id=problem_id,
+                failure_count=len(history_view),
+                last_failed_at=latest.failed_at,
+                last_failed_sequence=failures[-1].sequence,
+                last_failure_kind=latest.failure_kind,
+                current_evidence_recovered=all(item.recovered for item in history_view),
+                failure_history=history_view,
+            )
+        )
+    return tuple(summaries)
 
 
 def _idempotency_match(event: Mapping[str, Any], event_type: str, problem_id: str | None, attempt_id: str | None, payload: Mapping[str, Any]) -> bool:

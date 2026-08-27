@@ -256,7 +256,7 @@ def test_material_ids_kinds_titles_tags_and_duplicate_ids_are_validated(
     source = _text_source(tmp_path)
 
     with pytest.raises(MaterialError, match="unsupported material kind"):
-        add_material(root, "learner-one", source, kind="internship")
+        add_material(root, "learner-one", source, kind="unsupported_kind")
     with pytest.raises(MaterialError, match="material ID"):
         add_material(root, "learner-one", source, material_id="Bad_ID", kind="resume")
     with pytest.raises(MaterialError, match="title"):

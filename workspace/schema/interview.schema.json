@@ -39,6 +39,11 @@
         {"type": "null"}
       ]
     },
+    "delivered_questions": {
+      "type": "object",
+      "propertyNames": {"pattern": "^q-[0-9]{3}$"},
+      "additionalProperties": {"$ref": "#/$defs/delivered_question"}
+    },
     "answers": {
       "type": "object",
       "propertyNames": {"pattern": "^q-[0-9]{3}$"},
@@ -85,7 +90,13 @@
       "properties": {
         "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
         "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "kind": {"enum": ["resume", "experience", "research", "job_description", "portfolio", "other"]},
+        "kind": {
+          "enum": [
+            "resume", "career_intent", "internship", "project", "paper",
+            "competition", "interview_question", "experience", "research",
+            "job_description", "portfolio", "other"
+          ]
+        },
         "title": {"type": "string", "minLength": 1, "maxLength": 200},
         "allowed_use": {"const": "mock_interview"}
       }
@@ -154,6 +165,16 @@
         "asked_question": {"type": "string", "minLength": 1, "maxLength": 2000}
       }
     },
+    "delivered_question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "source", "delivered_at"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "source": {"enum": ["ai", "human"]},
+        "delivered_at": {"type": "string", "format": "date-time"}
+      }
+    },
     "coding_evidence": {
       "type": "object",
       "additionalProperties": false,
@@ -191,7 +212,7 @@
       "additionalProperties": false,
       "required": ["event", "timestamp"],
       "properties": {
-        "event": {"enum": ["created", "started", "answer_recorded", "coding_tested", "assessment_recorded", "finished"]},
+        "event": {"enum": ["created", "started", "question_delivered", "answer_recorded", "coding_tested", "assessment_recorded", "finished"]},
         "timestamp": {"type": "string", "format": "date-time"},
         "question_id": {"type": "string", "pattern": "^q-[0-9]{3}$"},
         "dimension": {"enum": ["reasoning_complexity", "technical_oral", "project_evidence", "communication"]}

@@ -15,7 +15,19 @@ from typing import Sequence
 import yaml
 
 from .catalog import Catalog, CatalogError, Problem, load_catalog
-from .events import EventError, append_event, read_events, reduce_events
+from .context import (
+    ContextError,
+    build_interview_context,
+    build_practice_context,
+    serialize_context,
+)
+from .events import (
+    EventError,
+    append_event,
+    read_events,
+    reduce_events,
+    summarize_mistakes,
+)
 from .grader import GraderError, run_public_tests
 from .lifecycle import LifecycleError, ReviewInput, record_review
 from .interviews import (
@@ -23,17 +35,20 @@ from .interviews import (
     CONFIDENCE_LEVELS,
     DIFFICULTY_RANGES,
     DURATIONS,
+    INTERVIEWER_SOURCES,
     MODES,
     SUBJECTIVE_DIMENSIONS,
     InterviewError,
     create_interview,
     current_question,
     finish_interview,
+    interview_candidates,
     list_interviews,
     load_session,
     reference_warnings,
     record_answer,
     record_assessment,
+    record_delivered_question,
     report_interview,
     run_coding_test,
     start_interview,
@@ -43,7 +58,7 @@ from .submissions import SubmissionError, inspect_submission
 from .workspace import (
     WorkspaceError, ensure_profile_is_ignored, event_schema_path, find_repository_root,
     init_profile, load_profile, profile_paths, retention_due_at, start_problem,
-    start_retention, validate_profile_data,
+    start_retention, update_career_intent, validate_profile_data,
 )
 
 
@@ -112,6 +127,14 @@ def _require_prerequisites(problem: Problem, state) -> None:
         raise CliError(f"prerequisites are not mastered: {', '.join(missing)}")
 
 
+def _difficulty_label(problem: Problem) -> str:
+    value = problem.raw["difficulty"]
+    return (
+        f"concept={value['concept']} coding={value['coding']} "
+        f"debugging={value['debugging']}"
+    )
+
+
 def _doctor(repo_root: Path) -> int:
     checks: list[tuple[str, bool, str]] = [("python", sys.version_info >= (3, 10), f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")]
     try:
@@ -164,19 +187,35 @@ def _init(repo_root: Path, profile_id: str, tracks: tuple[str, ...], catalog: Ca
     return 0
 
 
-def _next(repo_root: Path, profile_id: str, catalog: Catalog, include_experimental: bool = False) -> int:
+def _next(
+    repo_root: Path,
+    profile_id: str,
+    catalog: Catalog,
+    include_experimental: bool = False,
+    quest_id: str | None = None,
+) -> int:
     _, profile, _, state = _profile_state(repo_root, profile_id)
+    quest = None
+    if quest_id is not None:
+        try:
+            quest = catalog.quests[quest_id]
+        except KeyError as error:
+            raise CliError(f"unknown quest: {quest_id}") from error
     current = state.current_attempt()
     if current and state.problem_status(current.problem_id) == "mastered":
         current = None
     print("PROFILE")
     print(f"  {profile_id}")
+    if quest is not None:
+        print("QUEST")
+        print(f"  {quest.id} {quest.title}")
     print("CURRENT")
     if current:
         problem = catalog.get(current.problem_id)
         print(
             f"  {problem.id} {problem.title}  {state.problem_status(problem.id)}  "
-            f"validation={problem.validation_level}"
+            f"validation={problem.validation_level} "
+            f"difficulty={_difficulty_label(problem)}"
         )
         print("PREREQUISITES")
         if problem.prerequisites:
@@ -219,7 +258,7 @@ def _next(repo_root: Path, profile_id: str, catalog: Catalog, include_experiment
             print(f"  {problem_id} verified retention assets unavailable")
     else:
         print("  none")
-    unlocked = tuple(
+    available = tuple(
         problem
         for problem in catalog.unlocked(
             state.mastered,
@@ -227,14 +266,24 @@ def _next(repo_root: Path, profile_id: str, catalog: Catalog, include_experiment
             include_experimental=_allow_experimental(profile, include_experimental),
         )
         if state.problem_status(problem.id) == "not_started"
-    )[:3]
+    )
+    if quest is None:
+        unlocked = available[:3]
+    else:
+        by_id = {problem.id: problem for problem in available}
+        unlocked = tuple(
+            by_id[problem_id]
+            for problem_id in quest.problem_ids
+            if problem_id in by_id
+        )[:3]
     print("UNLOCKS")
     if unlocked:
         for problem in unlocked:
             retention = "yes" if all(problem.retention_variant(repo_root, stage) for stage in ("d2", "d7")) else "no"
             print(
                 f"  {problem.id} {problem.title}  assets={problem.status} "
-                f"validation={problem.validation_level} retention={retention} field_runs={problem.field_runs}"
+                f"validation={problem.validation_level} retention={retention} "
+                f"difficulty={_difficulty_label(problem)} field_runs={problem.field_runs}"
             )
     else:
         print("  none")
@@ -256,6 +305,7 @@ def _next(repo_root: Path, profile_id: str, catalog: Catalog, include_experiment
 def _show(problem: Problem) -> int:
     print(f"{problem.id}  {problem.title}")
     print(f"STATUS  {problem.status}")
+    print(f"DIFFICULTY  {_difficulty_label(problem)}")
     if problem.ready:
         retention = "yes" if all(problem.raw["retention"].get(stage) and isinstance(problem.raw["retention"][stage], dict) and problem.raw["retention"][stage].get("oracle_validated") is True for stage in ("d2", "d7")) else "no"
         print(f"ASSETS  ready")
@@ -370,29 +420,147 @@ def _catalog(repo_root: Path, catalog: Catalog, track_id: str | None) -> int:
             quality = f"validation={problem.validation_level} retention={retention} field_runs={problem.field_runs}"
         else:
             quality = "validation=n/a retention=no field_runs=0"
-        print(f"{problem.id:<12} assets={problem.status:<7} {quality}  {problem.title}")
+        difficulty = problem.raw["difficulty"]
+        print(
+            f"{problem.id:<12} assets={problem.status:<7} {quality} "
+            f"difficulty=c{difficulty['concept']}/k{difficulty['coding']}/d{difficulty['debugging']}  "
+            f"{problem.title}"
+        )
     return 0
 
 
-def _graph(catalog: Catalog, track_id: str) -> int:
+def _graph(
+    catalog: Catalog,
+    track_id: str | None = None,
+    quest_id: str | None = None,
+) -> int:
+    if (track_id is None) == (quest_id is None):
+        raise CliError("graph requires exactly one of --track or --quest")
+    if quest_id is not None:
+        try:
+            quest = catalog.quests[quest_id]
+        except KeyError as error:
+            raise CliError(f"unknown quest: {quest_id}") from error
+        print(f"QUEST {quest.id} - {quest.title}")
+        print("ORDER is recommended; PREREQUISITES are the hard DAG")
+        for index, problem_id in enumerate(quest.problem_ids, 1):
+            problem = catalog.get(problem_id)
+            print(
+                f"{index:>2}. {problem.id} <- "
+                f"{', '.join(problem.prerequisites) or 'root'} "
+                f"[{problem.status}; {_difficulty_label(problem)}]"
+            )
+        return 0
+    assert track_id is not None
     if track_id not in catalog.tracks:
         raise CliError(f"unknown track: {track_id}")
-    print(f"TRACK {track_id} — {catalog.tracks[track_id].title}")
+    print(f"TRACK {track_id} - {catalog.tracks[track_id].title}")
     for problem_id in catalog.order:
         problem = catalog.problems[problem_id]
         if track_id in problem.raw["tracks"]:
-            print(f"{problem.id} <- {', '.join(problem.prerequisites) or 'root'} [{problem.status}]")
+            print(
+                f"{problem.id} <- {', '.join(problem.prerequisites) or 'root'} "
+                f"[{problem.status}; {_difficulty_label(problem)}]"
+            )
     return 0
 
 
-def _profile_show(repo_root: Path, profile_id: str) -> int:
+def _profile_show(repo_root: Path, profile_id: str, as_json: bool = False) -> int:
     _, profile, _, state = _profile_state(repo_root, profile_id)
+    problem_ids = {problem_id for problem_id, _ in state.attempts}
+    counts = {
+        status: sum(
+            state.problem_status(problem_id) == status
+            for problem_id in problem_ids
+        )
+        for status in (
+            "in_progress",
+            "implemented",
+            "reviewed",
+            "retained_d2",
+            "retained_d7",
+            "mastered",
+        )
+    }
+    if as_json:
+        print(
+            json.dumps(
+                {"profile": profile, "practice_status_counts": counts},
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
     print(f"PROFILE {profile_id}")
     print(f"TRACKS {', '.join(profile['target_roles'])}")
-    problem_ids = {problem_id for problem_id, _ in state.attempts}
-    for status in ("in_progress", "implemented", "reviewed", "retained_d2", "retained_d7", "mastered"):
-        count = sum(state.problem_status(problem_id) == status for problem_id in problem_ids)
+    intent = profile.get("career_intent")
+    if intent:
+        print(f"TARGET JOBS {', '.join(intent['target_job_titles']) or 'none'}")
+        print(f"EMPLOYMENT STAGE {intent['employment_stage']}")
+    for status, count in counts.items():
         print(f"{status.upper()} {count}")
+    return 0
+
+
+def _profile_configure(repo_root: Path, profile_id: str, career_file: str) -> int:
+    content = _read_private_text(career_file, "career intent", 16_384)
+    try:
+        value = yaml.safe_load(content)
+    except yaml.YAMLError as error:
+        raise CliError("career intent file must contain valid YAML or JSON") from error
+    if not isinstance(value, dict):
+        raise CliError("career intent file must contain one object")
+    updated = update_career_intent(repo_root, profile_id, value)
+    intent = updated["career_intent"]
+    print(f"PROFILE {profile_id}: career intent updated")
+    print(f"TARGET JOBS {', '.join(intent['target_job_titles']) or 'none'}")
+    print(f"EMPLOYMENT STAGE {intent['employment_stage']}")
+    print("PRACTICE EVENTS: UNCHANGED")
+    return 0
+
+
+def _mistakes(
+    repo_root: Path,
+    catalog: Catalog,
+    profile_id: str,
+    *,
+    unresolved_only: bool,
+    as_json: bool,
+) -> int:
+    _, _, events, state = _profile_state(repo_root, profile_id)
+    values = sorted(
+        summarize_mistakes(events),
+        key=lambda item: item.last_failed_sequence,
+        reverse=True,
+    )
+    if unresolved_only:
+        values = [item for item in values if not item.current_evidence_recovered]
+    view = [
+        {
+            "problem_id": item.problem_id,
+            "title": catalog.get(item.problem_id).title,
+            "failure_count": item.failure_count,
+            "last_failed_at": item.last_failed_at.isoformat(timespec="seconds"),
+            "last_failure_kind": item.last_failure_kind,
+            "recovered": item.current_evidence_recovered,
+            "practice_status": state.problem_status(item.problem_id),
+        }
+        for item in values
+    ]
+    if as_json:
+        print(json.dumps(view, ensure_ascii=False, indent=2))
+        return 0
+    print(f"MISTAKES {profile_id}")
+    if not view:
+        print("  none")
+    for item in view:
+        print(
+            f"  {item['problem_id']} {item['title']} "
+            f"failures={item['failure_count']} latest={item['last_failure_kind']} "
+            f"recovered={'yes' if item['recovered'] else 'no'} "
+            f"status={item['practice_status']}"
+        )
+    print("SOURCE events.jsonl (derived view; no separate mistake file)")
     return 0
 
 
@@ -473,6 +641,71 @@ def _interview_summary(session: dict) -> dict:
         "deadline": session["deadline"],
         "result": session["result"],
     }
+
+
+def _context(repo_root: Path, catalog: Catalog, args) -> int:
+    if args.mode == "interviewer":
+        if args.interview is None:
+            raise CliError("interviewer context requires --interview")
+        if args.help_level is not None:
+            raise CliError("interviewer context does not accept --help-level")
+        value = build_interview_context(
+            repo_root, catalog, args.profile, args.interview
+        )
+    else:
+        if args.interview is not None:
+            raise CliError("--interview is available only in interviewer mode")
+        value = build_practice_context(
+            repo_root,
+            catalog,
+            args.profile,
+            args.mode,
+            help_level=args.help_level,
+        )
+    print(serialize_context(value), end="")
+    return 0
+
+
+def _interview_candidates(repo_root: Path, catalog: Catalog, args) -> int:
+    if args.limit < 1 or args.limit > 50:
+        raise CliError("candidate limit must be from 1 to 50")
+    _, _, _, state = _profile_state(repo_root, args.profile)
+    problems = interview_candidates(
+        catalog, track_id=args.track, difficulty=args.difficulty
+    )[: args.limit]
+    values = [
+        {
+            "problem_id": problem.id,
+            "title": problem.title,
+            "difficulty": problem.raw["difficulty"],
+            "validation_level": problem.validation_level,
+            "skills": problem.raw["skills"],
+            "practice_status": state.problem_status(problem.id),
+            "prerequisites": [
+                {"problem_id": required, "status": state.problem_status(required)}
+                for required in problem.prerequisites
+            ],
+        }
+        for problem in problems
+    ]
+    if args.json:
+        print(json.dumps(values, ensure_ascii=False, indent=2))
+        return 0
+    print(
+        f"INTERVIEW CANDIDATES track={args.track} "
+        f"difficulty={args.difficulty} profile={args.profile}"
+    )
+    if not values:
+        print("  none")
+    for item in values:
+        print(
+            f"  {item['problem_id']} {item['title']} "
+            f"coding={item['difficulty']['coding']} "
+            f"validation={item['validation_level']} "
+            f"practice={item['practice_status']}"
+        )
+    print("AI MAY RECOMMEND; USER CONFIRMS WITH interview create --problem")
+    return 0
 
 
 def _interview_create(repo_root: Path, catalog: Catalog, args) -> int:
@@ -614,6 +847,7 @@ def _interview_current(repo_root: Path, catalog: Catalog, profile_id: str, inter
     question = value["question"]
     if question:
         print(f"QUESTION {question['question_id']} kind={question['kind']} timebox={question['timebox_minutes']}m")
+        print(f"PROMPT SOURCE {question.get('prompt_source', 'fixed')}")
         print(question["prompt"])
         if question["kind"] == "coding":
             print(f"TASK llm-lab show {question['problem_id']}")
@@ -622,6 +856,18 @@ def _interview_current(repo_root: Path, catalog: Catalog, profile_id: str, inter
                 f"workspace/profiles/{profile_id}/interviews/{interview_id}/coding/submission.py"
             )
             print(f"TEST llm-lab interview test {interview_id} --profile {profile_id}")
+        else:
+            if question.get("prompt_source") == "fixed":
+                print(
+                    "CUSTOMIZE "
+                    f"llm-lab interview ask {interview_id} --profile {profile_id} "
+                    f"--question {question['question_id']} --source ai --file QUESTION_FILE"
+                )
+            print(
+                "ANSWER "
+                f"llm-lab interview answer {interview_id} --profile {profile_id} "
+                f"--question {question['question_id']} --file ANSWER_FILE"
+            )
     elif value["status"] == "awaiting_score":
         print(f"MISSING ASSESSMENTS {', '.join(value['missing_assessments']) or 'none'}")
         print(f"SCORE llm-lab interview score {interview_id} --profile {profile_id} --help")
@@ -650,6 +896,31 @@ def _interview_answer(repo_root: Path, catalog: Catalog, args) -> int:
     )
     print(f"ANSWER {args.question}: recorded")
     print(f"CURRENT llm-lab interview current {session['interview_id']} --profile {args.profile}")
+    return 0
+
+
+def _interview_ask(repo_root: Path, catalog: Catalog, args) -> int:
+    text = args.text
+    if args.file:
+        text = _read_private_text(args.file, "delivered question", 2000)
+    assert text is not None
+    session = record_delivered_question(
+        repo_root,
+        args.profile,
+        args.interview_id,
+        catalog,
+        args.question,
+        text,
+        source=args.source,
+    )
+    delivery = session["delivered_questions"][args.question]
+    print(f"QUESTION {args.question}: delivered and archived")
+    print(f"SOURCE {delivery['source']}")
+    print(f"DELIVERED AT {delivery['delivered_at']}")
+    print(
+        f"ANSWER llm-lab interview answer {args.interview_id} "
+        f"--profile {args.profile} --question {args.question} --file ANSWER_FILE"
+    )
     return 0
 
 
@@ -724,7 +995,7 @@ def _build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("doctor")
     init = commands.add_parser("init"); init.add_argument("--profile", required=True); init.add_argument("--track", action="append", default=[])
-    nxt = commands.add_parser("next"); nxt.add_argument("--profile", required=True); nxt.add_argument("--include-experimental", action="store_true")
+    nxt = commands.add_parser("next"); nxt.add_argument("--profile", required=True); nxt.add_argument("--include-experimental", action="store_true"); nxt.add_argument("--quest")
     show = commands.add_parser("show"); show.add_argument("problem_id")
     start = commands.add_parser("start"); start.add_argument("problem_id"); start.add_argument("--profile", required=True); start.add_argument("--allow-experimental", action="store_true")
     test = commands.add_parser("test"); test.add_argument("problem_id"); test.add_argument("--profile", required=True)
@@ -732,8 +1003,35 @@ def _build_parser() -> argparse.ArgumentParser:
     review = commands.add_parser("review"); review.add_argument("problem_id"); review.add_argument("--profile", required=True); review.add_argument("--contract", choices=("passed", "failed"), required=True); review.add_argument("--oral", choices=("passed", "failed"), required=True); review.add_argument("--explanation", required=True); review.add_argument("--complexity", required=True); review.add_argument("--boundaries", required=True)
     retain = commands.add_parser("retain"); retain.add_argument("problem_id"); retain.add_argument("--stage", choices=("d2", "d7"), required=True); retain.add_argument("--profile", required=True)
     listing = commands.add_parser("catalog"); listing.add_argument("--track")
-    graph = commands.add_parser("graph"); graph.add_argument("--track", required=True)
-    profile = commands.add_parser("profile"); profile_sub = profile.add_subparsers(dest="profile_command", required=True); profile_show = profile_sub.add_parser("show"); profile_show.add_argument("profile_id")
+    graph = commands.add_parser("graph")
+    graph_target = graph.add_mutually_exclusive_group(required=True)
+    graph_target.add_argument("--track")
+    graph_target.add_argument("--quest")
+    profile = commands.add_parser("profile")
+    profile_sub = profile.add_subparsers(dest="profile_command", required=True)
+    profile_show = profile_sub.add_parser("show")
+    profile_show.add_argument("profile_id")
+    profile_show.add_argument("--json", action="store_true")
+    profile_configure = profile_sub.add_parser(
+        "configure", help="replace structured, private career intent from YAML or JSON"
+    )
+    profile_configure.add_argument("profile_id")
+    profile_configure.add_argument("--career-file", required=True)
+    mistakes = commands.add_parser(
+        "mistakes", help="derive a Profile's mistake view from events.jsonl"
+    )
+    mistakes.add_argument("--profile", required=True)
+    mistakes.add_argument("--unresolved-only", action="store_true")
+    mistakes.add_argument("--json", action="store_true")
+    context = commands.add_parser(
+        "context", help="emit bounded JSON for a bring-your-own AI"
+    )
+    context.add_argument("--profile", required=True)
+    context.add_argument(
+        "--mode", choices=("coach", "teacher", "reviewer", "interviewer"), required=True
+    )
+    context.add_argument("--help-level", choices=("H1", "H2", "H3"))
+    context.add_argument("--interview")
     material = commands.add_parser("material", help="manage private career materials")
     material_sub = material.add_subparsers(dest="material_command", required=True)
     material_add = material_sub.add_parser("add", help="copy one explicit file into the ignored Profile")
@@ -757,6 +1055,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
     interview = commands.add_parser("interview", help="run profile-local timed mock interviews")
     interview_sub = interview.add_subparsers(dest="interview_command", required=True)
+    interview_candidate = interview_sub.add_parser(
+        "candidates", help="list deterministic Catalog candidates for an interviewer"
+    )
+    interview_candidate.add_argument("--profile", required=True)
+    interview_candidate.add_argument("--track", required=True)
+    interview_candidate.add_argument("--difficulty", choices=sorted(DIFFICULTY_RANGES), required=True)
+    interview_candidate.add_argument("--limit", type=int, default=12)
+    interview_candidate.add_argument("--json", action="store_true")
     interview_create = interview_sub.add_parser("create", help="freeze a local interview plan without starting its clock")
     interview_create.add_argument("--profile", required=True)
     interview_create.add_argument("--difficulty", choices=sorted(DIFFICULTY_RANGES), required=True)
@@ -791,6 +1097,16 @@ def _build_parser() -> argparse.ArgumentParser:
     interview_current.add_argument("interview_id")
     interview_current.add_argument("--profile", required=True)
     interview_current.add_argument("--json", action="store_true")
+    interview_ask = interview_sub.add_parser(
+        "ask", help="freeze an exact non-coding question delivered by an interviewer"
+    )
+    interview_ask.add_argument("interview_id")
+    interview_ask.add_argument("--profile", required=True)
+    interview_ask.add_argument("--question", required=True)
+    interview_ask.add_argument("--source", choices=sorted(INTERVIEWER_SOURCES), required=True)
+    delivered_group = interview_ask.add_mutually_exclusive_group(required=True)
+    delivered_group.add_argument("--text")
+    delivered_group.add_argument("--file")
     interview_answer = interview_sub.add_parser("answer")
     interview_answer.add_argument("interview_id")
     interview_answer.add_argument("--profile", required=True)
@@ -854,16 +1170,23 @@ def main(argv: Sequence[str] | None = None) -> int:
             raise CliError("unknown material command")
         catalog = load_catalog(repo_root)
         if args.command == "init": return _init(repo_root, args.profile, tuple(args.track), catalog)
-        if args.command == "next": return _next(repo_root, args.profile, catalog, args.include_experimental)
+        if args.command == "next": return _next(repo_root, args.profile, catalog, args.include_experimental, args.quest)
         if args.command == "catalog": return _catalog(repo_root, catalog, args.track)
-        if args.command == "graph": return _graph(catalog, args.track)
-        if args.command == "profile": return _profile_show(repo_root, args.profile_id)
+        if args.command == "graph": return _graph(catalog, args.track, args.quest)
+        if args.command == "profile":
+            if args.profile_command == "show": return _profile_show(repo_root, args.profile_id, args.json)
+            if args.profile_command == "configure": return _profile_configure(repo_root, args.profile_id, args.career_file)
+            raise CliError("unknown profile command")
+        if args.command == "mistakes": return _mistakes(repo_root, catalog, args.profile, unresolved_only=args.unresolved_only, as_json=args.json)
+        if args.command == "context": return _context(repo_root, catalog, args)
         if args.command == "interview":
+            if args.interview_command == "candidates": return _interview_candidates(repo_root, catalog, args)
             if args.interview_command == "create": return _interview_create(repo_root, catalog, args)
             if args.interview_command == "list": return _interview_list(repo_root, catalog, args.profile, args.json)
             if args.interview_command == "show": return _interview_show(repo_root, catalog, args.profile, args.interview_id, args.json)
             if args.interview_command == "start": return _interview_start(repo_root, catalog, args.profile, args.interview_id)
             if args.interview_command == "current": return _interview_current(repo_root, catalog, args.profile, args.interview_id, args.json)
+            if args.interview_command == "ask": return _interview_ask(repo_root, catalog, args)
             if args.interview_command == "answer": return _interview_answer(repo_root, catalog, args)
             if args.interview_command == "test": return _interview_test(repo_root, catalog, args.profile, args.interview_id)
             if args.interview_command == "score": return _interview_score(repo_root, catalog, args)
@@ -878,7 +1201,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "review": return _review(repo_root, args)
         if args.command == "retain": return _retain(repo_root, args.profile, problem, args.stage)
         raise CliError("unknown command")
-    except (CatalogError, CliError, EventError, GraderError, InterviewError, LifecycleError, MaterialError, SubmissionError, WorkspaceError) as error:
+    except (CatalogError, CliError, ContextError, EventError, GraderError, InterviewError, LifecycleError, MaterialError, SubmissionError, WorkspaceError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
 

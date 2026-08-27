@@ -9,6 +9,12 @@ experience_level:
   pytorch: beginner
   llm: beginner
 weekly_hours: 10
+career_intent:
+  target_job_titles: []
+  employment_stage: flexible
+  preferred_locations: []
+  interview_languages: []
+  priorities: []
 preferences:
   pressure: medium
   implementation_first: true

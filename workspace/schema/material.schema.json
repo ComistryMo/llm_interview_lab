@@ -48,6 +48,12 @@
         "kind": {
           "enum": [
             "resume",
+            "career_intent",
+            "internship",
+            "project",
+            "paper",
+            "competition",
+            "interview_question",
             "experience",
             "research",
             "job_description",

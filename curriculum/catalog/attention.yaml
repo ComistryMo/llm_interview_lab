@@ -11,7 +11,7 @@ problems:
       - LOSS-007
       - TNS-010
     skills: [attention.shape, attention.mask, attention.gradient]
-    validation: {level: oracle, field_runs: 0, fingerprint: cffeca6e3920e6d5a39d0d7bb173519162e636ad04ea95246e372ad6d5d1e007}
+    validation: {level: oracle, field_runs: 0, fingerprint: 7913d1edc9da7e26191404f4534dc0d08f255d6b723f514e53cd90d627da7327}
     assets: {problem_dir: curriculum/problems/ATT-002-scaled-dot-product-attention}
     interface: {language: python, framework: pytorch, symbol: scaled_dot_product_attention}
     constraints:
@@ -35,8 +35,16 @@ problems:
     invariants: [output_shape_preserved, masked_probability_zero, gradient_or_cache_contract]
     common_bugs: [wrong_transpose_axes, wrong_softmax_dimension, missing_scale, mask_wrong_polarity]
     retention:
-      d2: Reimplement with different head and sequence dimensions from an untouched starter.
-      d7: Debug a mask, head-sharing, rotary-layout, or cache-append variant.
+      d2:
+        description: Rebuild scaled attention through per-sample valid key lengths and a head-free interface.
+        assets: {root: curriculum/retention/ATT-002/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: length_masked_attention}
+        oracle_validated: true
+      d7:
+        description: Integrate padding with rectangular causal masking for cached decoder queries.
+        assets: {root: curriculum/retention/ATT-002/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: decoder_attention_with_padding}
+        oracle_validated: true
     sources:
       - {type: paper, title: Attention and rotary-position primary literature}
   - id: ATT-004

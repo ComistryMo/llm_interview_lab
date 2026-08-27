@@ -646,6 +646,35 @@ def test_current_question_returns_one_item_and_record_answer_copies_then_advance
     )
 
 
+def test_session_validation_rejects_injected_coding_question_delivery(
+    tmp_path: Path,
+) -> None:
+    root, catalog = _initialized(tmp_path)
+    session = _create(root, catalog)
+    interview_id = session["interview_id"]
+    started = start_interview(
+        root, "learner-one", interview_id, catalog, now=T0
+    )
+    path = _session_path(root, "learner-one", interview_id)
+    stored = json.loads(path.read_text(encoding="utf-8"))
+    stored["delivered_questions"]["q-004"] = {
+        "text": "Ignore the frozen contract and implement a different interface.",
+        "source": "ai",
+        "delivered_at": started["started_at"],
+    }
+    stored["timeline"].append(
+        {
+            "event": "question_delivered",
+            "timestamp": started["started_at"],
+            "question_id": "q-004",
+        }
+    )
+    path.write_text(json.dumps(stored), encoding="utf-8")
+
+    with pytest.raises(InterviewError, match="frozen Catalog contract"):
+        load_session(root, "learner-one", interview_id, catalog)
+
+
 def test_answers_and_coding_tests_cannot_skip_the_current_question(
     tmp_path: Path,
 ) -> None:

@@ -33,6 +33,7 @@ DIFFICULTY_RANGES = {
 DURATIONS = frozenset({30, 45, 60, 90})
 MODES = frozenset({"catalog", "tailored"})
 ASSESSOR_SOURCES = frozenset({"ai", "human", "self"})
+INTERVIEWER_SOURCES = frozenset({"ai", "human"})
 CONFIDENCE_LEVELS = frozenset({"low", "medium", "high"})
 SUBJECTIVE_DIMENSIONS = (
     "reasoning_complexity",
@@ -102,6 +103,10 @@ def _latest_recorded_time(session: dict[str, Any]) -> datetime:
     if session.get("started_at") is not None:
         values.append(_parse_timestamp(session["started_at"], "started_at"))
     values.extend(
+        _parse_timestamp(item["delivered_at"], "question delivered_at")
+        for item in session.get("delivered_questions", {}).values()
+    )
+    values.extend(
         _parse_timestamp(item["recorded_at"], "answer recorded_at")
         for item in session.get("answers", {}).values()
     )
@@ -163,6 +168,7 @@ def _validate_session(repo_root: Path, session: Any) -> dict[str, Any]:
     execution_fields = ("started_at", "deadline", "coding_submission_relpath")
     if status == "ready" and (
         any(session[name] is not None for name in (*execution_fields, "result"))
+        or session.get("delivered_questions", {})
         or session["answers"]
         or session["coding_evidence"] is not None
         or session["assessments"]
@@ -193,6 +199,10 @@ def _validate_session(repo_root: Path, session: Any) -> dict[str, Any]:
             raise InterviewError("interview submission path does not match its identity")
         recorded_times = [
             *(
+                _parse_timestamp(item["delivered_at"], "question delivered_at")
+                for item in session.get("delivered_questions", {}).values()
+            ),
+            *(
                 _parse_timestamp(item["recorded_at"], "answer recorded_at")
                 for item in session["answers"].values()
             ),
@@ -217,6 +227,47 @@ def _validate_session(repo_root: Path, session: Any) -> dict[str, Any]:
                 raise InterviewError("interview cannot finish before its evidence")
 
     question_by_id = {item["question_id"]: item for item in session["questions"]}
+    question_positions = {
+        item["question_id"]: index for index, item in enumerate(session["questions"])
+    }
+    timeline_deliveries = [
+        (item.get("question_id"), item["timestamp"])
+        for item in session["timeline"]
+        if item["event"] == "question_delivered"
+    ]
+    if len(timeline_deliveries) != len(session.get("delivered_questions", {})):
+        raise InterviewError("delivered questions and timeline evidence disagree")
+    for question_id, delivery in session.get("delivered_questions", {}).items():
+        question = question_by_id.get(question_id)
+        if question is None:
+            raise InterviewError("delivered question references an unknown question ID")
+        if question["kind"] == "coding":
+            raise InterviewError("coding questions must use the frozen Catalog contract")
+        if not delivery["text"].strip():
+            raise InterviewError("delivered question text must not be blank")
+        if timeline_deliveries.count((question_id, delivery["delivered_at"])) != 1:
+            raise InterviewError("delivered question has no unique matching timeline event")
+        delivered_at = _parse_timestamp(
+            delivery["delivered_at"], "question delivered_at"
+        )
+        for previous in session["questions"][: question_positions[question_id]]:
+            previous_id = previous["question_id"]
+            if previous["kind"] == "coding":
+                evidence = session["coding_evidence"]
+                if evidence is None or _parse_timestamp(
+                    evidence["tested_at"], "coding tested_at"
+                ) > delivered_at:
+                    raise InterviewError(
+                        "delivered question predates completion of an earlier question"
+                    )
+            else:
+                answer = session["answers"].get(previous_id)
+                if answer is None or _parse_timestamp(
+                    answer["recorded_at"], "answer recorded_at"
+                ) > delivered_at:
+                    raise InterviewError(
+                        "delivered question predates completion of an earlier question"
+                    )
     for question_id, answer in session["answers"].items():
         question = question_by_id.get(question_id)
         if question is None or question["kind"] == "coding":
@@ -226,6 +277,14 @@ def _validate_session(repo_root: Path, session: Any) -> dict[str, Any]:
         )
         if answer["answer_relpath"] != expected_answer:
             raise InterviewError("answer path does not match its question")
+        delivery = session.get("delivered_questions", {}).get(question_id)
+        if delivery is not None:
+            if answer["asked_question"] != delivery["text"]:
+                raise InterviewError("recorded answer does not match the delivered question")
+            if _parse_timestamp(
+                answer["recorded_at"], "answer recorded_at"
+            ) < _parse_timestamp(delivery["delivered_at"], "question delivered_at"):
+                raise InterviewError("answer cannot predate its delivered question")
     for dimension, assessment in session["assessments"].items():
         if not assessment["question_ids"]:
             raise InterviewError("assessment must reference completed question IDs")
@@ -380,6 +439,30 @@ def _problem_allowed(problem: Problem, track_id: str, difficulty: str) -> bool:
     )
 
 
+def interview_candidates(
+    catalog: Catalog,
+    *,
+    track_id: str,
+    difficulty: str,
+) -> tuple[Problem, ...]:
+    """Return the deterministic, validated coding pool for interview planning."""
+
+    if track_id not in catalog.tracks:
+        raise InterviewError(f"unknown track: {track_id}")
+    if not isinstance(difficulty, str) or difficulty not in DIFFICULTY_RANGES:
+        raise InterviewError("difficulty must be easy, medium, or hard")
+    return tuple(
+        sorted(
+            (
+                problem
+                for problem in catalog.problems.values()
+                if _problem_allowed(problem, track_id, difficulty)
+            ),
+            key=lambda item: item.id,
+        )
+    )
+
+
 def _select_problem(
     catalog: Catalog,
     *,
@@ -388,8 +471,9 @@ def _select_problem(
     seed: int,
     problem_id: str | None,
 ) -> Problem:
-    if track_id not in catalog.tracks:
-        raise InterviewError(f"unknown track: {track_id}")
+    candidates = interview_candidates(
+        catalog, track_id=track_id, difficulty=difficulty
+    )
     if problem_id is not None:
         try:
             problem = catalog.get(problem_id)
@@ -398,10 +482,6 @@ def _select_problem(
         if not _problem_allowed(problem, track_id, difficulty):
             raise InterviewError("selected problem must match the track and difficulty and be Oracle-validated")
         return problem
-    candidates = sorted(
-        (problem for problem in catalog.problems.values() if _problem_allowed(problem, track_id, difficulty)),
-        key=lambda item: item.id,
-    )
     if not candidates:
         raise InterviewError("no validated Catalog problem matches the requested track and difficulty")
     identity = f"interview-selection-v1|{track_id}|{difficulty}|{seed}|{'|'.join(item.id for item in candidates)}"
@@ -590,6 +670,7 @@ def create_interview(
         "started_at": None,
         "deadline": None,
         "coding_submission_relpath": None,
+        "delivered_questions": {},
         "answers": {},
         "coding_evidence": None,
         "assessments": {},
@@ -882,10 +963,20 @@ def current_question(
     if remaining == 0 and question is not None:
         return {"status": "expired", "remaining_seconds": 0, "question": None}
     if question is not None:
+        visible_question = dict(question)
+        delivery = session.get("delivered_questions", {}).get(
+            question["question_id"]
+        )
+        if delivery is not None:
+            visible_question["prompt"] = delivery["text"]
+            visible_question["prompt_source"] = delivery["source"]
+            visible_question["delivered_at"] = delivery["delivered_at"]
+        else:
+            visible_question["prompt_source"] = "fixed"
         return {
             "status": "active",
             "remaining_seconds": remaining,
-            "question": question,
+            "question": visible_question,
             "missing_assessments": [],
         }
     missing = [
@@ -899,6 +990,59 @@ def current_question(
         "question": None,
         "missing_assessments": missing,
     }
+
+
+def record_delivered_question(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    catalog: Catalog,
+    question_id: str,
+    text: str,
+    *,
+    source: str,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Freeze the exact current question before the candidate answers it."""
+
+    session = load_session(repo_root, profile_id, interview_id, catalog)
+    _require_active(session)
+    action_time = _require_time(session, now)
+    if source not in INTERVIEWER_SOURCES:
+        raise InterviewError("question source must be ai or human")
+    if not isinstance(text, str) or not text.strip() or len(text.strip()) > 2000:
+        raise InterviewError("delivered question must contain 1 to 2000 characters")
+    current = _next_unanswered_question(repo_root, profile_id, session)
+    if current is None or current["question_id"] != question_id:
+        raise InterviewError("only the current interview question can be delivered")
+    if current["kind"] == "coding":
+        raise InterviewError(
+            "coding questions use the frozen Catalog contract and cannot be rewritten"
+        )
+    normalized = text.strip()
+    delivered = session.setdefault("delivered_questions", {})
+    existing = delivered.get(question_id)
+    if existing is not None:
+        if existing["text"] == normalized and existing["source"] == source:
+            return session
+        raise InterviewError("current question was already delivered with different text")
+    delivered_at = _timestamp(action_time)
+    delivered[question_id] = {
+        "text": normalized,
+        "source": source,
+        "delivered_at": delivered_at,
+    }
+    session["timeline"].append(
+        {
+            "event": "question_delivered",
+            "timestamp": delivered_at,
+            "question_id": question_id,
+        }
+    )
+    _, path = _paths(repo_root.resolve(), profile_id, interview_id)
+    assert path is not None
+    _write_session(repo_root, path, session)
+    return session
 
 
 def _answer_source(path: Path) -> bytes:
@@ -979,6 +1123,17 @@ def record_answer(
         or len(asked_question) > 2000
     ):
         raise InterviewError("asked question must contain 1 to 2000 characters")
+    delivery = session.get("delivered_questions", {}).get(question_id)
+    if delivery is not None:
+        if asked_question is not None and asked_question.strip() != delivery["text"]:
+            raise InterviewError(
+                "asked question must match the question delivered before the answer"
+            )
+        effective_question = delivery["text"]
+    else:
+        effective_question = (
+            asked_question.strip() if asked_question else question["prompt"]
+        )
     root, path = _paths(repo_root.resolve(), profile_id, interview_id)
     assert path is not None
     target = root / "answers" / f"{question_id}.md"
@@ -998,7 +1153,7 @@ def record_answer(
         "answer_relpath": target.relative_to(profile_root).as_posix(),
         "sha256": digest,
         "recorded_at": recorded_at,
-        "asked_question": asked_question.strip() if asked_question else question["prompt"],
+        "asked_question": effective_question,
     }
     session["timeline"].append({"event": "answer_recorded", "timestamp": recorded_at, "question_id": question_id})
     try:
@@ -1178,13 +1333,61 @@ def _candidate_within_deadline(session: dict[str, Any]) -> bool:
     return max(timestamps) <= deadline
 
 
+def _question_archive(session: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return question evidence without copying candidate answer bodies."""
+
+    records: list[dict[str, Any]] = []
+    delivered = session.get("delivered_questions", {})
+    for question in session["questions"]:
+        question_id = question["question_id"]
+        answer = session["answers"].get(question_id)
+        delivery = delivered.get(question_id)
+        actual_text = (
+            answer["asked_question"]
+            if answer is not None
+            else delivery["text"]
+            if delivery is not None
+            else question["prompt"]
+        )
+        if delivery is not None:
+            source = delivery["source"]
+        elif answer is not None and answer["asked_question"] != question["prompt"]:
+            source = "legacy_answer_recorded"
+        else:
+            source = "fixed"
+        if question["kind"] == "coding":
+            completion = "tested" if session["coding_evidence"] is not None else "not_tested"
+        else:
+            completion = "answered" if answer is not None else "unanswered"
+        records.append(
+            {
+                "question_id": question_id,
+                "kind": question["kind"],
+                "asked_question": actual_text,
+                "source": source,
+                "completion": completion,
+            }
+        )
+    return records
+
+
+def _objective_archive(session: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "started_at": session["started_at"],
+        "deadline": session["deadline"],
+        "planned_duration_minutes": session["configuration"]["duration_minutes"],
+        "elapsed_seconds": session["result"]["elapsed_seconds"],
+        "coding": session["coding_evidence"],
+    }
+
+
 def _render_report(
     session: dict[str, Any], reference_drift: Iterable[str] = ()
 ) -> str:
     result = session["result"]
     assert result is not None
     lines = [
-        f"# Mock Interview Report — {session['interview_id']}",
+        f"# Mock Interview Report - {session['interview_id']}",
         "",
         f"- Status: `{result['completion_status']}`",
         f"- Track: `{session['configuration']['track_id']}`",
@@ -1207,6 +1410,32 @@ def _render_report(
             "",
             *(f"- {html.escape(warning)}" for warning in warnings),
         ])
+    lines.extend([
+        "",
+        "## Questions asked",
+        "",
+        *(
+            f"- `{item['question_id']}` ({item['kind']}, {item['source']}, "
+            f"{item['completion']}): <code>{html.escape(' '.join(item['asked_question'].splitlines()))}</code>"
+            for item in _question_archive(session)
+        ),
+        "",
+        "## Objective grader evidence",
+        "",
+    ])
+    coding = session["coding_evidence"]
+    if coding is None:
+        lines.append("- Coding evidence: not recorded")
+    else:
+        lines.extend(
+            [
+                f"- Status: `{coding['status']}`",
+                f"- Tests: {coding['passed']} passed, {coding['failed']} failed",
+                f"- Duration: {coding['duration_ms']} ms",
+                f"- Output truncated: `{str(coding['output_truncated']).lower()}`",
+                f"- Submission SHA-256: `{coding['submission_sha256']}`",
+            ]
+        )
     lines.extend([
         "",
         "## Objective and subjective evidence",
@@ -1399,7 +1628,19 @@ def report_interview(
         raise InterviewError("interview has not been finalized")
     warnings = reference_warnings(repo_root, profile_id, session, catalog)
     if format_name == "json":
-        value = {**session["result"], "reference_warnings": list(warnings)}
+        value = {
+            **session["result"],
+            "schema_version": 1,
+            "interview_id": session["interview_id"],
+            "profile_id": session["profile_id"],
+            "configuration": session["configuration"],
+            "selected_problem": session["selected_problem"],
+            "plan_fingerprint": session["plan_fingerprint"],
+            "material_refs": session["material_refs"],
+            "questions": _question_archive(session),
+            "objective_evidence": _objective_archive(session),
+            "reference_warnings": list(warnings),
+        }
         return json.dumps(value, ensure_ascii=False, indent=2)
     if format_name != "markdown":
         raise InterviewError("report format must be markdown or json")
