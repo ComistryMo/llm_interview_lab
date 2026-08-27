@@ -51,13 +51,19 @@
 ## 当前进度
 
 - [x] Python 3.11 基线与完整测试确认。
-- [ ] 核心生命周期与 CLI。
-- [ ] 公共个人 fixture 安全清理。
-- [ ] 38 道 ready 题。
-- [ ] 100+ planned 节点和导航对象。
-- [ ] 文档与 Coach 边界收敛。
-- [ ] 最终全量与 clean-clone 验收。
+- [x] 核心生命周期与 13 个 CLI 入口。
+- [x] 公共个人 fixture 安全清理；ignored `maintainer-v1` 未删除。
+- [x] 38 道 ready 题，每题严格四个资产文件。
+- [x] 188 个 planned 节点、12 Tracks、11 Quests、8 Capstones。
+- [x] 文档与 Coach 边界收敛。
+- [x] 最终全量与 clean-clone 验收。
 
 ## 最终复盘
 
-完成后填写实际资产数、节点数、测试证据、迁移结果、提交列表、限制和下一版本建议，并将本文件移动到 `plans/completed/`。
+LEAN-V2 MVP 于 2026-08-27 完成：固定图谱包含 38 ready / 188 planned；Workspace 支持多 Profile、事件归约、结构化 Review、D+2/D+7 复测和确定性 mastery；Grader 支持 SHA 绑定、独立 pytest 子进程、超时、输出截断与六种结果状态。
+
+迁移前重新核验了 ignored `workspace/profiles/maintainer-v1/` 的 ignore 规则、12/12 文件 SHA-256 和 reducer 等价性，随后删除 tracked tree 中的旧公共个人答案、状态、review、progress 和 handoff fixture；未删除 ignored 本地副本，未重写 Git 历史。
+
+最终 Repository Health：`130 passed, 2 skipped`。两个 skip 均因当前 Windows 账号没有创建 symlink/reparse 的权限；等价的非特权路径检查继续通过。`--collect-only` 收集 132 个基础设施节点，课程测试和真实 Workspace 均未进入根收集。clean clone 在独立 Python 3.11 venv 中完成 install/init/doctor/next/start，并确认 starter 预期失败、失败事件写入、Profile 创建后 Git 状态为空且 tracked Profile 只有 `.gitkeep`。
+
+已知限制：PyTorch 是可选依赖，本机最终 Repository Health 未安装 torch，因此 ready PyTorch 题只做了 Schema、AST、资产和公共测试契约审计，没有把 starter 当作正确实现运行；Review 结果由受信任的人或 AI 教练结构化录入；本地 grader 不是恶意代码沙箱；事件文件第一版不支持并发写入；外部课程 pack 保持 Preview-only。
