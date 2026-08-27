@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-interview-lab"
-version = "0.2.0a2"
+version = "0.3.0a1"
 description = "A gate-based, AI-assisted training lab for LLM algorithm interviews"
 readme = "README.md"
 requires-python = ">=3.10"
