@@ -1,0 +1,152 @@
+schema_version: 2
+problems:
+  - id: LOSS-007
+    title: Stable Softmax
+    status: ready
+    domain: loss_metric
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training]
+    tier: core
+    difficulty: {concept: 3, coding: 3, debugging: 4}
+    prerequisites:
+      - TNS-003
+    skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
+    assets: {problem_dir: curriculum/problems/LOSS-007-stable-softmax}
+    interface: {language: python, framework: pytorch, symbol: stable_softmax}
+    constraints:
+      forbidden_apis:
+      - torch.softmax
+      - torch.nn.functional.softmax
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: closed_form
+        target: max-shift Softmax identity
+        description: Float64 values, extreme inputs, reductions, and gradients are checked independently.
+      oral_questions:
+        - Derive the stable formula from the mathematical definition.
+        - What are the input, unreduced, and reduced shapes?
+        - Which numerical failure does the max shift prevent?
+        - How does the selected reduction scale gradients?
+    variant_axes: [dimension, dtype, reduction, extreme_magnitude]
+    invariants: [finite_for_large_finite_inputs, reference_alignment, gradient_connected]
+    common_bugs: [missing_max_shift, wrong_reduction_axis, detached_intermediate, ignored_element_denominator]
+    retention:
+      d2: Derive and reimplement the stable loss from an untouched starter.
+      d7: Debug a reduction or extreme-value variant and defend the gradient.
+    sources:
+      - {type: official_docs, title: PyTorch loss function documentation}
+  - id: LOSS-008
+    title: LogSumExp
+    status: ready
+    domain: loss_metric
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training]
+    tier: core
+    difficulty: {concept: 3, coding: 3, debugging: 4}
+    prerequisites:
+      - LOSS-007
+    skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
+    assets: {problem_dir: curriculum/problems/LOSS-008-logsumexp}
+    interface: {language: python, framework: pytorch, symbol: stable_logsumexp}
+    constraints:
+      forbidden_apis:
+      - torch.logsumexp
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: closed_form
+        target: max-shift LogSumExp identity
+        description: Float64 values, extreme inputs, reductions, and gradients are checked independently.
+      oral_questions:
+        - Derive the stable formula from the mathematical definition.
+        - What are the input, unreduced, and reduced shapes?
+        - Which numerical failure does the max shift prevent?
+        - How does the selected reduction scale gradients?
+    variant_axes: [dimension, dtype, reduction, extreme_magnitude]
+    invariants: [finite_for_large_finite_inputs, reference_alignment, gradient_connected]
+    common_bugs: [missing_max_shift, wrong_reduction_axis, detached_intermediate, ignored_element_denominator]
+    retention:
+      d2: Derive and reimplement the stable loss from an untouched starter.
+      d7: Debug a reduction or extreme-value variant and defend the gradient.
+    sources:
+      - {type: official_docs, title: PyTorch loss function documentation}
+  - id: LOSS-013
+    title: BCE with Logits
+    status: ready
+    domain: loss_metric
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training]
+    tier: core
+    difficulty: {concept: 3, coding: 3, debugging: 4}
+    prerequisites:
+      - LOSS-008
+    skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
+    assets: {problem_dir: curriculum/problems/LOSS-013-bce-with-logits}
+    interface: {language: python, framework: pytorch, symbol: bce_with_logits}
+    constraints:
+      forbidden_apis:
+      - torch.nn.functional.binary_cross_entropy_with_logits
+      - torch.nn.BCEWithLogitsLoss
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: PyTorch BCE-with-logits values and gradients
+        description: Float64 values, extreme inputs, reductions, and gradients are checked independently.
+      oral_questions:
+        - Derive the stable formula from the mathematical definition.
+        - What are the input, unreduced, and reduced shapes?
+        - Which numerical failure does the max shift prevent?
+        - How does the selected reduction scale gradients?
+    variant_axes: [dimension, dtype, reduction, extreme_magnitude]
+    invariants: [finite_for_large_finite_inputs, reference_alignment, gradient_connected]
+    common_bugs: [missing_max_shift, wrong_reduction_axis, detached_intermediate, ignored_element_denominator]
+    retention:
+      d2: Derive and reimplement the stable loss from an untouched starter.
+      d7: Debug a reduction or extreme-value variant and defend the gradient.
+    sources:
+      - {type: official_docs, title: PyTorch loss function documentation}
+  - id: LOSS-014
+    title: Cross Entropy
+    status: ready
+    domain: loss_metric
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training]
+    tier: core
+    difficulty: {concept: 3, coding: 3, debugging: 4}
+    prerequisites:
+      - LOSS-008
+      - TNS-006
+    skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
+    assets: {problem_dir: curriculum/problems/LOSS-014-cross-entropy}
+    interface: {language: python, framework: pytorch, symbol: cross_entropy}
+    constraints:
+      forbidden_apis:
+      - torch.nn.functional.cross_entropy
+      - torch.nn.CrossEntropyLoss
+      - torch.log_softmax
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: PyTorch cross-entropy values and gradients
+        description: Float64 values, extreme inputs, reductions, and gradients are checked independently.
+      oral_questions:
+        - Derive the stable formula from the mathematical definition.
+        - What are the input, unreduced, and reduced shapes?
+        - Which numerical failure does the max shift prevent?
+        - How does the selected reduction scale gradients?
+    variant_axes: [dimension, dtype, reduction, extreme_magnitude]
+    invariants: [finite_for_large_finite_inputs, reference_alignment, gradient_connected]
+    common_bugs: [missing_max_shift, wrong_reduction_axis, detached_intermediate, ignored_element_denominator]
+    retention:
+      d2: Derive and reimplement the stable loss from an untouched starter.
+      d7: Debug a reduction or extreme-value variant and defend the gradient.
+    sources:
+      - {type: official_docs, title: PyTorch loss function documentation}
+
