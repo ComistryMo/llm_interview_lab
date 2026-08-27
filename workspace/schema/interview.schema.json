@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ComistryMo/llm_interview_lab/workspace/schema/interview.schema.json",
+  "title": "LLM Interview Lab profile-local mock interview",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "interview_id", "profile_id", "status", "created_at",
+    "configuration", "material_refs", "selected_problem", "rubric", "questions",
+    "plan_fingerprint", "started_at", "deadline", "coding_submission_relpath",
+    "answers", "coding_evidence", "assessments", "timeline", "result"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "interview_id": {"type": "string", "pattern": "^interview-[0-9]{4}$"},
+    "profile_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "status": {"enum": ["ready", "active", "completed", "incomplete", "timed_out"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "configuration": {"$ref": "#/$defs/configuration"},
+    "material_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/material_ref"}
+    },
+    "selected_problem": {"$ref": "#/$defs/problem_ref"},
+    "rubric": {"$ref": "#/$defs/rubric"},
+    "questions": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 5,
+      "items": {"$ref": "#/$defs/question"}
+    },
+    "plan_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "started_at": {"oneOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+    "deadline": {"oneOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+    "coding_submission_relpath": {
+      "oneOf": [
+        {"type": "string", "pattern": "^interviews/interview-[0-9]{4}/coding/submission\\.py$"},
+        {"type": "null"}
+      ]
+    },
+    "answers": {
+      "type": "object",
+      "propertyNames": {"pattern": "^q-[0-9]{3}$"},
+      "additionalProperties": {"$ref": "#/$defs/answer"}
+    },
+    "coding_evidence": {
+      "oneOf": [{"$ref": "#/$defs/coding_evidence"}, {"type": "null"}]
+    },
+    "assessments": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reasoning_complexity": {"$ref": "#/$defs/assessment"},
+        "technical_oral": {"$ref": "#/$defs/assessment"},
+        "project_evidence": {"$ref": "#/$defs/assessment"},
+        "communication": {"$ref": "#/$defs/assessment"}
+      }
+    },
+    "timeline": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/timeline_event"}
+    },
+    "result": {"oneOf": [{"$ref": "#/$defs/result"}, {"type": "null"}]}
+  },
+  "$defs": {
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["difficulty", "duration_minutes", "track_id", "mode", "seed", "focus"],
+      "properties": {
+        "difficulty": {"enum": ["easy", "medium", "hard"]},
+        "duration_minutes": {"enum": [30, 45, 60, 90]},
+        "track_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "mode": {"enum": ["catalog", "tailored"]},
+        "seed": {"type": "integer", "minimum": 0},
+        "focus": {"type": "string", "maxLength": 500}
+      }
+    },
+    "material_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sha256", "kind", "title", "allowed_use"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "kind": {"enum": ["resume", "experience", "research", "job_description", "portfolio", "other"]},
+        "title": {"type": "string", "minLength": 1, "maxLength": 200},
+        "allowed_use": {"const": "mock_interview"}
+      }
+    },
+    "problem_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["problem_id", "title", "validation_level", "fingerprint"],
+      "properties": {
+        "problem_id": {"type": "string", "pattern": "^[A-Z]+-[0-9]{3}$"},
+        "title": {"type": "string", "minLength": 1},
+        "validation_level": {"enum": ["oracle", "field", "stable"]},
+        "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "rubric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "weights", "score_range"],
+      "properties": {
+        "version": {"const": "mixed-v1"},
+        "weights": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "coding_correctness", "reasoning_complexity", "technical_oral",
+            "project_evidence", "communication", "time_management"
+          ],
+          "properties": {
+            "coding_correctness": {"const": 30},
+            "reasoning_complexity": {"const": 20},
+            "technical_oral": {"const": 20},
+            "project_evidence": {"const": 15},
+            "communication": {"const": 10},
+            "time_management": {"const": 5}
+          }
+        },
+        "score_range": {"const": [0, 100]}
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["question_id", "kind", "prompt", "timebox_minutes", "material_ids"],
+      "properties": {
+        "question_id": {"type": "string", "pattern": "^q-[0-9]{3}$"},
+        "kind": {"enum": ["introduction", "background", "experience", "technical_oral", "coding", "follow_up"]},
+        "prompt": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "timebox_minutes": {"type": "integer", "minimum": 1, "maximum": 90},
+        "material_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"}
+        },
+        "problem_id": {"type": "string", "pattern": "^[A-Z]+-[0-9]{3}$"}
+      }
+    },
+    "answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["answer_relpath", "sha256", "recorded_at", "asked_question"],
+      "properties": {
+        "answer_relpath": {"type": "string", "pattern": "^interviews/interview-[0-9]{4}/answers/q-[0-9]{3}\\.md$"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "recorded_at": {"type": "string", "format": "date-time"},
+        "asked_question": {"type": "string", "minLength": 1, "maxLength": 2000}
+      }
+    },
+    "coding_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["problem_id", "submission_sha256", "status", "passed", "failed", "duration_ms", "output_truncated", "tested_at"],
+      "properties": {
+        "problem_id": {"type": "string", "pattern": "^[A-Z]+-[0-9]{3}$"},
+        "submission_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "status": {"enum": ["passed", "failed", "timed_out", "collection_error", "import_error", "internal_error"]},
+        "passed": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0},
+        "duration_ms": {"type": "integer", "minimum": 0},
+        "output_truncated": {"type": "boolean"},
+        "tested_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "source", "evidence", "confidence", "question_ids", "assessed_at"],
+      "properties": {
+        "score": {"type": "number", "minimum": 0, "maximum": 100},
+        "source": {"enum": ["ai", "human", "self"]},
+        "evidence": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "confidence": {"enum": ["low", "medium", "high"]},
+        "question_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^q-[0-9]{3}$"}
+        },
+        "assessed_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "timeline_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event", "timestamp"],
+      "properties": {
+        "event": {"enum": ["created", "started", "answer_recorded", "coding_tested", "assessment_recorded", "finished"]},
+        "timestamp": {"type": "string", "format": "date-time"},
+        "question_id": {"type": "string", "pattern": "^q-[0-9]{3}$"},
+        "dimension": {"enum": ["reasoning_complexity", "technical_oral", "project_evidence", "communication"]}
+      }
+    },
+    "dimension_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "source", "evidence", "confidence", "question_ids"],
+      "properties": {
+        "score": {"type": "number", "minimum": 0, "maximum": 100},
+        "source": {"type": "string", "minLength": 1},
+        "evidence": {"type": "string", "minLength": 1},
+        "confidence": {"type": "string"},
+        "question_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^q-[0-9]{3}$"}
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completion_status", "evidence_status", "finished_at", "elapsed_seconds", "overall_score", "outcome", "dimensions", "strengths", "gaps", "recommended_problem_ids", "summary", "mastery_changed"],
+      "properties": {
+        "completion_status": {"enum": ["completed", "incomplete", "timed_out"]},
+        "evidence_status": {"enum": ["complete", "partial"]},
+        "finished_at": {"type": "string", "format": "date-time"},
+        "elapsed_seconds": {"type": "integer", "minimum": 0},
+        "overall_score": {"type": "number", "minimum": 0, "maximum": 100},
+        "outcome": {"enum": ["Strong", "On track", "Needs focused practice", "Needs practice", "Insufficient evidence"]},
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["coding_correctness", "reasoning_complexity", "technical_oral", "project_evidence", "communication", "time_management"],
+          "properties": {
+            "coding_correctness": {"$ref": "#/$defs/dimension_result"},
+            "reasoning_complexity": {"$ref": "#/$defs/dimension_result"},
+            "technical_oral": {"$ref": "#/$defs/dimension_result"},
+            "project_evidence": {"$ref": "#/$defs/dimension_result"},
+            "communication": {"$ref": "#/$defs/dimension_result"},
+            "time_management": {"$ref": "#/$defs/dimension_result"}
+          }
+        },
+        "strengths": {"type": "array", "maxItems": 2, "items": {"type": "string"}},
+        "gaps": {"type": "array", "maxItems": 2, "items": {"type": "string"}},
+        "recommended_problem_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z]+-[0-9]{3}$"}},
+        "summary": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "mastery_changed": {"const": false}
+      }
+    }
+  }
+}

@@ -22,7 +22,16 @@ if TYPE_CHECKING:
     from .catalog import Problem
 
 PROFILE_ID_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
-PROFILE_SUBDIRECTORIES = ("submissions", "generated", "private_tests", "reviews", "cache", "exports")
+PROFILE_SUBDIRECTORIES = (
+    "submissions",
+    "generated",
+    "private_tests",
+    "reviews",
+    "cache",
+    "exports",
+    "materials",
+    "interviews",
+)
 
 
 class WorkspaceError(RuntimeError):
@@ -35,6 +44,8 @@ class ProfilePaths:
     profile_file: Path
     events_file: Path
     submissions_root: Path
+    materials_root: Path
+    interviews_root: Path
 
 
 @dataclass(frozen=True)
@@ -69,7 +80,14 @@ def validate_profile_id(profile_id: str) -> str:
 
 def profile_paths(repo_root: Path, profile_id: str) -> ProfilePaths:
     root = repo_root / "workspace/profiles" / validate_profile_id(profile_id)
-    return ProfilePaths(root, root / "profile.yaml", root / "events.jsonl", root / "submissions")
+    return ProfilePaths(
+        root,
+        root / "profile.yaml",
+        root / "events.jsonl",
+        root / "submissions",
+        root / "materials",
+        root / "interviews",
+    )
 
 
 def event_schema_path(repo_root: Path) -> Path:
@@ -101,6 +119,9 @@ def validate_profile_data(data: Any, repo_root: Path) -> dict[str, Any]:
 
 
 def load_profile(paths: ProfilePaths, repo_root: Path) -> dict[str, Any]:
+    ensure_profile_path_is_safe(
+        repo_root, paths.root.name, paths.profile_file, must_exist=True
+    )
     try:
         data = yaml.safe_load(paths.profile_file.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, yaml.YAMLError) as error:
@@ -124,14 +145,32 @@ def ensure_profile_is_ignored(repo_root: Path, profile_id: str) -> None:
         raise WorkspaceError("workspace profile path is not ignored by Git")
 
 
+def _ensure_profile_subdirectories(repo_root: Path, paths: ProfilePaths) -> None:
+    """Add missing layout directories without rewriting Profile facts."""
+
+    for name in PROFILE_SUBDIRECTORIES:
+        directory = paths.root / name
+        ensure_profile_path_is_safe(repo_root, paths.root.name, directory)
+        if directory.exists():
+            if not directory.is_dir() or _is_obvious_link(directory):
+                raise WorkspaceError(f"profile subdirectory is invalid: {name}")
+            continue
+        directory.mkdir()
+        ensure_profile_path_is_safe(
+            repo_root, paths.root.name, directory, must_exist=True
+        )
+
+
 def init_profile(repo_root: Path, profile_id: str, track_ids: tuple[str, ...] | None = None) -> InitResult:
     paths = profile_paths(repo_root, profile_id)
     ensure_profile_is_ignored(repo_root, profile_id)
+    ensure_profile_path_is_safe(repo_root, profile_id, paths.root)
     if paths.root.exists():
         if not paths.root.is_dir():
             raise WorkspaceError("profile path exists and is not a directory")
         load_profile(paths, repo_root)
         read_events(paths.events_file, event_schema_path(repo_root))
+        _ensure_profile_subdirectories(repo_root, paths)
         return InitResult(paths, False)
     try:
         template = yaml.safe_load((repo_root / "workspace/templates/default/profile.yaml").read_text(encoding="utf-8"))
@@ -145,8 +184,8 @@ def init_profile(repo_root: Path, profile_id: str, track_ids: tuple[str, ...] | 
         template["target_roles"] = list(dict.fromkeys(track_ids))
     validate_profile_data(template, repo_root)
     paths.root.mkdir(parents=True, exist_ok=False)
-    for name in PROFILE_SUBDIRECTORIES:
-        (paths.root / name).mkdir()
+    ensure_profile_path_is_safe(repo_root, profile_id, paths.root, must_exist=True)
+    _ensure_profile_subdirectories(repo_root, paths)
     paths.profile_file.write_text(yaml.safe_dump(template, sort_keys=False, allow_unicode=True), encoding="utf-8", newline="\n")
     append_event(paths.events_file, event_schema_path(repo_root), profile_id=profile_id, event_type="profile_created", problem_id=None, attempt_id=None, payload={"synthetic": False, "target_roles": template["target_roles"]})
     return InitResult(paths, True)
@@ -165,6 +204,71 @@ def _is_obvious_link(path: Path) -> bool:
         return False
     attributes = getattr(file_stat, "st_file_attributes", 0)
     return stat.S_ISLNK(file_stat.st_mode) or bool(attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
+
+
+def ensure_profile_path_is_safe(
+    repo_root: Path,
+    profile_id: str,
+    candidate: Path | None = None,
+    *,
+    must_exist: bool = False,
+) -> Path:
+    """Validate one lexical path inside an unlinked repository-local Profile.
+
+    This prevents accidental traversal through symlinks and Windows reparse
+    points.  It is a path-integrity check for trusted local use, not a sandbox
+    for hostile code.
+    """
+
+    repository = repo_root.resolve()
+    profiles_root = repository / "workspace/profiles"
+    profile_root = profiles_root / validate_profile_id(profile_id)
+    target = (candidate or profile_root).absolute()
+    try:
+        profile_root.absolute().relative_to(profiles_root.absolute())
+        target.relative_to(profile_root.absolute())
+    except ValueError as error:
+        raise WorkspaceError("Profile path is outside workspace/profiles") from error
+
+    if not profiles_root.is_dir() or _is_obvious_link(profiles_root):
+        raise WorkspaceError("workspace/profiles must be a regular, unlinked directory")
+
+    current = profiles_root
+    relative = target.relative_to(profiles_root)
+    for part in relative.parts:
+        current = current / part
+        if _is_obvious_link(current):
+            raise WorkspaceError("Profile path must not use a symlink or reparse point")
+        if current.exists() and current != target and not current.is_dir():
+            raise WorkspaceError("Profile path contains a non-directory component")
+
+    if must_exist and not target.exists():
+        raise WorkspaceError("required Profile path is missing")
+
+    try:
+        resolved_profiles = profiles_root.resolve(strict=True)
+        if profile_root.exists():
+            resolved_profile = profile_root.resolve(strict=True)
+            resolved_profile.relative_to(resolved_profiles)
+        else:
+            resolved_profile = profile_root
+
+        if target.exists():
+            resolved_target = target.resolve(strict=True)
+            if profile_root.exists():
+                resolved_target.relative_to(resolved_profile)
+        else:
+            parent = target.parent
+            while not parent.exists() and parent != profile_root.parent:
+                parent = parent.parent
+            resolved_parent = parent.resolve(strict=True)
+            if profile_root.exists():
+                resolved_parent.relative_to(resolved_profile)
+            else:
+                resolved_parent.relative_to(resolved_profiles)
+    except (OSError, ValueError) as error:
+        raise WorkspaceError("Profile path escapes workspace/profiles") from error
+    return target
 
 
 def _create_attempt(repo_root: Path, profile_id: str, problem: "Problem", attempt_id: str, retention_stage: str | None) -> StartResult:
