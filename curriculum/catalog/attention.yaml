@@ -11,7 +11,7 @@ problems:
       - LOSS-007
       - TNS-010
     skills: [attention.shape, attention.mask, attention.gradient]
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: cffeca6e3920e6d5a39d0d7bb173519162e636ad04ea95246e372ad6d5d1e007}
     assets: {problem_dir: curriculum/problems/ATT-002-scaled-dot-product-attention}
     interface: {language: python, framework: pytorch, symbol: scaled_dot_product_attention}
     constraints:
@@ -50,7 +50,7 @@ problems:
       - ATT-002
       - TNS-002
     skills: [attention.shape, attention.mask, attention.gradient]
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 6cd015375620dbca790fe0cfbe06ec6959a5a420808c167c4caad407504cc64b}
     assets: {problem_dir: curriculum/problems/ATT-004-multi-head-attention}
     interface: {language: python, framework: pytorch, symbol: multi_head_attention}
     constraints:
@@ -134,7 +134,7 @@ problems:
     prerequisites:
       - ATT-004
     skills: [attention.shape, attention.mask, attention.gradient]
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 9e867970f203ae721291e150964d13100be3948e92a9bedad6f8f1023dfdf93e}
     assets: {problem_dir: curriculum/problems/ATT-006-grouped-query-attention}
     interface: {language: python, framework: pytorch, symbol: grouped_query_attention}
     constraints:
@@ -209,7 +209,7 @@ problems:
     prerequisites:
       - ATT-002
     skills: [attention.shape, attention.mask, attention.gradient]
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: da6d423e2a27c392fcd2a8c36d4e4d257620708e7b02c17ea146b8b0d4da84e6}
     assets: {problem_dir: curriculum/problems/ATT-009-kv-cache}
     interface: {language: python, framework: pytorch, symbol: KVCache}
     constraints:

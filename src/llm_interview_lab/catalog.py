@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -38,6 +39,18 @@ class Problem:
     @property
     def ready(self) -> bool:
         return self.status in {"ready", "stable"}
+
+    @property
+    def validation_level(self) -> str:
+        return str(self.raw["validation"]["level"])
+
+    @property
+    def recommendable(self) -> bool:
+        return self.ready and self.validation_level in {"oracle", "field", "stable"}
+
+    @property
+    def field_runs(self) -> int:
+        return int(self.raw["validation"]["field_runs"])
 
     def retention_variant(self, repo_root: Path, stage: str) -> tuple[Path, Path, str] | None:
         value = self.raw["retention"].get(stage)
@@ -85,11 +98,18 @@ class Catalog:
         except KeyError as error:
             raise CatalogError(f"unknown problem ID: {problem_id}") from error
 
-    def unlocked(self, mastered: set[str], track_ids: set[str] | None = None) -> tuple[Problem, ...]:
+    def unlocked(
+        self,
+        mastered: set[str],
+        track_ids: set[str] | None = None,
+        *,
+        include_experimental: bool = False,
+    ) -> tuple[Problem, ...]:
         return tuple(
             self.problems[problem_id]
             for problem_id in self.order
             if self.problems[problem_id].ready
+            and (include_experimental or self.problems[problem_id].recommendable)
             and problem_id not in mastered
             and set(self.problems[problem_id].prerequisites).issubset(mastered)
             and (not track_ids or track_ids.intersection(self.problems[problem_id].raw["tracks"]))
@@ -187,7 +207,51 @@ def _validate_assets(repo_root: Path, problems: dict[str, Problem]) -> None:
             raise CatalogError(f"problem directories not registered as ready: {', '.join(unknown)}")
 
 
-def load_catalog(repo_root: Path) -> Catalog:
+def compute_problem_fingerprint(repo_root: Path, problem: Problem) -> str:
+    """Hash the public contract and executable assets, excluding maturity counters."""
+
+    if not problem.ready or problem.problem_dir is None or problem.public_tests is None:
+        raise CatalogError(f"planned problem has no validation fingerprint: {problem.id}")
+    contract = {key: value for key, value in problem.raw.items() if key != "validation"}
+    digest = hashlib.sha256()
+    digest.update(json.dumps(contract, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    asset_paths = [
+        problem.problem_dir / "task.md",
+        problem.problem_dir / "starter.py",
+        problem.public_tests,
+    ]
+    for stage in ("d2", "d7"):
+        value = problem.raw["retention"].get(stage)
+        if isinstance(value, dict):
+            root = _repository_path(repo_root, value["assets"]["root"], f"{problem.id} {stage} retention")
+            asset_paths.extend((root / value["assets"]["starter"], root / value["assets"]["public_tests"]))
+    for path in asset_paths:
+        try:
+            relative = path.resolve().relative_to(repo_root.resolve()).as_posix()
+            content = path.read_bytes()
+        except (OSError, ValueError) as error:
+            raise CatalogError(f"validation fingerprint asset cannot be read: {problem.id}") from error
+        digest.update(len(relative).to_bytes(4, "big"))
+        digest.update(relative.encode("utf-8"))
+        digest.update(len(content).to_bytes(8, "big"))
+        digest.update(content)
+    return digest.hexdigest()
+
+
+def _validate_fingerprints(repo_root: Path, problems: dict[str, Problem]) -> None:
+    for problem in problems.values():
+        if not problem.recommendable:
+            continue
+        recorded = problem.raw["validation"].get("fingerprint")
+        current = compute_problem_fingerprint(repo_root, problem)
+        if recorded != current:
+            raise CatalogError(
+                f"stale Oracle validation fingerprint: {problem.id}; "
+                "rerun ignored maintainer Oracle validation"
+            )
+
+
+def load_catalog(repo_root: Path, *, verify_validation: bool = True) -> Catalog:
     schema = _json_object(repo_root / "curriculum/schema/catalog.schema.json", "catalog schema")
     paths = sorted((repo_root / "curriculum/catalog").glob("*.yaml"))
     if not paths:
@@ -232,4 +296,6 @@ def load_catalog(repo_root: Path) -> Catalog:
         if set(capstone.prerequisites) - set(problems) or set(capstone.tracks) - known_tracks:
             raise CatalogError(f"invalid capstone references: {capstone.id}")
     _validate_assets(repo_root, problems)
+    if verify_validation:
+        _validate_fingerprints(repo_root, problems)
     return Catalog(problems, order, tracks, quests, capstones)

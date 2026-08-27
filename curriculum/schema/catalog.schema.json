@@ -13,7 +13,7 @@
     "problems": {"type": "array", "items": {"oneOf": [{"$ref": "#/$defs/ready_problem"}, {"$ref": "#/$defs/planned_problem"}]}}
   },
   "$defs": {
-    "id": {"type": "string", "pattern": "^[A-Z]+-[0-9]{3}$"},
+    "id": {"type": "string", "pattern": "^(?:[A-Z]+|CAP-[A-Z]+)-[0-9]{3}$"},
     "slug": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
     "difficulty": {
       "type": "object", "additionalProperties": false, "required": ["concept", "coding", "debugging"],
@@ -38,8 +38,8 @@
             "status": {"enum": ["ready", "stable"]}, "domain": {"$ref": "#/$defs/slug"}, "tracks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/slug"}},
             "tier": {"enum": ["core", "advanced", "elective"]}, "difficulty": {"$ref": "#/$defs/difficulty"}, "prerequisites": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
             "skills": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$"}},
-            "validation": {"type": "object", "additionalProperties": false, "required": ["level", "field_runs"], "properties": {"level": {"enum": ["contract", "oracle", "field", "stable"]}, "field_runs": {"type": "integer", "minimum": 0}}},
-            "assets": {"type": "object", "additionalProperties": false, "required": ["problem_dir"], "properties": {"problem_dir": {"type": "string", "pattern": "^curriculum/problems/[A-Z]+-[0-9]{3}-[a-z0-9-]+$"}}},
+            "validation": {"type": "object", "additionalProperties": false, "required": ["level", "field_runs"], "properties": {"level": {"enum": ["contract", "oracle", "field", "stable"]}, "field_runs": {"type": "integer", "minimum": 0}, "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
+            "assets": {"type": "object", "additionalProperties": false, "required": ["problem_dir"], "properties": {"problem_dir": {"type": "string", "pattern": "^curriculum/problems/(?:[A-Z]+|CAP-[A-Z]+)-[0-9]{3}-[a-z0-9-]+$"}}},
             "interface": {"type": "object", "additionalProperties": false, "required": ["language", "framework", "symbol"], "properties": {"language": {"const": "python"}, "framework": {"enum": ["stdlib", "pytorch"]}, "symbol": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"}}},
             "constraints": {"type": "object", "additionalProperties": false, "required": ["forbidden_apis", "time_limit_ms", "output_limit_kb"], "properties": {"forbidden_apis": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "time_limit_ms": {"type": "integer", "minimum": 100}, "output_limit_kb": {"type": "integer", "minimum": 1}, "memory_limit_mb": {"type": "integer", "minimum": 1}}},
             "assessment": {
@@ -80,7 +80,7 @@
               "type": "object", "additionalProperties": false,
               "required": ["root", "starter", "public_tests"],
               "properties": {
-                "root": {"type": "string", "pattern": "^curriculum/retention/[A-Z]+-[0-9]{3}/d[27]$"},
+                "root": {"type": "string", "pattern": "^curriculum/retention/(?:[A-Z]+|CAP-[A-Z]+)-[0-9]{3}/d[27]$"},
                 "starter": {"const": "starter.py"},
                 "public_tests": {"const": "test_public.py"}
               }

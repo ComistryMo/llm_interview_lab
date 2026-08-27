@@ -1,12 +1,24 @@
 # LLM Interview Lab
 
-> **Alpha v0.2.0-alpha.1:** 38 个可运行题中，13 个已通过维护者 public + private/property Oracle 验证，8 个具有经 Oracle 验证的 D+2/D+7 复测资产，0 个完成公开 field run。`ready` 表示题面与测试契约完整，不代表已经完成数值 Oracle 或真实用户验证。
+> **Alpha v0.2.0-alpha.2:** 39 个可运行节点中，18 个已通过维护者 public + private/property Oracle 验证，12 个具有经 Oracle 验证的 D+2/D+7 复测资产，真实 `field_runs` 仍为 0。`ready` 表示题面与测试契约完整，不代表已经完成 Oracle 或真实用户验证。
 
 本项目当前是公开 Alpha：欢迎试用与报告问题，但不承诺所有 `ready` 题都已完成数值验证。公共测试是学习反馈，不是防作弊的“隐藏测试”；本地 grader 有超时与输出截断，但不是恶意代码安全沙箱，只应运行你本人信任的代码。
 
 一个面向大众的、clone 后即可使用的 AI 算法面试手撕训练平台。
 
 这里训练的是“能独立解释、实现、测试、调试并隔周迁移”，不是把一次公开测试通过包装成掌握。固定课程与解锁规则是确定性的；AI 可以教学、分级提示、审查和生成本地变式，但不能直接判定 mastery。
+
+第一条完整 Golden Quest 是 `Python Data Reliability`：
+
+```text
+FND-001 → FND-002 → FND-003 → FND-004 → FND-005 → FND-006
+        → CAP-FND-001 Hard Sample Data Pipeline
+```
+
+六道前置题都具备独立、Oracle 验证的 D+2/D+7；只有全部达到
+`mastered` 才解锁 Capstone。陌生用户试跑步骤见
+[Golden Quest Beta 指南](docs/beta-golden-quest.md)。自动化 E2E 不计入
+`field_runs`，真实反馈到达前项目仍是 Alpha。
 
 ## 五分钟开始
 
@@ -103,7 +115,7 @@ Tracks 包括 AI 基础、LLM、VLM、后训练、Agent、训练/推理系统，
 
 ## 课程与差异化
 
-当前固定图谱包含 38 个可运行题和 188 个 planned 节点。planned 节点只有 Catalog 元数据，不制造空目录。首批 ready 内容覆盖：
+当前固定图谱包含 39 个可运行节点和 188 个 planned 节点。planned 节点只有 Catalog 元数据，不制造空目录。默认 Planner 只推荐 `oracle`、`field` 或 `stable` 节点；`contract` 节点仍可在 Catalog 查看，但需 Profile 开启 `allow_experimental_problems` 或显式 CLI opt-in。首批 ready 内容覆盖：
 
 - 真实数据任务中的 Python 与 JSONL；
 - shape、broadcast、gather、mask、last token、autograd；

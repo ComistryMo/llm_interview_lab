@@ -1,30 +1,48 @@
-name: Alpha/Beta training feedback
-description: Report one real learning run without sharing private or employer data.
-title: "[Beta] "
+name: Golden Quest Alpha feedback
+description: Report one real Python Data Reliability run without sharing private data.
+title: "[Golden Quest] "
 labels: ["beta-feedback"]
 body:
   - type: markdown
     attributes:
       value: "Do not attach submissions, private tests, employer data, or workspace/profiles content."
   - type: input
-    id: profile
-    attributes: {label: Anonymous profile, description: "A non-identifying nickname or synthetic ID."}
-  - type: input
-    id: track
-    attributes: {label: Selected track}
+    id: background
+    attributes: {label: User background, description: "Broad, non-identifying level such as Python beginner or ML student."}
     validations: {required: true}
   - type: input
-    id: timing
-    attributes: {label: Install time / time to first task, placeholder: "4 min / 7 min"}
+    id: install_time
+    attributes: {label: Install time, placeholder: "4 minutes"}
+  - type: input
+    id: first_task_time
+    attributes: {label: Time to first task, placeholder: "7 minutes"}
   - type: input
     id: completed
-    attributes: {label: Completed problem IDs}
+    attributes: {label: Completed nodes}
+  - type: dropdown
+    id: quest_completion
+    attributes:
+      label: Quest completion
+      options: ["Completed through CAP-FND-001", "Completed FND-001—006", "Partially completed", "Blocked before first task"]
+    validations: {required: true}
   - type: textarea
-    id: quality
-    attributes: {label: Contract, tests, and hints, description: "Note any confusing contract, misleading test, or hint leakage."}
+    id: contract_confusion
+    attributes: {label: Contract confusion}
   - type: textarea
-    id: retention
-    attributes: {label: Retention usefulness, description: "What did D+2/D+7 reveal?"}
+    id: misleading_test
+    attributes: {label: Misleading test}
+  - type: textarea
+    id: hint_leakage
+    attributes: {label: Hint leakage}
+  - type: textarea
+    id: d2_usefulness
+    attributes: {label: D+2 usefulness}
+  - type: textarea
+    id: d7_usefulness
+    attributes: {label: D+7 usefulness}
   - type: textarea
     id: blocker
     attributes: {label: Blocking bug, description: "Include OS, Python version, command, and sanitized output."}
+  - type: textarea
+    id: free_text
+    attributes: {label: Free-text feedback}

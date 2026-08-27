@@ -22,7 +22,7 @@ problems:
       - python.loop
       - python.exception
       - python.runtime_type
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 7c98a256c75fd96728e58bc68865f1eb4f50b2bd6829241b366635f6fca25382}
     assets:
       problem_dir: curriculum/problems/FND-001-wrong-prediction-count
     interface:
@@ -93,7 +93,7 @@ problems:
       - python.dict
       - python.runtime_type
       - python.copy
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 59b19b937918607fbcfa22c2124c12a0c5af076b6ea95ff0d283b08511b1328b}
     assets:
       problem_dir: curriculum/problems/FND-002-sample-contract-validation
     interface: {language: python, framework: stdlib, symbol: validate_sample}
@@ -116,8 +116,16 @@ problems:
     invariants: [deterministic_output, input_not_mutated]
     common_bugs: [implicit_bool_acceptance, missing_nested_validation, accidental_aliasing]
     retention:
-      d2: Rewrite the same interface from an untouched starter without viewing prior code.
-      d7: Solve a deterministic boundary-focused variant and explain the changed invariant.
+      d2:
+        description: Normalize an equivalent sample contract through a new field layout and interface.
+        assets: {root: curriculum/retention/FND-002/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: normalize_inference_record}
+        oracle_validated: true
+      d7:
+        description: Validate a batch, report rejected indices, and keep accepted records defensive.
+        assets: {root: curriculum/retention/FND-002/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: partition_valid_samples}
+        oracle_validated: true
     sources:
       - {type: internal_original, title: LLM Interview Lab clean-room exercise}
   - id: FND-003
@@ -131,13 +139,12 @@ problems:
     tier: core
     difficulty: {concept: 2, coding: 2, debugging: 2}
     prerequisites:
-      - FND-001
       - FND-002
     skills:
       - python.list
       - python.loop
       - python.validation
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 52bbef5c3e4f7aa393a3ec35ace11a06139a3d010f38fcfe2b520c9da93efd7f}
     assets:
       problem_dir: curriculum/problems/FND-003-hard-sample-filter
     interface: {language: python, framework: stdlib, symbol: mine_hard_samples}
@@ -188,7 +195,7 @@ problems:
       - python.dict
       - python.aggregate
       - python.float
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 037e163f67f3c240a7267a50747d0f6e1e467f5e45148e482454f4d412884739}
     assets:
       problem_dir: curriculum/problems/FND-004-hard-sample-summary
     interface: {language: python, framework: stdlib, symbol: summarize_hard_samples}
@@ -211,8 +218,16 @@ problems:
     invariants: [deterministic_output, input_not_mutated]
     common_bugs: [implicit_bool_acceptance, missing_nested_validation, accidental_aliasing]
     retention:
-      d2: Rewrite the same interface from an untouched starter without viewing prior code.
-      d7: Solve a deterministic boundary-focused variant and explain the changed invariant.
+      d2:
+        description: Compute per-label error totals from validated samples through a tuple-valued summary.
+        assets: {root: curriculum/retention/FND-004/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: summarize_errors_by_label}
+        oracle_validated: true
+      d7:
+        description: Merge independently produced summaries while preserving exact aggregate semantics.
+        assets: {root: curriculum/retention/FND-004/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: merge_error_summaries}
+        oracle_validated: true
     sources:
       - {type: internal_original, title: LLM Interview Lab clean-room exercise}
   - id: FND-005
@@ -227,12 +242,12 @@ problems:
     tier: core
     difficulty: {concept: 2, coding: 2, debugging: 2}
     prerequisites:
-      - FND-002
+      - FND-004
     skills:
       - python.file
       - python.json
       - python.iterator
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 9246512b316c9ed183e700c1a9f7fe7989338042cd3b2f56711327c0475b91a4}
     assets:
       problem_dir: curriculum/problems/FND-005-jsonl-streaming-io
     interface: {language: python, framework: stdlib, symbol: JsonlIO}
@@ -255,8 +270,16 @@ problems:
     invariants: [deterministic_output, input_not_mutated]
     common_bugs: [implicit_bool_acceptance, missing_nested_validation, accidental_aliasing]
     retention:
-      d2: Rewrite the same interface from an untouched starter without viewing prior code.
-      d7: Solve a deterministic boundary-focused variant and explain the changed invariant.
+      d2:
+        description: Parse JSONL from an iterable of text lines with the same strict object and line-number guarantees.
+        assets: {root: curriculum/retention/FND-005/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: iter_jsonl_objects}
+        oracle_validated: true
+      d7:
+        description: Transform one JSONL file into another using a validated record callback and count the output.
+        assets: {root: curriculum/retention/FND-005/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: transform_jsonl}
+        oracle_validated: true
     sources:
       - {type: internal_original, title: LLM Interview Lab clean-room exercise}
   - id: FND-006
@@ -270,12 +293,12 @@ problems:
     tier: core
     difficulty: {concept: 2, coding: 2, debugging: 2}
     prerequisites:
-      - FND-001
+      - FND-005
     skills:
       - python.generator
       - python.slice
       - python.validation
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: f146acdc3fa540e411082612262b8dc0be0c3e47d238b0f093dab3358c6b3b07}
     assets:
       problem_dir: curriculum/problems/FND-006-mini-batch-iterator
     interface: {language: python, framework: stdlib, symbol: iter_minibatches}
@@ -298,7 +321,48 @@ problems:
     invariants: [deterministic_output, input_not_mutated]
     common_bugs: [implicit_bool_acceptance, missing_nested_validation, accidental_aliasing]
     retention:
-      d2: Rewrite the same interface from an untouched starter without viewing prior code.
-      d7: Solve a deterministic boundary-focused variant and explain the changed invariant.
+      d2:
+        description: Yield each batch with its zero-based source offset through a changed interface.
+        assets: {root: curriculum/retention/FND-006/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: iter_indexed_batches}
+        oracle_validated: true
+      d7:
+        description: Produce padded batches and validity masks without aliasing or mutating input data.
+        assets: {root: curriculum/retention/FND-006/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: iter_padded_batches}
+        oracle_validated: true
     sources:
       - {type: internal_original, title: LLM Interview Lab clean-room exercise}
+
+  - id: CAP-FND-001
+    title: Hard Sample Data Pipeline
+    status: ready
+    domain: foundation
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm]
+    tier: core
+    difficulty: {concept: 3, coding: 3, debugging: 3}
+    prerequisites: [FND-001, FND-002, FND-003, FND-004, FND-005, FND-006]
+    skills: [python.json, python.validation, python.aggregate, python.filter, python.generator, python.pipeline]
+    validation: {level: oracle, field_runs: 0, fingerprint: 79648f2dd54df1a3db45f4b2bdaacd208960849e0a28ad9acdb6acd9766d1cd5}
+    assets: {problem_dir: curriculum/problems/CAP-FND-001-hard-sample-data-pipeline}
+    interface: {language: python, framework: stdlib, symbol: run_hard_sample_pipeline}
+    constraints: {forbidden_apis: [], time_limit_ms: 5000, output_limit_kb: 256}
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: fixture_expected
+        target: deterministic end-to-end JSONL pipeline fixtures
+        description: Fixtures verify strict validation, filtering, aggregation, output persistence, batching, and non-mutation.
+      oral_questions:
+        - Where does each FND-001 through FND-006 capability appear in the pipeline?
+        - Which operations are streaming and which require materialization, and why?
+        - What are the time and auxiliary-space complexities in samples and predictions?
+        - How are partial output and invalid input handled without hiding filesystem errors?
+    variant_axes: [record_count, label_distribution, error_threshold, batch_size, malformed_line]
+    invariants: [input_file_not_modified, output_contains_only_defensive_hard_samples, batches_match_output_order, counts_match_output]
+    common_bugs: [writing_before_full_validation, bool_accepted_as_int, rate_count_confusion, last_batch_dropped, nested_list_aliasing]
+    retention:
+      d2: Capstone retention is not part of Alpha.2; complete the six prerequisite retention gates instead.
+      d7: Capstone retention is not part of Alpha.2; field feedback drives its future transfer variant.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room foundation capstone}

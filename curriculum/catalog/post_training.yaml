@@ -84,7 +84,7 @@ problems:
     prerequisites:
       - PT-002
     skills: [post_training.mask, post_training.logprob, post_training.objective]
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 239d744b831e844e078c26661290c4a657d5246695dc4284c699db82187d2615}
     assets: {problem_dir: curriculum/problems/PT-006-dpo-loss}
     interface: {language: python, framework: pytorch, symbol: dpo_loss}
     constraints:
@@ -156,7 +156,7 @@ problems:
     prerequisites:
       - PT-014
     skills: [post_training.mask, post_training.logprob, post_training.objective]
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 443f04d2e2301c38437f0763e5354c27c3fccd57a3123e3ec4de41ea6be15433}
     assets: {problem_dir: curriculum/problems/PT-015-grpo-loss}
     interface: {language: python, framework: pytorch, symbol: grpo_clipped_loss}
     constraints:
