@@ -1,0 +1,69 @@
+schema_version: 1
+problems:
+  - id: FND-001
+    legacy_ids:
+      - 00A-1
+    title: Wrong Prediction Count
+    status: ready
+    domain: foundation
+    tracks:
+      - ai_foundation
+      - llm_algorithm
+      - vlm_algorithm
+    tier: core
+    difficulty:
+      concept: 1
+      coding: 1
+      debugging: 2
+    prerequisites: []
+    skills:
+      - python.function
+      - python.list
+      - python.loop
+      - python.exception
+      - python.runtime_type
+    assets:
+      problem_dir: curriculum/problems/FND-001-wrong-prediction-count
+    interface:
+      language: python
+      framework: stdlib
+      symbol: count_wrong_predictions
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      memory_limit_mb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: fixture_expected
+        description: Expected counts and contract violations are declared by public fixtures.
+      oral_questions:
+        - What value does the loop variable represent when iterating over predictions?
+        - How can Python expose both an index and an element during iteration?
+        - Why does list[int] not enforce element types at runtime?
+        - What are the time and auxiliary-space complexities?
+        - Why must bool be handled explicitly when strict integers are required?
+        - Why does this function not mutate the input list?
+    variant_axes:
+      - prediction_count
+      - invalid_value_position
+      - incorrect_prediction_distribution
+      - return_error_indices
+    invariants:
+      - input_list_is_not_modified
+      - result_is_between_zero_and_prediction_count
+      - invalid_contract_raises_value_error
+    common_bugs:
+      - loop_variable_treated_as_index
+      - bool_accepted_as_int
+      - type_annotation_assumed_to_validate_runtime_input
+      - unreachable_code_after_return
+    retention:
+      d2: Rewrite the same contract without viewing the previous submission.
+      d7: Return wrong prediction indices under an explicitly revised contract.
+      d21: Integrate the count into a toy hard-sample filtering pipeline.
+    sources:
+      - type: internal_original
+        title: LLM Interview Lab clean-room foundation exercise
