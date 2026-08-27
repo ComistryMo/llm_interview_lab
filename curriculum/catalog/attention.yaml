@@ -1,0 +1,226 @@
+schema_version: 2
+problems:
+  - id: ATT-002
+    title: Scaled Dot-Product Attention
+    status: ready
+    domain: transformer
+    tracks: [llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 5}
+    prerequisites:
+      - LOSS-007
+      - TNS-010
+    skills: [attention.shape, attention.mask, attention.gradient]
+    assets: {problem_dir: curriculum/problems/ATT-002-scaled-dot-product-attention}
+    interface: {language: python, framework: pytorch, symbol: scaled_dot_product_attention}
+    constraints:
+      forbidden_apis:
+      - torch.nn.functional.scaled_dot_product_attention
+      - torch.nn.MultiheadAttention
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: explicit head-wise PyTorch reference
+        description: Shape, values, masks, sharing, gradients, and state transitions are checked independently.
+      oral_questions:
+        - Draw every query, key, value, score, probability, and output shape.
+        - Why is score scaling applied before Softmax?
+        - How must allowed-position masks affect probability values?
+        - What changes in KV head count or cache state relative to standard MHA?
+    variant_axes: [batch_size, sequence_length, head_count, mask, causal, dtype]
+    invariants: [output_shape_preserved, masked_probability_zero, gradient_or_cache_contract]
+    common_bugs: [wrong_transpose_axes, wrong_softmax_dimension, missing_scale, mask_wrong_polarity]
+    retention:
+      d2: Reimplement with different head and sequence dimensions from an untouched starter.
+      d7: Debug a mask, head-sharing, rotary-layout, or cache-append variant.
+    sources:
+      - {type: paper, title: Attention and rotary-position primary literature}
+  - id: ATT-004
+    title: Multi-Head Attention
+    status: ready
+    domain: transformer
+    tracks: [llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 5}
+    prerequisites:
+      - ATT-002
+      - TNS-002
+    skills: [attention.shape, attention.mask, attention.gradient]
+    assets: {problem_dir: curriculum/problems/ATT-004-multi-head-attention}
+    interface: {language: python, framework: pytorch, symbol: multi_head_attention}
+    constraints:
+      forbidden_apis:
+      - torch.nn.functional.scaled_dot_product_attention
+      - torch.nn.MultiheadAttention
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: explicit head-wise PyTorch reference
+        description: Shape, values, masks, sharing, gradients, and state transitions are checked independently.
+      oral_questions:
+        - Draw every query, key, value, score, probability, and output shape.
+        - Why is score scaling applied before Softmax?
+        - How must allowed-position masks affect probability values?
+        - What changes in KV head count or cache state relative to standard MHA?
+    variant_axes: [batch_size, sequence_length, head_count, mask, causal, dtype]
+    invariants: [output_shape_preserved, masked_probability_zero, gradient_or_cache_contract]
+    common_bugs: [wrong_transpose_axes, wrong_softmax_dimension, missing_scale, mask_wrong_polarity]
+    retention:
+      d2: Reimplement with different head and sequence dimensions from an untouched starter.
+      d7: Debug a mask, head-sharing, rotary-layout, or cache-append variant.
+    sources:
+      - {type: paper, title: Attention and rotary-position primary literature}
+  - id: ATT-005
+    title: Multi-Query Attention
+    status: ready
+    domain: transformer
+    tracks: [llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 5}
+    prerequisites:
+      - ATT-004
+    skills: [attention.shape, attention.mask, attention.gradient]
+    assets: {problem_dir: curriculum/problems/ATT-005-multi-query-attention}
+    interface: {language: python, framework: pytorch, symbol: multi_query_attention}
+    constraints:
+      forbidden_apis:
+      - torch.nn.functional.scaled_dot_product_attention
+      - torch.nn.MultiheadAttention
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: explicit head-wise PyTorch reference
+        description: Shape, values, masks, sharing, gradients, and state transitions are checked independently.
+      oral_questions:
+        - Draw every query, key, value, score, probability, and output shape.
+        - Why is score scaling applied before Softmax?
+        - How must allowed-position masks affect probability values?
+        - What changes in KV head count or cache state relative to standard MHA?
+    variant_axes: [batch_size, sequence_length, head_count, mask, causal, dtype]
+    invariants: [output_shape_preserved, masked_probability_zero, gradient_or_cache_contract]
+    common_bugs: [wrong_transpose_axes, wrong_softmax_dimension, missing_scale, mask_wrong_polarity]
+    retention:
+      d2: Reimplement with different head and sequence dimensions from an untouched starter.
+      d7: Debug a mask, head-sharing, rotary-layout, or cache-append variant.
+    sources:
+      - {type: paper, title: Attention and rotary-position primary literature}
+  - id: ATT-006
+    title: Grouped-Query Attention
+    status: ready
+    domain: transformer
+    tracks: [llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 5}
+    prerequisites:
+      - ATT-005
+    skills: [attention.shape, attention.mask, attention.gradient]
+    assets: {problem_dir: curriculum/problems/ATT-006-grouped-query-attention}
+    interface: {language: python, framework: pytorch, symbol: grouped_query_attention}
+    constraints:
+      forbidden_apis:
+      - torch.nn.functional.scaled_dot_product_attention
+      - torch.nn.MultiheadAttention
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: explicit head-wise PyTorch reference
+        description: Shape, values, masks, sharing, gradients, and state transitions are checked independently.
+      oral_questions:
+        - Draw every query, key, value, score, probability, and output shape.
+        - Why is score scaling applied before Softmax?
+        - How must allowed-position masks affect probability values?
+        - What changes in KV head count or cache state relative to standard MHA?
+    variant_axes: [batch_size, sequence_length, head_count, mask, causal, dtype]
+    invariants: [output_shape_preserved, masked_probability_zero, gradient_or_cache_contract]
+    common_bugs: [wrong_transpose_axes, wrong_softmax_dimension, missing_scale, mask_wrong_polarity]
+    retention:
+      d2: Reimplement with different head and sequence dimensions from an untouched starter.
+      d7: Debug a mask, head-sharing, rotary-layout, or cache-append variant.
+    sources:
+      - {type: paper, title: Attention and rotary-position primary literature}
+  - id: ATT-007
+    title: Rotary Position Embedding
+    status: ready
+    domain: transformer
+    tracks: [llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 5}
+    prerequisites:
+      - TNS-003
+    skills: [attention.shape, attention.mask, attention.gradient]
+    assets: {problem_dir: curriculum/problems/ATT-007-rope}
+    interface: {language: python, framework: pytorch, symbol: apply_rope}
+    constraints:
+      forbidden_apis:
+      - transformers.models.*.apply_rotary_pos_emb
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: explicit head-wise PyTorch reference
+        description: Shape, values, masks, sharing, gradients, and state transitions are checked independently.
+      oral_questions:
+        - Draw every query, key, value, score, probability, and output shape.
+        - Why is score scaling applied before Softmax?
+        - How must allowed-position masks affect probability values?
+        - What changes in KV head count or cache state relative to standard MHA?
+    variant_axes: [batch_size, sequence_length, head_count, mask, causal, dtype]
+    invariants: [output_shape_preserved, masked_probability_zero, gradient_or_cache_contract]
+    common_bugs: [wrong_transpose_axes, wrong_softmax_dimension, missing_scale, mask_wrong_polarity]
+    retention:
+      d2: Reimplement with different head and sequence dimensions from an untouched starter.
+      d7: Debug a mask, head-sharing, rotary-layout, or cache-append variant.
+    sources:
+      - {type: paper, title: Attention and rotary-position primary literature}
+  - id: ATT-009
+    title: KV Cache
+    status: ready
+    domain: transformer
+    tracks: [llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 5}
+    prerequisites:
+      - ATT-006
+      - ATT-007
+    skills: [attention.shape, attention.mask, attention.gradient]
+    assets: {problem_dir: curriculum/problems/ATT-009-kv-cache}
+    interface: {language: python, framework: pytorch, symbol: KVCache}
+    constraints:
+      forbidden_apis:
+      - transformers.cache_utils.Cache
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: explicit head-wise PyTorch reference
+        description: Shape, values, masks, sharing, gradients, and state transitions are checked independently.
+      oral_questions:
+        - Draw every query, key, value, score, probability, and output shape.
+        - Why is score scaling applied before Softmax?
+        - How must allowed-position masks affect probability values?
+        - What changes in KV head count or cache state relative to standard MHA?
+    variant_axes: [batch_size, sequence_length, head_count, mask, causal, dtype]
+    invariants: [output_shape_preserved, masked_probability_zero, gradient_or_cache_contract]
+    common_bugs: [wrong_transpose_axes, wrong_softmax_dimension, missing_scale, mask_wrong_polarity]
+    retention:
+      d2: Reimplement with different head and sequence dimensions from an untouched starter.
+      d7: Debug a mask, head-sharing, rotary-layout, or cache-append variant.
+    sources:
+      - {type: paper, title: Attention and rotary-position primary literature}
+
