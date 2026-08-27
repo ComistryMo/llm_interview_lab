@@ -10,7 +10,7 @@ problems:
     prerequisites:
       - TNS-003
     skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: df7c84f2f74153bb1bd9346882b64bcea17702f6393596d8d4452df355a954d4}
     assets: {problem_dir: curriculum/problems/LOSS-007-stable-softmax}
     interface: {language: python, framework: pytorch, symbol: stable_softmax}
     constraints:
@@ -56,7 +56,7 @@ problems:
     prerequisites:
       - LOSS-007
     skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: afd1838bcddf1ea27310169c40696ad2040b8f804a24d92f0a8515e9ddcb1e6a}
     assets: {problem_dir: curriculum/problems/LOSS-008-logsumexp}
     interface: {language: python, framework: pytorch, symbol: stable_logsumexp}
     constraints:
@@ -79,8 +79,16 @@ problems:
     invariants: [finite_for_large_finite_inputs, reference_alignment, gradient_connected]
     common_bugs: [missing_max_shift, wrong_reduction_axis, detached_intermediate, ignored_element_denominator]
     retention:
-      d2: Derive and reimplement the stable loss from an untouched starter.
-      d7: Debug a reduction or extreme-value variant and defend the gradient.
+      d2:
+        description: Compute stable log-mean-exp through a changed interface and reduction identity.
+        assets: {root: curriculum/retention/LOSS-008/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: stable_logmeanexp}
+        oracle_validated: true
+      d7:
+        description: Integrate a boolean mask into LogSumExp and reject reductions with no valid elements.
+        assets: {root: curriculum/retention/LOSS-008/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: masked_logsumexp}
+        oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch loss function documentation}
   - id: LOSS-013
@@ -131,8 +139,9 @@ problems:
     prerequisites:
       - LOSS-008
       - TNS-006
+      - TNS-010
     skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
-    validation: {level: oracle, field_runs: 0, fingerprint: 734f3e1c42d67a8e45efd07182e25db1e59d243ee8eea896480dc0a3b1630088}
+    validation: {level: oracle, field_runs: 0, fingerprint: 6d7370f54b8c993dd4a1b183d1ac4da7bb777bce07526e6048764473cf5933ba}
     assets: {problem_dir: curriculum/problems/LOSS-014-cross-entropy}
     interface: {language: python, framework: pytorch, symbol: cross_entropy}
     constraints:
@@ -140,6 +149,7 @@ problems:
       - torch.nn.functional.cross_entropy
       - torch.nn.CrossEntropyLoss
       - torch.log_softmax
+      - torch.nn.functional.log_softmax
       time_limit_ms: 5000
       output_limit_kb: 256
     assessment:
@@ -169,3 +179,39 @@ problems:
         oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch loss function documentation}
+
+  - id: CAP-LOSS-001
+    title: Masked Sequence Classification Loss
+    status: ready
+    domain: loss_metric
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 4}
+    prerequisites: [TNS-011, TNS-013, LOSS-014]
+    skills: [tensor.mask, tensor.gather, module.linear, loss.cross_entropy, tensor.gradient]
+    validation: {level: oracle, field_runs: 0, fingerprint: bf713db3c79253da8eb4b0254e2f48850114d03fed6dee41a56e216107ef1c9e}
+    assets: {problem_dir: curriculum/problems/CAP-LOSS-001-masked-sequence-classification-loss}
+    interface: {language: python, framework: pytorch, symbol: masked_sequence_classification_loss}
+    constraints:
+      forbidden_apis: [torch.nn.functional.cross_entropy, torch.nn.CrossEntropyLoss]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: explicit last-valid selection plus PyTorch linear and cross-entropy references
+        description: Independent fixtures align values and gradients for padding, non-contiguous inputs, and extreme logits.
+      oral_questions:
+        - How do you locate the greatest valid token position for both left and right padding?
+        - What are the shapes of selected states, logits, targets, and the scalar loss?
+        - Which max-shift identity keeps Cross Entropy finite for extreme logits?
+        - Which hidden-state rows receive gradient, and why do padded rows receive none?
+    variant_axes: [batch_size, padding_side, mask_gaps, hidden_size, class_count, dtype, layout]
+    invariants: [greatest_valid_position_selected, finite_stable_loss, gradients_reach_selected_states_and_classifier, inputs_not_mutated]
+    common_bugs: [length_minus_one_breaks_left_padding, wrong_gather_axis, unstable_exp_log, detached_selected_state, all_padding_silently_selected]
+    retention:
+      d2: Capstone retention is outside the Training Foundations Alpha; master its prerequisite Problems instead.
+      d7: Capstone transfer is deferred until field feedback identifies a useful integration variant.
+    sources:
+      - {type: official_docs, title: PyTorch tensor indexing and CrossEntropyLoss documentation}

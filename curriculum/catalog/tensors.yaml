@@ -7,14 +7,13 @@ problems:
     tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training, systems]
     tier: core
     difficulty: {concept: 2, coding: 3, debugging: 3}
-    prerequisites:
-      - FND-006
+    prerequisites: []
     skills:
       - tensor.shape
       - tensor.reshape
       - tensor.permute
       - tensor.contiguous
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 6a213e57190a8e047dcb2fd236fa34b1fa73465f3d9b85ef6cc8e1499b794024}
     assets: {problem_dir: curriculum/problems/TNS-002-reshape-permute-contiguous}
     interface: {language: python, framework: pytorch, symbol: split_heads}
     constraints:
@@ -37,8 +36,16 @@ problems:
     invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
     common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
     retention:
-      d2: Reimplement the same tensor contract with different shapes and no prior code.
-      d7: Debug an axis, mask, or gradient variant selected from the catalog axes.
+      d2:
+        description: Merge a head-major tensor back into a contiguous sequence representation through a changed interface.
+        assets: {root: curriculum/retention/TNS-002/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: merge_heads}
+        oracle_validated: true
+      d7:
+        description: Reorder packed per-head features into sequence-major layout while preserving non-contiguous input semantics.
+        assets: {root: curriculum/retention/TNS-002/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: pack_head_features}
+        oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch tensor and autograd documentation}
   - id: TNS-003
@@ -53,7 +60,7 @@ problems:
     skills:
       - tensor.broadcast
       - tensor.gradient
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 4aedc71a2bc23ca6407946ea0f71eee07248eb7bb315571286e51a125a530a36}
     assets: {problem_dir: curriculum/problems/TNS-003-broadcasting}
     interface: {language: python, framework: pytorch, symbol: broadcast_add_bias}
     constraints:
@@ -76,8 +83,16 @@ problems:
     invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
     common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
     retention:
-      d2: Reimplement the same tensor contract with different shapes and no prior code.
-      d7: Debug an axis, mask, or gradient variant selected from the catalog axes.
+      d2:
+        description: Apply hidden-wise scale and shift to a rank-3 tensor using broadcasting and a changed interface.
+        assets: {root: curriculum/retention/TNS-003/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: broadcast_affine}
+        oracle_validated: true
+      d7:
+        description: Add a per-head bias to rank-4 attention scores without broadcasting along the wrong axis.
+        assets: {root: curriculum/retention/TNS-003/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: add_head_bias}
+        oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch tensor and autograd documentation}
   - id: TNS-006
@@ -92,7 +107,7 @@ problems:
     skills:
       - tensor.gather
       - tensor.index
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: ce57413b4b3c0b1cef303c53567b2e25b55feabc8c25932419c1d61f772765ed}
     assets: {problem_dir: curriculum/problems/TNS-006-gather}
     interface: {language: python, framework: pytorch, symbol: gather_last_dim}
     constraints:
@@ -114,8 +129,16 @@ problems:
     invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
     common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
     retention:
-      d2: Reimplement the same tensor contract with different shapes and no prior code.
-      d7: Debug an axis, mask, or gradient variant selected from the catalog axes.
+      d2:
+        description: Select several sequence rows per batch from rank-3 values using a rank-2 index tensor.
+        assets: {root: curriculum/retention/TNS-006/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: batched_select_rows}
+        oracle_validated: true
+      d7:
+        description: Gather token log-probabilities and zero invalid positions through an explicit boolean mask.
+        assets: {root: curriculum/retention/TNS-006/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: gather_masked_token_values}
+        oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch tensor and autograd documentation}
   - id: TNS-010
@@ -130,7 +153,7 @@ problems:
     skills:
       - tensor.mask
       - tensor.broadcast
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: b81116da64d1d3382df9a9a43d0aef498f04d35f1bab9d4b238b1472d1b9035e}
     assets: {problem_dir: curriculum/problems/TNS-010-sequence-mask}
     interface: {language: python, framework: pytorch, symbol: sequence_mask}
     constraints:
@@ -153,8 +176,16 @@ problems:
     invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
     common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
     retention:
-      d2: Reimplement the same tensor contract with different shapes and no prior code.
-      d7: Debug an axis, mask, or gradient variant selected from the catalog axes.
+      d2:
+        description: Build a rank-4 padding mask where true marks invalid key positions.
+        assets: {root: curriculum/retention/TNS-010/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: padding_key_mask}
+        oracle_validated: true
+      d7:
+        description: Integrate causal and per-sample length constraints into a rank-3 allowed-attention mask.
+        assets: {root: curriculum/retention/TNS-010/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: causal_sequence_mask}
+        oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch tensor and autograd documentation}
   - id: TNS-011
@@ -171,7 +202,7 @@ problems:
       - tensor.gather
       - tensor.mask
       - tensor.gradient
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: c61b84aa2dea31560bf300721f0840835bee7d2424bfe2e2a2d4fc006969daf9}
     assets: {problem_dir: curriculum/problems/TNS-011-last-valid-token}
     interface: {language: python, framework: pytorch, symbol: last_valid_token}
     constraints:
@@ -219,7 +250,7 @@ problems:
       - tensor.autograd
       - tensor.detach
       - tensor.no_grad
-    validation: {level: oracle, field_runs: 0, fingerprint: be84b1ac3e7e3a32121e6be69fecf2200097bce0a08d8e09da24b9a0eaead0dc}
+    validation: {level: oracle, field_runs: 0, fingerprint: cd5b7ef4838efecf27fd08a2c18ac4b974c6553e8fc7740b0a60a59ea4893ad9}
     assets: {problem_dir: curriculum/problems/TNS-013-autograd-detach-no-grad}
     interface: {language: python, framework: pytorch, symbol: autograd_probe}
     constraints:
@@ -242,7 +273,15 @@ problems:
     invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
     common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
     retention:
-      d2: Reimplement the same tensor contract with different shapes and no prior code.
-      d7: Debug an axis, mask, or gradient variant selected from the catalog axes.
+      d2:
+        description: Build a loss whose prediction branch stays differentiable while its target branch is explicitly detached.
+        assets: {root: curriculum/retention/TNS-013/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: detached_target_mse}
+        oracle_validated: true
+      d7:
+        description: Perform a functional exponential-moving-average update under no-grad semantics without aliasing inputs.
+        assets: {root: curriculum/retention/TNS-013/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: ema_snapshot}
+        oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch tensor and autograd documentation}
