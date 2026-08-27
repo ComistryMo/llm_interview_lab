@@ -10,7 +10,7 @@ problems:
     prerequisites:
       - TNS-013
     skills: [optimizer.state, optimizer.no_grad, optimizer.validation]
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: c2c9bc69b981d67216abfb1f45f0fc2d9b8310a561eb4ef402d7fcf50d300b96}
     assets: {problem_dir: curriculum/problems/OPT-001-sgd}
     interface: {language: python, framework: pytorch, symbol: sgd_step}
     constraints:
@@ -32,8 +32,16 @@ problems:
     invariants: [gradient_not_mutated, state_detached, no_partial_invalid_step]
     common_bugs: [tracked_parameter_update, wrong_step_timing, aliased_state, coupled_weight_decay]
     retention:
-      d2: Reimplement one update from equations with fresh state fixtures.
-      d7: Debug a two-step state or missing-gradient variant and defend all state transitions.
+      d2:
+        description: Return a functional SGD update without mutating the parameter or gradient inputs.
+        assets: {root: curriculum/retention/OPT-001/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: functional_sgd}
+        oracle_validated: true
+      d7:
+        description: Integrate global-norm gradient clipping with one in-place SGD update across parameters.
+        assets: {root: curriculum/retention/OPT-001/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: clipped_sgd_step}
+        oracle_validated: true
     sources:
       - {type: paper, title: Adam and AdamW algorithm definitions}
   - id: OPT-002
@@ -46,7 +54,7 @@ problems:
     prerequisites:
       - OPT-001
     skills: [optimizer.state, optimizer.no_grad, optimizer.validation]
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 3a20779b795471d14c94e94e45547cc2ce606d48ac4a4bc43cd3e0dec0bf3a1c}
     assets: {problem_dir: curriculum/problems/OPT-002-momentum}
     interface: {language: python, framework: pytorch, symbol: momentum_step}
     constraints:
@@ -68,8 +76,16 @@ problems:
     invariants: [gradient_not_mutated, state_detached, no_partial_invalid_step]
     common_bugs: [tracked_parameter_update, wrong_step_timing, aliased_state, coupled_weight_decay]
     retention:
-      d2: Reimplement one update from equations with fresh state fixtures.
-      d7: Debug a two-step state or missing-gradient variant and defend all state transitions.
+      d2:
+        description: Return one functional momentum update and fresh velocity without mutating inputs.
+        assets: {root: curriculum/retention/OPT-002/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: functional_momentum}
+        oracle_validated: true
+      d7:
+        description: Update named parameters and velocity state while preserving entries with missing gradients.
+        assets: {root: curriculum/retention/OPT-002/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: named_momentum_step}
+        oracle_validated: true
     sources:
       - {type: paper, title: Adam and AdamW algorithm definitions}
   - id: OPT-004
@@ -81,8 +97,9 @@ problems:
     difficulty: {concept: 3, coding: 4, debugging: 4}
     prerequisites:
       - TNS-013
+      - OPT-001
     skills: [optimizer.state, optimizer.no_grad, optimizer.validation]
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 185c58c4291ce5d3dca620788c9bb6a7b5fa89706899155024270bf3a371cb79}
     assets: {problem_dir: curriculum/problems/OPT-004-adam}
     interface: {language: python, framework: pytorch, symbol: adam_step}
     constraints:
@@ -104,10 +121,54 @@ problems:
     invariants: [gradient_not_mutated, state_detached, no_partial_invalid_step]
     common_bugs: [tracked_parameter_update, wrong_step_timing, aliased_state, coupled_weight_decay]
     retention:
-      d2: Reimplement one update from equations with fresh state fixtures.
-      d7: Debug a two-step state or missing-gradient variant and defend all state transitions.
+      d2:
+        description: Return one functional Adam update and fresh moment state without mutating inputs.
+        assets: {root: curriculum/retention/OPT-004/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: functional_adam}
+        oracle_validated: true
+      d7:
+        description: Integrate Adam across named parameters with independent state and missing gradients.
+        assets: {root: curriculum/retention/OPT-004/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: named_adam_step}
+        oracle_validated: true
     sources:
       - {type: paper, title: Adam and AdamW algorithm definitions}
+
+  - id: CAP-TRN-001
+    title: Tiny Sequence Classifier Trainer
+    status: ready
+    domain: optimizer
+    tracks: [ai_foundation, llm_algorithm]
+    tier: core
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: [FND-006, TNS-010, TNS-013, LOSS-014, NNL-001, NNL-002, OPT-002, OPT-005]
+    skills: [python.generator, tensor.mask, tensor.autograd, module.embedding, module.linear, loss.cross_entropy, optimizer.adamw, training.reproducibility]
+    validation: {level: oracle, field_runs: 0, fingerprint: 84bc836559de010606e07e60eb51da8eaca28d958f4f0709aa46530d5dfce26c}
+    assets: {problem_dir: curriculum/problems/CAP-TRN-001-tiny-sequence-classifier-trainer}
+    interface: {language: python, framework: pytorch, symbol: train_tiny_sequence_classifier}
+    constraints:
+      forbidden_apis: [torch.nn.Embedding, torch.nn.Linear, torch.optim]
+      time_limit_ms: 10000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: deterministic primitive PyTorch trainer and official component references
+        description: Toy fixtures verify reproducibility, gradients, state evolution, decoupled decay, padding, and decreasing loss.
+      oral_questions:
+        - Trace every Tensor shape from token IDs through mean pooling, logits, loss, and parameter gradients.
+        - Why must gradients be cleared between steps, and where does AdamW persistent state live?
+        - How is weight decay kept decoupled from the adaptive gradient moments?
+        - Which controls make two runs reproducible, and what does a decreasing toy loss prove or not prove?
+    variant_axes: [batch_size, sequence_length, padding_ratio, seed, learning_rate, weight_decay, step_count]
+    invariants: [fixed_seed_reproducible, loss_decreases, gradients_reach_embedding_and_linear, adamw_state_evolves, inputs_not_mutated]
+    common_bugs: [padding_in_mean_denominator, gradients_not_cleared, tracked_parameter_update, coupled_weight_decay, reused_graph, nondeterministic_initialization]
+    retention:
+      d2: Capstone retention is outside the Training Foundations Alpha; master its prerequisite Problems instead.
+      d7: Capstone transfer is deferred until field feedback identifies a useful trainer variant.
+    sources:
+      - {type: official_docs, title: PyTorch autograd and optimizer documentation}
   - id: OPT-005
     title: AdamW
     status: ready

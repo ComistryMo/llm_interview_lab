@@ -68,7 +68,7 @@ def test_catalog_has_mvp_scale_and_only_ready_nodes_have_asset_directories() -> 
     assert len(ready) >= 32
     assert len(planned) >= 100
     assert len(catalog.tracks) >= 12
-    assert len(catalog.quests) >= 11
+    assert len(catalog.quests) >= 10
     assert len(catalog.capstones) >= 8
     assert all(problem.problem_dir is None for problem in planned)
     assert len(list((REPO_ROOT / "curriculum/problems").iterdir())) == len(ready)
@@ -138,7 +138,11 @@ def test_verified_retention_assets_are_complete_and_separate() -> None:
             starter, public_tests, symbol = variant
             verified.append((problem.id, stage))
             assert starter.parent == public_tests.parent
-            assert {path.name for path in starter.parent.iterdir()} == RETENTION_ASSETS
+            assert {
+                path.name
+                for path in starter.parent.iterdir()
+                if path.name != "__pycache__" and path.suffix != ".pyc"
+            } == RETENTION_ASSETS
             assert starter != problem.problem_dir / "starter.py"
             assert public_tests != problem.public_tests
             assert "NotImplementedError" in starter.read_text(encoding="utf-8")

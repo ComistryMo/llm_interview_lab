@@ -11,7 +11,7 @@ problems:
       - TNS-003
       - TNS-013
     skills: [module.parameter, module.forward, tensor.gradient]
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 1e758b07ab647d3b81ed4cae9c52f561b89421ac9b15a35cead66417798ebe12}
     assets: {problem_dir: curriculum/problems/NNL-001-linear}
     interface: {language: python, framework: pytorch, symbol: ManualLinear}
     constraints:
@@ -34,8 +34,16 @@ problems:
     invariants: [registered_parameter_shapes, reference_alignment, gradient_connected]
     common_bugs: [wrong_weight_orientation, unregistered_tensor, dtype_upcast, padding_gradient]
     retention:
-      d2: Rebuild the layer from an untouched starter and verify parameter registration.
-      d7: Debug a shape, dtype, initialization, or gradient variant.
+      d2:
+        description: Apply a functional affine projection with weight stored in input-by-output orientation.
+        assets: {root: curriculum/retention/NNL-001/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: affine_projection}
+        oracle_validated: true
+      d7:
+        description: Build a projection Module with an optional bias and an explicit parameter-loading interface.
+        assets: {root: curriculum/retention/NNL-001/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: LoadedLinear}
+        oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch module and layer documentation}
   - id: NNL-002
@@ -49,7 +57,7 @@ problems:
       - TNS-006
       - TNS-013
     skills: [module.parameter, module.forward, tensor.gradient]
-    validation: {level: contract, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 73aad058032c2c2e61c859f34281e240c21c7a613d810d84f35b90d904cca22f}
     assets: {problem_dir: curriculum/problems/NNL-002-embedding}
     interface: {language: python, framework: pytorch, symbol: ManualEmbedding}
     constraints:
@@ -73,8 +81,16 @@ problems:
     invariants: [registered_parameter_shapes, reference_alignment, gradient_connected]
     common_bugs: [wrong_weight_orientation, unregistered_tensor, dtype_upcast, padding_gradient]
     retention:
-      d2: Rebuild the layer from an untouched starter and verify parameter registration.
-      d7: Debug a shape, dtype, initialization, or gradient variant.
+      d2:
+        description: Perform functional embedding lookup from an explicit weight table and padding index.
+        assets: {root: curriculum/retention/NNL-002/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: lookup_embeddings}
+        oracle_validated: true
+      d7:
+        description: Integrate embedding lookup with a boolean token mask and mean pooling over valid tokens.
+        assets: {root: curriculum/retention/NNL-002/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: masked_mean_embedding}
+        oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch module and layer documentation}
   - id: NNL-008

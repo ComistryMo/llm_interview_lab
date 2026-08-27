@@ -18,17 +18,13 @@ quests:
     problem_ids: [FND-001, FND-002, FND-003, FND-004, FND-005, FND-006, CAP-FND-001]
     description: Validate, filter, summarize, stream, batch, and integrate a toy hard-sample data pipeline.
   - id: tensor_and_autograd
-    title: Tensor and Autograd
-    problem_ids: [TNS-002, TNS-003, TNS-006, TNS-010, TNS-011, TNS-013, TNS-007, TNS-012]
-    description: Restore shape fluency and make gradient and state boundaries explicit.
-  - id: stable_loss
-    title: Stable Loss
-    problem_ids: [LOSS-007, LOSS-008, LOSS-013, LOSS-014, LOSS-004, LOSS-006]
-    description: Derive stable objectives and align both values and gradients.
+    title: Tensor & Stable Loss
+    problem_ids: [TNS-002, TNS-003, TNS-006, TNS-010, TNS-011, TNS-013, LOSS-007, LOSS-008, LOSS-014, CAP-LOSS-001]
+    description: Move from shape and mask contracts through stable classification loss and one sequence-loss capstone.
   - id: optimizer_training_loop
-    title: Optimizer and Training Loop
-    problem_ids: [OPT-001, OPT-002, OPT-004, OPT-005, OPT-006, OPT-007, OPT-009, OPT-010, OPT-012]
-    description: Connect optimizer state to a resumable, auditable training loop.
+    title: Optimizer & Training Loop
+    problem_ids: [NNL-001, NNL-002, OPT-001, OPT-002, OPT-004, OPT-005, CAP-TRN-001]
+    description: Build trainable primitives and stateful updates, then integrate them in a deterministic toy trainer.
   - id: transformer_forward
     title: Transformer Forward
     problem_ids: [NNL-001, NNL-002, NNL-008, ATT-002, ATT-004, ATT-005, ATT-006, ATT-007, ATT-009, ATT-008]

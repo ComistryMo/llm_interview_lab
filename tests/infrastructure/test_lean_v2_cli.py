@@ -253,7 +253,7 @@ def test_next_reports_mastery_blocked_without_verified_retention(
     monkeypatch.chdir(root)
     main(["init", "--profile", "learner-one"])
     paths = profile_paths(root, "learner-one")
-    blocked_problem = "TNS-002"
+    blocked_problem = "NNL-008"
     attempt_dir = paths.submissions_root / blocked_problem / "attempt-0001"
     attempt_dir.mkdir(parents=True)
     submission = attempt_dir / "submission.py"
