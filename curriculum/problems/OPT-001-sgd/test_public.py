@@ -25,7 +25,6 @@ def test_invalid_contract_raises(submission,params,lr):
     with pytest.raises(ValueError): submission.sgd_step(params,lr)
 
 def test_invalid_later_gradient_does_not_partially_update(submission):
-    a=torch.tensor([1.],requires_grad=True); b=torch.tensor([2.],requires_grad=True); a.grad=torch.tensor([1.]); b.grad=torch.tensor([1.,2.])
+    a=torch.tensor([1.],requires_grad=True); b=torch.tensor([2]); a.grad=torch.tensor([1.])
     with pytest.raises(ValueError): submission.sgd_step([a,b],.1)
     assert a.item()==1
-

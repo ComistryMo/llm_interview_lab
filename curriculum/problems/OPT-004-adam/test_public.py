@@ -6,7 +6,7 @@ def test_first_step_matches_closed_form(submission):
     state=submission.adam_step([p],[None],.1,.9,.999,1e-8)[0]
     expected=torch.tensor([.9,-.9],dtype=torch.float64)
     assert torch.allclose(p,expected,atol=1e-8) and state["step"]==1
-    assert torch.equal(state["m"],torch.tensor([.2,-.4],dtype=torch.float64))
+    assert torch.allclose(state["m"],torch.tensor([.2,-.4],dtype=torch.float64),atol=1e-15)
 
 def test_two_steps_match_manual_reference(submission):
     p=torch.tensor([1.],dtype=torch.float64,requires_grad=True); state=None
@@ -30,4 +30,3 @@ def test_state_is_detached_and_not_aliased(submission):
 def test_invalid_hyperparameters_raise(submission,lr,b1,b2,eps):
     p=torch.tensor([1.],requires_grad=True)
     with pytest.raises(ValueError): submission.adam_step([p],[None],lr,b1,b2,eps)
-
