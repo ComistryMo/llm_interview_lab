@@ -92,6 +92,7 @@ def test_capstone_unlocks_only_after_all_six_are_mastered(tmp_path, monkeypatch,
     _master(root, "learner-one", QUEST_IDS[-1])
     main(["next", "--profile", "learner-one"])
     assert "CAP-FND-001 Hard Sample Data Pipeline" in capsys.readouterr().out
+    assert main(["start", "CAP-FND-001", "--profile", "learner-one"]) == 0
 
 
 def test_contract_nodes_need_explicit_or_profile_opt_in(tmp_path, monkeypatch, capsys):
