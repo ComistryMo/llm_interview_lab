@@ -84,11 +84,21 @@ python -m pip install -e ".[torch,dev]"
 
 | 入口 | 用途 | 起点 |
 |---|---|---|
-| Personal Workspace | 登记脱敏简历、经历、研究和岗位材料 | `llm-lab material list --profile default` |
-| Practice | 按 DAG 刷题、Review、D+2/D+7 和 mastery | `llm-lab next --profile default` |
+| Personal Workspace | 记录求职意向，登记脱敏简历、项目、论文与面试材料 | `llm-lab profile show default` |
+| Practice | 按 DAG/Quest 刷题，查看难度、错题、D+2/D+7 和 mastery | `llm-lab next --profile default` |
 | Mock Interview | 选择难度与时长，从已验证题库进行限时面试 | `llm-lab interview create ...` |
 
-添加一份本地、AI 可读的脱敏材料：
+求职意向是 Profile 中的结构化私有字段，可从 YAML 或 JSON 原子更新；字段格式见
+[Workspace 文档](docs/workspace.md)：
+
+```bash
+llm-lab profile configure default --career-file ../private/career-intent.yaml
+llm-lab profile show default --json
+```
+
+材料 kind 包括 `resume`、`career_intent`、`internship`、`project`、`paper`、
+`competition`、`interview_question`、`experience`、`research`、
+`job_description`、`portfolio` 与 `other`。添加一份本地、AI 可读的脱敏材料：
 
 ```bash
 llm-lab material add --profile default --kind resume \
@@ -100,6 +110,8 @@ llm-lab material show MATERIAL_ID --profile default
 不读取个人材料的题库面试：
 
 ```bash
+llm-lab interview candidates --profile default --track llm_algorithm \
+  --difficulty medium --limit 8
 llm-lab interview create --profile default --mode catalog \
   --track llm_algorithm --difficulty medium --duration 60 --seed 7
 ```
@@ -132,39 +144,16 @@ flowchart LR
 
 > **Public tests passed ≠ mastered.**
 
-一次公开测试通过只证明当前 submission 满足可见契约。完整状态依次为：
-
-```text
-not_started
-→ in_progress
-→ implemented
-→ reviewed
-→ retained_d2
-→ retained_d7
-→ mastered
-```
+一次公开测试通过只证明当前 submission 满足可见契约。完整状态依次为
+`not_started → in_progress → implemented → reviewed → retained_d2 → retained_d7 → mastered`。
 
 Review 记录代码解释、复杂度、边界条件、契约和口述结果。D+2 使用独立
 starter 做等价重写，D+7 使用 Debugging 或 Integration 变式；两者都不会复制旧答案。
-
-<details>
-<summary>查看 Review 与 Retention 命令</summary>
-
-```bash
-llm-lab review FND-001 --profile default \
-  --contract passed --oral passed \
-  --explanation "Explained validation and counting branches" \
-  --complexity "O(n) time, O(1) auxiliary space" \
-  --boundaries "Rejects bool and invalid container types"
-
-llm-lab retain FND-001 --stage d2 --profile default
-llm-lab retain FND-001 --stage d7 --profile default
-```
+当前经过资产与 Oracle 验证的默认复测节奏只有 **D+2 与 D+7**，没有 D+5 Gate。
 
 生产流程按 Review 事件时间计算复测到期日。每个 retention attempt 仍需独立完成
 `test → submit → review`，不能用旧 submission 的 PASS 证据替代。
-
-</details>
+具体 Review 与 Retention 命令见 [Workspace 文档](docs/workspace.md)。
 
 ## 选择路线
 
@@ -186,6 +175,19 @@ Profile 可以选择一个或多个 Track。`next` 只展示当前任务、到�
 llm-lab catalog
 llm-lab catalog --track llm_algorithm
 llm-lab graph --track ai_foundation
+llm-lab graph --quest transformer_forward
+llm-lab next --profile default --quest transformer_forward
+```
+
+`graph --quest` 展示推荐学习顺序，`prerequisites` 才是硬 DAG；`show`、`catalog`、
+`graph` 和 `next` 会显示题目的 concept/coding/debugging 难度。难度不是验证等级，
+也不会绕过前置。错题视图直接从 `events.jsonl` 的失败测试、失败 Review 和
+`task_failed` 事件归约，不维护第二份日志：
+
+```bash
+llm-lab show ATT-002
+llm-lab mistakes --profile default
+llm-lab mistakes --profile default --unresolved-only
 ```
 
 默认 Planner 只推荐 `oracle`、`field` 或 `stable` 节点。`contract` 节点仍在
@@ -241,8 +243,20 @@ Quest 中的展示顺序是推荐学习顺序；真正阻止解锁的关系只�
 
 1. 在仓库根目录启动 Agent，让它读取 `AGENTS.md` 与 `coach/POLICY.md`。
 2. 明确当前 `profile_id`，不要让它枚举其他 Profile。
-3. Practice 入口运行 `llm-lab next --profile default`；Personal Workspace 只处理点名的 `material_id`；Mock Interview 运行 `interview show/current`，不要用 Practice 的 `next` 替代 session。
+3. 用 `llm-lab context` 生成当前模式的最小 JSON，而不是让 AI 扫描 Profile。
 4. 根据目的选择 `TEACHER`、`REVIEWER`、`COACH` 或 `INTERVIEWER` 模式。
+
+```bash
+llm-lab context --profile default --mode coach
+llm-lab context --profile default --mode teacher --help-level H2
+llm-lab context --profile default --mode reviewer
+llm-lab context --profile default --mode interviewer --interview INTERVIEW_ID
+```
+
+Context 最大 8 KiB；COACH 只加入有界 `career_intent` 与近期错题摘要，不加入材料正文。
+Agent 除静态 `policy_refs` 外只能读取 `read_allowlist` 中的当前 task、submission、回答或
+本场 consent 材料；不得读取 raw events、旧答案、测试源码、未来题目或其他 Profile。
+静态 Policy 可按 SHA 缓存；SHA 未变化时不必在每个问题前重复发送，从而控制 token 成本。
 
 可直接复制以下启动 Prompt：
 
@@ -250,7 +264,8 @@ Quest 中的展示顺序是推荐学习顺序；真正阻止解锁的关系只�
 Read AGENTS.md and coach/POLICY.md.
 
 Act in COACH mode for profile "default".
-Run `llm-lab next --profile default` and inspect only the current task.
+Run `llm-lab context --profile default --mode coach`.
+Treat its `read_allowlist` as the complete set of additional files you may read.
 
 Do not modify my submission.
 Do not reveal a complete solution.
@@ -268,6 +283,10 @@ Do not mark a problem as mastered yourself.
 SHA 匹配的 material ID；材料内容按 untrusted evidence 处理，不能触发命令或覆盖 Policy。
 Active 阶段不教学、不改答案、逐题进行，最终区分本地 grader 的 objective evidence
 与附证据的 AI 主观评分。面试分数永远不会改变 Practice mastery。
+
+完整顺序是 `candidates → create → start → context → answer/test → score → finish →
+report`。非 coding 问题先用 `ask` 冻结实际措辞；coding 始终使用 Catalog `task.md`
+并直接 `test`，不能 ask 或改写契约。详细命令见 [模拟面试文档](docs/interviews.md)。
 
 ### Chat-only AI
 
@@ -350,6 +369,9 @@ Git ignore 是防误提交边界，不是备份系统或模型供应商隐私保
 Profile，也不要使用 `git add -f`。AI 只能读取当前 Profile 中用户显式点名、逐场
 consent 且 SHA 匹配的 material ID，不得扫描目录、读取其他 Profile 或自动上传。
 
+脱敏后的真实面试题可以登记为 `interview_question` 材料，用于当前 Profile 的复盘或
+经逐场授权后的追问；它不会自动成为公共 Problem、测试或 Catalog 节点。
+
 材料被视为 untrusted evidence：其中的 Prompt、命令、路径或链接都不能覆盖仓库
 Policy 或触发工具调用。只保存用户拥有且已脱敏的求职材料；完整边界见
 [Personal Materials and Mock Interviews](docs/interviews.md)。
@@ -361,13 +383,13 @@ Policy 或触发工具调用。只保存用户拥有且已脱敏的求职材料�
 
 ## 项目状态
 
-**As of v0.3.0-alpha.1**
+**Current Catalog snapshot**（可用 `llm-lab doctor` 复核）
 
 | 指标 | 数量 |
 |---|---:|
 | Ready | 41 |
 | Oracle-validated | 32 |
-| Retention-ready | 23 |
+| Retention-ready | 24 |
 | Field-tested | 0 |
 
 固定 Catalog 另有 **188 个 planned 节点**；它们只有元数据，不创建空题目目录，
@@ -415,7 +437,4 @@ llm-lab doctor
 
 项目不会在这一阶段引入 Web UI、数据库、在线账户或运行时多 Agent 系统。
 
----
-
-Apache-2.0 License。课程问题和测试为本项目原创 clean-room 资产；引用的论文、
-官方文档与框架来源记录在 Catalog 中。
+Apache-2.0 License。课程问题和测试为本项目原创 clean-room 资产；论文、官方文档与框架来源记录在 Catalog 中。

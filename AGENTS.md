@@ -17,25 +17,25 @@
 
 ### Practice
 
-1. 运行 `llm-lab next --profile <id>`。
-2. 从 `curriculum/catalog/*.yaml` 读取当前 Problem 的元数据。
-3. 读取该 Problem 的 `task.md` 和按帮助等级允许的 `hints.md`。
-4. 审查时读取当前 attempt 的 submission 与 `events.jsonl`，并运行精确公开测试。
+1. 按目的运行 `llm-lab context --profile <id> --mode coach|teacher|reviewer`；`teacher` 还要显式指定 H1、H2 或 H3。
+2. 读取输出中的静态 `policy_refs`，并把 `read_allowlist` 当作允许额外读取的完整文件集合；不得自行扫描 Catalog shards、raw events、旧 submission、测试源码或未来题目。
+3. `TEACHER` 只使用 context 内给定的提示等级；`REVIEWER` 才能读取 allowlist 中当前 submission，并运行精确公开测试。
+4. 路线浏览使用 `graph --track/--quest`，错误复盘使用由 events 派生的 `mistakes`；两者都不是新的事实源。
 
 固定课程唯一来源是 Catalog shards。个人当前任务、进度、错误和复测由 Profile events 动态归约；物理事件顺序是 Practice 历史事实源。不维护 `CURRENT_TASK.md`、`PROGRESS.md` 或 `MISTAKE_LOG.md`。
 
 ### Mock Interview
 
-1. 若已有 `interview_id`，读取当前 Profile 内冻结的 session plan；不要运行 Practice 的 `next` 来替代面试计划。若尚未创建，先进入规划步骤：确认目标 Track、难度、时长、focus，以及用户明确点名并授权用于规划的 material ID。
-2. 只读取 plan 明确授权且 SHA-256 匹配的 material ID；不得自动读取整个简历目录或 Profile。
-3. Coding 题只能来自固定 Catalog 中 `ready` 且 validation 为 `oracle`、`field` 或 `stable` 的节点。开始后不得换题、改难度、改 rubric 或延长计时来影响结果。
-4. Active 阶段一次只问一个问题，不修改 submission、不泄露答案或测试、不切换到教学模式。只做不带解法的契约澄清；任何帮助都要记录。
-   个性化追问的原文必须随回答通过 `--asked-file` 留档；只有固定 session prompt 可以省略该参数。
-5. 本地 session clock 和 grader 是时间与代码结果的事实来源。AI 不能自行宣称测试通过、超时或完成。
-6. 面试结束后，固定 rubric 的客观分与 AI/人工主观分必须分开。每个主观判断要引用 session evidence；缺少证据时标记 `unscored` 或 `incomplete`，不得猜测或重新归一化凑分。
-7. Interview report 只写入当前 ignored Profile。模拟面试分数不属于 Practice、retention 或 mastery 证据；AI 不得据此写入或授予 `task_mastered`。
+1. 若尚未创建，先确认 Track、难度、时长和 focus，运行 `interview candidates`，再基于用户明确点名、授权用于规划的 material ID 建议题目；用户确认后才运行 `interview create`。
+2. 若已有 `interview_id`，运行 `llm-lab context --profile <id> --mode interviewer --interview <id>`，只读取其 `read_allowlist`；不要用 Practice 的 `next` 替代 session，也不得预读未来问题。
+3. 只读取 plan 明确授权且 SHA-256 匹配的 material ID；不得自动读取整个简历目录或 Profile。Coding 题只能来自固定 Catalog 中 `ready` 且 validation 为 `oracle`、`field` 或 `stable` 的节点。
+4. Active 阶段一次只问一个问题。非 coding 问题在回答前用 `interview ask` 冻结实际原文；coding 禁止 `ask`，只能原样使用冻结的 `task.md` 并运行 grader。
+5. 不修改 submission、不泄露答案或测试、不切换到教学模式。只做不带解法的契约澄清；任何帮助都要记录。
+6. 本地 session clock 和 grader 是时间与代码结果的事实来源。AI 不能自行宣称测试通过、超时或完成。
+7. 面试结束后，固定 rubric 的客观分与 AI/人工主观分必须分开。每个主观判断要引用 session evidence；缺少证据时标记 `unscored` 或 `incomplete`，不得猜测或重新归一化凑分。
+8. Interview report 只写入当前 ignored Profile。模拟面试分数不属于 Practice、retention 或 mastery 证据；AI 不得据此写入或授予 `task_mastered`。
 
-规划步骤中，AI 可以只基于获准材料和合格 Catalog 候选建议一个 `--problem`，但必须先向用户展示建议的题目、时长、难度和材料 ID/SHA；用户确认后才运行 `interview create` 冻结 session。未显式授权材料时，只能建立不读取个人材料的 catalog 面试。
+规划步骤中，AI 可以只基于获准材料和 `interview candidates` 输出建议一个 `--problem`，但必须先向用户展示建议的题目、时长、难度和材料 ID/SHA；用户确认后才运行 `interview create` 冻结 session。未显式授权材料时，只能建立不读取个人材料的 catalog 面试。
 
 ## 不可绕过的边界
 

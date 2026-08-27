@@ -14,6 +14,11 @@
 
 帮助等级：H0 独立；H1 官方文档/语法；H2 概念；H3 结构步骤；H4 关键片段；H5 完整演示。H4/H5 不计独立掌握，必须换接口或结构后无帮助复测。
 
+Profile-aware 工作优先运行 `llm-lab context`。AI 可以读取其中的静态 `policy_refs`，
+并必须把 `read_allowlist` 当作允许额外读取的完整集合；不得绕过它读取 raw events、
+完整 Catalog、旧 submission、测试源码、未来问题或其他 Profile。Context 是本地只读交接，
+不是内置模型客户端，也不会自动上传内容。
+
 ## Personal Workspace 与材料授权
 
 AI 只能访问用户明确指定的当前 `profile_id`，不能枚举或读取其他真实 Profile。求职材料只能通过当前 Profile 的 manifest 和 `material_id` 引用；不得递归扫描目录、跟随链接或通过绝对路径绕过 Profile 边界。
@@ -24,10 +29,10 @@ AI 可以使用用户拥有且已脱敏的简历、经历、研究和岗位材�
 
 ## INTERVIEWER 约束
 
-- 创建面试前确认 mode、difficulty、duration、Track、focus 和材料 allowlist。Coding 题只从 `ready` 且 validation 为 `oracle`、`field` 或 `stable` 的固定 Catalog 选择。
+- 创建面试前确认 mode、difficulty、duration、Track、focus 和材料 allowlist；用 `interview candidates` 获取确定性合格池，用户确认后才以 `--problem` 冻结。Coding 题只从 `ready` 且 validation 为 `oracle`、`field` 或 `stable` 的固定 Catalog 选择。
 - 开始前冻结问题 ID、Catalog fingerprint、材料 SHA、seed、时间预算和 rubric。Active 后 AI 不得为了改变结果换题、改权重或延时。
-- 一次只给一个问题。默认不提供教学提示，不展示 solution 或测试，不编辑 submission。契约澄清不得包含解法；任何帮助都要进入 session evidence。需要提前转教学时应运行 `finish --confirm-incomplete` 留下 incomplete 报告，再切换 `TEACHER`。
-- 个性化追问必须把实际问题原文通过 `interview answer --asked-file` 留档；非敏感且与冻结 prompt 完全相同的问题才可省略。
+- 每个阶段先运行 interviewer context，只读当前 `read_allowlist`，不得预读未来问题。一次只给一个问题；默认不提供教学提示，不展示 solution 或测试，不编辑 submission。
+- 非 coding 问题在回答前使用 `interview ask` 冻结 AI 或人工实际问出的文本。Coding 禁止 `ask`；公共 `task.md` 是固定契约，必须原样交付并直接由 grader 测试，不能改写、扩大或缩小。契约澄清不得包含解法；任何帮助都要进入 session evidence。需要提前转教学时应运行 `finish --confirm-incomplete` 留下 incomplete 报告，再切换 `TEACHER`。
 - 本地 session clock 决定时间状态，本地 grader 决定代码测试事实。AI 不能把自己的判断描述为确定性测试证据。
 - 固定 rubric 的客观证据与 AI/人工主观评分必须分开。每个主观评分都要有 source、evidence 和 confidence；证据缺失时标记 `unscored` 或 `incomplete`，不得重新归一化出看似完整的总分。
 - Report 只写当前 ignored Profile，说明难度、实际用时、测试结果、评分依据、局限和建议的固定 Problem ID。模拟表现不是录用概率，也不能成为 Practice review、retention 或 mastery 证据。
