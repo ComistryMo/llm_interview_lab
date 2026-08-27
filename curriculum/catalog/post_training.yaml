@@ -1,0 +1,179 @@
+schema_version: 2
+problems:
+  - id: PT-001
+    title: SFT Label Mask
+    status: ready
+    domain: post_training
+    tracks: [llm_algorithm, vlm_algorithm, post_training, agent]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 5}
+    prerequisites:
+      - TNS-010
+    skills: [post_training.mask, post_training.logprob, post_training.objective]
+    assets: {problem_dir: curriculum/problems/PT-001-sft-label-mask}
+    interface: {language: python, framework: pytorch, symbol: build_sft_labels}
+    constraints:
+      forbidden_apis: [transformers.Trainer, trl]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: closed-form objective and transparent PyTorch reference
+        description: Values, masks, reductions, gradients, and degenerate batches are checked independently.
+      oral_questions:
+        - Trace every tensor from model outputs or rewards to the returned value.
+        - Which axes are token, sequence, candidate group, and batch?
+        - Which tensors carry gradients and which must be detached?
+        - What happens for empty masks, invalid completions, or zero reward variance?
+    variant_axes: [batch_size, sequence_length, mask_density, reward_distribution]
+    invariants: [shape_alignment, masked_items_excluded, finite_degenerate_behavior]
+    common_bugs: [wrong_reduction_denominator, reference_gradient_leak, zero_variance_nan, clip_wrong_direction]
+    retention:
+      d2: Reimplement the objective on a fresh tensor layout without viewing prior code.
+      d7: Debug a mask, reduction, reference, or degenerate-reward variant.
+    sources:
+      - {type: paper, title: "SFT, DPO, and GRPO primary method definitions"}
+  - id: PT-002
+    title: Token / Sequence Logprob
+    status: ready
+    domain: post_training
+    tracks: [llm_algorithm, vlm_algorithm, post_training, agent]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 5}
+    prerequisites:
+      - PT-001
+      - LOSS-008
+      - TNS-006
+    skills: [post_training.mask, post_training.logprob, post_training.objective]
+    assets: {problem_dir: curriculum/problems/PT-002-token-sequence-logprob}
+    interface: {language: python, framework: pytorch, symbol: token_sequence_logprobs}
+    constraints:
+      forbidden_apis: [transformers.Trainer, trl]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: closed-form objective and transparent PyTorch reference
+        description: Values, masks, reductions, gradients, and degenerate batches are checked independently.
+      oral_questions:
+        - Trace every tensor from model outputs or rewards to the returned value.
+        - Which axes are token, sequence, candidate group, and batch?
+        - Which tensors carry gradients and which must be detached?
+        - What happens for empty masks, invalid completions, or zero reward variance?
+    variant_axes: [batch_size, sequence_length, mask_density, reward_distribution]
+    invariants: [shape_alignment, masked_items_excluded, finite_degenerate_behavior]
+    common_bugs: [wrong_reduction_denominator, reference_gradient_leak, zero_variance_nan, clip_wrong_direction]
+    retention:
+      d2: Reimplement the objective on a fresh tensor layout without viewing prior code.
+      d7: Debug a mask, reduction, reference, or degenerate-reward variant.
+    sources:
+      - {type: paper, title: "SFT, DPO, and GRPO primary method definitions"}
+  - id: PT-006
+    title: DPO Loss
+    status: ready
+    domain: post_training
+    tracks: [llm_algorithm, vlm_algorithm, post_training, agent]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 5}
+    prerequisites:
+      - PT-002
+    skills: [post_training.mask, post_training.logprob, post_training.objective]
+    assets: {problem_dir: curriculum/problems/PT-006-dpo-loss}
+    interface: {language: python, framework: pytorch, symbol: dpo_loss}
+    constraints:
+      forbidden_apis: [transformers.Trainer, trl]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: closed-form objective and transparent PyTorch reference
+        description: Values, masks, reductions, gradients, and degenerate batches are checked independently.
+      oral_questions:
+        - Trace every tensor from model outputs or rewards to the returned value.
+        - Which axes are token, sequence, candidate group, and batch?
+        - Which tensors carry gradients and which must be detached?
+        - What happens for empty masks, invalid completions, or zero reward variance?
+    variant_axes: [batch_size, sequence_length, mask_density, reward_distribution]
+    invariants: [shape_alignment, masked_items_excluded, finite_degenerate_behavior]
+    common_bugs: [wrong_reduction_denominator, reference_gradient_leak, zero_variance_nan, clip_wrong_direction]
+    retention:
+      d2: Reimplement the objective on a fresh tensor layout without viewing prior code.
+      d7: Debug a mask, reduction, reference, or degenerate-reward variant.
+    sources:
+      - {type: paper, title: "SFT, DPO, and GRPO primary method definitions"}
+  - id: PT-014
+    title: GRPO Group Advantage
+    status: ready
+    domain: post_training
+    tracks: [llm_algorithm, vlm_algorithm, post_training, agent]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 5}
+    prerequisites:
+      - PT-002
+    skills: [post_training.mask, post_training.logprob, post_training.objective]
+    assets: {problem_dir: curriculum/problems/PT-014-grpo-group-advantage}
+    interface: {language: python, framework: pytorch, symbol: grpo_group_advantage}
+    constraints:
+      forbidden_apis: [transformers.Trainer, trl]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: closed-form objective and transparent PyTorch reference
+        description: Values, masks, reductions, gradients, and degenerate batches are checked independently.
+      oral_questions:
+        - Trace every tensor from model outputs or rewards to the returned value.
+        - Which axes are token, sequence, candidate group, and batch?
+        - Which tensors carry gradients and which must be detached?
+        - What happens for empty masks, invalid completions, or zero reward variance?
+    variant_axes: [batch_size, sequence_length, mask_density, reward_distribution]
+    invariants: [shape_alignment, masked_items_excluded, finite_degenerate_behavior]
+    common_bugs: [wrong_reduction_denominator, reference_gradient_leak, zero_variance_nan, clip_wrong_direction]
+    retention:
+      d2: Reimplement the objective on a fresh tensor layout without viewing prior code.
+      d7: Debug a mask, reduction, reference, or degenerate-reward variant.
+    sources:
+      - {type: paper, title: "SFT, DPO, and GRPO primary method definitions"}
+  - id: PT-015
+    title: GRPO Clipped Loss
+    status: ready
+    domain: post_training
+    tracks: [llm_algorithm, vlm_algorithm, post_training, agent]
+    tier: core
+    difficulty: {concept: 4, coding: 4, debugging: 5}
+    prerequisites:
+      - PT-014
+    skills: [post_training.mask, post_training.logprob, post_training.objective]
+    assets: {problem_dir: curriculum/problems/PT-015-grpo-loss}
+    interface: {language: python, framework: pytorch, symbol: grpo_clipped_loss}
+    constraints:
+      forbidden_apis: [transformers.Trainer, trl]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: closed-form objective and transparent PyTorch reference
+        description: Values, masks, reductions, gradients, and degenerate batches are checked independently.
+      oral_questions:
+        - Trace every tensor from model outputs or rewards to the returned value.
+        - Which axes are token, sequence, candidate group, and batch?
+        - Which tensors carry gradients and which must be detached?
+        - What happens for empty masks, invalid completions, or zero reward variance?
+    variant_axes: [batch_size, sequence_length, mask_density, reward_distribution]
+    invariants: [shape_alignment, masked_items_excluded, finite_degenerate_behavior]
+    common_bugs: [wrong_reduction_denominator, reference_gradient_leak, zero_variance_nan, clip_wrong_direction]
+    retention:
+      d2: Reimplement the objective on a fresh tensor layout without viewing prior code.
+      d7: Debug a mask, reduction, reference, or degenerate-reward variant.
+    sources:
+      - {type: paper, title: "SFT, DPO, and GRPO primary method definitions"}
