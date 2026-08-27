@@ -71,8 +71,19 @@ python scripts/validate_external_courses.py
 ## Progress
 
 - [x] Baseline confirmed.
-- [ ] Quality gate and fingerprint implemented.
-- [ ] Golden Quest and Capstone Oracle-validated.
-- [ ] Beta/field workflow documented and tested.
-- [ ] Local and remote release gates passed.
+- [x] Quality gate and fingerprint implemented.
+- [x] Golden Quest and Capstone Oracle-validated.
+- [x] Beta/field workflow documented and tested.
+- [x] Local and remote release gates passed.
 
+## Final review
+
+- Repository health: 150 collected; 148 passed and 2 expected Windows
+  symlink-privilege skips.
+- PR #2 CI: all seven Ubuntu/Windows/Python and CPU PyTorch jobs passed.
+- Clean clone: FND-001..006 each passed base, D+2, and D+7 and reached
+  `mastered`; CAP-FND-001 then unlocked, passed, and reached `reviewed`.
+- Catalog: 39 ready, 188 planned, 18 Oracle, 12 retention-ready, 0 real field
+  runs. No automated evidence was counted as field validation.
+- Git isolation: only `workspace/profiles/.gitkeep` is tracked; clean-clone
+  trial Profile remained ignored and did not dirty Git status.
