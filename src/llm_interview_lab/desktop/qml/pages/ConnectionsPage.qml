@@ -9,6 +9,14 @@ Flickable {
     required property var palette
     contentWidth: width; contentHeight: content.implicitHeight + 60; clip: true
     property var pendingApproval: ({})
+    function approvalFiles() {
+        var value = root.pendingApproval.files
+        if (!value)
+            return ""
+        if (typeof value.join === "function")
+            return value.join(", ")
+        return String(value)
+    }
 
     ColumnLayout {
         id: content
@@ -84,7 +92,7 @@ Flickable {
             visible: !!root.pendingApproval.request_id
             Layout.fillWidth: true; Layout.preferredHeight: root.pendingApproval.diff ? 390 : 260; cardColor: root.palette.surface; borderColor: root.palette.warning
             Text { text: "Codex approval required"; color: root.palette.warning; font.pixelSize: 18; font.bold: true }
-            Text { width: parent.width; text: "Action: " + (root.pendingApproval.action || "") + "\nScope: " + (root.pendingApproval.scope || "") + "\nFiles: " + ((root.pendingApproval.files || []).join ? root.pendingApproval.files.join(", ") : root.pendingApproval.files || "") + "\nCommand: " + (root.pendingApproval.command || "") + "\nReason: " + (root.pendingApproval.reason || "") + "\nRisk: " + (root.pendingApproval.risk || ""); color: root.palette.text; wrapMode: Text.Wrap }
+            Text { width: parent.width; text: "Action: " + (root.pendingApproval.action || "") + "\nScope: " + (root.pendingApproval.scope || "") + "\nFiles: " + root.approvalFiles() + "\nCommand: " + (root.pendingApproval.command || "") + "\nReason: " + (root.pendingApproval.reason || "") + "\nRisk: " + (root.pendingApproval.risk || ""); color: root.palette.text; wrapMode: Text.Wrap }
             ScrollView {
                 visible: !!root.pendingApproval.diff
                 width: parent.width; Layout.fillHeight: true; clip: true
