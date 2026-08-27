@@ -1,0 +1,323 @@
+schema_version: 2
+problems:
+  - id: TML-001
+    title: "Logistic Regression from Scratch"
+    status: planned
+    domain: traditional_ml
+    tracks: ["traditional_ml"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-013","OPT-001"]
+    problem_type: implementation
+    description: "Train binary logistic regression with explicit gradients and metrics."
+  - id: TML-002
+    title: "Decision Tree Split"
+    status: planned
+    domain: traditional_ml
+    tracks: ["traditional_ml"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-004"]
+    problem_type: implementation
+    description: "Choose deterministic information-gain splits with missing values."
+  - id: TML-003
+    title: "Gradient Boosting Residual Step"
+    status: planned
+    domain: traditional_ml
+    tracks: ["traditional_ml"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TML-002"]
+    problem_type: implementation
+    description: "Fit one residual learner and update ensemble predictions."
+  - id: TML-004
+    title: "K-Means"
+    status: planned
+    domain: traditional_ml
+    tracks: ["traditional_ml"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-011","TNS-003"]
+    problem_type: implementation
+    description: "Run seeded assignment and centroid updates with empty clusters."
+  - id: TML-005
+    title: "Feature Leakage Audit"
+    status: planned
+    domain: traditional_ml
+    tracks: ["traditional_ml"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-014"]
+    problem_type: debugging
+    description: "Identify target, temporal, and split leakage in toy tabular features."
+  - id: REC-001
+    title: "Ranking Metrics"
+    status: planned
+    domain: recommendation
+    tracks: ["recommendation"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-007"]
+    problem_type: implementation
+    description: "Compute precision, recall, MAP, MRR, and NDCG at k."
+  - id: REC-002
+    title: "Negative Sampling"
+    status: planned
+    domain: recommendation
+    tracks: ["recommendation"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-018"]
+    problem_type: implementation
+    description: "Sample reproducible negatives while excluding user positives."
+  - id: REC-003
+    title: "Wide and Deep Model"
+    status: planned
+    domain: recommendation
+    tracks: ["recommendation"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["NNL-001","NNL-002"]
+    problem_type: implementation
+    description: "Combine memorization crosses with dense learned features."
+  - id: REC-004
+    title: "DeepFM Interaction"
+    status: planned
+    domain: recommendation
+    tracks: ["recommendation"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["REC-003"]
+    problem_type: implementation
+    description: "Compute factorization-machine pair interactions without quadratic loops."
+  - id: REC-005
+    title: "Two-Tower Retrieval"
+    status: planned
+    domain: recommendation
+    tracks: ["recommendation"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-006","REC-002"]
+    problem_type: integration
+    description: "Train user/item embeddings with in-batch retrieval loss."
+  - id: REC-006
+    title: "Pairwise Ranking Loss"
+    status: planned
+    domain: recommendation
+    tracks: ["recommendation"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-013"]
+    problem_type: implementation
+    description: "Implement BPR-style pairwise ranking with stable logits."
+  - id: CV-001
+    title: "Convolution Output Geometry"
+    status: planned
+    domain: computer_vision
+    tracks: ["computer_vision"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["NNL-009"]
+    problem_type: implementation
+    description: "Compute and validate convolution output size for padding and dilation."
+  - id: CV-002
+    title: "Non-Maximum Suppression"
+    status: planned
+    domain: computer_vision
+    tracks: ["computer_vision","vlm_algorithm"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-011","ALG-007"]
+    problem_type: implementation
+    description: "Select boxes by score and suppress overlaps deterministically."
+  - id: CV-003
+    title: "Deterministic Image Augmentation"
+    status: planned
+    domain: computer_vision
+    tracks: ["computer_vision","vlm_algorithm"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-011"]
+    problem_type: implementation
+    description: "Apply seeded crop, flip, and normalization with box transforms."
+  - id: CV-004
+    title: "Vision Transformer Block"
+    status: planned
+    domain: computer_vision
+    tracks: ["computer_vision","vlm_algorithm"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["VLM-001","ATT-008"]
+    problem_type: integration
+    description: "Compose patch tokens, attention, MLP, and residual normalization."
+  - id: CV-005
+    title: "Detection Matching"
+    status: planned
+    domain: computer_vision
+    tracks: ["computer_vision","vlm_algorithm"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-011","ALG-013"]
+    problem_type: implementation
+    description: "Match predictions to targets under IoU and class costs."
+  - id: GNN-001
+    title: "Graph Message Aggregation"
+    status: planned
+    domain: gnn
+    tracks: ["gnn"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-005"]
+    problem_type: implementation
+    description: "Aggregate neighbor features from edge indices with isolated nodes."
+  - id: GNN-002
+    title: "Graph Convolution Layer"
+    status: planned
+    domain: gnn
+    tracks: ["gnn"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["GNN-001","NNL-001"]
+    problem_type: implementation
+    description: "Apply normalized adjacency aggregation and learned projection."
+  - id: GNN-003
+    title: "GraphSAGE Sampling"
+    status: planned
+    domain: gnn
+    tracks: ["gnn"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["GNN-001","FND-011"]
+    problem_type: implementation
+    description: "Sample fixed-size neighborhoods and aggregate self plus neighbors."
+  - id: GNN-004
+    title: "Graph Attention Layer"
+    status: planned
+    domain: gnn
+    tracks: ["gnn"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["GNN-001","LOSS-007"]
+    problem_type: implementation
+    description: "Normalize edge attention over destination neighborhoods."
+  - id: GNN-005
+    title: "Mini-Batch Graph Sampler"
+    status: planned
+    domain: gnn
+    tracks: ["gnn"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["GNN-003","FND-006"]
+    problem_type: integration
+    description: "Build compact induced subgraphs and original-node mappings."
+  - id: GEN-001
+    title: "Variational Autoencoder ELBO"
+    status: planned
+    domain: generative_models
+    tracks: ["generative_models"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-004","NNL-001"]
+    problem_type: implementation
+    description: "Combine reconstruction and analytic Gaussian KL with reparameterization."
+  - id: GEN-002
+    title: "GAN Objectives"
+    status: planned
+    domain: generative_models
+    tracks: ["generative_models"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-013"]
+    problem_type: implementation
+    description: "Implement minimax and non-saturating generator/discriminator losses."
+  - id: GEN-003
+    title: "Diffusion Forward Process"
+    status: planned
+    domain: generative_models
+    tracks: ["generative_models"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-011","TNS-003"]
+    problem_type: implementation
+    description: "Sample noisy states directly from a cumulative alpha schedule."
+  - id: GEN-004
+    title: "Diffusion Noise Scheduler"
+    status: planned
+    domain: generative_models
+    tracks: ["generative_models"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["GEN-003","OPT-006"]
+    problem_type: implementation
+    description: "Construct beta schedules and validate monotone cumulative products."
+  - id: GEN-005
+    title: "Classifier-Free Guidance"
+    status: planned
+    domain: generative_models
+    tracks: ["generative_models"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["GEN-003"]
+    problem_type: implementation
+    description: "Combine conditional and unconditional noise predictions by guidance scale."
+  - id: TRL-001
+    title: "Finite MDP Bellman Backup"
+    status: planned
+    domain: traditional_rl
+    tracks: ["traditional_rl"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-015"]
+    problem_type: implementation
+    description: "Apply value and optimal Bellman backups on a small finite MDP."
+  - id: TRL-002
+    title: "Tabular Q-Learning"
+    status: planned
+    domain: traditional_rl
+    tracks: ["traditional_rl"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TRL-001","FND-011"]
+    problem_type: implementation
+    description: "Update action values with seeded epsilon-greedy behavior."
+  - id: TRL-003
+    title: "DQN Target Computation"
+    status: planned
+    domain: traditional_rl
+    tracks: ["traditional_rl"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TRL-002","NNL-001"]
+    problem_type: implementation
+    description: "Compute terminal-aware bootstrapped targets with a frozen network."
+  - id: TRL-004
+    title: "REINFORCE Loss"
+    status: planned
+    domain: traditional_rl
+    tracks: ["traditional_rl"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["PT-002"]
+    problem_type: implementation
+    description: "Build a Monte Carlo policy-gradient loss with return normalization."
+  - id: TRL-005
+    title: "Actor-Critic Advantage"
+    status: planned
+    domain: traditional_rl
+    tracks: ["traditional_rl"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TRL-004","PT-010"]
+    problem_type: implementation
+    description: "Combine policy and value objectives using bootstrapped advantages."
+  - id: TRL-006
+    title: "Replay Buffer"
+    status: planned
+    domain: traditional_rl
+    tracks: ["traditional_rl"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-017","FND-011"]
+    problem_type: implementation
+    description: "Implement fixed-capacity reproducible experience storage and sampling."
+

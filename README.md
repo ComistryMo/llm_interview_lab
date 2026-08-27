@@ -1,49 +1,22 @@
 # LLM Interview Lab
 
-[![CI](https://github.com/ComistryMo/llm_interview_lab/actions/workflows/ci.yml/badge.svg)](https://github.com/ComistryMo/llm_interview_lab/actions/workflows/ci.yml)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
+> **Alpha v0.2.0-alpha.1:** 38 个可运行题中，13 个已通过维护者 public + private/property Oracle 验证，8 个具有经 Oracle 验证的 D+2/D+7 复测资产，0 个完成公开 field run。`ready` 表示题面与测试契约完整，不代表已经完成数值 Oracle 或真实用户验证。
 
-一个以“独立实现、证据审查、间隔复测”为核心的大模型算法面试训练实验室。它把 AI 放在教练席，而不是代写席。
+本项目当前是公开 Alpha：欢迎试用与报告问题，但不承诺所有 `ready` 题都已完成数值验证。公共测试是学习反馈，不是防作弊的“隐藏测试”；本地 grader 有超时与输出截断，但不是恶意代码安全沙箱，只应运行你本人信任的代码。
 
-> Project status: **v0.1 alpha**. B00 基础设施与 Task 00A-1 流程 fixture 可用；00A-2 之后的 Stage 00 内容仍是 draft。Stanford CS336 Spring 2026 companion track 已完成五份作业的固定版本元数据接入，但不镜像第三方内容，也不代表原生课程已经补齐。仓库目前保留一个脱敏但与维护者公开账号关联的 fixture，因此尚未启用 GitHub Template。新用户必须先生成无答案的私人 workspace，不能把 fixture 当作自己的训练证据。
+一个面向大众的、clone 后即可使用的 AI 算法面试手撕训练平台。
 
-## 它解决什么问题
+这里训练的是“能独立解释、实现、测试、调试并隔周迁移”，不是把一次公开测试通过包装成掌握。固定课程与解锁规则是确定性的；AI 可以教学、分级提示、审查和生成本地变式，但不能直接判定 mastery。
 
-常见学习计划记录“看过什么”，却无法回答“能否闭卷写出、解释边界、七天后迁移”。本项目用同一条证据链管理每个任务：
+## 五分钟开始
 
-```text
-唯一任务 → 独立尝试 → 定向测试 → 需求审查 → 原理口述
-        → D+2 闭卷复写 → D+7 变式 → 综合迁移
-```
-
-- `src/` 保存学员答案，AI 默认只读；
-- `tests/` 把正常、边界、异常和性质要求变成可执行证据；
-- `state/TASK_LEDGER.jsonl` 记录帮助等级和状态迁移；
-- `curriculum/`、`hints/` 将任务文字、分级提示与完整答案分开；
-- 课程可按依赖阶段或岗位方向浏览，runtime、GPU 策略和可见测试均有机器可读登记；
-- 外部课程以固定 revision 的 companion pack 接入：只提交审计元数据和本项目 Gate，官方材料留在独立、被忽略的 checkout；
-- 通用教练协议可供具备终端能力、只读文件能力或纯聊天能力的 AI 使用。
-
-它与“答案型算法教程”的边界很明确：这里不把完整答案与当前练习放在一起，核心产物是受控 AI 帮助下的独立实现、审查、D+2/D+7 复测和迁移证据。外部优秀项目只作为固定版本的设计参考，不作为课程内容镜像。
-
-## 适合与不适合
-
-适合正在准备 LLM/VLM、后训练、Agent 或算法工程岗位，愿意接受单任务、限时、闭卷和变式复测的学习者。它不是完整 Python 教材、题库镜像、公司项目资料库，也不承诺用一套固定路线适配所有人。
-
-## 10 分钟开始
-
-要求：Git、Python 3.10+。PyTorch 在 Tensor 阶段前是可选依赖。
+需要 Python 3.10+，推荐 Python 3.11。
 
 ```bash
-git clone https://github.com/ComistryMo/llm_interview_lab.git llm-interview-lab-upstream
-cd llm-interview-lab-upstream
-python scripts/create_private_workspace.py ../my-llm-interview-lab
-cd ../my-llm-interview-lab
+git clone https://github.com/ComistryMo/llm_interview_lab.git
+cd llm_interview_lab
 python -m venv .venv
 ```
-
-激活环境：
 
 ```powershell
 # Windows PowerShell
@@ -55,89 +28,145 @@ python -m venv .venv
 . .venv/bin/activate
 ```
 
-安装最小依赖并检查仓库健康：
+激活环境后，在任一平台运行：
 
 ```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python scripts/check_environment.py
-python -m pytest -q
-python scripts/validate_curriculum.py
-python scripts/validate_state.py
+python -m pip install -e .[dev]
+llm-lab init --profile default --track ai_foundation
+llm-lab doctor
+llm-lab next --profile default
+llm-lab start FND-001 --profile default
 ```
 
-`python -m pytest -q` 只运行基础设施与已验收回归，必须全绿。当前训练题使用 `state/CURRENT_TASK.md` 里的定向命令；训练中的红灯是反馈，不等于仓库损坏。
+编辑输出的 `workspace/profiles/default/.../submission.py`，然后运行：
 
-生成器只读取已提交的公共 HEAD，不复制源 checkout 的未提交文件；它清除 fixture、恢复无答案 starter、创建新的 `not_started` ledger，并丢弃公共 Git 历史。结果是一个全新、尚未提交但已暂存待审查的 `main` 分支；`upstream` 只可 fetch、不可 push。添加私人 `origin` 和填写档案前，按[开始使用](docs/GETTING_STARTED.md)完成安全检查。
+```bash
+llm-lab test FND-001 --profile default
+llm-lab submit FND-001 --profile default
+```
 
-## 与 AI 协作
+第一份 starter 预期测试失败；它不含答案。Tensor 及后续题另需：
 
-先让 AI 读取 `AGENTS.md`、学习者档案、当前任务、教练协议和任务卡，再要求它只推进一个问题。通用启动文本：
+```bash
+python -m pip install -e .[torch,dev]
+```
+
+## 完整训练闭环
 
 ```text
-开始今日训练。读取仓库规则和当前任务，运行定向测试；
-不要修改我的答案。用不超过 10 条复述状态，然后只给出唯一下一步。
+init + Track
+  → next → start → edit submission
+  → test → submit (implemented)
+  → contract + oral review (reviewed)
+  → D+2 clean rewrite (retained_d2)
+  → D+7 variant (mastered)
+  → prerequisite unlock
 ```
 
-本仓库原生提供 `AGENTS.md` 入口；其他助手按[AI 教练接入指南](docs/AI_COACH_ADAPTER.md)使用同一份权威协议。任何助手都不得因为工具能力更强而绕过帮助等级或 mastery Gate。
-
-## Stanford CS336 companion track（可选）
-
-本仓库已审计并登记 Stanford CS336 Spring 2026 课程页所链接五份 assignment 的 124 个 handout problem、52 个 adapter 入口和 105 个上游测试节点。A1 固定仓库 README 自称 Spring 2025 artifact；该来源差异已单独记录。这里的“全量”指全量**覆盖清单与训练映射**，不是复制课程文件：用户明确确认许可证和学术诚信政策后，工具才会把固定官方 commit 检出到 `.external/`，而且不会自动执行第三方代码。
+结构化 Review 示例：
 
 ```bash
-python scripts/manage_external_course.py list
-python scripts/manage_external_course.py show EXT-CS336-A1
-python scripts/manage_external_course.py show-group EXT-CS336-A1-tokenizer-core
-python scripts/manage_external_course.py install EXT-CS336-A1 --acknowledge-policy
-python scripts/manage_external_course.py verify EXT-CS336-A1
+llm-lab review FND-001 --profile default \
+  --contract passed --oral passed \
+  --explanation "Explained validation and counting branches" \
+  --complexity "O(n) time, O(1) auxiliary space" \
+  --boundaries "Rejects bool, empty input, and invalid container types"
 ```
 
-Assignment 1–4 的审计版本含 MIT LICENSE；对 Assignment 5 固定 tree 的递归文件名审计未发现许可证文件，因此本项目对它不做任何再分发许可推定。五个 assignment ID 是聚合清单，未来正式训练一次只选择一个 canonical problem-group Task；当前 `inventory-audited` 状态允许安装与 Preview，但在原生 readiness 完成机器映射前不允许写入 Implementation Lane。安装不等于开始或掌握。官方作业模式遵守 Stanford 的 AI 政策，帮助最高 H2，AI 不写代码、伪代码或 TODO。完整边界、资源分层和 D+2/D+7 规则见[外部课程包](docs/EXTERNAL_COURSE_PACKS.md)。
+到期后启动全新、无旧答案的复测 attempt：
 
-## 公共和私人边界
+```bash
+llm-lab retain FND-001 --stage d2 --profile default
+llm-lab retain FND-001 --stage d7 --profile default
+```
 
-这个 GitHub 仓库是公共上游：课程、协议、模板、测试基础设施、虚构示例和一个明确标注的脱敏维护者 fixture 可公开。你的真实档案、答案、审查、进度和项目事实应保存在生成的**独立私人仓库**，不要放在公共 fork 中。
+生产命令按 Review 事件时间计算 D+2/D+7；测试可以注入时钟。复测仍需 `test → submit → review`。只有公开测试、契约审查、口述、D+2 与 D+7 全部通过，确定性流程才写入 `task_mastered`。
 
-`.gitignore` 不是保密机制。雇主或客户的源码、数据、日志、路径、配置、截图、模型标识、指标和业务样本，连“被忽略的本地目录”也不应进入本仓库工作树。详见[隐私与安全](docs/PRIVACY_AND_SECURITY.md)。
+## CLI
 
-## 关键命令
+| 命令 | 作用 | 写 Workspace |
+|---|---|---:|
+| `llm-lab doctor` | 校验 Catalog、DAG、Demo 和 Git 隔离 | 否 |
+| `llm-lab init --profile ID [--track TRACK]` | 创建本地 Profile | 是 |
+| `llm-lab next --profile ID` | 一屏显示当前任务、复测和最多三个解锁项 | 否 |
+| `llm-lab show PROBLEM` | 显示固定题契约 | 否 |
+| `llm-lab start PROBLEM --profile ID` | 创建或幂等返回普通 attempt | 是 |
+| `llm-lab test PROBLEM --profile ID` | 在独立 pytest 子进程运行公开测试 | 是 |
+| `llm-lab submit PROBLEM --profile ID` | 绑定当前 SHA-256 测试证据 | 是 |
+| `llm-lab review PROBLEM ...` | 记录结构化契约与口述结果 | 是 |
+| `llm-lab retain PROBLEM --stage d2\|d7 ...` | 创建无旧答案的复测 attempt | 是 |
+| `llm-lab catalog [--track TRACK]` | 主动展开完整目录 | 否 |
+| `llm-lab graph --track TRACK` | 显示 Track DAG 边 | 否 |
+| `llm-lab profile show ID` | 从 events 动态汇总状态 | 否 |
 
-| 目的 | 命令 |
-|---|---|
-| 环境检查 | `python scripts/check_environment.py` |
-| 创建私人 workspace | `python scripts/create_private_workspace.py <new-directory>` |
-| 默认健康测试 | `python -m pytest -q` |
-| 当前原生任务 | `python scripts/run_current_task.py`（外部任务只提示人工审阅，不自动执行） |
-| 安全预览/选择唯一任务 | `python scripts/select_current_task.py <TASK-ID>`（默认 dry-run） |
-| 课程目录一致性 | `python scripts/validate_curriculum.py` |
-| 外部课程包一致性 | `python scripts/validate_external_courses.py` |
-| 外部课程包查看/安装 | `python scripts/manage_external_course.py --help` |
-| 状态一致性 | `python scripts/validate_state.py` |
-| 导出预检 | `python scripts/export_handoff.py --dry-run` |
-| 可选 Torch 环境 | `python -m pip install -r requirements-torch.txt` |
+Tracks 包括 AI 基础、LLM、VLM、后训练、Agent、训练/推理系统，以及传统 ML、推荐、CV、GNN、生成模型和传统 RL 选修。
 
-## 文档导航
+## 课程与差异化
 
-- [开始使用](docs/GETTING_STARTED.md)
-- [教练协议](docs/COACHING_PROTOCOL.md)
-- [状态模型](docs/STATE_MODEL.md)
-- [评分量表](docs/ASSESSMENT_RUBRIC.md)
-- [个性化](docs/CUSTOMIZATION.md)
-- [AI 接入](docs/AI_COACH_ADAPTER.md)
-- [测试边界](docs/TESTING.md)
-- [仓库架构](docs/REPO_ARCHITECTURE.md)
-- [课程双轴导航](curriculum/NAVIGATION.md)
-- [课程元数据契约](docs/CURRICULUM_METADATA.md)
-- [外部课程包与 CS336 使用边界](docs/EXTERNAL_COURSE_PACKS.md)
-- [外部课程全量导航](curriculum/external/NAVIGATION.md)
-- [课程路线](docs/MASTER_TRAINING_PLAN.md)
-- [外部参考与来源治理](docs/REFERENCE_POLICY.md)
-- [贡献指南](CONTRIBUTING.md)
-- [安全政策](SECURITY.md)
+当前固定图谱包含 38 个可运行题和 188 个 planned 节点。planned 节点只有 Catalog 元数据，不制造空目录。首批 ready 内容覆盖：
 
-## 贡献与许可证
+- 真实数据任务中的 Python 与 JSONL；
+- shape、broadcast、gather、mask、last token、autograd；
+- Stable Softmax、LogSumExp、BCE、Cross Entropy；
+- SGD、Momentum、Adam、AdamW；
+- Linear、Embedding、RMSNorm；
+- Attention、MHA、MQA、GQA、RoPE、KV Cache；
+- SFT label、sequence logprob、DPO、GRPO；
+- Tool Schema、Registry、Agent Loop、Trajectory。
 
-课程 PR 必须包含前置任务、可见测试、分级提示、D+2/D+7 变式和隐私确认；不要提交完整学员答案或批量空任务。详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+每个 ready 题只有原创 `task.md`、无答案 `starter.py`、`test_public.py` 和 H1/H2/H3 `hints.md`。元数据统一在 `curriculum/catalog/*.yaml`，包含前置、三维难度、Oracle、口述题、变式轴、不变式、常见错误和复测契约。
 
-本项目采用 [Apache License 2.0](LICENSE)。
+与普通题单相比，本项目把依赖解锁、提交 SHA、代码审查、口述、间隔复写和变式迁移放在同一个本地闭环中；课程测试只通过统一 loader 测试当前 Workspace submission，不会偷偷测试 starter。
+
+## Workspace 与隐私
+
+真实学习数据默认位于仓库内部但不进入 Git：
+
+```text
+workspace/profiles/<id>/
+├── profile.yaml
+├── events.jsonl          # 唯一学习历史事实源
+├── submissions/
+├── generated/
+├── private_tests/
+├── reviews/
+├── cache/
+└── exports/
+```
+
+公共仓库只跟踪 Schema、模板、完全虚构的 `workspace/demo/` 和 `.gitkeep`。验证方法：
+
+```bash
+git check-ignore -v workspace/profiles/default/events.jsonl
+git status --short
+git ls-files workspace/profiles
+```
+
+不要使用 `git add -f` 提交真实 Profile。更多边界见 [Workspace](docs/workspace.md)。
+
+## AI 教练
+
+把 [AGENTS.md](AGENTS.md) 与 [Coach Policy](coach/POLICY.md) 提供给能读取本地仓库的 AI。AI 可以：
+
+- 运行 `next/show/test`，解释当前契约和失败证据；
+- 按 H0—H5 控制提示；
+- 审查代码可读性、复杂度、数值稳定、shape/mask/dtype/device/gradient；
+- 完成结构化口述追问；
+- 按 Catalog 的 `variant_axes` 在本地 `generated/` 创建私人变式和测试。
+
+AI 不得修改固定 DAG、把生成题自动加入公共题库、替学习者补当前答案，或用测试通过直接写 mastery。项目不含模型 API、多 Agent Runtime 或后台服务。
+
+## 开发与安全边界
+
+```bash
+python -m pytest --collect-only -q
+python -m pytest -q
+llm-lab doctor
+python scripts/validate_external_courses.py
+```
+
+根 pytest 不收集课程 `test_public.py`、starter 或真实 Profile。Grader 提供精确路径、超时和输出截断，但不是恶意代码沙箱；只运行学习者本人信任的本地代码。
+
+架构见 [docs/architecture.md](docs/architecture.md)，出题规范见 [docs/curriculum-authoring.md](docs/curriculum-authoring.md)，贡献规则见 [CONTRIBUTING.md](CONTRIBUTING.md)。外部课程兼容元数据被冻结在 `curriculum/external/`，不是默认路线，也不镜像上游答案或测试。
+
+License: [Apache-2.0](LICENSE).

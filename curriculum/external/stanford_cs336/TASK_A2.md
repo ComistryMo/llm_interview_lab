@@ -6,7 +6,7 @@
 
 上游 A2 checkout 内含 A1 staff implementation。该目录是答案泄漏源，只能在学习者自己的 A1 集成 Gate 通过后打开，且不得迁入本仓库 `src/`、测试或提示。
 
-整份 assignment 是聚合 Gate。当前 `integration_status=inventory-audited` 只允许安装与 Preview；待原生 readiness 与 group 依赖机器映射完成并升级为 `implementation-ready` 后，每次才可把一个 `EXT-CS336-A2-<group>` 注册为唯一 `CURRENT_TASK`。安装器无法替学习者证明 A1 Gate，只能通过独立 spoiler 确认阻止误开。
+整份 assignment 是聚合 Gate。当前 `integration_status=inventory-audited` 只允许安装与 Preview；problem-group ID 不写入原生 Workspace。安装器无法替学习者证明 A1 Gate，只能通过独立 spoiler 确认阻止误开。
 
 ## 前置 Gate
 

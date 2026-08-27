@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-interview-lab"
-version = "0.1.0"
+version = "0.2.0a1"
 description = "A gate-based, AI-assisted training lab for LLM algorithm interviews"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,30 +14,39 @@ keywords = ["llm", "interview", "pytorch", "post-training", "learning"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Education",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
+dependencies = [
+    "jsonschema>=4.23,<5",
+    "PyYAML>=6.0,<7",
+    "pytest>=8.0,<9",
+]
+
+[project.scripts]
+llm-lab = "llm_interview_lab.cli:main"
 
 [project.optional-dependencies]
-test = ["pytest>=8.0,<9"]
+test = []
 torch = ["torch>=2.2"]
-dev = ["pytest>=8.0,<9"]
+dev = []
 
 [project.urls]
 Homepage = "https://github.com/ComistryMo/llm_interview_lab"
 Repository = "https://github.com/ComistryMo/llm_interview_lab"
 Issues = "https://github.com/ComistryMo/llm_interview_lab/issues"
 
-[tool.setuptools]
-packages = []
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["llm_interview_lab*"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests/infrastructure", "tests/regression"]
-pythonpath = ["."]
+pythonpath = [".", "src"]
+norecursedirs = [".external", "curriculum/problems", "curriculum/retention", "workspace/profiles"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
 markers = [

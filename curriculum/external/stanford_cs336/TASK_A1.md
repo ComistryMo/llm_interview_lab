@@ -6,7 +6,7 @@
 
 `EXT-CS336-A1` 是大型 capstone，不应替代本仓库从 Python、Tensor、Loss 到 Transformer 的小步任务。它的价值是验证多个已掌握组件能否在一个真实契约中集成。
 
-整份 assignment 只是聚合 Gate，不得作为第二条并行 Implementation Lane。当前 `integration_status=inventory-audited` 只允许安装与 Preview；待原生 readiness 机器映射完成并升级为 `implementation-ready` 后，正式实施才从生成导航选择一个 `EXT-CS336-A1-<group>` canonical task ID，由受校验选择器注册为唯一 `CURRENT_TASK`。
+整份 assignment 只是聚合 Gate，不得作为第二条并行 Implementation Lane。当前 `integration_status=inventory-audited` 只允许安装与 Preview；problem-group ID 仅用于冻结清单和证据边界，不写入原生 Workspace。
 
 ## 前置 Gate
 

@@ -6,16 +6,29 @@
 
 ### Added
 
-- 依赖阶段 × 岗位方向的生成式课程导航；
-- 现有 Task 的机器可读公共元数据、runtime/GPU 策略和精确测试节点；
-- 固定 commit 的外部参考与许可证范围登记；
-- curriculum、依赖 DAG、reference exposure 和导航漂移的离线校验。
+- 38 道原创 ready 固定题与 188 个 planned Catalog 节点；
+- 12 条岗位 Track、11 条 Quest、8 个 planned Capstone；
+- repository-local 多 Profile Workspace 与 append-only event reducer；
+- `start → test → submit → review → D+2 → D+7 → mastered` CLI 闭环；
+- 统一 submission loader、pytest 子进程、超时、输出截断与 SHA-256 证据；
+- 固定 commit 的外部参考兼容清单与许可证审计。
+
+### Changed
+
+- 固定课程事实源收敛为 `curriculum/catalog/*.yaml`；
+- 个人学习历史事实源收敛为每个 Profile 的 `events.jsonl`；
+- README、架构、Workspace、出题规范和 AI 教练边界收敛为少量维护文档。
+
+### Removed
+
+- 公共维护者答案、状态、review、progress 与 handoff fixture；
+- 重复的 Markdown 状态、旧 JSON Catalog、旧导航和被 CLI 替代的脚本。
 
 ## [0.1.0] - 2026-08-26
 
 ### Added
 
-- Stage 00 训练原型与脱敏维护者 fixture；
+- Stage 00 训练原型；
 - Python 3.10+ 环境检查和分层 pytest 入口；
 - 精确时间语义的任务 ledger 与状态校验；
 - fail-closed handoff 导出器；

@@ -1,0 +1,118 @@
+schema_version: 2
+problems:
+  - id: NNL-001
+    title: Linear Layer
+    status: ready
+    domain: neural_layer
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, systems]
+    tier: core
+    difficulty: {concept: 3, coding: 3, debugging: 4}
+    prerequisites:
+      - TNS-003
+      - TNS-013
+    skills: [module.parameter, module.forward, tensor.gradient]
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/NNL-001-linear}
+    interface: {language: python, framework: pytorch, symbol: ManualLinear}
+    constraints:
+      forbidden_apis:
+      - torch.nn.Linear
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: primitive PyTorch equation and module state
+        description: Values, parameters, initialization, and gradients are aligned with transparent references.
+      oral_questions:
+        - What are every parameter and activation shape?
+        - Why is each trainable value an nn.Parameter?
+        - Which axes does the forward equation reduce or transform?
+        - Where do gradients accumulate and what state enters state_dict?
+    variant_axes: [batch_shape, dtype, optional_parameter, initialization]
+    invariants: [registered_parameter_shapes, reference_alignment, gradient_connected]
+    common_bugs: [wrong_weight_orientation, unregistered_tensor, dtype_upcast, padding_gradient]
+    retention:
+      d2: Rebuild the layer from an untouched starter and verify parameter registration.
+      d7: Debug a shape, dtype, initialization, or gradient variant.
+    sources:
+      - {type: official_docs, title: PyTorch module and layer documentation}
+  - id: NNL-002
+    title: Embedding Layer
+    status: ready
+    domain: neural_layer
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, systems]
+    tier: core
+    difficulty: {concept: 3, coding: 3, debugging: 4}
+    prerequisites:
+      - TNS-006
+      - TNS-013
+    skills: [module.parameter, module.forward, tensor.gradient]
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/NNL-002-embedding}
+    interface: {language: python, framework: pytorch, symbol: ManualEmbedding}
+    constraints:
+      forbidden_apis:
+      - torch.nn.Embedding
+      - torch.nn.functional.embedding
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: primitive PyTorch equation and module state
+        description: Values, parameters, initialization, and gradients are aligned with transparent references.
+      oral_questions:
+        - What are every parameter and activation shape?
+        - Why is each trainable value an nn.Parameter?
+        - Which axes does the forward equation reduce or transform?
+        - Where do gradients accumulate and what state enters state_dict?
+    variant_axes: [batch_shape, dtype, optional_parameter, initialization]
+    invariants: [registered_parameter_shapes, reference_alignment, gradient_connected]
+    common_bugs: [wrong_weight_orientation, unregistered_tensor, dtype_upcast, padding_gradient]
+    retention:
+      d2: Rebuild the layer from an untouched starter and verify parameter registration.
+      d7: Debug a shape, dtype, initialization, or gradient variant.
+    sources:
+      - {type: official_docs, title: PyTorch module and layer documentation}
+  - id: NNL-008
+    title: RMSNorm
+    status: ready
+    domain: neural_layer
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, systems]
+    tier: core
+    difficulty: {concept: 3, coding: 3, debugging: 4}
+    prerequisites:
+      - TNS-003
+      - TNS-013
+    skills: [module.parameter, module.forward, tensor.gradient]
+    validation: {level: oracle, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/NNL-008-rmsnorm}
+    interface: {language: python, framework: pytorch, symbol: RMSNorm}
+    constraints:
+      forbidden_apis:
+      - torch.nn.RMSNorm
+      - torch.nn.LayerNorm
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: primitive PyTorch equation and module state
+        description: Values, parameters, initialization, and gradients are aligned with transparent references.
+      oral_questions:
+        - What are every parameter and activation shape?
+        - Why is each trainable value an nn.Parameter?
+        - Which axes does the forward equation reduce or transform?
+        - Where do gradients accumulate and what state enters state_dict?
+    variant_axes: [batch_shape, dtype, optional_parameter, initialization]
+    invariants: [registered_parameter_shapes, reference_alignment, gradient_connected]
+    common_bugs: [wrong_weight_orientation, unregistered_tensor, dtype_upcast, padding_gradient]
+    retention:
+      d2: Rebuild the layer from an untouched starter and verify parameter registration.
+      d7: Debug a shape, dtype, initialization, or gradient variant.
+    sources:
+      - {type: official_docs, title: PyTorch module and layer documentation}

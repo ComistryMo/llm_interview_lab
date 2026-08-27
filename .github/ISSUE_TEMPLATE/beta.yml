@@ -1,0 +1,30 @@
+name: Alpha/Beta training feedback
+description: Report one real learning run without sharing private or employer data.
+title: "[Beta] "
+labels: ["beta-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not attach submissions, private tests, employer data, or workspace/profiles content."
+  - type: input
+    id: profile
+    attributes: {label: Anonymous profile, description: "A non-identifying nickname or synthetic ID."}
+  - type: input
+    id: track
+    attributes: {label: Selected track}
+    validations: {required: true}
+  - type: input
+    id: timing
+    attributes: {label: Install time / time to first task, placeholder: "4 min / 7 min"}
+  - type: input
+    id: completed
+    attributes: {label: Completed problem IDs}
+  - type: textarea
+    id: quality
+    attributes: {label: Contract, tests, and hints, description: "Note any confusing contract, misleading test, or hint leakage."}
+  - type: textarea
+    id: retention
+    attributes: {label: Retention usefulness, description: "What did D+2/D+7 reveal?"}
+  - type: textarea
+    id: blocker
+    attributes: {label: Blocking bug, description: "Include OS, Python version, command, and sanitized output."}

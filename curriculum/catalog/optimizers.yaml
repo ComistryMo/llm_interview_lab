@@ -1,0 +1,154 @@
+schema_version: 2
+problems:
+  - id: OPT-001
+    title: SGD
+    status: ready
+    domain: optimizer
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites:
+      - TNS-013
+    skills: [optimizer.state, optimizer.no_grad, optimizer.validation]
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/OPT-001-sgd}
+    interface: {language: python, framework: pytorch, symbol: sgd_step}
+    constraints:
+      forbidden_apis: [torch.optim]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: closed_form
+        target: hand-computed one-step and multi-step update equations
+        description: Parameter values and persistent state are compared with explicit float64 equations.
+      oral_questions:
+        - Write every update equation in execution order.
+        - Which tensors are persistent state and when do their steps increment?
+        - Why must parameter updates run without autograd tracking?
+        - How are missing gradients and invalid later parameters handled?
+    variant_axes: [parameter_count, missing_gradient, step_count, hyperparameters]
+    invariants: [gradient_not_mutated, state_detached, no_partial_invalid_step]
+    common_bugs: [tracked_parameter_update, wrong_step_timing, aliased_state, coupled_weight_decay]
+    retention:
+      d2: Reimplement one update from equations with fresh state fixtures.
+      d7: Debug a two-step state or missing-gradient variant and defend all state transitions.
+    sources:
+      - {type: paper, title: Adam and AdamW algorithm definitions}
+  - id: OPT-002
+    title: Momentum
+    status: ready
+    domain: optimizer
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites:
+      - OPT-001
+    skills: [optimizer.state, optimizer.no_grad, optimizer.validation]
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/OPT-002-momentum}
+    interface: {language: python, framework: pytorch, symbol: momentum_step}
+    constraints:
+      forbidden_apis: [torch.optim]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: closed_form
+        target: hand-computed one-step and multi-step update equations
+        description: Parameter values and persistent state are compared with explicit float64 equations.
+      oral_questions:
+        - Write every update equation in execution order.
+        - Which tensors are persistent state and when do their steps increment?
+        - Why must parameter updates run without autograd tracking?
+        - How are missing gradients and invalid later parameters handled?
+    variant_axes: [parameter_count, missing_gradient, step_count, hyperparameters]
+    invariants: [gradient_not_mutated, state_detached, no_partial_invalid_step]
+    common_bugs: [tracked_parameter_update, wrong_step_timing, aliased_state, coupled_weight_decay]
+    retention:
+      d2: Reimplement one update from equations with fresh state fixtures.
+      d7: Debug a two-step state or missing-gradient variant and defend all state transitions.
+    sources:
+      - {type: paper, title: Adam and AdamW algorithm definitions}
+  - id: OPT-004
+    title: Adam
+    status: ready
+    domain: optimizer
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites:
+      - TNS-013
+    skills: [optimizer.state, optimizer.no_grad, optimizer.validation]
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/OPT-004-adam}
+    interface: {language: python, framework: pytorch, symbol: adam_step}
+    constraints:
+      forbidden_apis: [torch.optim]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: closed_form
+        target: hand-computed one-step and multi-step update equations
+        description: Parameter values and persistent state are compared with explicit float64 equations.
+      oral_questions:
+        - Write every update equation in execution order.
+        - Which tensors are persistent state and when do their steps increment?
+        - Why must parameter updates run without autograd tracking?
+        - How are missing gradients and invalid later parameters handled?
+    variant_axes: [parameter_count, missing_gradient, step_count, hyperparameters]
+    invariants: [gradient_not_mutated, state_detached, no_partial_invalid_step]
+    common_bugs: [tracked_parameter_update, wrong_step_timing, aliased_state, coupled_weight_decay]
+    retention:
+      d2: Reimplement one update from equations with fresh state fixtures.
+      d7: Debug a two-step state or missing-gradient variant and defend all state transitions.
+    sources:
+      - {type: paper, title: Adam and AdamW algorithm definitions}
+  - id: OPT-005
+    title: AdamW
+    status: ready
+    domain: optimizer
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites:
+      - OPT-004
+    skills: [optimizer.state, optimizer.no_grad, optimizer.validation]
+    validation: {level: oracle, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/OPT-005-adamw}
+    interface: {language: python, framework: pytorch, symbol: adamw_step}
+    constraints:
+      forbidden_apis: [torch.optim]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: closed_form
+        target: hand-computed one-step and multi-step update equations
+        description: Parameter values and persistent state are compared with explicit float64 equations.
+      oral_questions:
+        - Write every update equation in execution order.
+        - Which tensors are persistent state and when do their steps increment?
+        - Why must parameter updates run without autograd tracking?
+        - How are missing gradients and invalid later parameters handled?
+    variant_axes: [parameter_count, missing_gradient, step_count, hyperparameters]
+    invariants: [gradient_not_mutated, state_detached, no_partial_invalid_step]
+    common_bugs: [tracked_parameter_update, wrong_step_timing, aliased_state, coupled_weight_decay]
+    retention:
+      d2:
+        description: Apply one functional AdamW update without mutating the input parameter.
+        assets: {root: curriculum/retention/OPT-005/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: functional_adamw}
+        oracle_validated: true
+      d7:
+        description: Integrate AdamW state across named parameter groups and missing gradients.
+        assets: {root: curriculum/retention/OPT-005/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: grouped_adamw_step}
+        oracle_validated: true
+    sources:
+      - {type: paper, title: Adam and AdamW algorithm definitions}

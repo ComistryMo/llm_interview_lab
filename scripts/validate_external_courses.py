@@ -17,26 +17,108 @@ import sys
 from typing import Any, Mapping, Sequence
 from urllib.parse import urlparse
 
-try:
-    from scripts.validate_curriculum import (
-        CurriculumValidationError,
-        REFERENCE_RELATIVE,
-        REPO_ROOT,
-        load_json,
-        validate_reference_registry,
-    )
-except ModuleNotFoundError:  # Direct execution: python scripts/validate_external_courses.py
-    from validate_curriculum import (  # type: ignore[no-redef]
-        CurriculumValidationError,
-        REFERENCE_RELATIVE,
-        REPO_ROOT,
-        load_json,
-        validate_reference_registry,
-    )
-
-
+REPO_ROOT = Path(__file__).resolve().parents[1]
+REFERENCE_RELATIVE = "references/registry.json"
 CATALOG_RELATIVE = "curriculum/external/catalog.json"
 NAVIGATION_RELATIVE = "curriculum/external/NAVIGATION.md"
+
+
+class CurriculumValidationError(ValueError):
+    """Raised when frozen external-course metadata violates its contract."""
+
+
+def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise CurriculumValidationError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    """Load one UTF-8 JSON object while rejecting duplicate keys."""
+
+    try:
+        value = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=_reject_duplicate_keys,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise CurriculumValidationError(
+            f"cannot read valid UTF-8 JSON: {path.name}"
+        ) from error
+    if not isinstance(value, dict):
+        raise CurriculumValidationError(f"{path.name} must contain one JSON object")
+    return value
+
+
+def validate_reference_registry(registry: Mapping[str, Any]) -> set[str]:
+    """Validate the provenance fields consumed by the frozen external pack."""
+
+    if set(registry) != {"schema_version", "references"} or registry.get("schema_version") != 2:
+        raise CurriculumValidationError("reference registry must use schema_version 2")
+    records = registry.get("references")
+    if not isinstance(records, list):
+        raise CurriculumValidationError("reference registry references must be a list")
+    identifiers: set[str] = set()
+    sha_pattern = re.compile(r"^[0-9a-f]{40}$")
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            raise CurriculumValidationError(f"references[{index}] must be an object")
+        identifier = record.get("id")
+        if not isinstance(identifier, str) or not identifier or identifier in identifiers:
+            raise CurriculumValidationError(f"invalid or duplicate reference id: {identifier}")
+        identifiers.add(identifier)
+        if record.get("kind") != "external-repository":
+            raise CurriculumValidationError(f"reference {identifier} kind is unsupported")
+        for name in ("repository_url", "license_audit_url"):
+            value = record.get(name)
+            parsed = urlparse(value) if isinstance(value, str) else None
+            if parsed is None or parsed.scheme != "https" or not parsed.netloc:
+                raise CurriculumValidationError(
+                    f"reference {identifier} {name} must be a public HTTPS URL"
+                )
+        revision = record.get("pinned_revision")
+        if not isinstance(revision, str) or sha_pattern.fullmatch(revision) is None:
+            raise CurriculumValidationError(
+                f"reference {identifier} must pin a full lowercase commit SHA"
+            )
+        try:
+            date.fromisoformat(str(record.get("audited_on")))
+        except ValueError as error:
+            raise CurriculumValidationError(
+                f"reference {identifier} audited_on must be YYYY-MM-DD"
+            ) from error
+        status = record.get("license_status")
+        licenses = record.get("licenses")
+        if status not in {"verified", "not-found"} or not isinstance(licenses, list):
+            raise CurriculumValidationError(
+                f"reference {identifier} has invalid license metadata"
+            )
+        if status == "verified" and not licenses:
+            raise CurriculumValidationError(f"reference {identifier} requires license evidence")
+        if status == "not-found" and licenses:
+            raise CurriculumValidationError(
+                f"reference {identifier} cannot declare unverified licenses"
+            )
+        for license_record in licenses:
+            if not isinstance(license_record, dict) or set(license_record) != {
+                "scope", "spdx", "evidence_url"
+            }:
+                raise CurriculumValidationError(
+                    f"reference {identifier} has invalid license evidence"
+                )
+        for name in ("title", "license_audit_method", "usage"):
+            if not isinstance(record.get(name), str) or not record[name].strip():
+                raise CurriculumValidationError(f"reference {identifier} requires {name}")
+        for name in ("influence", "excluded_material"):
+            value = record.get(name)
+            if not isinstance(value, list) or not all(
+                isinstance(item, str) and item.strip() for item in value
+            ):
+                raise CurriculumValidationError(f"reference {identifier} requires {name}")
+    return identifiers
 
 CATALOG_KEYS = {"schema_version", "packs"}
 PACK_ENTRY_KEYS = {"id", "order", "manifest_file"}
@@ -864,7 +946,7 @@ def render_navigation(
         "",
         "<!-- Generated by scripts/validate_external_courses.py. Do not edit manually. -->",
         "",
-        "外部课程包是固定版本的兼容层，不是第三方内容镜像。安装与 Preview 不会改变 `state/CURRENT_TASK.md`；只有 assignment 升级为 `implementation-ready` 后，才能通过受校验的选择流程把一个 canonical problem group 设为唯一当前任务。当前 `inventory-audited` 项目 fail closed。官方作业的许可证与学术诚信政策继续生效；一次官方测试全绿不等于本仓库 mastery。",
+        "外部课程包是冻结的兼容层，不是第三方内容镜像。安装与 Preview 不会写入任何 Profile 的 `events.jsonl`。当前 `inventory-audited` 项目 fail closed，不能进入原生 Implementation Lane。官方作业的许可证与学术诚信政策继续生效；一次官方测试全绿不等于本仓库 mastery。",
         "",
     ]
     for manifest in manifests:
@@ -937,9 +1019,9 @@ def render_navigation(
         lines.extend(["### Problem-group 实施单元", ""])
         lines.extend(
             [
-                "整份 assignment 是聚合 Gate；正式实施时每次只把一个下列 canonical task ID "
-                "登记为私人 ledger 的唯一 `CURRENT_TASK`。安装 checkout 本身不会开始任务；"
-                "`inventory-audited` 状态只能 Preview，不能登记。",
+                "整份 assignment 是聚合 Gate；下列 canonical task ID 只用于冻结的清单与证据边界。"
+                "安装 checkout 本身不会开始任务，也不会写入原生 Workspace；"
+                "`inventory-audited` 状态只能 Preview，不能登记为原生任务。",
                 "每个 canonical task 的 learner 状态只证明 companion runtime。全部 `portable-required` group 分别达到 `reviewed` / `retained_7d` / `mastered` 时，才分别形成 assignment 的 portable aggregate；official runtime 必须另存真实运行证据，不能由 `mastered` 推定。",
                 "Prerequisite groups 是本 companion 为小步训练定义的顺序，不声称是 Stanford 官方课程规则；前置 group 至少 `reviewed` 才能解锁后继。",
                 "",

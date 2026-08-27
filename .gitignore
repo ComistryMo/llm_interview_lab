@@ -18,7 +18,8 @@ Thumbs.db
 .vscode/
 *.code-workspace
 .external/
-/state/.task-selection.lock
+/workspace/profiles/*
+!/workspace/profiles/.gitkeep
 private/
 data/private/
 state/local/

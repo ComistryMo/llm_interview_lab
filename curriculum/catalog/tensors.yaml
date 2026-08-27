@@ -1,0 +1,248 @@
+schema_version: 2
+problems:
+  - id: TNS-002
+    title: Reshape / Permute / Contiguous
+    status: ready
+    domain: tensor_autograd
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 2, coding: 3, debugging: 3}
+    prerequisites:
+      - FND-006
+    skills:
+      - tensor.shape
+      - tensor.reshape
+      - tensor.permute
+      - tensor.contiguous
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/TNS-002-reshape-permute-contiguous}
+    interface: {language: python, framework: pytorch, symbol: split_heads}
+    constraints:
+      forbidden_apis:
+      - torch.Tensor.view
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: elementary PyTorch composition
+        description: Results are aligned with transparent primitive PyTorch operations and analytic gradients.
+      oral_questions:
+        - What are all input and output shapes?
+        - Which dimension or index axis is semantically correct?
+        - How do dtype and device propagate?
+        - Where does autograd connectivity begin and end?
+    variant_axes: [batch_size, sequence_length, dtype, layout]
+    invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
+    common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
+    retention:
+      d2: Reimplement the same tensor contract with different shapes and no prior code.
+      d7: Debug an axis, mask, or gradient variant selected from the catalog axes.
+    sources:
+      - {type: official_docs, title: PyTorch tensor and autograd documentation}
+  - id: TNS-003
+    title: Broadcasting
+    status: ready
+    domain: tensor_autograd
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 2, coding: 3, debugging: 3}
+    prerequisites:
+      - TNS-002
+    skills:
+      - tensor.broadcast
+      - tensor.gradient
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/TNS-003-broadcasting}
+    interface: {language: python, framework: pytorch, symbol: broadcast_add_bias}
+    constraints:
+      forbidden_apis:
+      - python.loop
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: elementary PyTorch composition
+        description: Results are aligned with transparent primitive PyTorch operations and analytic gradients.
+      oral_questions:
+        - What are all input and output shapes?
+        - Which dimension or index axis is semantically correct?
+        - How do dtype and device propagate?
+        - Where does autograd connectivity begin and end?
+    variant_axes: [batch_size, sequence_length, dtype, layout]
+    invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
+    common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
+    retention:
+      d2: Reimplement the same tensor contract with different shapes and no prior code.
+      d7: Debug an axis, mask, or gradient variant selected from the catalog axes.
+    sources:
+      - {type: official_docs, title: PyTorch tensor and autograd documentation}
+  - id: TNS-006
+    title: Gather Along Last Dimension
+    status: ready
+    domain: tensor_autograd
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 2, coding: 3, debugging: 3}
+    prerequisites:
+      - TNS-003
+    skills:
+      - tensor.gather
+      - tensor.index
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/TNS-006-gather}
+    interface: {language: python, framework: pytorch, symbol: gather_last_dim}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: elementary PyTorch composition
+        description: Results are aligned with transparent primitive PyTorch operations and analytic gradients.
+      oral_questions:
+        - What are all input and output shapes?
+        - Which dimension or index axis is semantically correct?
+        - How do dtype and device propagate?
+        - Where does autograd connectivity begin and end?
+    variant_axes: [batch_size, sequence_length, dtype, layout]
+    invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
+    common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
+    retention:
+      d2: Reimplement the same tensor contract with different shapes and no prior code.
+      d7: Debug an axis, mask, or gradient variant selected from the catalog axes.
+    sources:
+      - {type: official_docs, title: PyTorch tensor and autograd documentation}
+  - id: TNS-010
+    title: Sequence Mask
+    status: ready
+    domain: tensor_autograd
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 2, coding: 3, debugging: 3}
+    prerequisites:
+      - TNS-003
+    skills:
+      - tensor.mask
+      - tensor.broadcast
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/TNS-010-sequence-mask}
+    interface: {language: python, framework: pytorch, symbol: sequence_mask}
+    constraints:
+      forbidden_apis:
+      - python.loop
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: elementary PyTorch composition
+        description: Results are aligned with transparent primitive PyTorch operations and analytic gradients.
+      oral_questions:
+        - What are all input and output shapes?
+        - Which dimension or index axis is semantically correct?
+        - How do dtype and device propagate?
+        - Where does autograd connectivity begin and end?
+    variant_axes: [batch_size, sequence_length, dtype, layout]
+    invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
+    common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
+    retention:
+      d2: Reimplement the same tensor contract with different shapes and no prior code.
+      d7: Debug an axis, mask, or gradient variant selected from the catalog axes.
+    sources:
+      - {type: official_docs, title: PyTorch tensor and autograd documentation}
+  - id: TNS-011
+    title: Last Valid Token
+    status: ready
+    domain: tensor_autograd
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 2, coding: 3, debugging: 3}
+    prerequisites:
+      - TNS-006
+      - TNS-010
+    skills:
+      - tensor.gather
+      - tensor.mask
+      - tensor.gradient
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/TNS-011-last-valid-token}
+    interface: {language: python, framework: pytorch, symbol: last_valid_token}
+    constraints:
+      forbidden_apis:
+      - python.loop
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: elementary PyTorch composition
+        description: Results are aligned with transparent primitive PyTorch operations and analytic gradients.
+      oral_questions:
+        - What are all input and output shapes?
+        - Which dimension or index axis is semantically correct?
+        - How do dtype and device propagate?
+        - Where does autograd connectivity begin and end?
+    variant_axes: [batch_size, sequence_length, dtype, layout]
+    invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
+    common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
+    retention:
+      d2:
+        description: Gather the last token from explicit sequence lengths instead of a mask.
+        assets: {root: curriculum/retention/TNS-011/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: token_at_lengths}
+        oracle_validated: true
+      d7:
+        description: Gather the final true position from a non-prefix boolean validity mask.
+        assets: {root: curriculum/retention/TNS-011/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: last_true_token}
+        oracle_validated: true
+    sources:
+      - {type: official_docs, title: PyTorch tensor and autograd documentation}
+  - id: TNS-013
+    title: Autograd / Detach / No-Grad
+    status: ready
+    domain: tensor_autograd
+    tracks: [ai_foundation, llm_algorithm, vlm_algorithm, post_training, systems]
+    tier: core
+    difficulty: {concept: 2, coding: 3, debugging: 3}
+    prerequisites:
+      - TNS-003
+    skills:
+      - tensor.autograd
+      - tensor.detach
+      - tensor.no_grad
+    validation: {level: oracle, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/TNS-013-autograd-detach-no-grad}
+    interface: {language: python, framework: pytorch, symbol: autograd_probe}
+    constraints:
+      forbidden_apis:
+      - torch.autograd.grad
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: elementary PyTorch composition
+        description: Results are aligned with transparent primitive PyTorch operations and analytic gradients.
+      oral_questions:
+        - What are all input and output shapes?
+        - Which dimension or index axis is semantically correct?
+        - How do dtype and device propagate?
+        - Where does autograd connectivity begin and end?
+    variant_axes: [batch_size, sequence_length, dtype, layout]
+    invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
+    common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
+    retention:
+      d2: Reimplement the same tensor contract with different shapes and no prior code.
+      d7: Debug an axis, mask, or gradient variant selected from the catalog axes.
+    sources:
+      - {type: official_docs, title: PyTorch tensor and autograd documentation}

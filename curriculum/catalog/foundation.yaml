@@ -1,0 +1,304 @@
+schema_version: 2
+problems:
+  - id: FND-001
+    legacy_ids:
+      - 00A-1
+    title: Wrong Prediction Count
+    status: ready
+    domain: foundation
+    tracks:
+      - ai_foundation
+      - llm_algorithm
+      - vlm_algorithm
+    tier: core
+    difficulty:
+      concept: 1
+      coding: 1
+      debugging: 2
+    prerequisites: []
+    skills:
+      - python.function
+      - python.list
+      - python.loop
+      - python.exception
+      - python.runtime_type
+    validation: {level: oracle, field_runs: 0}
+    assets:
+      problem_dir: curriculum/problems/FND-001-wrong-prediction-count
+    interface:
+      language: python
+      framework: stdlib
+      symbol: count_wrong_predictions
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+      memory_limit_mb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: fixture_expected
+        target: strict integer count fixtures
+        description: Expected counts and contract violations are declared by public fixtures.
+      oral_questions:
+        - What value does the loop variable represent when iterating over predictions?
+        - How can Python expose both an index and an element during iteration?
+        - Why does list[int] not enforce element types at runtime?
+        - What are the time and auxiliary-space complexities?
+        - Why must bool be handled explicitly when strict integers are required?
+        - Why does this function not mutate the input list?
+    variant_axes:
+      - prediction_count
+      - invalid_value_position
+      - incorrect_prediction_distribution
+      - return_error_indices
+    invariants:
+      - input_list_is_not_modified
+      - result_is_between_zero_and_prediction_count
+      - invalid_contract_raises_value_error
+    common_bugs:
+      - loop_variable_treated_as_index
+      - bool_accepted_as_int
+      - type_annotation_assumed_to_validate_runtime_input
+      - unreachable_code_after_return
+    retention:
+      d2:
+        description: Compute a wrong-prediction rate through a new non-empty input contract.
+        assets: {root: curriculum/retention/FND-001/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: wrong_prediction_rate}
+        oracle_validated: true
+      d7:
+        description: Integrate record validation with collection of wrong record indices.
+        assets: {root: curriculum/retention/FND-001/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: wrong_record_indices}
+        oracle_validated: true
+    sources:
+      - type: internal_original
+        title: LLM Interview Lab clean-room foundation exercise
+  - id: FND-002
+    title: Sample Contract Validation
+    status: ready
+    domain: foundation
+    tracks:
+      - ai_foundation
+      - llm_algorithm
+      - vlm_algorithm
+    tier: core
+    difficulty: {concept: 2, coding: 2, debugging: 2}
+    prerequisites:
+      - FND-001
+    skills:
+      - python.dict
+      - python.runtime_type
+      - python.copy
+    validation: {level: contract, field_runs: 0}
+    assets:
+      problem_dir: curriculum/problems/FND-002-sample-contract-validation
+    interface: {language: python, framework: stdlib, symbol: validate_sample}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: fixture_expected
+        target: public contract fixtures and invariants
+        description: Independent fixtures exercise normal, boundary, invalid, and non-mutation behavior.
+      oral_questions:
+        - What is the exact input and output contract?
+        - Which boundary case is easiest to miss and why?
+        - What are the time and auxiliary-space complexities?
+        - How does the implementation avoid mutating its input?
+    variant_axes: [input_size, invalid_position, boundary_mode]
+    invariants: [deterministic_output, input_not_mutated]
+    common_bugs: [implicit_bool_acceptance, missing_nested_validation, accidental_aliasing]
+    retention:
+      d2: Rewrite the same interface from an untouched starter without viewing prior code.
+      d7: Solve a deterministic boundary-focused variant and explain the changed invariant.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room exercise}
+  - id: FND-003
+    title: Hard Sample Filter
+    status: ready
+    domain: foundation
+    tracks:
+      - ai_foundation
+      - llm_algorithm
+      - vlm_algorithm
+    tier: core
+    difficulty: {concept: 2, coding: 2, debugging: 2}
+    prerequisites:
+      - FND-001
+      - FND-002
+    skills:
+      - python.list
+      - python.loop
+      - python.validation
+    validation: {level: contract, field_runs: 0}
+    assets:
+      problem_dir: curriculum/problems/FND-003-hard-sample-filter
+    interface: {language: python, framework: stdlib, symbol: mine_hard_samples}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: fixture_expected
+        target: public contract fixtures and invariants
+        description: Independent fixtures exercise normal, boundary, invalid, and non-mutation behavior.
+      oral_questions:
+        - What is the exact input and output contract?
+        - Which boundary case is easiest to miss and why?
+        - What are the time and auxiliary-space complexities?
+        - How does the implementation avoid mutating its input?
+    variant_axes: [input_size, invalid_position, boundary_mode]
+    invariants: [deterministic_output, input_not_mutated]
+    common_bugs: [implicit_bool_acceptance, missing_nested_validation, accidental_aliasing]
+    retention:
+      d2:
+        description: Return only qualifying sample IDs under a fresh threshold contract.
+        assets: {root: curriculum/retention/FND-003/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: hard_sample_ids}
+        oracle_validated: true
+      d7:
+        description: Summarize valid hard samples by category without mutating records.
+        assets: {root: curriculum/retention/FND-003/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: hard_sample_counts}
+        oracle_validated: true
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room exercise}
+  - id: FND-004
+    title: Hard Sample Summary
+    status: ready
+    domain: foundation
+    tracks:
+      - ai_foundation
+      - llm_algorithm
+      - vlm_algorithm
+    tier: core
+    difficulty: {concept: 2, coding: 2, debugging: 2}
+    prerequisites:
+      - FND-003
+    skills:
+      - python.dict
+      - python.aggregate
+      - python.float
+    validation: {level: contract, field_runs: 0}
+    assets:
+      problem_dir: curriculum/problems/FND-004-hard-sample-summary
+    interface: {language: python, framework: stdlib, symbol: summarize_hard_samples}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: fixture_expected
+        target: public contract fixtures and invariants
+        description: Independent fixtures exercise normal, boundary, invalid, and non-mutation behavior.
+      oral_questions:
+        - What is the exact input and output contract?
+        - Which boundary case is easiest to miss and why?
+        - What are the time and auxiliary-space complexities?
+        - How does the implementation avoid mutating its input?
+    variant_axes: [input_size, invalid_position, boundary_mode]
+    invariants: [deterministic_output, input_not_mutated]
+    common_bugs: [implicit_bool_acceptance, missing_nested_validation, accidental_aliasing]
+    retention:
+      d2: Rewrite the same interface from an untouched starter without viewing prior code.
+      d7: Solve a deterministic boundary-focused variant and explain the changed invariant.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room exercise}
+  - id: FND-005
+    title: JSONL Streaming I/O
+    status: ready
+    domain: foundation
+    tracks:
+      - ai_foundation
+      - llm_algorithm
+      - vlm_algorithm
+      - agent
+    tier: core
+    difficulty: {concept: 2, coding: 2, debugging: 2}
+    prerequisites:
+      - FND-002
+    skills:
+      - python.file
+      - python.json
+      - python.iterator
+    validation: {level: oracle, field_runs: 0}
+    assets:
+      problem_dir: curriculum/problems/FND-005-jsonl-streaming-io
+    interface: {language: python, framework: stdlib, symbol: JsonlIO}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: fixture_expected
+        target: public contract fixtures and invariants
+        description: Independent fixtures exercise normal, boundary, invalid, and non-mutation behavior.
+      oral_questions:
+        - What is the exact input and output contract?
+        - Which boundary case is easiest to miss and why?
+        - What are the time and auxiliary-space complexities?
+        - How does the implementation avoid mutating its input?
+    variant_axes: [input_size, invalid_position, boundary_mode]
+    invariants: [deterministic_output, input_not_mutated]
+    common_bugs: [implicit_bool_acceptance, missing_nested_validation, accidental_aliasing]
+    retention:
+      d2: Rewrite the same interface from an untouched starter without viewing prior code.
+      d7: Solve a deterministic boundary-focused variant and explain the changed invariant.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room exercise}
+  - id: FND-006
+    title: Mini-Batch Iterator
+    status: ready
+    domain: foundation
+    tracks:
+      - ai_foundation
+      - llm_algorithm
+      - vlm_algorithm
+    tier: core
+    difficulty: {concept: 2, coding: 2, debugging: 2}
+    prerequisites:
+      - FND-001
+    skills:
+      - python.generator
+      - python.slice
+      - python.validation
+    validation: {level: contract, field_runs: 0}
+    assets:
+      problem_dir: curriculum/problems/FND-006-mini-batch-iterator
+    interface: {language: python, framework: stdlib, symbol: iter_minibatches}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: fixture_expected
+        target: public contract fixtures and invariants
+        description: Independent fixtures exercise normal, boundary, invalid, and non-mutation behavior.
+      oral_questions:
+        - What is the exact input and output contract?
+        - Which boundary case is easiest to miss and why?
+        - What are the time and auxiliary-space complexities?
+        - How does the implementation avoid mutating its input?
+    variant_axes: [input_size, invalid_position, boundary_mode]
+    invariants: [deterministic_output, input_not_mutated]
+    common_bugs: [implicit_bool_acceptance, missing_nested_validation, accidental_aliasing]
+    retention:
+      d2: Rewrite the same interface from an untouched starter without viewing prior code.
+      d7: Solve a deterministic boundary-focused variant and explain the changed invariant.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room exercise}

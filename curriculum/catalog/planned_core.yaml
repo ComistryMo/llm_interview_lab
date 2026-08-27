@@ -1,0 +1,553 @@
+schema_version: 2
+problems:
+  - id: FND-007
+    title: "Dataclass Training Config"
+    status: planned
+    domain: foundation
+    tracks: ["ai_foundation","llm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-002"]
+    problem_type: implementation
+    description: "Model a validated immutable toy training configuration with dataclass."
+  - id: FND-008
+    title: "Composable Iterator Pipeline"
+    status: planned
+    domain: foundation
+    tracks: ["ai_foundation","llm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-005","FND-006"]
+    problem_type: implementation
+    description: "Compose lazy mapping, filtering, and batching without materializing the dataset."
+  - id: FND-009
+    title: "Training Timer Context Manager"
+    status: planned
+    domain: foundation
+    tracks: ["ai_foundation","systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-007"]
+    problem_type: implementation
+    description: "Implement an exception-safe context manager that records elapsed phases."
+  - id: FND-010
+    title: "Traceback Root-Cause Debugging"
+    status: planned
+    domain: foundation
+    tracks: ["ai_foundation"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-002"]
+    problem_type: debugging
+    description: "Diagnose chained Python exceptions and preserve the original cause."
+  - id: FND-011
+    title: "Reproducible Sampling"
+    status: planned
+    domain: foundation
+    tracks: ["ai_foundation","llm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-007"]
+    problem_type: implementation
+    description: "Sample deterministically with explicit local random state and stable ordering."
+  - id: FND-012
+    title: "Dataset Deduplication"
+    status: planned
+    domain: foundation
+    tracks: ["ai_foundation","llm_algorithm","vlm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-005"]
+    problem_type: implementation
+    description: "Deduplicate normalized records while retaining deterministic provenance."
+  - id: FND-013
+    title: "Reservoir Sampling"
+    status: planned
+    domain: foundation
+    tracks: ["ai_foundation","llm_algorithm"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["FND-008","FND-011"]
+    problem_type: implementation
+    description: "Maintain an unbiased fixed-size sample from a streaming iterator."
+  - id: FND-014
+    title: "Stratified Data Split"
+    status: planned
+    domain: foundation
+    tracks: ["ai_foundation","llm_algorithm","vlm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-011","FND-012"]
+    problem_type: implementation
+    description: "Create reproducible class-stratified train and evaluation splits."
+  - id: ALG-001
+    title: "Array and Hash Frequency Join"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-002"]
+    problem_type: implementation
+    description: "Join two record collections in linear time using hash-indexed counts."
+  - id: ALG-002
+    title: "Two-Pointer Interval Merge"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-001"]
+    problem_type: implementation
+    description: "Merge sorted interval streams with two pointers and explicit invariants."
+  - id: ALG-003
+    title: "Sliding-Window Token Budget"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation","llm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-002"]
+    problem_type: implementation
+    description: "Find the longest contiguous segment within a token budget."
+  - id: ALG-004
+    title: "Binary Search Feasible Batch Size"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation","systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-003"]
+    problem_type: implementation
+    description: "Search a monotone memory predicate for the maximum feasible batch size."
+  - id: ALG-005
+    title: "Linked-List Cycle and Entry"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-002"]
+    problem_type: implementation
+    description: "Detect a linked-list cycle and return its entry without extra storage."
+  - id: ALG-006
+    title: "Monotonic Stack Span"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-001"]
+    problem_type: implementation
+    description: "Compute nearest-greater spans with a monotonic stack."
+  - id: ALG-007
+    title: "Heap Top-K Hard Samples"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation","llm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-004"]
+    problem_type: implementation
+    description: "Maintain deterministic top-k hard samples with bounded heap memory."
+  - id: ALG-008
+    title: "QuickSelect Quantile"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation"]
+    tier: advanced
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-007"]
+    problem_type: implementation
+    description: "Select a reward quantile in expected linear time with duplicate handling."
+  - id: ALG-009
+    title: "Binary Tree DFS Serialization"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-005"]
+    problem_type: implementation
+    description: "Serialize and restore a binary tree with an iterative DFS contract."
+  - id: ALG-010
+    title: "Breadth-First Layer Traversal"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-009"]
+    problem_type: implementation
+    description: "Traverse tree layers with an explicit queue and bounded state."
+  - id: ALG-011
+    title: "Dependency Topological Sort"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation","systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-010"]
+    problem_type: implementation
+    description: "Validate references and compute a stable topological course order."
+  - id: ALG-012
+    title: "Union-Find Connectivity"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-001"]
+    problem_type: implementation
+    description: "Implement union by rank and path compression for dynamic components."
+  - id: ALG-013
+    title: "Dijkstra Shortest Path"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation","agent"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-007","ALG-011"]
+    problem_type: implementation
+    description: "Compute non-negative shortest paths and reconstruct one deterministic route."
+  - id: ALG-014
+    title: "Trie Token Prefix Index"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation","llm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-002"]
+    problem_type: implementation
+    description: "Index token strings for prefix lookup with an explicit node class."
+  - id: ALG-015
+    title: "One-Dimensional Dynamic Programming"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-003"]
+    problem_type: implementation
+    description: "Solve a constrained sequence objective with rolling DP state."
+  - id: ALG-016
+    title: "Two-Dimensional Edit Distance"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation","agent"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-015"]
+    problem_type: implementation
+    description: "Compute edit distance and explain table transitions and memory reduction."
+  - id: ALG-017
+    title: "LRU Cache"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation","systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-005","ALG-001"]
+    problem_type: implementation
+    description: "Design O(1) get and put with a hash map and doubly linked list."
+  - id: ALG-018
+    title: "Weighted Random Sampling"
+    status: planned
+    domain: algorithms
+    tracks: ["ai_foundation","post_training"]
+    tier: advanced
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-004","FND-011"]
+    problem_type: implementation
+    description: "Sample from non-negative weights using prefix sums and binary search."
+  - id: TNS-001
+    title: "Shape, Stride, and View"
+    status: planned
+    domain: tensor_autograd
+    tracks: ["ai_foundation","llm_algorithm","systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["FND-006"]
+    problem_type: debugging
+    description: "Reason about storage strides and when reshape can return a view."
+  - id: TNS-004
+    title: "Advanced Tensor Indexing"
+    status: planned
+    domain: tensor_autograd
+    tracks: ["ai_foundation","llm_algorithm","vlm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-003"]
+    problem_type: implementation
+    description: "Select batched rows and columns with advanced indexing and shape checks."
+  - id: TNS-005
+    title: "Scatter and Scatter-Add"
+    status: planned
+    domain: tensor_autograd
+    tracks: ["ai_foundation","llm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-004"]
+    problem_type: implementation
+    description: "Write and accumulate indexed values with duplicate-index semantics."
+  - id: TNS-007
+    title: "Finite-Difference Gradient Check"
+    status: planned
+    domain: tensor_autograd
+    tracks: ["ai_foundation","llm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-013"]
+    problem_type: implementation
+    description: "Compare autograd with centered finite differences under controlled precision."
+  - id: TNS-008
+    title: "Custom Autograd Function"
+    status: planned
+    domain: tensor_autograd
+    tracks: ["llm_algorithm","systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["TNS-007"]
+    problem_type: implementation
+    description: "Implement a custom forward and backward with saved-tensor discipline."
+  - id: TNS-009
+    title: "Gradient Accumulation Semantics"
+    status: planned
+    domain: tensor_autograd
+    tracks: ["ai_foundation","llm_algorithm","post_training"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-013"]
+    problem_type: debugging
+    description: "Show how gradients accumulate across backward calls and are reset."
+  - id: TNS-012
+    title: "Parameter, Buffer, and State Dict"
+    status: planned
+    domain: tensor_autograd
+    tracks: ["llm_algorithm","systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["NNL-001","NNL-008"]
+    problem_type: implementation
+    description: "Register persistent and non-persistent module state and round-trip state_dict."
+  - id: TNS-014
+    title: "Micro-Batch Gradient Accumulation"
+    status: planned
+    domain: tensor_autograd
+    tracks: ["llm_algorithm","post_training"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-009","LOSS-014"]
+    problem_type: integration
+    description: "Match full-batch gradients using correctly scaled micro-batch losses."
+  - id: TNS-015
+    title: "Dtype and Device Transfer Audit"
+    status: planned
+    domain: tensor_autograd
+    tracks: ["llm_algorithm","systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-012"]
+    problem_type: debugging
+    description: "Find implicit CPU tensors and unintended precision promotion in a module."
+  - id: TNS-016
+    title: "Numerical Failure Debugger"
+    status: planned
+    domain: tensor_autograd
+    tracks: ["llm_algorithm","post_training"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["TNS-007","LOSS-008"]
+    problem_type: debugging
+    description: "Locate the first non-finite activation or gradient with hooks."
+  - id: LOSS-001
+    title: "Negative Log-Likelihood"
+    status: planned
+    domain: loss_metric
+    tracks: ["ai_foundation","llm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-006"]
+    problem_type: implementation
+    description: "Compute masked NLL from precomputed log probabilities."
+  - id: LOSS-002
+    title: "Label Smoothing"
+    status: planned
+    domain: loss_metric
+    tracks: ["llm_algorithm","vlm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-014"]
+    problem_type: implementation
+    description: "Blend hard-label NLL with uniform-class loss under ignore masking."
+  - id: LOSS-003
+    title: "Focal Loss"
+    status: planned
+    domain: loss_metric
+    tracks: ["vlm_algorithm","post_training"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-013"]
+    problem_type: implementation
+    description: "Downweight easy binary examples with stable focal modulation."
+  - id: LOSS-004
+    title: "KL Divergence"
+    status: planned
+    domain: loss_metric
+    tracks: ["llm_algorithm","post_training"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-008"]
+    problem_type: implementation
+    description: "Compute forward and reverse categorical KL from logits."
+  - id: LOSS-005
+    title: "Jensen-Shannon Divergence"
+    status: planned
+    domain: loss_metric
+    tracks: ["llm_algorithm","vlm_algorithm"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["LOSS-004"]
+    problem_type: implementation
+    description: "Implement symmetric bounded JS divergence with stable mixture logits."
+  - id: LOSS-006
+    title: "InfoNCE"
+    status: planned
+    domain: loss_metric
+    tracks: ["llm_algorithm","vlm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-014"]
+    problem_type: implementation
+    description: "Build in-batch contrastive logits and symmetric InfoNCE loss."
+  - id: LOSS-009
+    title: "Perplexity from Masked NLL"
+    status: planned
+    domain: loss_metric
+    tracks: ["llm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-001"]
+    problem_type: implementation
+    description: "Aggregate token NLL with a correct mask denominator and safe exponentiation."
+  - id: LOSS-010
+    title: "Binary AUC with Ties"
+    status: planned
+    domain: loss_metric
+    tracks: ["ai_foundation","vlm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ALG-002"]
+    problem_type: implementation
+    description: "Compute ROC AUC with deterministic tie ranks and class validation."
+  - id: LOSS-011
+    title: "Intersection over Union"
+    status: planned
+    domain: loss_metric
+    tracks: ["vlm_algorithm","computer_vision"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-004"]
+    problem_type: implementation
+    description: "Compute box and mask IoU with empty-union conventions."
+  - id: LOSS-012
+    title: "Triplet Margin Loss"
+    status: planned
+    domain: loss_metric
+    tracks: ["vlm_algorithm"]
+    tier: elective
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-003"]
+    problem_type: implementation
+    description: "Compute batched distance-margin loss and valid-triplet masks."
+  - id: LOSS-015
+    title: "Multi-Loss Composition"
+    status: planned
+    domain: loss_metric
+    tracks: ["vlm_algorithm","post_training"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["LOSS-002","LOSS-003","LOSS-004"]
+    problem_type: integration
+    description: "Combine named objectives with explicit scales and per-loss metrics."
+  - id: OPT-003
+    title: "Nesterov Momentum"
+    status: planned
+    domain: optimizer
+    tracks: ["ai_foundation","llm_algorithm"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["OPT-002"]
+    problem_type: implementation
+    description: "Extend momentum state with a look-ahead update and verify equations."
+  - id: OPT-006
+    title: "Warmup Cosine Scheduler"
+    status: planned
+    domain: optimizer
+    tracks: ["llm_algorithm","systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["OPT-005"]
+    problem_type: implementation
+    description: "Compute deterministic warmup and cosine learning rates by optimizer step."
+  - id: OPT-007
+    title: "Global Gradient Clipping"
+    status: planned
+    domain: optimizer
+    tracks: ["llm_algorithm","post_training"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["OPT-005"]
+    problem_type: implementation
+    description: "Compute global norm and scale gradients without changing direction."
+  - id: OPT-008
+    title: "Automatic Mixed Precision Step"
+    status: planned
+    domain: optimizer
+    tracks: ["llm_algorithm","systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["OPT-007","TNS-015"]
+    problem_type: integration
+    description: "Model scale, unscale, non-finite skip, and scale-update ordering."
+  - id: OPT-009
+    title: "Optimizer Gradient Accumulation"
+    status: planned
+    domain: optimizer
+    tracks: ["llm_algorithm","post_training"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-014","OPT-005"]
+    problem_type: integration
+    description: "Place zero_grad, backward, clipping, and step at correct accumulation boundaries."
+  - id: OPT-010
+    title: "Checkpoint Save and Load"
+    status: planned
+    domain: optimizer
+    tracks: ["llm_algorithm","systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-012","OPT-005"]
+    problem_type: implementation
+    description: "Round-trip model, optimizer, scheduler, RNG, and training counters."
+  - id: OPT-011
+    title: "Deterministic Resume"
+    status: planned
+    domain: optimizer
+    tracks: ["llm_algorithm","systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["OPT-010","FND-011"]
+    problem_type: debugging
+    description: "Prove resumed training matches uninterrupted updates under fixed inputs."
+  - id: OPT-012
+    title: "Minimal Training Loop"
+    status: planned
+    domain: optimizer
+    tracks: ["ai_foundation","llm_algorithm","post_training"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["OPT-009","OPT-010"]
+    problem_type: integration
+    description: "Implement train and evaluation phases with explicit mode and gradient boundaries."
+

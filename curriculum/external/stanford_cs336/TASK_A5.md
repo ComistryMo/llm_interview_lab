@@ -6,7 +6,7 @@
 
 固定版本 `c2734a…` 的仓库树没有发现根或子目录 LICENSE、COPYING、NOTICE。本项目只登记事实性接口与 problem/test 名称，并允许用户从官方 URL 本地检出；不复制、翻译、改编或再分发其中任何代码、PDF、prompt、数据、模型、tests、snapshot 或 fixture。
 
-整份 assignment 是聚合 Gate；当前 `integration_status=inventory-audited` 只允许安装与 Preview，待 readiness 与 group 依赖机器映射完成并升级为 `implementation-ready` 后，每次才可登记一个 `EXT-CS336-A5-<group>`。priority 表示岗位价值，不等于 portable/official completion role。
+整份 assignment 是聚合 Gate；当前 `integration_status=inventory-audited` 只允许安装与 Preview，problem-group ID 不写入原生 Workspace。priority 表示岗位价值，不等于 portable/official completion role。
 
 ## 前置 Gate
 
