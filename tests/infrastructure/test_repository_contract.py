@@ -7,12 +7,20 @@ import subprocess
 
 import pytest
 
+import llm_interview_lab
 from llm_interview_lab.catalog import PROBLEM_ASSETS, RETENTION_ASSETS, load_catalog
 
 
 pytestmark = pytest.mark.infrastructure
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MARKDOWN_LINK = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+
+
+def test_package_version_matches_pyproject() -> None:
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'(?m)^version = "([^"]+)"$', pyproject)
+    assert match is not None
+    assert llm_interview_lab.__version__ == match.group(1)
 
 
 def _assert_exact_case(path: Path) -> None:
