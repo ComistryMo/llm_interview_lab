@@ -372,15 +372,15 @@ Profile 创建及复制前后的 `git status --porcelain` 无差异；提交后 
 
 ### 9.5 规模偏差与理由
 
-本切片超过 3000 Git 新增行，因此按批准条件解释：
+本切片相对 `main` 为 3442 个 Git 新增物理行、109 个删除物理行，因此按批准条件解释：
 
-- Production Python 1290 行：七个 CLI 协调、Catalog/DAG、事件校验/reducer、Workspace 生命周期、唯一 loader、pytest plugin 和独立子进程 grader；每个模块均被 FND-001 或 doctor 实际调用；
+- Production Python 1547 行：七个 CLI 协调、Catalog/DAG、事件校验/reducer、Workspace 生命周期、唯一 loader、pytest plugin 和独立子进程 grader；每个模块均被 FND-001 或 doctor 实际调用；
 - Schema/Catalog/Template 469 行：Catalog、Profile、Event 三个严格 Schema，以及单节点 Catalog、模板和 Demo；
-- 新测试及 grader fixture 473 行，另有 repository contract 增量：覆盖批准要求的所有正负路径，未以重复测试凑行数；
-- FND-001 四文件资产 86 行：题面、无答案 starter、公开测试和 H1/H2/H3；
-- 其余为 clone-first README、Workspace 边界说明和本 ExecPlan/迁移报告。
+- 新测试及 grader fixture 587 行，repository contract 另增 56 行：覆盖批准要求的所有正负路径，未以重复测试凑行数；
+- FND-001 四文件资产 126 行：题面、无答案 starter、公开测试和 H1/H2/H3；
+- README、Workspace README 和本 ExecPlan/迁移报告共新增 632 行；其余 25 行是 packaging、ignore 与 CI 边界。
 
-Production Python 超出 1000 行的优先目标，主要来自 CLI 336、Events 232、Workspace 235、Catalog/DAG 201 和 Grader/Plugin/Loader 282。没有 Web、数据库、AI Coach、Track/Quest/Capstone、生成器、未来节点或未调用扩展点；继续压缩会把事件契约、错误分类或路径边界重新塞进 CLI，降低可审查性。
+Production Python 超出 1000 行的优先目标，主要来自 CLI 384、Events 281、Workspace 296、Catalog/DAG 243 和 Grader/Plugin/Loader 338；`__init__.py` 为 5 行。这里统一采用 `git diff --numstat` 的物理行口径，避免与忽略空行的逻辑行统计混用。没有 Web、数据库、AI Coach、Track/Quest/Capstone、生成器、未来节点或未调用扩展点；继续压缩会把事件契约、错误分类或路径边界重新塞进 CLI，降低可审查性。
 
 ### 9.6 实施中发现并修正的问题
 
