@@ -44,6 +44,12 @@ def main() -> int:
         environment = {
             **os.environ,
             "LOCALAPPDATA": str(root / "local-app-data"),
+            # This test directory can itself live below the source checkout.
+            # Force the executable through its standalone path so the smoke
+            # cannot accidentally reuse repository-local public assets.
+            "LLM_LAB_DESKTOP_DATA_ROOT": str(
+                root / "local-app-data" / "LLMInterviewLab"
+            ),
             "TEMP": str(root),
             "TMP": str(root),
             "QT_QPA_PLATFORM": "offscreen",

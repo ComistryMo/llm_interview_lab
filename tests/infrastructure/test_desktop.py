@@ -298,6 +298,10 @@ def test_desktop_release_configuration_is_portable_and_separate_from_core_ci() -
     assert "curriculum/retention/=**/*.py" in spec
     assert "--include-package=httpx" in spec
     assert "--nofollow-import-to=any_llm" in spec
+    checker = (REPO_ROOT / "scripts/check_desktop_artifact.py").read_text(
+        encoding="utf-8"
+    )
+    assert '"LLM_LAB_DESKTOP_DATA_ROOT"' in checker
     connections_qml = (
         REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/ConnectionsPage.qml"
     ).read_text(encoding="utf-8")
