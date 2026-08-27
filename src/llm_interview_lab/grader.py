@@ -92,7 +92,22 @@ def run_public_tests(
         ENV_SUBMISSION: str(inspected.path), ENV_SUBMISSIONS_ROOT: str(submissions_root.resolve()),
         ENV_SYMBOL: expected_symbol, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "PYTHONDONTWRITEBYTECODE": "1",
     })
-    command = [sys.executable, "-m", "pytest", str(test_path.resolve()), "-q", "--tb=short", "--capture=no", "-p", "llm_interview_lab.pytest_plugin"]
+    grader_executable = os.environ.get("LLM_LAB_GRADER_EXECUTABLE")
+    command = (
+        [grader_executable, "--grader-worker"]
+        if grader_executable
+        else [sys.executable, "-m", "pytest"]
+    )
+    command.extend(
+        [
+            str(test_path.resolve()),
+            "-q",
+            "--tb=short",
+            "--capture=no",
+            "-p",
+            "llm_interview_lab.pytest_plugin",
+        ]
+    )
     started = time.perf_counter()
     try:
         completed = subprocess.run(

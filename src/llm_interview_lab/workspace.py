@@ -67,7 +67,9 @@ def find_repository_root(start: Path | None = None) -> Path:
     if candidate.is_file():
         candidate = candidate.parent
     for directory in (candidate, *candidate.parents):
-        if (directory / "pyproject.toml").is_file() and (directory / "curriculum").is_dir() and (directory / "workspace").is_dir():
+        source_checkout = (directory / "pyproject.toml").is_file()
+        desktop_runtime = (directory / ".llm-lab-standalone.json").is_file()
+        if (source_checkout or desktop_runtime) and (directory / "curriculum").is_dir() and (directory / "workspace").is_dir():
             return directory
     raise WorkspaceError("run llm-lab inside a cloned llm_interview_lab repository")
 
@@ -207,6 +209,15 @@ def update_role_preferences(
 
 
 def _git_path_is_ignored(repo_root: Path, candidate: Path) -> bool:
+    standalone_marker = repo_root / ".llm-lab-standalone.json"
+    if standalone_marker.is_file() and not (repo_root / ".git").exists():
+        try:
+            candidate.resolve().relative_to(
+                (repo_root / "workspace/profiles").resolve()
+            )
+        except (OSError, ValueError):
+            return False
+        return True
     relative = candidate.relative_to(repo_root).as_posix()
     result = subprocess.run(["git", "-C", str(repo_root), "check-ignore", "-q", "--", relative], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if result.returncode not in {0, 1}:

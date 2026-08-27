@@ -36,6 +36,8 @@ mlruns/
 artifacts/
 models/
 dist/
+*-nuitka-report.xml
+nuitka-crash-report.xml
 *.pem
 *.key
 *.p12
