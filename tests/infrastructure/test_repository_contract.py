@@ -85,6 +85,12 @@ def test_authoritative_public_documents_exist() -> None:
         "docs/EXTERNAL_COURSE_PACKS.md",
         "docs/AI_COACH_ADAPTER.md",
         "docs/CUSTOMIZATION.md",
+        "curriculum/schema/catalog.schema.json",
+        "curriculum/catalog/foundation.yaml",
+        "curriculum/problems/FND-001-wrong-prediction-count/task.md",
+        "curriculum/problems/FND-001-wrong-prediction-count/starter.py",
+        "curriculum/problems/FND-001-wrong-prediction-count/test_public.py",
+        "curriculum/problems/FND-001-wrong-prediction-count/hints.md",
         "curriculum/catalog.json",
         "curriculum/NAVIGATION.md",
         "curriculum/external/catalog.json",
@@ -97,7 +103,22 @@ def test_authoritative_public_documents_exist() -> None:
         "scripts/run_current_task.py",
         "scripts/select_current_task.py",
         "scripts/create_private_workspace.py",
+        "src/llm_interview_lab/cli.py",
+        "src/llm_interview_lab/catalog.py",
+        "src/llm_interview_lab/dag.py",
+        "src/llm_interview_lab/events.py",
+        "src/llm_interview_lab/grader.py",
+        "src/llm_interview_lab/pytest_plugin.py",
+        "src/llm_interview_lab/submissions.py",
+        "src/llm_interview_lab/workspace.py",
         "templates/starter/src/stage00/hard_sample_miner.py",
+        "workspace/README.md",
+        "workspace/schema/profile.schema.json",
+        "workspace/schema/event.schema.json",
+        "workspace/templates/default/profile.yaml",
+        "workspace/demo/profile.yaml",
+        "workspace/demo/events.jsonl",
+        "workspace/profiles/.gitkeep",
     }
 
     missing = sorted(path for path in required if not (REPO_ROOT / path).is_file())
@@ -121,6 +142,30 @@ def test_transient_external_and_state_lock_paths_are_ignored() -> None:
 
     assert ".external/" in ignore
     assert "/state/.task-selection.lock" in ignore
+    assert "/workspace/profiles/*" in ignore
+    assert "!/workspace/profiles/.gitkeep" in ignore
+
+
+def test_only_workspace_profile_placeholder_is_public() -> None:
+    profile_files = sorted(
+        name
+        for name in _repository_candidate_names()
+        if name.startswith("workspace/profiles/")
+    )
+
+    assert profile_files == ["workspace/profiles/.gitkeep"]
+
+
+def test_fnd001_problem_directory_has_exact_public_assets() -> None:
+    prefix = "curriculum/problems/FND-001-wrong-prediction-count/"
+    problem_files = {
+        name.removeprefix(prefix)
+        for name in _repository_candidate_names()
+        if name.startswith(prefix)
+    }
+
+    assert problem_files == {"task.md", "starter.py", "test_public.py", "hints.md"}
+    assert all("solution" not in name.lower() for name in problem_files)
 
 
 def test_relative_markdown_links_resolve_with_exact_case() -> None:
@@ -176,8 +221,19 @@ def test_readme_commands_and_metadata_are_consistent() -> None:
     assert "python -m pytest -q" in readme
     assert "python scripts/check_environment.py" in readme
     assert "python scripts/validate_state.py" in readme
+    assert "llm-lab init --profile default" in readme
+    assert "llm-lab doctor" in readme
+    assert "llm-lab next --profile default" in readme
     assert 'requires-python = ">=3.10"' in pyproject
     assert 'license = "Apache-2.0"' in pyproject
+
+
+def test_pytest_collection_boundary_is_explicit() -> None:
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert 'testpaths = ["tests/infrastructure", "tests/regression"]' in pyproject
+    assert '"curriculum/problems"' in pyproject
+    assert '"workspace/profiles"' in pyproject
 
 
 def test_external_task_selection_language_is_unambiguous() -> None:

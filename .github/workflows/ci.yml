@@ -36,6 +36,12 @@ jobs:
       - name: Check environment
         run: python scripts/check_environment.py
 
+      - name: Validate LEAN-V2 catalog and fictional demo
+        run: llm-lab doctor
+
+      - name: Audit repository-health collection
+        run: python -m pytest --collect-only -q
+
       - name: Run repository health tests
         run: python -m pytest -q
 
