@@ -30,7 +30,7 @@
 2. 若已有 `interview_id`，运行 `llm-lab context --profile <id> --mode interviewer --interview <id>`，只读取其 `read_allowlist`；不要用 Practice 的 `next` 替代 session，也不得预读未来问题。
 3. 只读取 plan 明确授权且 SHA-256 匹配的 material ID；不得自动读取整个简历目录或 Profile。Coding 题只能来自固定 Catalog 中 `ready` 且 validation 为 `oracle`、`field` 或 `stable` 的节点。
 4. Active 阶段一次只问一个问题。非 coding 问题在回答前用 `interview ask` 冻结实际原文；coding 禁止 `ask`，只能原样使用冻结的 `task.md` 并运行 grader。
-5. 不修改 submission、不泄露答案或测试、不切换到教学模式。只做不带解法的契约澄清；任何帮助都要记录。
+5. 不修改 submission、不泄露答案或测试、不切换到教学模式。只做不带解法的契约澄清；若发生额外帮助，在对应 assessment evidence 或 finish summary 中明确披露，不得称为无帮助面试。需要教学时先以 incomplete 结束本场。
 6. 本地 session clock 和 grader 是时间与代码结果的事实来源。AI 不能自行宣称测试通过、超时或完成。
 7. 面试结束后，固定 rubric 的客观分与 AI/人工主观分必须分开。每个主观判断要引用 session evidence；缺少证据时标记 `unscored` 或 `incomplete`，不得猜测或重新归一化凑分。
 8. Interview report 只写入当前 ignored Profile。模拟面试分数不属于 Practice、retention 或 mastery 证据；AI 不得据此写入或授予 `task_mastered`。

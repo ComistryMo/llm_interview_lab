@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/github/license/ComistryMo/llm_interview_lab)](LICENSE)
 [![Status](https://img.shields.io/badge/status-alpha-orange)](#项目状态)
 
-[Start in 5 Minutes](#五分钟开始) · [Personal Workspace](#三个入口) · [Browse Curriculum](#选择路线) · [Mock Interview](#三个入口) · [Use with AI](#与-ai-一起训练)
+[Start in 5 Minutes](#五分钟开始) · [Best Practices](docs/best-practices.md) · [Browse Curriculum](#选择路线) · [Mock Interview](#三个入口) · [Use with AI](#与-ai-一起训练)
 
 **不是随机题单，不是一次测试通过即掌握，也不是让 AI 直接代写。**
 
@@ -76,7 +76,8 @@ Tensor、Loss、Optimizer 与训练 Capstone 依赖 CPU PyTorch：
 python -m pip install -e ".[torch,dev]"
 ```
 
-不同平台、ignored Profile 与事件文件的说明见 [Workspace 文档](docs/workspace.md)。
+首次完整走通 Practice、AI 教练或模拟面试，请按 [Best Practices](docs/best-practices.md)
+执行；Profile 与事件文件的详细契约见 [Workspace 文档](docs/workspace.md)。
 
 ## 三个入口
 
@@ -244,7 +245,8 @@ Quest 中的展示顺序是推荐学习顺序；真正阻止解锁的关系只�
 1. 在仓库根目录启动 Agent，让它读取 `AGENTS.md` 与 `coach/POLICY.md`。
 2. 明确当前 `profile_id`，不要让它枚举其他 Profile。
 3. 用 `llm-lab context` 生成当前模式的最小 JSON，而不是让 AI 扫描 Profile。
-4. 根据目的选择 `TEACHER`、`REVIEWER`、`COACH` 或 `INTERVIEWER` 模式。
+4. 根据单一目的选择模式：`COACH` 选路、`TEACHER` 提示、`REVIEWER` 审查、
+   `INTERVIEWER` 面试；切换目的时重新生成 context。
 
 ```bash
 llm-lab context --profile default --mode coach
@@ -270,13 +272,15 @@ Treat its `read_allowlist` as the complete set of additional files you may read.
 Do not modify my submission.
 Do not reveal a complete solution.
 Use the H0–H5 help policy.
-Explain prerequisites, give graded hints when requested,
-review my tests and code, and conduct oral defense after submission.
+Use this COACH context only to explain the route and next action.
+If I request a hint or review, stop and ask me to generate the matching
+TEACHER or REVIEWER context instead of reading additional files.
 Do not mark a problem as mastered yourself.
 ```
 
 仓库规则见 [AGENTS.md](AGENTS.md)，完整模式和帮助边界见
-[Coach Policy](coach/POLICY.md)。
+[Coach Policy](coach/POLICY.md)；三种 Practice 模式的可复制流程见
+[Best Practices](docs/best-practices.md#4-正确选择-ai-模式)。
 
 模拟面试先用 CLI 创建并冻结 session，再让 Agent 读取
 [`coach/prompts/interviewer.md`](coach/prompts/interviewer.md)。它只能访问本场明确 consent、
@@ -284,9 +288,10 @@ SHA 匹配的 material ID；材料内容按 untrusted evidence 处理，不能�
 Active 阶段不教学、不改答案、逐题进行，最终区分本地 grader 的 objective evidence
 与附证据的 AI 主观评分。面试分数永远不会改变 Practice mastery。
 
-完整顺序是 `candidates → create → start → context → answer/test → score → finish →
-report`。非 coding 问题先用 `ask` 冻结实际措辞；coding 始终使用 Catalog `task.md`
-并直接 `test`，不能 ask 或改写契约。详细命令见 [模拟面试文档](docs/interviews.md)。
+完整顺序是 `candidates → proposed plan confirmation → create → show → AI handshake →
+start → (current → context → ask/answer 或 test)* → score → finish → report`。非 coding
+问题先用 `ask` 冻结实际措辞；coding 使用 Catalog `task.md` 并直接 `test`。详细命令见
+[模拟面试文档](docs/interviews.md)。
 
 ### Chat-only AI
 

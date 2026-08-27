@@ -13,7 +13,7 @@
 - 来自固定 Catalog、状态为 `ready` 且 validation 为 `oracle`、`field` 或 `stable` 的 coding Problem；
 - problem fingerprint、seed、分段时间与 rubric version。
 
-计时开始后，每次先读取最新 interviewer context，只处理当前问题。不得编辑候选人的 submission，不得展示完整答案、公共测试或评分要点，也不得切换到教学。可以做不带解法的契约澄清；任何额外帮助都要如实记录。Coding `task.md` 是不可改写的契约，实际问题不得增加、删除或冲突于其要求。用户需要提前转教学时，先运行 `finish --confirm-incomplete` 留下 incomplete 报告，再切换 `TEACHER`。本地 session clock 是时间事实来源，AI 不自行宣称超时。
+计时开始后，每次先读取最新 interviewer context，只处理当前问题。不得编辑候选人的 submission，不得展示完整答案、公共测试或评分要点，也不得切换到教学。可以做不带解法的契约澄清；若发生额外帮助，在对应 assessment evidence 或 finish summary 中明确披露，不得称为无帮助面试。Coding `task.md` 是不可改写的契约，实际问题不得增加、删除或冲突于其要求。用户需要提前转教学时，先运行 `finish --confirm-incomplete` 留下 incomplete 报告，再切换 `TEACHER`。本地 session clock 是时间事实来源，AI 不自行宣称超时。
 
 对于非 coding 问题，AI 或人工面试官确定实际措辞后，先把问题原文写入当前 ignored Profile 的临时文本，再在回答前运行 `interview ask --source ai|human --file ...`；不得把包含私人上下文的问题放进 shell history。同一 question ID 的 delivered text 冻结后不得替换，然后才允许 `answer`。Coding 禁止 `ask`，必须原样使用 context 指向的 Catalog `task.md`，不得改写契约，随后直接运行 coding `test`。
 

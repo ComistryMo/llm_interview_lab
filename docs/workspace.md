@@ -1,5 +1,8 @@
 # Workspace
 
+第一次使用请先按 [Best Practices](best-practices.md) 完成安装、第一题和模式选择；本页是
+Profile、材料、Practice、AI context 与隐私边界的完整参考。
+
 Workspace 是仓库内正式子系统。公共模板、Schema 和完全虚构 Demo 被跟踪；`workspace/profiles/*` 默认忽略。每个 Profile 同时容纳 Personal Workspace、Practice 和 Mock Interview，用户不需要第二个仓库。
 
 ```text

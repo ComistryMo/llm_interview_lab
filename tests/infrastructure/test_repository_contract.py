@@ -3,12 +3,15 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 import re
+import shlex
 import subprocess
 
 import pytest
 
 import llm_interview_lab
 from llm_interview_lab.catalog import PROBLEM_ASSETS, RETENTION_ASSETS, load_catalog
+from llm_interview_lab.cli import _build_parser
+from llm_interview_lab.context import EXCLUDED_CONTEXT, MAX_SERIALIZED_CONTEXT_BYTES
 
 
 pytestmark = pytest.mark.infrastructure
@@ -43,6 +46,7 @@ def test_public_entrypoints_and_maintained_docs_exist() -> None:
         "AGENTS.md",
         "pyproject.toml",
         "docs/architecture.md",
+        "docs/best-practices.md",
         "docs/workspace.md",
         "docs/curriculum-authoring.md",
         "coach/POLICY.md",
@@ -196,6 +200,7 @@ def test_obsolete_duplicate_sources_of_truth_are_absent() -> None:
         "README.md",
         "CONTRIBUTING.md",
         "docs/architecture.md",
+        "docs/best-practices.md",
         "docs/workspace.md",
         "docs/curriculum-authoring.md",
         "docs/EXTERNAL_COURSE_PACKS.md",
@@ -215,3 +220,60 @@ def test_maintained_markdown_links_resolve_with_exact_case(document: str) -> Non
         resolved = (source.parent / relative).resolve()
         assert resolved.exists(), f"broken link in {document}: {target}"
         _assert_exact_case(resolved)
+
+
+def _best_practices() -> str:
+    return (REPO_ROOT / "docs/best-practices.md").read_text(encoding="utf-8")
+
+
+def test_best_practices_cli_examples_match_the_real_parser() -> None:
+    document = _best_practices()
+    parser = _build_parser()
+    commands: list[str] = []
+    for block in re.findall(r"```(?:bash|shell)\s*\n(.*?)```", document, re.DOTALL):
+        logical = re.sub(r"\\\s*\n\s*", " ", block)
+        commands.extend(
+            line.strip()
+            for line in logical.splitlines()
+            if line.strip().startswith("llm-lab ")
+        )
+
+    assert len(commands) >= 20
+    for command in commands:
+        parser.parse_args(shlex.split(command)[1:])
+
+    for command in (
+        "llm-lab context --profile default --mode coach",
+        "llm-lab context --profile default --mode teacher --help-level H2",
+        "llm-lab context --profile default --mode reviewer",
+        "llm-lab context --profile default --mode interviewer --interview INTERVIEW_ID",
+    ):
+        assert command in document
+
+
+def test_best_practices_has_explicit_privacy_and_consent_boundaries() -> None:
+    document = _best_practices()
+    for token in (
+        "workspace/profiles/<id>/",
+        "material_id",
+        "SHA-256",
+        "consent",
+        "untrusted evidence",
+        "read_allowlist",
+    ):
+        assert token in document
+
+    assert "Git ignore 只防误提交，不是备份，也不是模型供应商的隐私保证" in document
+    assert "CLI 和 context 不会自动上传材料" in document
+    assert "不要上传整个 Profile 或公司/客户内部材料" in document
+
+
+def test_best_practices_token_budget_matches_the_context_runtime() -> None:
+    document = _best_practices()
+    assert MAX_SERIALIZED_CONTEXT_BYTES == 8 * 1024
+    assert "8 KiB" in document
+    for excluded in EXCLUDED_CONTEXT:
+        assert f"`{excluded}`" in document
+    assert "`policy_refs` 按 SHA-256 缓存" in document
+    assert "每轮只发送最新 context" in document
+    assert "不是让 AI 扫描仓库" in document
