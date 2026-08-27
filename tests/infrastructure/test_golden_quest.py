@@ -100,9 +100,10 @@ def test_contract_nodes_need_explicit_or_profile_opt_in(tmp_path, monkeypatch, c
     main(["init", "--profile", "learner-one"]); capsys.readouterr()
     for problem_id in QUEST_IDS:
         _master(root, "learner-one", problem_id)
-    assert main(["start", "TNS-002", "--profile", "learner-one"]) == 2
+    experimental_problem = "AGT-001"
+    assert main(["start", experimental_problem, "--profile", "learner-one"]) == 2
     assert "contract-only" in capsys.readouterr().err
-    assert main(["start", "TNS-002", "--profile", "learner-one", "--allow-experimental"]) == 0
+    assert main(["start", experimental_problem, "--profile", "learner-one", "--allow-experimental"]) == 0
 
     main(["init", "--profile", "learner-two"]); capsys.readouterr()
     profile_file = profile_paths(root, "learner-two").profile_file
@@ -111,7 +112,7 @@ def test_contract_nodes_need_explicit_or_profile_opt_in(tmp_path, monkeypatch, c
     profile_file.write_text(yaml.safe_dump(profile, sort_keys=False), encoding="utf-8")
     for problem_id in QUEST_IDS:
         _master(root, "learner-two", problem_id)
-    assert main(["start", "TNS-002", "--profile", "learner-two"]) == 0
+    assert main(["start", experimental_problem, "--profile", "learner-two"]) == 0
 
 
 def test_default_planner_contains_only_validated_nodes():
@@ -122,7 +123,8 @@ def test_default_planner_contains_only_validated_nodes():
         problem.id for problem in catalog.unlocked(mastered, include_experimental=True)
     }
     assert default_ids and all(catalog.get(problem_id).recommendable for problem_id in default_ids)
-    assert "TNS-002" not in default_ids and "TNS-002" in experimental_ids
+    assert "TNS-002" in default_ids
+    assert "AGT-001" not in default_ids and "AGT-001" in experimental_ids
 
 
 def test_oracle_fingerprint_invalidates_changed_base_or_retention_asset(tmp_path):
