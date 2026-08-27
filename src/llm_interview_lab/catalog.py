@@ -43,6 +43,18 @@ class Problem:
         return self.status in {"ready", "stable"}
 
     @property
+    def kind(self) -> str:
+        """Return the interview item kind; legacy nodes remain coding by default."""
+
+        return str(self.raw.get("kind", "coding"))
+
+    @property
+    def canonical_skills(self) -> tuple[str, ...]:
+        """Return optional ontology references without replacing legacy skill tags."""
+
+        return tuple(self.raw.get("canonical_skills", ()))
+
+    @property
     def validation_level(self) -> str:
         return str(self.raw["validation"]["level"])
 

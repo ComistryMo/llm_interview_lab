@@ -1,0 +1,26 @@
+dimensions:
+  claim_decomposition:
+    weight: 0.25
+    anchors:
+      1: Accepts the headline delta as causal.
+      3: Identifies obvious confounders but not evaluator or budget effects.
+      5: Separates intervention, controls, outcome, uncertainty and scope.
+  comparison_design:
+    weight: 0.30
+    anchors:
+      1: Requests unrelated additional experiments.
+      3: Proposes a fair baseline but incomplete factorial isolation.
+      5: Defines the smallest controlled matrix that distinguishes key causes.
+  statistical_evidence:
+    weight: 0.25
+    anchors:
+      1: Treats one run and aggregate score as sufficient.
+      3: Requests seeds and slices but not paired or evaluator uncertainty.
+      5: Uses appropriate repeats, pairing, slices, uncertainty and provenance.
+  conclusion_integrity:
+    weight: 0.20
+    anchors:
+      1: Repeats or reverses the claim without qualification.
+      3: Labels the result preliminary but leaves decision impact vague.
+      5: States exactly what is supported, unknown and safe to decide now.
+fatal_issues: [fabricates_missing_run, ignores_changed_evaluator, overclaims_causality]

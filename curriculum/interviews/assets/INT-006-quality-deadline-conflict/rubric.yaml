@@ -1,0 +1,26 @@
+dimensions:
+  evidence_and_ownership:
+    weight: 0.30
+    anchors:
+      1: Uses vague claims or attributes team work to self.
+      3: Gives a concrete role but incomplete evidence or uncertainty.
+      5: Separates personal actions, team context, facts and unknowns precisely.
+  tradeoff_reasoning:
+    weight: 0.25
+    anchors:
+      1: Frames one side as obviously correct without alternatives.
+      3: Names alternatives but does not connect them to risk.
+      5: Compares realistic options, reversibility, impact and decision criteria.
+  collaboration:
+    weight: 0.25
+    anchors:
+      1: Blames others or bypasses stakeholders without justification.
+      3: Communicates the concern but weakly adapts to stakeholders.
+      5: Creates shared evidence, escalates proportionally and preserves trust.
+  learning:
+    weight: 0.20
+    anchors:
+      1: Claims success without reflection.
+      3: Names a lesson but no changed behavior.
+      5: Connects outcome and feedback to a specific repeatable behavior change.
+fatal_issues: [fabricates_outcome, exposes_confidential_data, erases_team_contribution]

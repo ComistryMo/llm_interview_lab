@@ -1,0 +1,26 @@
+dimensions:
+  problem_definition:
+    weight: 0.30
+    anchors:
+      1: Jumps to a feature and invents user needs.
+      3: Identifies a user and pain point but leaves important assumptions implicit.
+      5: Separates facts from assumptions and defines a testable user outcome.
+  ai_fit_and_scope:
+    weight: 0.25
+    anchors:
+      1: Treats AI as mandatory and proposes an unbounded assistant.
+      3: Gives a plausible narrow workflow with limited boundary analysis.
+      5: Compares AI and non-AI options and scopes a reversible first workflow.
+  metrics_and_risk:
+    weight: 0.25
+    anchors:
+      1: Provides no measurable success or failure criteria.
+      3: Provides quality metrics but weak guardrails or online linkage.
+      5: Connects user outcome, offline evidence, online metrics and guardrails.
+  delivery_evidence:
+    weight: 0.20
+    anchors:
+      1: Offers a launch opinion without a validation plan.
+      3: Proposes a pilot but omits ownership or decision thresholds.
+      5: Defines staged evidence, owners, thresholds, escalation and rollback.
+fatal_issues: [invents_user_data, no_success_metric, ignores_human_fallback]

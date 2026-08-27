@@ -1,0 +1,26 @@
+dimensions:
+  ownership_and_context:
+    weight: 0.25
+    anchors:
+      1: Gives a team narrative without personal responsibility.
+      3: States owned tasks but weak decision authority or constraints.
+      5: Separates personal decisions, implementation, interfaces and team work.
+  migration_correctness:
+    weight: 0.30
+    anchors:
+      1: Treats successful execution as equivalent output.
+      3: Uses shadowing or checksums but incomplete state/version coverage.
+      5: Defines invariants, compatibility, replay, comparison and cutover gates.
+  risk_and_rollback:
+    weight: 0.25
+    anchors:
+      1: Uses a one-way big-bang migration.
+      3: Has stages and rollback but ambiguous data reconciliation.
+      5: Uses reversible stages, ownership, stop rules and recovery evidence.
+  evidence_and_learning:
+    weight: 0.20
+    anchors:
+      1: Claims benefits without baseline or admits no failure.
+      3: Provides metrics and lesson with incomplete attribution.
+      5: Uses honest comparisons, failure analysis, limits and follow-up debt.
+fatal_issues: [fabricates_project_fact, exposes_confidential_material, no_correctness_invariant]

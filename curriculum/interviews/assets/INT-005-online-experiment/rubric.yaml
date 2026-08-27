@@ -1,0 +1,26 @@
+dimensions:
+  causal_design:
+    weight: 0.30
+    anchors:
+      1: Compares uncontrolled before-and-after averages.
+      3: Defines randomization but misses interference or eligibility bias.
+      5: Aligns hypothesis, unit, baseline, population and causal assumptions.
+  metrics:
+    weight: 0.25
+    anchors:
+      1: Optimizes one engagement proxy.
+      3: Includes primary and guardrails with weak thresholds.
+      5: Defines decision-linked outcome, diagnostics, latency and rare-harm guardrails.
+  statistical_reasoning:
+    weight: 0.25
+    anchors:
+      1: Chooses duration by intuition and ignores uncertainty.
+      3: Mentions power and significance without operational assumptions.
+      5: Reasons about effect size, variance, duration, novelty and multiple slices.
+  decision_and_operations:
+    weight: 0.20
+    anchors:
+      1: Ships whenever the primary metric rises.
+      3: Has a review rule but no real-time stop or rollback.
+      5: Defines monitoring, stopping, conflict resolution and reversible rollout.
+fatal_issues: [no_control_group, no_guardrail, ignores_rare_harm]

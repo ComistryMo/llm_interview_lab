@@ -1,0 +1,26 @@
+dimensions:
+  ownership:
+    weight: 0.25
+    anchors:
+      1: Uses team-level claims without personal scope.
+      3: States responsibilities but not key decisions or artifacts.
+      5: Separates owned decisions, implementation, collaboration and limits.
+  technical_depth:
+    weight: 0.30
+    anchors:
+      1: Gives a product summary without data or system mechanics.
+      3: Explains architecture but weakly connects failure behavior.
+      5: Traces data, model, validation, operations and failure boundaries.
+  evidence_quality:
+    weight: 0.25
+    anchors:
+      1: Makes unverified outcome claims.
+      3: Provides metrics with incomplete baseline or causal context.
+      5: Uses honest baselines, slices, uncertainty and reproducible evidence.
+  reflection:
+    weight: 0.20
+    anchors:
+      1: Claims everything worked or blames constraints.
+      3: Names a failure with a generic lesson.
+      5: Explains why a decision failed and a specific changed approach.
+fatal_issues: [fabricates_project_fact, exposes_confidential_material, claims_team_work_as_personal]

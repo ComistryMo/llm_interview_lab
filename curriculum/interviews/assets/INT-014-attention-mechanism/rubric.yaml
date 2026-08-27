@@ -1,0 +1,26 @@
+dimensions:
+  mechanism:
+    weight: 0.35
+    anchors:
+      1: Confuses query heads with key/value heads or shapes.
+      3: Explains head sharing but incompletely connects cache and compute.
+      5: Traces shapes, sharing, cache bytes, compute and attention semantics.
+  hypothesis_quality:
+    weight: 0.25
+    anchors:
+      1: Attributes every change to the architecture.
+      3: Names optimization and conversion confounders without prioritization.
+      5: Provides competing causal hypotheses and predicted observations.
+  experiment_design:
+    weight: 0.25
+    anchors:
+      1: Requests more training without controls.
+      3: Proposes ablations but misses workload or statistical controls.
+      5: Controls checkpoint, seed, workload, shapes and per-slice evidence.
+  decision_quality:
+    weight: 0.15
+    anchors:
+      1: Ships or rejects from the aggregate result.
+      3: Notes uncertainty but lacks a decision boundary.
+      5: Makes a conditional decision tied to use-case and evidence thresholds.
+fatal_issues: [wrong_head_semantics, conflates_prefill_and_decode, claims_causality_without_control]

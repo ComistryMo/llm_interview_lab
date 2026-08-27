@@ -1,0 +1,26 @@
+dimensions:
+  task_and_environment:
+    weight: 0.25
+    anchors:
+      1: Uses ad hoc prompts in an uncontrolled environment.
+      3: Defines tasks and reset but weakly versions dependencies.
+      5: Defines representative tasks, deterministic state, versions and replay evidence.
+  metric_coverage:
+    weight: 0.30
+    anchors:
+      1: Measures only final task success.
+      3: Adds steps and cost but incomplete recovery or safety evidence.
+      5: Connects outcome, progress, actions, recovery, cost, latency and safety.
+  evaluator_validity:
+    weight: 0.25
+    anchors:
+      1: Treats an LLM judge as ground truth.
+      3: Compares to humans but omits disagreement or drift.
+      5: Uses anchored rubrics, blind calibration, agreement analysis and abstention.
+  leakage_and_diagnosis:
+    weight: 0.20
+    anchors:
+      1: Ignores contamination and reports one aggregate score.
+      3: Adds splits and slices but weak version provenance.
+      5: Controls leakage, versions environments and maps failures to trainable skills.
+fatal_issues: [final_success_only, unvalidated_llm_judge, unversioned_environment]

@@ -1,0 +1,514 @@
+schema_version: 1
+level_scale: &levels
+  "0": 未接触，无法提供有效证据。
+  "1": 能解释术语、目标与基本边界。
+  "2": 能在提示下完成典型任务。
+  "3": 能独立实现、验证并调试。
+  "4": 能做系统权衡、优化并指导他人。
+skills:
+  - id: skill.programming_algorithms.data_structures
+    title: Data Structures
+    domain: programming_algorithms
+    description: Select and implement data structures with explicit invariants.
+    levels: *levels
+    evidence: [coding, oral, debugging]
+    related_problems: [ALG-001, ALG-005, ALG-014, ALG-017]
+  - id: skill.programming_algorithms.complexity
+    title: Complexity Analysis
+    domain: programming_algorithms
+    description: Explain time, space and scaling costs for an implementation.
+    levels: *levels
+    evidence: [coding, oral]
+    related_problems: [FND-003, ALG-007, ALG-008]
+  - id: skill.programming_algorithms.graphs
+    title: Graph Algorithms
+    domain: programming_algorithms
+    description: Model dependencies and paths using graph algorithms.
+    levels: *levels
+    evidence: [coding, oral, debugging]
+    related_problems: [ALG-011, ALG-012, ALG-013]
+  - id: skill.programming_algorithms.caching
+    title: Caching Structures
+    domain: programming_algorithms
+    description: Design bounded caches and reason about eviction behavior.
+    levels: *levels
+    evidence: [coding, design, debugging]
+    related_problems: [ALG-017, INF-004, INF-006]
+
+  - id: skill.python_engineering.data_contracts
+    title: Python Data Contracts
+    domain: python_engineering
+    description: Validate Python values and preserve clear input-output contracts.
+    levels: *levels
+    evidence: [coding, oral, debugging]
+    related_problems: [FND-001, FND-002, FND-003]
+  - id: skill.python_engineering.exceptions
+    title: Exceptions and Failure Semantics
+    domain: python_engineering
+    description: Raise, propagate and diagnose precise failures.
+    levels: *levels
+    evidence: [coding, debugging, oral]
+    related_problems: [FND-002, FND-005, FND-010]
+  - id: skill.python_engineering.typing
+    title: Types and Data Models
+    domain: python_engineering
+    description: Use annotations and structured models to make contracts reviewable.
+    levels: *levels
+    evidence: [coding, design, oral]
+    related_problems: [FND-007, AGT-001]
+  - id: skill.python_engineering.iterators
+    title: Iterators and Streaming I/O
+    domain: python_engineering
+    description: Process bounded-memory streams and mini-batches.
+    levels: *levels
+    evidence: [coding, debugging]
+    related_problems: [FND-005, FND-006, FND-008]
+  - id: skill.python_engineering.testing
+    title: Testing and Debugging
+    domain: python_engineering
+    description: Turn contracts and regressions into focused automated tests.
+    levels: *levels
+    evidence: [coding, debugging, oral]
+    related_problems: [FND-010, TNS-016]
+
+  - id: skill.machine_learning_math.linear_algebra
+    title: Linear Algebra for ML
+    domain: machine_learning_math
+    description: Reason about vectors, matrices, projections and tensor shapes.
+    levels: *levels
+    evidence: [coding, oral, design]
+    related_problems: [NNL-001, ATT-002]
+  - id: skill.machine_learning_math.probability
+    title: Probability and Information
+    domain: machine_learning_math
+    description: Apply probability, likelihood and information measures.
+    levels: *levels
+    evidence: [oral, coding]
+    related_problems: [LOSS-004, LOSS-005, LOSS-014]
+  - id: skill.machine_learning_math.optimization
+    title: Numerical Optimization
+    domain: machine_learning_math
+    description: Explain gradients, update rules and convergence trade-offs.
+    levels: *levels
+    evidence: [coding, oral, debugging]
+    related_problems: [OPT-001, OPT-004, OPT-005]
+  - id: skill.machine_learning_math.statistics
+    title: Experimental Statistics
+    domain: machine_learning_math
+    description: Quantify uncertainty, compare samples and interpret metrics.
+    levels: *levels
+    evidence: [case, oral, project]
+    related_problems: [LOSS-010, FND-014]
+
+  - id: skill.deep_learning.tensor_ops
+    title: Tensor Shape and Indexing
+    domain: deep_learning
+    description: Manipulate shapes, broadcasts, gathers and masks correctly.
+    levels: *levels
+    evidence: [coding, debugging, oral]
+    related_problems: [TNS-002, TNS-003, TNS-006, TNS-010]
+  - id: skill.deep_learning.autograd
+    title: Autograd and Gradient Flow
+    domain: deep_learning
+    description: Trace computation graphs, detach boundaries and gradients.
+    levels: *levels
+    evidence: [coding, debugging, oral]
+    related_problems: [TNS-007, TNS-008, TNS-013]
+  - id: skill.deep_learning.neural_layers
+    title: Neural Network Layers
+    domain: deep_learning
+    description: Implement and verify trainable neural primitives.
+    levels: *levels
+    evidence: [coding, debugging]
+    related_problems: [NNL-001, NNL-002, NNL-008]
+  - id: skill.deep_learning.losses
+    title: Stable Loss Functions
+    domain: deep_learning
+    description: Implement objectives with stable numerics and clear reductions.
+    levels: *levels
+    evidence: [coding, oral, debugging]
+    related_problems: [LOSS-007, LOSS-008, LOSS-013, LOSS-014]
+  - id: skill.deep_learning.optimizers
+    title: Stateful Optimizers
+    domain: deep_learning
+    description: Implement stateful parameter updates and resume semantics.
+    levels: *levels
+    evidence: [coding, debugging, oral]
+    related_problems: [OPT-001, OPT-002, OPT-004, OPT-005]
+
+  - id: skill.llm_vlm.tokenization
+    title: Tokenization and Templates
+    domain: llm_vlm
+    description: Explain tokenizer training, special tokens and chat templates.
+    levels: *levels
+    evidence: [coding, oral, debugging]
+    related_problems: [TOK-001, TOK-002, TOK-003, TOK-004]
+  - id: skill.llm_vlm.attention
+    title: Attention Mechanisms
+    domain: llm_vlm
+    description: Implement and analyze attention, masks and head layouts.
+    levels: *levels
+    evidence: [coding, oral, debugging]
+    related_problems: [ATT-002, ATT-004, ATT-005, ATT-006]
+    aliases: [Attention]
+  - id: skill.llm_vlm.transformer
+    title: Transformer Architecture
+    domain: llm_vlm
+    description: Connect embeddings, normalization, MLP and attention blocks.
+    levels: *levels
+    evidence: [coding, oral, design]
+    related_problems: [ATT-007, ATT-008, ATT-012]
+  - id: skill.llm_vlm.multimodal_data
+    title: Multimodal Data Flow
+    domain: llm_vlm
+    description: Align image placeholders, token budgets, labels and batches.
+    levels: *levels
+    evidence: [coding, debugging, design]
+    related_problems: [VLM-004, VLM-005, VLM-006, VLM-007]
+  - id: skill.llm_vlm.vlm_architecture
+    title: Vision-Language Architecture
+    domain: llm_vlm
+    description: Explain vision encoders, projectors and language-model fusion.
+    levels: *levels
+    evidence: [oral, coding, design]
+    related_problems: [VLM-001, VLM-002, VLM-003]
+  - id: skill.llm_vlm.generation
+    title: Generation and Sampling
+    domain: llm_vlm
+    description: Reason about decoding, sampling and generation failure modes.
+    levels: *levels
+    evidence: [coding, debugging, oral]
+    related_problems: [ATT-010, ATT-011, INF-001]
+  - id: skill.llm_vlm.context_management
+    title: Context and Token Budgeting
+    domain: llm_vlm
+    description: Budget context, masks and multimodal tokens under constraints.
+    levels: *levels
+    evidence: [design, debugging, oral]
+    related_problems: [ALG-003, VLM-010, ATT-014]
+
+  - id: skill.post_training_rl.sft
+    title: Supervised Fine-Tuning
+    domain: post_training_rl
+    description: Build masked SFT data and loss flows.
+    levels: *levels
+    evidence: [coding, oral, debugging]
+    related_problems: [PT-001, PT-003, PT-004]
+  - id: skill.post_training_rl.preference_data
+    title: Preference Data
+    domain: post_training_rl
+    description: Validate preference pairs, provenance and sampling assumptions.
+    levels: *levels
+    evidence: [coding, case, debugging]
+    related_problems: [PT-005, PT-006]
+  - id: skill.post_training_rl.reward_modeling
+    title: Reward Modeling
+    domain: post_training_rl
+    description: Design reward objectives, verifiers and failure analysis.
+    levels: *levels
+    evidence: [coding, oral, design]
+    related_problems: [PT-007, PT-008, PT-020]
+  - id: skill.post_training_rl.policy_optimization
+    title: Policy Optimization
+    domain: post_training_rl
+    description: Explain policy ratios, clipping, advantages and KL control.
+    levels: *levels
+    evidence: [coding, oral, debugging]
+    related_problems: [PT-009, PT-010, PT-011, PT-012]
+  - id: skill.post_training_rl.grpo
+    title: Grouped Policy Optimization
+    domain: post_training_rl
+    description: Implement group advantages and sequence-level clipped updates.
+    levels: *levels
+    evidence: [coding, oral, debugging]
+    related_problems: [PT-013, PT-014, PT-015, PT-019]
+  - id: skill.post_training_rl.verification
+    title: Verifiers and Reward Integrity
+    domain: post_training_rl
+    description: Detect invalid completions, reward hacking and verifier gaps.
+    levels: *levels
+    evidence: [coding, case, debugging]
+    related_problems: [PT-008, PT-016, PT-018]
+
+  - id: skill.agent_application.tool_calling
+    title: Tool Contracts and Calling
+    domain: agent_application
+    description: Define schemas, validate calls and execute tools safely.
+    levels: *levels
+    evidence: [coding, debugging, design]
+    related_problems: [AGT-001, AGT-002, AGT-003, AGT-004]
+  - id: skill.agent_application.agent_loop
+    title: Agent Loop
+    domain: agent_application
+    description: Implement bounded observation-action loops and stop rules.
+    levels: *levels
+    evidence: [coding, debugging, oral]
+    related_problems: [AGT-005, AGT-006, AGT-007]
+  - id: skill.agent_application.state_memory
+    title: Agent State and Memory
+    domain: agent_application
+    description: Model state, history and memory with explicit retention rules.
+    levels: *levels
+    evidence: [design, coding, debugging]
+    related_problems: [AGT-007, AGT-009, AGT-012]
+  - id: skill.agent_application.planning
+    title: Agent Planning
+    domain: agent_application
+    description: Decompose goals and choose actions without hiding assumptions.
+    levels: *levels
+    evidence: [design, case, oral]
+    related_problems: [AGT-006, AGT-012]
+  - id: skill.agent_application.reliability
+    title: Agent Reliability
+    domain: agent_application
+    description: Handle retries, timeouts, invalid actions and recovery.
+    levels: *levels
+    evidence: [debugging, design, coding]
+    related_problems: [AGT-005, AGT-011]
+  - id: skill.agent_application.evaluation
+    title: Agent Evaluation
+    domain: agent_application
+    description: Replay trajectories and evaluate task-level behavior.
+    levels: *levels
+    evidence: [coding, case, design]
+    related_problems: [AGT-008, AGT-010, AGT-014, AGT-017]
+
+  - id: skill.ai_product.problem_framing
+    title: AI Problem Framing
+    domain: ai_product
+    description: Convert a user problem into falsifiable AI product hypotheses.
+    levels: *levels
+    evidence: [case, oral, project]
+    related_problems: []
+  - id: skill.ai_product.prd
+    title: AI Product Requirements
+    domain: ai_product
+    description: Specify workflows, failure states and acceptance criteria.
+    levels: *levels
+    evidence: [case, design, project]
+    related_problems: []
+  - id: skill.ai_product.metrics
+    title: AI Product Metrics
+    domain: ai_product
+    description: Connect offline quality, online behavior and business outcomes.
+    levels: *levels
+    evidence: [case, oral, project]
+    related_problems: [LOSS-010]
+  - id: skill.ai_product.delivery
+    title: AI Release and Iteration
+    domain: ai_product
+    description: Plan experiments, staged rollout, feedback and rollback.
+    levels: *levels
+    evidence: [case, design, project]
+    related_problems: []
+  - id: skill.ai_product.cost_quality
+    title: Cost-Latency-Quality Trade-offs
+    domain: ai_product
+    description: Choose product behavior under quality, latency and budget limits.
+    levels: *levels
+    evidence: [case, design, oral]
+    related_problems: [VLM-010, INF-014]
+
+  - id: skill.evaluation_safety.rubrics
+    title: Rubric Design
+    domain: evaluation_safety
+    description: Define evidence-based dimensions and anchored scores.
+    levels: *levels
+    evidence: [case, design, oral]
+    related_problems: [AGT-010]
+  - id: skill.evaluation_safety.benchmarks
+    title: Benchmark Design
+    domain: evaluation_safety
+    description: Build representative, repeatable and diagnostic evaluations.
+    levels: *levels
+    evidence: [case, design, project]
+    related_problems: [AGT-014, VLM-013]
+  - id: skill.evaluation_safety.leakage
+    title: Leakage and Contamination
+    domain: evaluation_safety
+    description: Detect train-test contamination and invalid comparisons.
+    levels: *levels
+    evidence: [case, debugging, project]
+    related_problems: [TML-005, VLM-014, AGT-017]
+  - id: skill.evaluation_safety.safety_eval
+    title: Safety Evaluation
+    domain: evaluation_safety
+    description: Scope safety risks, red-team cases and mitigation evidence.
+    levels: *levels
+    evidence: [case, design, project]
+    related_problems: []
+  - id: skill.evaluation_safety.llm_judge
+    title: LLM-as-a-Judge
+    domain: evaluation_safety
+    description: Calibrate judge prompts, bias checks and human agreement.
+    levels: *levels
+    evidence: [case, debugging, oral]
+    related_problems: []
+
+  - id: skill.data_mlops.data_quality
+    title: Data Quality
+    domain: data_mlops
+    description: Validate, sample, deduplicate and audit training data.
+    levels: *levels
+    evidence: [coding, case, debugging]
+    related_problems: [FND-002, FND-012, FND-014]
+  - id: skill.data_mlops.pipelines
+    title: Reproducible Data Pipelines
+    domain: data_mlops
+    description: Build versioned, observable and replayable data flows.
+    levels: *levels
+    evidence: [coding, design, project]
+    related_problems: [FND-005, FND-006, CAP-FND-001]
+  - id: skill.data_mlops.experiments
+    title: Experiment Tracking
+    domain: data_mlops
+    description: Track hypotheses, configurations, metrics and comparisons.
+    levels: *levels
+    evidence: [project, case, oral]
+    related_problems: []
+  - id: skill.data_mlops.reproducibility
+    title: Reproducibility
+    domain: data_mlops
+    description: Control seeds, environments, artifacts and reruns.
+    levels: *levels
+    evidence: [coding, debugging, project]
+    related_problems: [FND-011, OPT-011]
+
+  - id: skill.training_infra.distributed
+    title: Distributed Training
+    domain: training_infra
+    description: Reason about collectives, parallelism and sharding.
+    levels: *levels
+    evidence: [design, oral, debugging]
+    related_problems: [DST-001, DST-002, DST-003, DST-004]
+  - id: skill.training_infra.checkpointing
+    title: Checkpoint and Recovery
+    domain: training_infra
+    description: Design consistent state, resume and failure recovery.
+    levels: *levels
+    evidence: [coding, design, debugging]
+    related_problems: [OPT-010, OPT-011, DST-008]
+  - id: skill.training_infra.scheduling
+    title: Training Scheduling
+    domain: training_infra
+    description: Allocate heterogeneous jobs under fairness and utilization goals.
+    levels: *levels
+    evidence: [design, case, debugging]
+    related_problems: [DST-006, DST-007]
+  - id: skill.training_infra.observability
+    title: Training Observability
+    domain: training_infra
+    description: Diagnose throughput, stalls, numerical failures and resource waste.
+    levels: *levels
+    evidence: [debugging, design, project]
+    related_problems: [TNS-016, GPU-008]
+
+  - id: skill.inference_systems.kv_cache
+    title: KV Cache
+    domain: inference_systems
+    description: Model cache shape, memory and incremental decode behavior.
+    levels: *levels
+    evidence: [coding, design, debugging]
+    related_problems: [ATT-009, INF-002]
+  - id: skill.inference_systems.serving
+    title: Model Serving
+    domain: inference_systems
+    description: Design batching, admission and request scheduling.
+    levels: *levels
+    evidence: [design, debugging, oral]
+    related_problems: [INF-003, INF-014]
+  - id: skill.inference_systems.quantization
+    title: Quantization
+    domain: inference_systems
+    description: Explain calibration, formats and quality-performance trade-offs.
+    levels: *levels
+    evidence: [coding, design, oral]
+    related_problems: [INF-008, INF-009, INF-010, INF-011]
+  - id: skill.inference_systems.kernels
+    title: Kernel Performance
+    domain: inference_systems
+    description: Analyze memory traffic, fusion and GPU kernel bottlenecks.
+    levels: *levels
+    evidence: [coding, debugging, design]
+    related_problems: [GPU-001, GPU-002, GPU-007, GPU-008]
+  - id: skill.inference_systems.capacity
+    title: Latency, Throughput and Memory
+    domain: inference_systems
+    description: Size serving systems and explain performance trade-offs.
+    levels: *levels
+    evidence: [design, case, oral]
+    related_problems: [INF-002, INF-003, INF-005]
+
+  - id: skill.system_design.requirements
+    title: System Requirements
+    domain: system_design
+    description: Clarify workloads, SLOs, constraints and failure domains.
+    levels: *levels
+    evidence: [design, case, oral]
+    related_problems: []
+  - id: skill.system_design.tradeoffs
+    title: Architecture Trade-offs
+    domain: system_design
+    description: Compare designs with explicit assumptions and measurable costs.
+    levels: *levels
+    evidence: [design, case, oral]
+    related_problems: []
+  - id: skill.system_design.reliability
+    title: Reliability and Degradation
+    domain: system_design
+    description: Design fallbacks, backpressure, recovery and observability.
+    levels: *levels
+    evidence: [design, debugging, case]
+    related_problems: [AGT-005, INF-014]
+
+  - id: skill.product_communication.stakeholders
+    title: Stakeholder Communication
+    domain: product_communication
+    description: Align product, research, engineering and policy decisions.
+    levels: *levels
+    evidence: [behavioral, case, project]
+    related_problems: []
+  - id: skill.product_communication.storytelling
+    title: Technical Storytelling
+    domain: product_communication
+    description: Explain decisions, evidence and uncertainty at the audience's level.
+    levels: *levels
+    evidence: [oral, project, behavioral]
+    related_problems: []
+  - id: skill.product_communication.decision_records
+    title: Decision Documentation
+    domain: product_communication
+    description: Record alternatives, evidence, owners and follow-up criteria.
+    levels: *levels
+    evidence: [case, project, design]
+    related_problems: []
+
+  - id: skill.project_deep_dive.ownership
+    title: Project Ownership Evidence
+    domain: project_deep_dive
+    description: Separate personal contribution, team context and verified outcomes.
+    levels: *levels
+    evidence: [project, oral, behavioral]
+    related_problems: []
+  - id: skill.project_deep_dive.experiments
+    title: Project Experiment Analysis
+    domain: project_deep_dive
+    description: Reconstruct baselines, failures, ablations and causal claims.
+    levels: *levels
+    evidence: [project, oral, case]
+    related_problems: []
+
+  - id: skill.behavioral.collaboration
+    title: Collaboration and Conflict
+    domain: behavioral
+    description: Give concrete evidence of alignment, disagreement and resolution.
+    levels: *levels
+    evidence: [behavioral, project]
+    related_problems: []
+  - id: skill.behavioral.growth
+    title: Learning and Growth
+    domain: behavioral
+    description: Explain feedback, mistakes and changed behavior with evidence.
+    levels: *levels
+    evidence: [behavioral, project]
+    related_problems: []

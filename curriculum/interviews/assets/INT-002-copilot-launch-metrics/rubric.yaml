@@ -1,0 +1,26 @@
+dimensions:
+  metric_hierarchy:
+    weight: 0.25
+    anchors:
+      1: Uses a single proxy as the product outcome.
+      3: Separates quality and engagement but weakly links them to user value.
+      5: Defines outcome, leading, diagnostic and guardrail metrics with causal links.
+  evaluation_design:
+    weight: 0.30
+    anchors:
+      1: Proposes an unsegmented average without a comparison design.
+      3: Includes offline and online evaluation but misses key bias controls.
+      5: Covers representative sampling, baselines, segments, uncertainty and bias.
+  risk_and_privacy:
+    weight: 0.20
+    anchors:
+      1: Ignores harmful tails or data retention.
+      3: Names risks but lacks operational thresholds.
+      5: Defines privacy-aware evidence, tail metrics, escalation and stop rules.
+  decision_quality:
+    weight: 0.25
+    anchors:
+      1: Makes a launch decision from one favorable number.
+      3: Uses several signals but leaves conflicts unresolved.
+      5: States explicit go, hold and rollback rules for conflicting evidence.
+fatal_issues: [acceptance_rate_only, ignores_privacy, no_guardrail]

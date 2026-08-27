@@ -1,0 +1,26 @@
+dimensions:
+  hypothesis_quality:
+    weight: 0.25
+    anchors:
+      1: Equates rising reward with improvement or declares hacking without evidence.
+      3: Names plausible shortcuts but lacks predicted observations.
+      5: Separates capability, distribution, evaluator and exploitation hypotheses.
+  evaluator_audit:
+    weight: 0.30
+    anchors:
+      1: Reuses the same aggregate reward as validation.
+      3: Decomposes rewards but weakly probes causal features.
+      5: Uses component, counterfactual, adversarial, holdout and agreement evidence.
+  monitoring_and_safety:
+    weight: 0.20
+    anchors:
+      1: Continues training until a later manual review.
+      3: Adds alerts without protected slices or stop rules.
+      5: Defines protected evaluations, drift signals, thresholds and ownership.
+  remediation:
+    weight: 0.25
+    anchors:
+      1: Penalizes the visible symptom without validating side effects.
+      3: Changes data or reward with incomplete causal checks.
+      5: Fixes the exploited channel, adds independent evidence and revalidates transfer.
+fatal_issues: [reward_equals_quality, tunes_on_protected_set, no_independent_evaluator]

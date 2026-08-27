@@ -1,0 +1,26 @@
+dimensions:
+  provenance_and_leakage:
+    weight: 0.30
+    anchors:
+      1: Accepts declared train/test labels without tracing usage.
+      3: Checks exact overlap but misses paraphrase, tuning or evaluator leakage.
+      5: Audits lineage, transformations, access, semantic overlap and decision use.
+  evaluation_validity:
+    weight: 0.25
+    anchors:
+      1: Trusts aggregate scores and one judge.
+      3: Reviews sampling and human agreement but weak rubric anchors.
+      5: Validates sampling, rubrics, judges, disagreement and protected evidence.
+  safety_and_statistics:
+    weight: 0.25
+    anchors:
+      1: Averages away severe rare failures.
+      3: Reports severity slices but weak uncertainty or escalation.
+      5: Uses severity-aware rates, intervals, minimum evidence and stop rules.
+  decision_integrity:
+    weight: 0.20
+    anchors:
+      1: Ships on contaminated favorable evidence.
+      3: Flags limitations but lacks a remediation gate.
+      5: States valid claims, invalid claims, remediation, owners and re-evaluation.
+fatal_issues: [hides_contamination, unvalidated_llm_judge, averages_away_severe_harm]

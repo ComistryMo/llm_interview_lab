@@ -1,0 +1,26 @@
+dimensions:
+  objective_correctness:
+    weight: 0.35
+    anchors:
+      1: Confuses preference and on-policy objectives or ratio direction.
+      3: Explains both objectives but misses one policy separation or mask.
+      5: Traces data, log probabilities, policies, advantages, clipping and KL correctly.
+  failure_analysis:
+    weight: 0.25
+    anchors:
+      1: Attributes instability to learning rate alone.
+      3: Names zero variance and lengths but weakly predicts symptoms.
+      5: Connects each failure to a measurable tensor, sign, scale or invariant.
+  verification:
+    weight: 0.25
+    anchors:
+      1: Relies on end-to-end loss curves.
+      3: Proposes tiny cases but omits manual expected values or gradients.
+      5: Uses hand-computed cases, masks, sign checks and framework-independent invariants.
+  intervention_safety:
+    weight: 0.15
+    anchors:
+      1: Changes several hyperparameters simultaneously.
+      3: Stages changes but lacks rollback or health criteria.
+      5: Prioritizes correctness, instrumentation, one-factor tests and stop rules.
+fatal_issues: [mixes_policy_roles, ignores_masks, fabricates_advantage_for_zero_variance]

@@ -1,0 +1,26 @@
+dimensions:
+  state_completeness:
+    weight: 0.25
+    anchors:
+      1: Checks only model weights.
+      3: Includes optimizer and step but misses RNG, sampler or topology.
+      5: Enumerates all state needed for deterministic semantic resume.
+  evidence_and_isolation:
+    weight: 0.30
+    anchors:
+      1: Retries the same checkpoint without preserving evidence.
+      3: Compares checksums and logs but weakly isolates creation versus restore.
+      5: Uses manifests, per-shard provenance, controlled restore and boundary checks.
+  recovery_safety:
+    weight: 0.20
+    anchors:
+      1: Continues training from inconsistent state.
+      3: Rolls back but lacks validation or data-duplication checks.
+      5: Selects a known-good point, validates state and prevents double consumption.
+  prevention:
+    weight: 0.25
+    anchors:
+      1: Adds another retry.
+      3: Uses atomic upload but incomplete compatibility metadata.
+      5: Uses staged writes, immutable manifests, checksums, compatibility and restore tests.
+fatal_issues: [overwrites_good_checkpoint, ignores_optimizer_state, resumes_inconsistent_shards]
