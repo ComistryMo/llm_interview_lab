@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 from pathlib import Path
 import shutil
@@ -15,11 +15,14 @@ from llm_interview_lab.events import (
     read_events,
     reduce_events,
 )
+from llm_interview_lab.lifecycle import ReviewInput, record_review
 from llm_interview_lab.workspace import (
     WorkspaceError,
     event_schema_path,
     init_profile,
+    profile_paths,
     start_problem,
+    start_retention,
 )
 
 
@@ -64,7 +67,7 @@ def _starter_problem(root: Path) -> Problem:
         runner_kind="pytest",
         public_tests=problem_dir / "test_public.py",
         oracle_kind="fixture_expected",
-        raw={},
+        raw={"retention": {"d2": "equivalent rewrite", "d7": "boundary variant"}},
     )
 
 
@@ -250,3 +253,60 @@ def test_start_refuses_implemented_attempt(tmp_path: Path) -> None:
 
     with pytest.raises(WorkspaceError, match="already implemented"):
         start_problem(root, "learner-one", problem)
+
+
+def _mark_implemented(root: Path, profile_id: str, problem_id: str, attempt_id: str, submission: Path) -> None:
+    paths = profile_paths(root, profile_id)
+    digest = hashlib.sha256(submission.read_bytes()).hexdigest()
+    append_event(
+        paths.events_file,
+        event_schema_path(root),
+        profile_id=profile_id,
+        event_type="public_tests_run",
+        problem_id=problem_id,
+        attempt_id=attempt_id,
+        payload={"submission_sha256": digest, "exit_code": 0, "status": "passed", "passed": 5, "failed": 0, "duration_ms": 1},
+    )
+    append_event(
+        paths.events_file,
+        event_schema_path(root),
+        profile_id=profile_id,
+        event_type="task_implemented",
+        problem_id=problem_id,
+        attempt_id=attempt_id,
+        payload={"submission_sha256": digest},
+    )
+
+
+def _passing_review(root: Path, profile_id: str, problem_id: str, at: datetime):
+    return record_review(
+        root,
+        profile_id,
+        problem_id,
+        ReviewInput("passed", "passed", "explains every branch", "O(n) time and O(1) space", "empty and invalid inputs covered"),
+        timestamp=at,
+    )
+
+
+def test_review_d2_d7_and_mastery_are_evidence_gated(tmp_path: Path) -> None:
+    root = _workspace_repo(tmp_path)
+    init_profile(root, "learner-one")
+    problem = _starter_problem(root)
+    initial = start_problem(root, "learner-one", problem)
+    initial.submission_path.write_text("# independent implementation\n", encoding="utf-8")
+    _mark_implemented(root, "learner-one", problem.id, initial.attempt_id, initial.submission_path)
+    reviewed_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    assert _passing_review(root, "learner-one", problem.id, reviewed_at).status == "reviewed"
+
+    d2 = start_retention(root, "learner-one", problem, "d2", now=reviewed_at + timedelta(days=2))
+    assert d2.attempt_id == "attempt-0002"
+    assert d2.submission_path.read_text(encoding="utf-8") != initial.submission_path.read_text(encoding="utf-8")
+    _mark_implemented(root, "learner-one", problem.id, d2.attempt_id, d2.submission_path)
+    assert _passing_review(root, "learner-one", problem.id, reviewed_at + timedelta(days=2)).status == "retained_d2"
+
+    d7 = start_retention(root, "learner-one", problem, "d7", now=reviewed_at + timedelta(days=7))
+    assert d7.attempt_id == "attempt-0003"
+    _mark_implemented(root, "learner-one", problem.id, d7.attempt_id, d7.submission_path)
+    assert _passing_review(root, "learner-one", problem.id, reviewed_at + timedelta(days=7)).mastered
+    final = reduce_events(read_events(profile_paths(root, "learner-one").events_file, event_schema_path(root)))
+    assert final.problem_status(problem.id) == "mastered"

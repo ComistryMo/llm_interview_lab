@@ -6,226 +6,69 @@
   "additionalProperties": false,
   "required": ["schema_version", "problems"],
   "properties": {
-    "schema_version": {
-      "const": 1
-    },
-    "problems": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "$ref": "#/$defs/problem"
-      }
-    }
+    "schema_version": {"const": 2},
+    "tracks": {"type": "array", "items": {"$ref": "#/$defs/track"}},
+    "quests": {"type": "array", "items": {"$ref": "#/$defs/quest"}},
+    "capstones": {"type": "array", "items": {"$ref": "#/$defs/capstone"}},
+    "problems": {"type": "array", "items": {"oneOf": [{"$ref": "#/$defs/ready_problem"}, {"$ref": "#/$defs/planned_problem"}]}}
   },
   "$defs": {
-    "problem": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "title",
-        "status",
-        "domain",
-        "tracks",
-        "tier",
-        "difficulty",
-        "prerequisites",
-        "skills",
-        "assets",
-        "interface",
-        "constraints",
-        "assessment",
-        "variant_axes",
-        "invariants",
-        "common_bugs",
-        "retention",
-        "sources"
-      ],
+    "id": {"type": "string", "pattern": "^[A-Z]+-[0-9]{3}$"},
+    "slug": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "difficulty": {
+      "type": "object", "additionalProperties": false, "required": ["concept", "coding", "debugging"],
+      "properties": {"concept": {"type": "integer", "minimum": 1, "maximum": 5}, "coding": {"type": "integer", "minimum": 1, "maximum": 5}, "debugging": {"type": "integer", "minimum": 1, "maximum": 5}}
+    },
+    "base_problem": {
+      "type": "object", "required": ["id", "title", "status", "domain", "tracks", "tier", "difficulty", "prerequisites"],
       "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^[A-Z]+-[0-9]{3}$"
-        },
-        "legacy_ids": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "title": {
-          "type": "string",
-          "minLength": 1
-        },
-        "status": {
-          "enum": ["planned", "ready", "stable"]
-        },
-        "domain": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9_]*$"
-        },
-        "tracks": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9_]*$"
-          }
-        },
-        "tier": {
-          "enum": ["core", "advanced", "elective"]
-        },
-        "difficulty": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["concept", "coding", "debugging"],
+        "id": {"$ref": "#/$defs/id"}, "title": {"type": "string", "minLength": 1}, "status": {"enum": ["planned", "ready", "stable"]}, "domain": {"$ref": "#/$defs/slug"},
+        "tracks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/slug"}}, "tier": {"enum": ["core", "advanced", "elective"]},
+        "difficulty": {"$ref": "#/$defs/difficulty"}, "prerequisites": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}
+      }
+    },
+    "ready_problem": {
+      "allOf": [
+        {"$ref": "#/$defs/base_problem"},
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "title", "status", "domain", "tracks", "tier", "difficulty", "prerequisites", "skills", "assets", "interface", "constraints", "assessment", "variant_axes", "invariants", "common_bugs", "retention", "sources"],
           "properties": {
-            "concept": {"type": "integer", "minimum": 1, "maximum": 5},
-            "coding": {"type": "integer", "minimum": 1, "maximum": 5},
-            "debugging": {"type": "integer", "minimum": 1, "maximum": 5}
-          }
-        },
-        "prerequisites": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "pattern": "^[A-Z]+-[0-9]{3}$"
-          }
-        },
-        "skills": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9_.]*$"
-          }
-        },
-        "assets": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["problem_dir"],
-          "properties": {
-            "problem_dir": {
-              "type": "string",
-              "pattern": "^curriculum/problems/[A-Z]+-[0-9]{3}-[a-z0-9-]+$"
-            }
-          }
-        },
-        "interface": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["language", "framework", "symbol"],
-          "properties": {
-            "language": {"const": "python"},
-            "framework": {"enum": ["stdlib", "pytorch"]},
-            "symbol": {
-              "type": "string",
-              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
-            }
-          }
-        },
-        "constraints": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["forbidden_apis", "time_limit_ms", "memory_limit_mb"],
-          "properties": {
-            "forbidden_apis": {
-              "type": "array",
-              "uniqueItems": true,
-              "items": {"type": "string", "minLength": 1}
-            },
-            "time_limit_ms": {"type": "integer", "minimum": 1},
-            "memory_limit_mb": {"type": "integer", "minimum": 1}
-          }
-        },
-        "assessment": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["runner", "oracle", "oral_questions"],
-          "properties": {
-            "runner": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["kind", "public_tests"],
+            "id": {"$ref": "#/$defs/id"}, "legacy_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "title": {"type": "string", "minLength": 1},
+            "status": {"enum": ["ready", "stable"]}, "domain": {"$ref": "#/$defs/slug"}, "tracks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/slug"}},
+            "tier": {"enum": ["core", "advanced", "elective"]}, "difficulty": {"$ref": "#/$defs/difficulty"}, "prerequisites": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+            "skills": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$"}},
+            "assets": {"type": "object", "additionalProperties": false, "required": ["problem_dir"], "properties": {"problem_dir": {"type": "string", "pattern": "^curriculum/problems/[A-Z]+-[0-9]{3}-[a-z0-9-]+$"}}},
+            "interface": {"type": "object", "additionalProperties": false, "required": ["language", "framework", "symbol"], "properties": {"language": {"const": "python"}, "framework": {"enum": ["stdlib", "pytorch"]}, "symbol": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"}}},
+            "constraints": {"type": "object", "additionalProperties": false, "required": ["forbidden_apis", "time_limit_ms", "output_limit_kb"], "properties": {"forbidden_apis": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "time_limit_ms": {"type": "integer", "minimum": 100}, "output_limit_kb": {"type": "integer", "minimum": 1}, "memory_limit_mb": {"type": "integer", "minimum": 1}}},
+            "assessment": {
+              "type": "object", "additionalProperties": false, "required": ["runner", "oracle", "oral_questions"],
               "properties": {
-                "kind": {"const": "pytest"},
-                "public_tests": {"const": "test_public.py"}
+                "runner": {"type": "object", "additionalProperties": false, "required": ["kind", "public_tests"], "properties": {"kind": {"const": "pytest"}, "public_tests": {"const": "test_public.py"}}},
+                "oracle": {"type": "object", "additionalProperties": false, "required": ["kind", "target", "description"], "properties": {"kind": {"enum": ["fixture_expected", "closed_form", "framework_reference", "brute_force", "cross_implementation", "property_only"]}, "target": {"type": "string", "minLength": 1}, "description": {"type": "string", "minLength": 1}}},
+                "oral_questions": {"type": "array", "minItems": 4, "items": {"type": "string", "minLength": 1}}
               }
             },
-            "oracle": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["kind", "description"],
-              "properties": {
-                "kind": {
-                  "enum": [
-                    "fixture_expected",
-                    "closed_form",
-                    "framework_reference",
-                    "brute_force",
-                    "cross_implementation",
-                    "property_only"
-                  ]
-                },
-                "description": {"type": "string", "minLength": 1},
-                "target": {"type": "string", "minLength": 1}
-              }
-            },
-            "oral_questions": {
-              "type": "array",
-              "minItems": 1,
-              "items": {"type": "string", "minLength": 1}
-            }
-          }
-        },
-        "variant_axes": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
-        },
-        "invariants": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
-        },
-        "common_bugs": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
-        },
-        "retention": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["d2", "d7"],
-          "properties": {
-            "d2": {"type": "string", "minLength": 1},
-            "d7": {"type": "string", "minLength": 1},
-            "d21": {"type": "string", "minLength": 1}
-          }
-        },
-        "sources": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["type", "title"],
-            "properties": {
-              "type": {
-                "enum": ["internal_original", "paper", "official_docs", "official_source"]
-              },
-              "title": {"type": "string", "minLength": 1}
-            }
+            "variant_axes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "invariants": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+            "common_bugs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+            "retention": {"type": "object", "additionalProperties": false, "required": ["d2", "d7"], "properties": {"d2": {"type": "string", "minLength": 1}, "d7": {"type": "string", "minLength": 1}}},
+            "sources": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["type", "title"], "properties": {"type": {"enum": ["internal_original", "paper", "official_docs", "official_source"]}, "title": {"type": "string", "minLength": 1}, "url": {"type": "string", "format": "uri"}}}}
           }
         }
-      }
-    }
+      ]
+    },
+    "planned_problem": {
+      "allOf": [
+        {"$ref": "#/$defs/base_problem"},
+        {"type": "object", "additionalProperties": false, "required": ["id", "title", "status", "domain", "tracks", "tier", "difficulty", "prerequisites", "problem_type", "description"], "properties": {
+          "id": {"$ref": "#/$defs/id"}, "title": {"type": "string", "minLength": 1}, "status": {"const": "planned"}, "domain": {"$ref": "#/$defs/slug"},
+          "tracks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/slug"}}, "tier": {"enum": ["core", "advanced", "elective"]}, "difficulty": {"$ref": "#/$defs/difficulty"},
+          "prerequisites": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}, "problem_type": {"enum": ["implementation", "debugging", "design", "derivation", "integration"]}, "description": {"type": "string", "minLength": 1}
+        }}
+      ]
+    },
+    "track": {"type": "object", "additionalProperties": false, "required": ["id", "title", "description"], "properties": {"id": {"$ref": "#/$defs/slug"}, "title": {"type": "string", "minLength": 1}, "description": {"type": "string", "minLength": 1}}},
+    "quest": {"type": "object", "additionalProperties": false, "required": ["id", "title", "problem_ids", "description"], "properties": {"id": {"$ref": "#/$defs/slug"}, "title": {"type": "string", "minLength": 1}, "problem_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}, "description": {"type": "string", "minLength": 1}}},
+    "capstone": {"type": "object", "additionalProperties": false, "required": ["id", "title", "status", "tracks", "prerequisites", "description"], "properties": {"id": {"$ref": "#/$defs/slug"}, "title": {"type": "string", "minLength": 1}, "status": {"const": "planned"}, "tracks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/slug"}}, "prerequisites": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}, "description": {"type": "string", "minLength": 1}}}
   }
 }

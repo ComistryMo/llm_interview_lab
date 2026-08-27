@@ -13,10 +13,11 @@ pytestmark = pytest.mark.infrastructure
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_catalog_contains_only_the_first_vertical_slice_problem() -> None:
+def test_catalog_contains_public_tracks_and_first_ready_problem() -> None:
     catalog = load_catalog(REPO_ROOT)
 
-    assert catalog.order == ("FND-001",)
+    assert "FND-001" in catalog.order
+    assert {"ai_foundation", "llm_algorithm", "vlm_algorithm", "post_training", "agent", "systems"}.issubset(catalog.tracks)
     problem = catalog.get("FND-001")
     assert problem.raw["legacy_ids"] == ["00A-1"]
     assert problem.runner_kind == "pytest"
@@ -49,7 +50,7 @@ def test_schema_reserves_reviewed_oracle_kinds() -> None:
         )
     )
     kinds = set(
-        schema["$defs"]["problem"]["properties"]["assessment"]["properties"]
+        schema["$defs"]["ready_problem"]["allOf"][1]["properties"]["assessment"]["properties"]
         ["oracle"]["properties"]["kind"]["enum"]
     )
 

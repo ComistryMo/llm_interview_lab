@@ -4,66 +4,15 @@
   "title": "LLM Interview Lab workspace event",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "event_id",
-    "timestamp",
-    "profile_id",
-    "event_type",
-    "problem_id",
-    "attempt_id",
-    "payload"
-  ],
+  "required": ["schema_version", "event_id", "timestamp", "profile_id", "event_type", "problem_id", "attempt_id", "payload"],
   "properties": {
-    "schema_version": {
-      "const": 1
-    },
-    "event_id": {
-      "type": "string",
-      "pattern": "^evt-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-    },
-    "timestamp": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "profile_id": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9-]{0,63}$"
-    },
-    "event_type": {
-      "enum": [
-        "profile_created",
-        "legacy_import",
-        "task_started",
-        "public_tests_run",
-        "submission_created",
-        "task_implemented"
-      ]
-    },
-    "problem_id": {
-      "oneOf": [
-        {
-          "type": "string",
-          "pattern": "^[A-Z]+-[0-9]{3}$"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "attempt_id": {
-      "oneOf": [
-        {
-          "type": "string",
-          "pattern": "^attempt-[0-9]{4}$"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "payload": {
-      "type": "object"
-    }
+    "schema_version": {"const": 1},
+    "event_id": {"type": "string", "pattern": "^evt-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "profile_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "event_type": {"enum": ["profile_created", "legacy_import", "task_started", "public_tests_run", "submission_created", "task_implemented", "review_completed", "retention_d2_passed", "retention_d7_passed", "task_mastered", "task_failed", "hint_requested"]},
+    "problem_id": {"oneOf": [{"type": "string", "pattern": "^[A-Z]+-[0-9]{3}$"}, {"type": "null"}]},
+    "attempt_id": {"oneOf": [{"type": "string", "pattern": "^attempt-[0-9]{4}$"}, {"type": "null"}]},
+    "payload": {"type": "object"}
   }
 }

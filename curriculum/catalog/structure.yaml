@@ -1,0 +1,15 @@
+schema_version: 2
+tracks:
+  - {id: ai_foundation, title: AI Foundation, description: "Python, algorithms, tensors, losses, and training fundamentals."}
+  - {id: llm_algorithm, title: LLM Algorithm, description: "Transformer, language-model training, and post-training implementation."}
+  - {id: vlm_algorithm, title: VLM Algorithm, description: "Vision-language data flow, modeling, training, and evaluation."}
+  - {id: post_training, title: Post-Training, description: "SFT, preference optimization, reward modeling, and RL."}
+  - {id: agent, title: Agent, description: "Tool calling, trajectories, evaluation, and agent training."}
+  - {id: systems, title: Training and Inference Systems, description: "Distributed training, serving, quantization, and GPU fundamentals."}
+  - {id: traditional_ml, title: Traditional Machine Learning, description: "Classical supervised and unsupervised modeling."}
+  - {id: recommendation, title: Recommendation, description: "Retrieval, ranking, CTR modeling, and recommender systems."}
+  - {id: computer_vision, title: Computer Vision, description: "Core vision models, objectives, and evaluation."}
+  - {id: gnn, title: Graph Neural Networks, description: "Graph representation learning and message passing."}
+  - {id: generative_models, title: Generative Models, description: "VAE, GAN, and diffusion foundations."}
+  - {id: traditional_rl, title: Traditional Reinforcement Learning, description: "Value-based and policy-based reinforcement learning."}
+problems: []
