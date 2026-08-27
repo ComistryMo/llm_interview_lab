@@ -20,7 +20,7 @@ Release an honest public Alpha without expanding course breadth: explicit valida
 - [x] Local collection: 137 repository-health tests; no course starter/retention/Profile collection.
 - [x] Local regression: 135 passed, 2 Windows privilege skips.
 - [x] README Alpha disclosure, beta issue form, and one Ubuntu 3.11 CPU PyTorch job are present.
-- [ ] Draft PR, remote CI, main merge, and `v0.2.0-alpha.1` release.
+- [x] Draft PR #1 created; push and pull-request CI each passed all seven jobs. Release gate approved for main merge and `v0.2.0-alpha.1`.
 
 ## Rollback
 
