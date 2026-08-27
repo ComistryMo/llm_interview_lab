@@ -8,13 +8,16 @@ values suitable for a terminal or a Qt model.
 from __future__ import annotations
 
 from dataclasses import asdict
+import os
 from pathlib import Path
 from typing import Any, Iterable, Mapping
+from uuid import uuid4
 
 from .catalog import Catalog, Problem, load_catalog
 from .events import append_event, read_events, reduce_events
 from .grader import GraderResult, run_public_tests
 from .lifecycle import ReviewInput, ReviewResult, record_review
+from .materials import add_material, list_materials
 from .role_interviews import (
     create_role_interview,
     current_role_question,
@@ -22,6 +25,7 @@ from .role_interviews import (
     load_role_interview,
     record_role_answer,
     record_role_assessment,
+    record_role_followup,
     role_interview_report,
     run_role_coding_test,
     start_role_interview,
@@ -34,6 +38,7 @@ from .workspace import (
     init_profile,
     load_profile,
     profile_paths,
+    ensure_profile_path_is_safe,
     retention_due_at,
     start_problem,
     start_retention,
@@ -124,7 +129,7 @@ class ApplicationService:
             top = sorted(
                 role.skill_weights,
                 key=lambda skill_id: (-role.skill_weights[skill_id].weight, skill_id),
-            )[:4]
+            )[:8]
             cards.append(
                 {
                     "id": role.id,
@@ -138,6 +143,29 @@ class ApplicationService:
                 }
             )
         return cards
+
+    def material_cards(self, profile_id: str) -> list[dict[str, Any]]:
+        """Return manifest metadata only; never read or expose material bodies."""
+
+        return [item.as_dict() for item in list_materials(self.repo_root, profile_id)]
+
+    def add_career_material(
+        self,
+        profile_id: str,
+        source_path: str | Path,
+        *,
+        kind: str,
+        title: str | None = None,
+        ai_access: bool = False,
+    ) -> dict[str, Any]:
+        return add_material(
+            self.repo_root,
+            profile_id,
+            source_path,
+            kind=kind,
+            title=title,
+            ai_access=ai_access,
+        ).as_dict()
 
     def _state(self, profile_id: str):
         paths = profile_paths(self.repo_root, profile_id)
@@ -173,7 +201,7 @@ class ApplicationService:
             if attempt.implemented and not attempt.reviewed
         ]
         due_retention: list[dict[str, str]] = []
-        for problem_id in sorted(state.reviewed):
+        for problem_id in sorted(state.reviewed_at):
             if problem_id not in state.retained_d2:
                 due_retention.append(
                     {"problem_id": problem_id, "stage": "d2", "due_at": retention_due_at(state, problem_id, "d2").isoformat()}
@@ -182,9 +210,52 @@ class ApplicationService:
                 due_retention.append(
                     {"problem_id": problem_id, "stage": "d7", "due_at": retention_due_at(state, problem_id, "d7").isoformat()}
                 )
+        role_readiness: list[dict[str, Any]] = []
+        if role_preferences:
+            role = self.roles.roles.get(role_preferences.get("primary_role"))
+            seniority = role_preferences.get("seniority", "new_grad")
+            assessment = role_preferences.get("skill_self_assessment", {})
+            if role is not None and seniority in role.seniority:
+                domains: dict[str, dict[str, float]] = {}
+                for skill_id, target in role.skill_weights.items():
+                    skill = self.roles.skills[skill_id]
+                    target_level = max(1, target.target_level[seniority])
+                    related = set(skill.related_problems)
+                    verified_level = (
+                        3 * len(related.intersection(state.mastered)) / len(related)
+                        if related
+                        else 0.0
+                    )
+                    bucket = domains.setdefault(
+                        skill.domain,
+                        {"weight": 0.0, "self": 0.0, "verified": 0.0},
+                    )
+                    bucket["weight"] += target.weight
+                    bucket["self"] += target.weight * min(
+                        float(assessment.get(skill_id, 0)) / target_level, 1.0
+                    )
+                    bucket["verified"] += target.weight * min(
+                        verified_level / target_level, 1.0
+                    )
+                role_readiness = [
+                    {
+                        "id": domain,
+                        "label": domain.replace("_", " ").title(),
+                        "self_reported": round(value["self"] / value["weight"], 3),
+                        "verified": round(value["verified"] / value["weight"], 3),
+                    }
+                    for domain, value in sorted(domains.items())
+                    if value["weight"] > 0
+                ]
+        role_view = None
+        if role_preferences:
+            role_view = dict(role_preferences)
+            selected_role = self.roles.roles.get(role_preferences.get("primary_role"))
+            if selected_role is not None:
+                role_view["title"] = selected_role.title
         return {
             "profile_id": profile_id,
-            "role": role_preferences or None,
+            "role": role_view,
             "current": (
                 {
                     "problem_id": current.problem_id,
@@ -206,6 +277,7 @@ class ApplicationService:
                 for problem in available[:3]
             ],
             "mastered_count": len(state.mastered),
+            "role_readiness": role_readiness,
         }
 
     def problem_view(self, problem_id: str) -> dict[str, Any]:
@@ -221,6 +293,50 @@ class ApplicationService:
             "prerequisites": list(problem.prerequisites),
             "difficulty": problem.raw["difficulty"],
             "task": task,
+        }
+
+    def problem_cards(self, profile_id: str) -> list[dict[str, Any]]:
+        _, profile, state = self._state(profile_id)
+        tracks = set(profile["target_roles"])
+        cards: list[dict[str, Any]] = []
+        for problem_id in self.catalog.order:
+            problem = self.catalog.problems[problem_id]
+            if not tracks.intersection(problem.raw["tracks"]):
+                continue
+            cards.append(
+                {
+                    "problem_id": problem.id,
+                    "title": problem.title,
+                    "status": state.problem_status(problem.id),
+                    "asset_status": problem.status,
+                    "validation": problem.validation_level if problem.ready else "planned",
+                    "difficulty": problem.raw["difficulty"],
+                    "locked": not set(problem.prerequisites).issubset(state.mastered),
+                    "prerequisites": list(problem.prerequisites),
+                    "retention": bool(
+                        problem.ready
+                        and all(
+                            problem.retention_variant(self.repo_root, stage)
+                            for stage in ("d2", "d7")
+                        )
+                    ),
+                }
+            )
+        return cards
+
+    def current_submission(self, profile_id: str) -> dict[str, Any] | None:
+        paths, _, state = self._state(profile_id)
+        attempt = state.current_attempt()
+        if attempt is None or attempt.submission_relpath is None:
+            return None
+        path = self.repo_root.joinpath(*attempt.submission_relpath.split("/"))
+        inspected = inspect_submission(path, paths.submissions_root)
+        return {
+            "problem_id": attempt.problem_id,
+            "attempt_id": attempt.attempt_id,
+            "path": str(inspected.path),
+            "sha256": inspected.sha256,
+            "text": inspected.path.read_text(encoding="utf-8"),
         }
 
     def start_practice(
@@ -377,6 +493,62 @@ class ApplicationService:
             self.repo_root, profile_id, interview_id, self.catalog
         )
 
+    def current_interview_coding_submission(
+        self, profile_id: str, interview_id: str
+    ) -> dict[str, str]:
+        """Return only the active coding answer from this exact Profile/session."""
+
+        current = self.current_interview(profile_id, interview_id)["question"]
+        if current is None or current["kind"] != "coding":
+            raise ApplicationError("the current interview question is not coding")
+        paths = profile_paths(self.repo_root, profile_id)
+        root = paths.interviews_root / interview_id / "coding" / current["question_id"]
+        path = ensure_profile_path_is_safe(
+            self.repo_root, profile_id, root / "submission.py", must_exist=True
+        )
+        inspected = inspect_submission(path, root)
+        return {
+            "question_id": current["question_id"],
+            "sha256": inspected.sha256,
+            "text": path.read_text(encoding="utf-8"),
+        }
+
+    def save_interview_coding_submission(
+        self, profile_id: str, interview_id: str, text: str
+    ) -> dict[str, str]:
+        """Atomically save the visible active coding answer; never touch Practice."""
+
+        if not isinstance(text, str) or len(text.encode("utf-8")) > 1_000_000:
+            raise ApplicationError("coding submission must be UTF-8 text up to 1 MB")
+        current = self.current_interview(profile_id, interview_id)["question"]
+        if current is None or current["kind"] != "coding":
+            raise ApplicationError("the current interview question is not coding")
+        paths = profile_paths(self.repo_root, profile_id)
+        root = paths.interviews_root / interview_id / "coding" / current["question_id"]
+        path = ensure_profile_path_is_safe(
+            self.repo_root, profile_id, root / "submission.py", must_exist=True
+        )
+        temporary = ensure_profile_path_is_safe(
+            self.repo_root,
+            profile_id,
+            path.with_name(f".{path.name}.{uuid4().hex}.tmp"),
+        )
+        try:
+            with temporary.open("x", encoding="utf-8", newline="\n") as stream:
+                stream.write(text)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, path)
+        except OSError as error:
+            temporary.unlink(missing_ok=True)
+            raise ApplicationError("coding submission could not be saved") from error
+        inspected = inspect_submission(path, root)
+        return {
+            "question_id": current["question_id"],
+            "sha256": inspected.sha256,
+            "text": text,
+        }
+
     def score_interview(
         self,
         profile_id: str,
@@ -399,6 +571,26 @@ class ApplicationService:
             source=source,
             confidence=confidence,
             fatal_issues=fatal_issues,
+        )
+
+    def record_interview_followup(
+        self,
+        profile_id: str,
+        interview_id: str,
+        *,
+        parent_question_id: str,
+        prompt: str,
+        answer: str,
+        source: str = "ai",
+    ) -> dict[str, Any]:
+        return record_role_followup(
+            self.repo_root,
+            profile_id,
+            interview_id,
+            parent_question_id=parent_question_id,
+            prompt=prompt,
+            answer=answer,
+            source=source,
         )
 
     def finish_interview(

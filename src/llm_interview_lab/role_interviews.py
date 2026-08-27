@@ -491,11 +491,18 @@ def _remaining_seconds(session: Mapping[str, Any], now: datetime | None = None) 
     )
 
 
-def _is_complete(session: Mapping[str, Any], question: Mapping[str, Any]) -> bool:
+def _has_response(session: Mapping[str, Any], question: Mapping[str, Any]) -> bool:
     question_id = question["question_id"]
     if question["kind"] == "coding":
         return question_id in session["coding_evidence"]
     return question_id in session["answers"]
+
+
+def _is_complete(session: Mapping[str, Any], question: Mapping[str, Any]) -> bool:
+    """A question advances only after response evidence and assessment exist."""
+
+    question_id = question["question_id"]
+    return _has_response(session, question) and question_id in session["assessments"]
 
 
 def current_role_question(
@@ -535,6 +542,8 @@ def record_role_answer(
         raise RoleInterviewError("only the current question may be answered")
     if current["kind"] == "coding":
         raise RoleInterviewError("run the coding grader instead of recording a text answer")
+    if question_id in session["answers"]:
+        raise RoleInterviewError("the current question already has recorded answer evidence")
     root = _session_root(repo_root, profile_id, interview_id)
     path = ensure_profile_path_is_safe(
         repo_root, profile_id, root / "answers" / f"{question_id}.md"
@@ -655,7 +664,7 @@ def record_role_assessment(
         (value for value in session["questions"] if value["question_id"] == question_id),
         None,
     )
-    if question is None or not _is_complete(session, question):
+    if question is None or not _has_response(session, question):
         raise RoleInterviewError("assessment requires completed question evidence")
     expected = set(question["rubric"]["dimensions"])
     if set(scores) != expected or any(type(value) is not int or value < 1 or value > 5 for value in scores.values()):
@@ -701,7 +710,9 @@ def finish_role_interview(
     session = load_role_interview(repo_root, profile_id, interview_id)
     if session["status"] != "active":
         raise RoleInterviewError("only an active role interview can be finished")
-    unanswered = [q["question_id"] for q in session["questions"] if not _is_complete(session, q)]
+    unanswered = [
+        q["question_id"] for q in session["questions"] if not _has_response(session, q)
+    ]
     unscored = [q["question_id"] for q in session["questions"] if q["question_id"] not in session["assessments"]]
     expired = _remaining_seconds(session, now) == 0
     if (unanswered or unscored) and not (confirm_incomplete or expired):

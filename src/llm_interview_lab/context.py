@@ -20,6 +20,12 @@ from .catalog import Catalog, Problem
 from .events import read_events, reduce_events, summarize_mistakes
 from .interviews import current_question, load_session, reference_warnings
 from .materials import get_material
+from .role_interviews import (
+    ROLE_INTERVIEW_ID_PREFIX,
+    RoleInterviewError,
+    current_role_question,
+    load_role_interview,
+)
 from .submissions import SubmissionError, inspect_submission
 from .workspace import (
     event_schema_path,
@@ -526,6 +532,208 @@ def _completed_interview_evidence(
     return evidence, allowlist
 
 
+def _role_material_ref(
+    repo_root: Path,
+    profile_id: str,
+    reference: Mapping[str, Any],
+) -> dict[str, str]:
+    if reference["allowed_use"] != "role_interview":
+        raise ContextError("role interview material has no matching consent")
+    record = get_material(repo_root, profile_id, reference["id"])
+    if not record.ai_access or record.sha256 != reference["sha256"]:
+        raise ContextError("role interview material consent is stale or revoked")
+    material_path = profile_paths(repo_root, profile_id).root.joinpath(
+        *record.relative_path.split("/")
+    )
+    return {
+        "path": _repo_relative(
+            repo_root, material_path, f"material_{reference['id']}"
+        ),
+        "purpose": "consented_role_interview_material",
+        "sha256": record.sha256,
+        "material_id": record.id,
+        "allowed_use": reference["allowed_use"],
+    }
+
+
+def _build_role_interview_context(
+    repo_root: Path,
+    catalog: Catalog,
+    profile_id: str,
+    interview_id: str,
+) -> dict[str, Any]:
+    """Build a current-question-only view for one role-aware interview."""
+
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    read_allowlist: list[dict[str, str]] = []
+    commands: dict[str, str] = {}
+    current: dict[str, Any]
+
+    if session["status"] == "ready":
+        current = {
+            "status": "ready",
+            "configuration": {
+                "role_id": session["role_id"],
+                "seniority": session["seniority"],
+                "difficulty": session["difficulty"],
+                "duration_minutes": session["duration_minutes"],
+                "ai_mode": session["ai_mode"],
+            },
+            # Only timing and kinds are visible before the clock starts.
+            "question_plan": [
+                {
+                    "question_id": question["question_id"],
+                    "kind": question["kind"],
+                    "timebox_minutes": question["timebox_minutes"],
+                }
+                for question in session["questions"]
+            ],
+        }
+        commands["next"] = (
+            f"llm-lab interview role-start {interview_id} --profile {profile_id}"
+        )
+    elif session["status"] == "active":
+        try:
+            stage = current_role_question(repo_root, profile_id, interview_id)
+        except RoleInterviewError as error:
+            if "expired" not in str(error):
+                raise ContextError(str(error)) from error
+            stage = {"question": None, "remaining_seconds": 0}
+        question = stage["question"]
+        current = {
+            "status": "expired" if stage["remaining_seconds"] == 0 else "active",
+            "deadline": session["deadline"],
+            "remaining_seconds": stage["remaining_seconds"],
+            "question": None,
+        }
+        if question is None:
+            commands["next"] = (
+                f"llm-lab interview role-finish {interview_id} --profile {profile_id}"
+            )
+        else:
+            question_id = question["question_id"]
+            current["question"] = {
+                "question_id": question_id,
+                "kind": question["kind"],
+                "title": question["title"],
+                "prompt": question["prompt"],
+                "timebox_minutes": question["timebox_minutes"],
+                "skills": question["skills"],
+                "rubric": question["rubric"],
+            }
+            if question["kind"] == "coding":
+                problem = catalog.get(question["source"]["id"])
+                assert problem.problem_dir is not None
+                task_ref = _file_ref(
+                    repo_root,
+                    problem.problem_dir / "task.md",
+                    "interview_coding_contract",
+                )
+                submission_path = (
+                    profile_paths(repo_root, profile_id).interviews_root
+                    / interview_id
+                    / "coding"
+                    / question_id
+                    / "submission.py"
+                )
+                try:
+                    inspected = inspect_submission(
+                        submission_path, submission_path.parent
+                    )
+                except SubmissionError as error:
+                    raise ContextError(
+                        f"current interview submission is unavailable: {error}"
+                    ) from error
+                submission_ref = _file_ref(
+                    repo_root, inspected.path, "current_interview_submission"
+                )
+                current["coding"] = {
+                    "contract": {
+                        "path": task_ref["path"],
+                        "sha256": task_ref["sha256"],
+                    },
+                    "submission": {
+                        "path": submission_ref["path"],
+                        "sha256": submission_ref["sha256"],
+                    },
+                    "grader": session["coding_evidence"].get(question_id),
+                }
+                read_allowlist.extend((task_ref, submission_ref))
+                commands["test"] = (
+                    f"llm-lab interview role-test {interview_id} --profile {profile_id}"
+                )
+            else:
+                answer = session["answers"].get(question_id)
+                if answer is None:
+                    commands["next"] = (
+                        f"llm-lab interview role-answer {interview_id} "
+                        f"--profile {profile_id} --question {question_id} --file ANSWER_FILE"
+                    )
+                else:
+                    answer_path = _profile_relative(
+                        repo_root, profile_id, answer["relative_path"]
+                    )
+                    answer_ref = _file_ref(
+                        repo_root, answer_path, "current_interview_answer"
+                    )
+                    if answer_ref["sha256"] != answer["sha256"]:
+                        raise ContextError("current interview answer changed after recording")
+                    current["answer"] = {
+                        "path": answer_ref["path"],
+                        "sha256": answer_ref["sha256"],
+                    }
+                    read_allowlist.append(answer_ref)
+            if question_id not in session["assessments"] and (
+                question_id in session["answers"]
+                or question_id in session["coding_evidence"]
+            ):
+                commands["next"] = (
+                    f"llm-lab interview role-score {interview_id} --profile {profile_id} "
+                    f"--question {question_id} --help"
+                )
+            for reference in session["material_refs"]:
+                read_allowlist.append(
+                    _role_material_ref(repo_root, profile_id, reference)
+                )
+    else:
+        report = (
+            profile_paths(repo_root, profile_id).interviews_root
+            / interview_id
+            / "report.md"
+        )
+        current = {
+            "status": session["status"],
+            "result": session["result"],
+            "report": None,
+        }
+        if report.is_file():
+            report_ref = _file_ref(repo_root, report, "final_interview_report")
+            current["report"] = {
+                "path": report_ref["path"],
+                "sha256": report_ref["sha256"],
+            }
+            read_allowlist.append(report_ref)
+        commands["next"] = (
+            f"llm-lab interview role-report {interview_id} --profile {profile_id}"
+        )
+
+    value: dict[str, Any] = {
+        "schema_version": CONTEXT_SCHEMA_VERSION,
+        "mode": "INTERVIEWER",
+        "profile_id": profile_id,
+        "scope": "mock_interview",
+        "interview_id": interview_id,
+        "policy_refs": _policy_refs(repo_root, "interviewer"),
+        "state_fingerprint": "0" * 64,
+        "plan_fingerprint": session["plan_fingerprint"],
+        "current": current,
+        "read_allowlist": read_allowlist,
+        "commands": commands,
+        "excluded": list(EXCLUDED_CONTEXT),
+    }
+    return _with_fingerprint(value)
+
+
 def build_interview_context(
     repo_root: Path,
     catalog: Catalog,
@@ -535,6 +743,10 @@ def build_interview_context(
     """Build a stage-gated context for one explicitly named interview."""
 
     repo_root = repo_root.resolve()
+    if interview_id.startswith(ROLE_INTERVIEW_ID_PREFIX):
+        return _build_role_interview_context(
+            repo_root, catalog, profile_id, interview_id
+        )
     session = load_session(repo_root, profile_id, interview_id, catalog)
     read_allowlist: list[dict[str, str]] = []
     commands: dict[str, str] = {}

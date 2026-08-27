@@ -8,7 +8,13 @@ import subprocess
 
 import pytest
 
+from llm_interview_lab.ai.context_builder import (
+    ContextBuilderError,
+    build_role_interview_context_preview,
+)
 from llm_interview_lab.catalog import load_catalog
+from llm_interview_lab.context import build_interview_context, serialize_context
+from llm_interview_lab.materials import add_material, resolve_material_path
 from llm_interview_lab.role_interviews import (
     RoleInterviewError,
     create_role_interview,
@@ -42,6 +48,8 @@ def _repository(tmp_path: Path, *profiles: str) -> Path:
     shutil.copytree(REPO_ROOT / "curriculum", root / "curriculum")
     shutil.copytree(REPO_ROOT / "workspace/schema", root / "workspace/schema")
     shutil.copytree(REPO_ROOT / "workspace/templates", root / "workspace/templates")
+    shutil.copytree(REPO_ROOT / "coach", root / "coach")
+    shutil.copy2(REPO_ROOT / "AGENTS.md", root / "AGENTS.md")
     (root / "workspace/profiles").mkdir(parents=True)
     (root / "workspace/profiles/.gitkeep").write_text("", encoding="utf-8")
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)
@@ -267,3 +275,137 @@ def test_plan_fingerprint_rejects_tampering(tmp_path: Path) -> None:
     path.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(RoleInterviewError, match="plan changed"):
         load_role_interview(root, "learner-one", session["interview_id"])
+
+
+def test_role_interview_context_reads_only_explicit_sha_bound_material(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    source = tmp_path / "resume.md"
+    source.write_text(
+        "Synthetic candidate evidence: built a toy evaluator.\n", encoding="utf-8"
+    )
+    material = add_material(
+        root,
+        "learner-one",
+        source,
+        kind="resume",
+        title="Synthetic resume",
+        ai_access=True,
+        material_id="resume-one",
+    )
+    session = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="ai_product_manager",
+        seniority="new_grad",
+        ai_mode="provider",
+        material_ids=(material.id,),
+        consent_materials=True,
+        now=T0,
+    )
+    start_role_interview(root, "learner-one", session["interview_id"], catalog, now=T0)
+    preview = build_role_interview_context_preview(
+        root,
+        "learner-one",
+        session["interview_id"],
+        candidate_answer="I would validate one measurable assumption first.",
+    )
+    assert [part.id for part in preview.parts] == [
+        "policy",
+        "question",
+        "material:resume-one",
+        "candidate_answer",
+    ]
+    assert preview.parts[2].sensitive
+    assert "toy evaluator" in preview.parts[2].content
+    assert "learner-two" not in preview.selected_text
+    without_material = build_role_interview_context_preview(
+        root,
+        "learner-one",
+        session["interview_id"],
+        candidate_answer="I would validate one measurable assumption first.",
+        include_materials=False,
+    )
+    assert [part.id for part in without_material.parts] == [
+        "policy",
+        "question",
+        "candidate_answer",
+    ]
+    assert "toy evaluator" not in without_material.selected_text
+
+    resolve_material_path(root, "learner-one", material).write_text(
+        "changed after consent\n", encoding="utf-8"
+    )
+    with pytest.raises(ContextBuilderError, match="stale or revoked"):
+        build_role_interview_context_preview(
+            root,
+            "learner-one",
+            session["interview_id"],
+            candidate_answer="Same answer.",
+        )
+
+
+def test_role_interviewer_context_never_previews_future_question(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    session = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="ai_product_manager",
+        seniority="new_grad",
+        now=T0,
+    )
+    first, second = session["questions"][:2]
+    ready = build_interview_context(
+        root, catalog, "learner-one", session["interview_id"]
+    )
+    assert first["prompt"] not in serialize_context(ready)
+    assert second["prompt"] not in serialize_context(ready)
+
+    start_role_interview(root, "learner-one", session["interview_id"], catalog, now=T0)
+    active = build_interview_context(
+        root, catalog, "learner-one", session["interview_id"]
+    )
+    assert active["current"]["question"]["question_id"] == "q-001"
+    assert active["current"]["question"]["prompt"] == first["prompt"]
+    assert active["current"]["question"]["prompt"] != second["prompt"]
+
+    record_role_answer(
+        root,
+        "learner-one",
+        session["interview_id"],
+        "q-001",
+        "I state assumptions, a measurable outcome, and a reversible experiment.",
+        now=T0 + timedelta(minutes=1),
+    )
+    awaiting_score = build_interview_context(
+        root, catalog, "learner-one", session["interview_id"]
+    )
+    assert awaiting_score["current"]["question"]["question_id"] == "q-001"
+    assert awaiting_score["current"]["answer"]["path"].endswith("q-001.md")
+    assert "role-score" in awaiting_score["commands"]["next"]
+    assert awaiting_score["current"]["question"]["prompt"] != second["prompt"]
+
+    record_role_assessment(
+        root,
+        "learner-one",
+        session["interview_id"],
+        "q-001",
+        {name: 3 for name in first["rubric"]["dimensions"]},
+        evidence="q-001 names assumptions and measurable evidence.",
+        source="human",
+        confidence="high",
+        now=T0 + timedelta(minutes=2),
+    )
+    next_question = build_interview_context(
+        root, catalog, "learner-one", session["interview_id"]
+    )
+    assert next_question["current"]["question"]["question_id"] == "q-002"
