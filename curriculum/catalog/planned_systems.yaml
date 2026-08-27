@@ -1,0 +1,433 @@
+schema_version: 2
+problems:
+  - id: AGT-003
+    title: "Tool-Call Parser"
+    status: planned
+    domain: agent
+    tracks: ["agent"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["AGT-001"]
+    problem_type: implementation
+    description: "Parse structured model output into validated final or tool actions."
+  - id: AGT-004
+    title: "Tool Executor"
+    status: planned
+    domain: agent
+    tracks: ["agent"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["AGT-002","AGT-003"]
+    problem_type: implementation
+    description: "Execute trusted local tools and normalize success and failure observations."
+  - id: AGT-005
+    title: "Retry and Timeout Policy"
+    status: planned
+    domain: agent
+    tracks: ["agent"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["AGT-004"]
+    problem_type: design
+    description: "Apply bounded retries and per-step deadlines with explicit terminal reasons."
+  - id: AGT-007
+    title: "Agent State Machine"
+    status: planned
+    domain: agent
+    tracks: ["agent"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["AGT-006"]
+    problem_type: implementation
+    description: "Represent agent phases and reject illegal state transitions."
+  - id: AGT-008
+    title: "Trajectory Replay"
+    status: planned
+    domain: agent
+    tracks: ["agent"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["AGT-009"]
+    problem_type: implementation
+    description: "Replay recorded actions against a deterministic environment adapter."
+  - id: AGT-010
+    title: "Trajectory Evaluator"
+    status: planned
+    domain: agent
+    tracks: ["agent","post_training"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["AGT-008"]
+    problem_type: implementation
+    description: "Compute success, efficiency, and invalid-action metrics from trajectories."
+  - id: AGT-011
+    title: "Environment Reset Contract"
+    status: planned
+    domain: agent
+    tracks: ["agent"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["AGT-007"]
+    problem_type: implementation
+    description: "Reset seeded environments and verify independent episode state."
+  - id: AGT-012
+    title: "Long-Trajectory Truncation"
+    status: planned
+    domain: agent
+    tracks: ["agent"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["AGT-009","AGT-010"]
+    problem_type: implementation
+    description: "Truncate or summarize long histories without breaking tool causality."
+  - id: AGT-013
+    title: "GUI Action Space"
+    status: planned
+    domain: agent
+    tracks: ["agent","vlm_algorithm"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["AGT-001","VLM-011"]
+    problem_type: implementation
+    description: "Validate click, type, scroll, wait, and finish actions in screen coordinates."
+  - id: AGT-014
+    title: "Agent Benchmark Harness"
+    status: planned
+    domain: agent
+    tracks: ["agent"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["AGT-010","AGT-011"]
+    problem_type: integration
+    description: "Run seeded tasks and aggregate reproducible agent metrics."
+  - id: AGT-015
+    title: "Agent SFT Collator"
+    status: planned
+    domain: agent
+    tracks: ["agent","post_training"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["AGT-009","PT-001"]
+    problem_type: implementation
+    description: "Mask observations and supervise only selected agent action tokens."
+  - id: AGT-016
+    title: "Agent RL Rollout Batch"
+    status: planned
+    domain: agent
+    tracks: ["agent","post_training"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["AGT-014","PT-015"]
+    problem_type: integration
+    description: "Convert trajectories into grouped rollout, reward, and mask tensors."
+  - id: AGT-017
+    title: "Benchmark Leakage and Version Audit"
+    status: planned
+    domain: agent
+    tracks: ["agent"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["AGT-014","FND-012"]
+    problem_type: debugging
+    description: "Detect task leakage and pin environment and evaluator versions."
+  - id: INF-001
+    title: "Sampling Pipeline"
+    status: planned
+    domain: inference
+    tracks: ["llm_algorithm","systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ATT-011"]
+    problem_type: integration
+    description: "Compose temperature, penalties, top-k, top-p, and seeded sampling."
+  - id: INF-002
+    title: "KV Cache Memory Estimator"
+    status: planned
+    domain: inference
+    tracks: ["systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["ATT-009"]
+    problem_type: derivation
+    description: "Estimate cache bytes from layers, sequence, dtype, and KV heads."
+  - id: INF-003
+    title: "Continuous Batching Scheduler"
+    status: planned
+    domain: inference
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["ALG-007","INF-002"]
+    problem_type: implementation
+    description: "Admit prefill and decode work under token and memory budgets."
+  - id: INF-004
+    title: "Prefix Cache"
+    status: planned
+    domain: inference
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["ATT-009","ALG-017"]
+    problem_type: implementation
+    description: "Reuse immutable prompt KV blocks with deterministic eviction."
+  - id: INF-005
+    title: "PagedAttention Block Table"
+    status: planned
+    domain: inference
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["ATT-017","INF-002"]
+    problem_type: implementation
+    description: "Allocate and free physical cache blocks through logical block tables."
+  - id: INF-006
+    title: "Radix Prefix Cache"
+    status: planned
+    domain: inference
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["ALG-014","INF-004"]
+    problem_type: implementation
+    description: "Index shared token prefixes in a radix tree with reference counts."
+  - id: INF-007
+    title: "Speculative Decoding Acceptance"
+    status: planned
+    domain: inference
+    tracks: ["systems","llm_algorithm"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["LOSS-007","FND-011"]
+    problem_type: implementation
+    description: "Implement target/draft acceptance and corrected resampling probabilities."
+  - id: INF-008
+    title: "Symmetric INT8 Quantization"
+    status: planned
+    domain: inference
+    tracks: ["systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-015"]
+    problem_type: implementation
+    description: "Quantize and dequantize tensors with per-tensor and per-channel scales."
+  - id: INF-009
+    title: "INT4 and NF4 Packing"
+    status: planned
+    domain: inference
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["INF-008"]
+    problem_type: implementation
+    description: "Pack low-bit codes and compare uniform with normal-float codebooks."
+  - id: INF-010
+    title: "AWQ Scale Search"
+    status: planned
+    domain: inference
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["INF-009"]
+    problem_type: implementation
+    description: "Search activation-aware channel scales on public toy calibration data."
+  - id: INF-011
+    title: "GPTQ Error Compensation"
+    status: planned
+    domain: inference
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["INF-009"]
+    problem_type: derivation
+    description: "Trace sequential weight quantization with Hessian-based compensation."
+  - id: INF-012
+    title: "SmoothQuant Scaling"
+    status: planned
+    domain: inference
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["INF-008"]
+    problem_type: implementation
+    description: "Move activation outliers into weights with per-channel scaling."
+  - id: INF-013
+    title: "LoRA Merge and Unmerge"
+    status: planned
+    domain: inference
+    tracks: ["llm_algorithm","systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["NNL-001"]
+    problem_type: implementation
+    description: "Merge low-rank adapters into base weights and restore them exactly."
+  - id: INF-014
+    title: "Serving Request Scheduler"
+    status: planned
+    domain: inference
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["INF-003"]
+    problem_type: design
+    description: "Balance latency, throughput, fairness, and cancellation in request queues."
+  - id: DST-001
+    title: "Collective Communication Shapes"
+    status: planned
+    domain: distributed
+    tracks: ["systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["TNS-015"]
+    problem_type: implementation
+    description: "Simulate all-reduce, all-gather, and reduce-scatter tensor contracts."
+  - id: DST-002
+    title: "Distributed Data Parallel"
+    status: planned
+    domain: distributed
+    tracks: ["systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: ["DST-001","OPT-012"]
+    problem_type: design
+    description: "Trace gradient buckets, synchronization, and no_sync accumulation."
+  - id: DST-003
+    title: "ZeRO State Partitioning"
+    status: planned
+    domain: distributed
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["DST-002","OPT-005"]
+    problem_type: derivation
+    description: "Calculate optimizer, gradient, and parameter memory by ZeRO stage."
+  - id: DST-004
+    title: "Fully Sharded Data Parallel"
+    status: planned
+    domain: distributed
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["DST-003"]
+    problem_type: design
+    description: "Trace parameter all-gather and gradient reduce-scatter around modules."
+  - id: DST-005
+    title: "Tensor Parallel Linear"
+    status: planned
+    domain: distributed
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["DST-001","NNL-001"]
+    problem_type: implementation
+    description: "Implement column and row parallel linear reference compositions."
+  - id: DST-006
+    title: "Pipeline Parallel Schedule"
+    status: planned
+    domain: distributed
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["DST-002"]
+    problem_type: implementation
+    description: "Generate GPipe and 1F1B micro-batch schedules and bubble metrics."
+  - id: DST-007
+    title: "Expert Parallel Routing"
+    status: planned
+    domain: distributed
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["DST-001","NNL-014"]
+    problem_type: design
+    description: "Route tokens across ranks and account for all-to-all capacity."
+  - id: DST-008
+    title: "Sharded Checkpoint Manifest"
+    status: planned
+    domain: distributed
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["DST-004","OPT-010"]
+    problem_type: implementation
+    description: "Validate shard manifests and reconstruct a logical state dict."
+  - id: GPU-001
+    title: "Tiled Matrix Multiplication"
+    status: planned
+    domain: gpu
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["NNL-001"]
+    problem_type: implementation
+    description: "Implement a CPU reference tiled GEMM and reason about GPU reuse."
+  - id: GPU-002
+    title: "Parallel Reduction"
+    status: planned
+    domain: gpu
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["GPU-001"]
+    problem_type: implementation
+    description: "Implement staged reductions and analyze synchronization and precision."
+  - id: GPU-003
+    title: "Online Softmax Kernel Model"
+    status: planned
+    domain: gpu
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["ATT-015","GPU-002"]
+    problem_type: implementation
+    description: "Apply online max and denominator recurrences over blocks."
+  - id: GPU-004
+    title: "RMSNorm Kernel Contract"
+    status: planned
+    domain: gpu
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["NNL-008","GPU-002"]
+    problem_type: design
+    description: "Specify fusion, reduction, dtype, and alignment requirements."
+  - id: GPU-005
+    title: "RoPE Kernel Contract"
+    status: planned
+    domain: gpu
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["ATT-007","GPU-001"]
+    problem_type: design
+    description: "Specify vectorized pair rotation and memory-layout constraints."
+  - id: GPU-006
+    title: "Attention Kernel Contract"
+    status: planned
+    domain: gpu
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["GPU-003","ATT-002"]
+    problem_type: design
+    description: "Map tiled QK, online Softmax, and PV accumulation without materialized scores."
+  - id: GPU-007
+    title: "Roofline Arithmetic Intensity"
+    status: planned
+    domain: gpu
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["GPU-001"]
+    problem_type: derivation
+    description: "Estimate compute and memory bounds for common transformer kernels."
+  - id: GPU-008
+    title: "GPU Profiling Interpretation"
+    status: planned
+    domain: gpu
+    tracks: ["systems"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 5}
+    prerequisites: ["GPU-007"]
+    problem_type: debugging
+    description: "Interpret public profiler traces for launch, memory, and occupancy bottlenecks."
+

@@ -12,4 +12,58 @@ tracks:
   - {id: gnn, title: Graph Neural Networks, description: "Graph representation learning and message passing."}
   - {id: generative_models, title: Generative Models, description: "VAE, GAN, and diffusion foundations."}
   - {id: traditional_rl, title: Traditional Reinforcement Learning, description: "Value-based and policy-based reinforcement learning."}
+quests:
+  - id: python_data_reliability
+    title: Python Data Reliability
+    problem_ids: [FND-001, FND-002, FND-003, FND-004, FND-005, FND-006]
+    description: Validate, filter, summarize, stream, and batch toy inference data.
+  - id: tensor_and_autograd
+    title: Tensor and Autograd
+    problem_ids: [TNS-002, TNS-003, TNS-006, TNS-010, TNS-011, TNS-013, TNS-007, TNS-012]
+    description: Restore shape fluency and make gradient and state boundaries explicit.
+  - id: stable_loss
+    title: Stable Loss
+    problem_ids: [LOSS-007, LOSS-008, LOSS-013, LOSS-014, LOSS-004, LOSS-006]
+    description: Derive stable objectives and align both values and gradients.
+  - id: optimizer_training_loop
+    title: Optimizer and Training Loop
+    problem_ids: [OPT-001, OPT-002, OPT-004, OPT-005, OPT-006, OPT-007, OPT-009, OPT-010, OPT-012]
+    description: Connect optimizer state to a resumable, auditable training loop.
+  - id: transformer_forward
+    title: Transformer Forward
+    problem_ids: [NNL-001, NNL-002, NNL-008, ATT-002, ATT-004, ATT-005, ATT-006, ATT-007, ATT-009, ATT-008]
+    description: Progress from primitive layers through attention variants and one decoder block.
+  - id: tiny_decoder
+    title: Tiny Decoder
+    problem_ids: [TOK-003, NNL-005, ATT-008, ATT-010, ATT-011, ATT-012]
+    description: Assemble and sample from a small decoder-only language model.
+  - id: post_training_quest
+    title: Post-Training
+    problem_ids: [PT-001, PT-002, PT-003, PT-004, PT-005, PT-006, PT-007, PT-014, PT-015]
+    description: Trace SFT, preference, reward, and grouped policy objectives end to end.
+  - id: vlm_data_flow
+    title: VLM Data Flow
+    problem_ids: [VLM-001, VLM-002, VLM-003, VLM-004, VLM-005, VLM-006, VLM-007, VLM-013, VLM-014]
+    description: Align images, placeholders, labels, batches, and leakage-resistant evaluation.
+  - id: agent_runtime
+    title: Agent Runtime
+    problem_ids: [AGT-001, AGT-002, AGT-003, AGT-004, AGT-006, AGT-007, AGT-009, AGT-010]
+    description: Build a deterministic tool-calling loop and trajectory evaluation path.
+  - id: efficient_inference
+    title: Efficient Inference
+    problem_ids: [ATT-009, INF-002, INF-003, INF-004, ATT-017, INF-005, INF-007]
+    description: Connect cache representation, batching, prefix reuse, paging, and speculative decode.
+  - id: distributed_training
+    title: Distributed Training
+    problem_ids: [DST-001, DST-002, DST-003, DST-004, DST-005, DST-006, DST-007, DST-008]
+    description: Reason from collective shapes through parallelism and sharded checkpoints.
+capstones:
+  - {id: toy_classifier_trainer, title: Toy Classifier Trainer, status: planned, tracks: [ai_foundation], prerequisites: [OPT-012, LOSS-010], description: "Train and resume a small classifier with deterministic metrics."}
+  - {id: tiny_transformer_decoder, title: Tiny Transformer Decoder, status: planned, tracks: [llm_algorithm], prerequisites: [ATT-012, OPT-012], description: "Train and sample from a small decoder using only public toy data."}
+  - {id: minimal_sft_trainer, title: Minimal SFT Trainer, status: planned, tracks: [llm_algorithm, post_training], prerequisites: [PT-004], description: "Run masked SFT with checkpoint and evaluation evidence."}
+  - {id: reward_model_dpo, title: Reward Model and DPO, status: planned, tracks: [post_training], prerequisites: [PT-006, PT-007], description: "Validate preference data and align reward and DPO objectives."}
+  - {id: grpo_mini_loop, title: GRPO Mini Loop, status: planned, tracks: [post_training], prerequisites: [PT-013, PT-015, PT-016, PT-017], description: "Connect grouped rollout, rewards, advantages, and clipped updates."}
+  - {id: multimodal_sft_pipeline, title: Multimodal SFT Pipeline, status: planned, tracks: [vlm_algorithm], prerequisites: [VLM-007, PT-004, VLM-014], description: "Train a toy multimodal batch path with leakage checks."}
+  - {id: tool_calling_agent_loop, title: Tool-Calling Agent Loop, status: planned, tracks: [agent], prerequisites: [AGT-010, AGT-014, AGT-017], description: "Run and evaluate deterministic local tool trajectories."}
+  - {id: paged_kv_cache, title: Paged KV Cache, status: planned, tracks: [systems], prerequisites: [INF-005, INF-014], description: "Allocate cache pages and schedule requests under a memory budget."}
 problems: []
