@@ -7,7 +7,7 @@ import subprocess
 
 import pytest
 
-from llm_interview_lab.catalog import PROBLEM_ASSETS, load_catalog
+from llm_interview_lab.catalog import PROBLEM_ASSETS, RETENTION_ASSETS, load_catalog
 
 
 pytestmark = pytest.mark.infrastructure
@@ -112,13 +112,38 @@ def test_ready_problem_assets_are_answer_free_and_use_the_shared_loader(
     assert problem.raw["invariants"]
     assert problem.raw["common_bugs"]
     assert set(problem.raw["retention"]) == {"d2", "d7"}
+    validation = problem.raw["validation"]
+    assert validation["level"] in {"contract", "oracle", "field", "stable"}
+    assert type(validation["field_runs"]) is int and validation["field_runs"] >= 0
+
+
+def test_verified_retention_assets_are_complete_and_separate() -> None:
+    catalog = load_catalog(REPO_ROOT)
+    verified = []
+    for problem in catalog.problems.values():
+        if not problem.ready:
+            continue
+        for stage in ("d2", "d7"):
+            variant = problem.retention_variant(REPO_ROOT, stage)
+            if variant is None:
+                continue
+            starter, public_tests, symbol = variant
+            verified.append((problem.id, stage))
+            assert starter.parent == public_tests.parent
+            assert {path.name for path in starter.parent.iterdir()} == RETENTION_ASSETS
+            assert starter != problem.problem_dir / "starter.py"
+            assert public_tests != problem.public_tests
+            assert "NotImplementedError" in starter.read_text(encoding="utf-8")
+            tests = public_tests.read_text(encoding="utf-8")
+            assert "submission" in tests and symbol in tests
+    assert len(verified) >= 8
 
 
 def test_root_pytest_collection_excludes_learning_code() -> None:
     config = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert 'testpaths = ["tests/infrastructure", "tests/regression"]' in config
-    assert 'norecursedirs = [".external", "curriculum/problems", "workspace/profiles"]' in config
+    assert 'norecursedirs = [".external", "curriculum/problems", "curriculum/retention", "workspace/profiles"]' in config
 
 
 def test_real_workspace_profiles_are_not_tracked() -> None:

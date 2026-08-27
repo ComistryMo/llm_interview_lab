@@ -11,6 +11,7 @@ problems:
       - TNS-003
       - TNS-013
     skills: [module.parameter, module.forward, tensor.gradient]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/NNL-001-linear}
     interface: {language: python, framework: pytorch, symbol: ManualLinear}
     constraints:
@@ -48,6 +49,7 @@ problems:
       - TNS-006
       - TNS-013
     skills: [module.parameter, module.forward, tensor.gradient]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/NNL-002-embedding}
     interface: {language: python, framework: pytorch, symbol: ManualEmbedding}
     constraints:
@@ -86,6 +88,7 @@ problems:
       - TNS-003
       - TNS-013
     skills: [module.parameter, module.forward, tensor.gradient]
+    validation: {level: oracle, field_runs: 0}
     assets: {problem_dir: curriculum/problems/NNL-008-rmsnorm}
     interface: {language: python, framework: pytorch, symbol: RMSNorm}
     constraints:
@@ -113,4 +116,3 @@ problems:
       d7: Debug a shape, dtype, initialization, or gradient variant.
     sources:
       - {type: official_docs, title: PyTorch module and layer documentation}
-

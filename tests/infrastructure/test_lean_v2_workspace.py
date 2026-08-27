@@ -57,6 +57,21 @@ def _starter_problem(root: Path) -> Problem:
         "    raise NotImplementedError\n",
         encoding="utf-8",
     )
+    retention: dict[str, object] = {}
+    for stage, symbol in (("d2", "wrong_rate"), ("d7", "wrong_indices")):
+        variant = root / "curriculum" / "retention" / "FND-001" / stage
+        variant.mkdir(parents=True)
+        (variant / "starter.py").write_text(
+            f"def {symbol}(*args, **kwargs):\n    raise NotImplementedError\n",
+            encoding="utf-8",
+        )
+        (variant / "test_public.py").write_text("def test_placeholder(submission):\n    assert submission\n", encoding="utf-8")
+        retention[stage] = {
+            "description": f"verified {stage} variant",
+            "assets": {"root": f"curriculum/retention/FND-001/{stage}", "starter": "starter.py", "public_tests": "test_public.py"},
+            "interface": {"language": "python", "framework": "stdlib", "symbol": symbol},
+            "oracle_validated": True,
+        }
     return Problem(
         id="FND-001",
         title="Workspace test problem",
@@ -67,7 +82,7 @@ def _starter_problem(root: Path) -> Problem:
         runner_kind="pytest",
         public_tests=problem_dir / "test_public.py",
         oracle_kind="fixture_expected",
-        raw={"retention": {"d2": "equivalent rewrite", "d7": "boundary variant"}},
+        raw={"retention": retention},
     )
 
 
@@ -310,3 +325,17 @@ def test_review_d2_d7_and_mastery_are_evidence_gated(tmp_path: Path) -> None:
     assert _passing_review(root, "learner-one", problem.id, reviewed_at + timedelta(days=7)).mastered
     final = reduce_events(read_events(profile_paths(root, "learner-one").events_file, event_schema_path(root)))
     assert final.problem_status(problem.id) == "mastered"
+
+
+def test_retention_without_verified_assets_is_blocked(tmp_path: Path) -> None:
+    root = _workspace_repo(tmp_path)
+    init_profile(root, "learner-one")
+    problem = _starter_problem(root)
+    problem.raw["retention"]["d2"] = "description only"
+    initial = start_problem(root, "learner-one", problem)
+    _mark_implemented(root, "learner-one", problem.id, initial.attempt_id, initial.submission_path)
+    reviewed_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    _passing_review(root, "learner-one", problem.id, reviewed_at)
+
+    with pytest.raises(WorkspaceError, match="mastery blocked"):
+        start_retention(root, "learner-one", problem, "d2", now=reviewed_at + timedelta(days=2))

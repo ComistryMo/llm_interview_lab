@@ -10,6 +10,7 @@ problems:
     prerequisites:
       - TNS-010
     skills: [post_training.mask, post_training.logprob, post_training.objective]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/PT-001-sft-label-mask}
     interface: {language: python, framework: pytorch, symbol: build_sft_labels}
     constraints:
@@ -47,6 +48,7 @@ problems:
       - LOSS-008
       - TNS-006
     skills: [post_training.mask, post_training.logprob, post_training.objective]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/PT-002-token-sequence-logprob}
     interface: {language: python, framework: pytorch, symbol: token_sequence_logprobs}
     constraints:
@@ -82,6 +84,7 @@ problems:
     prerequisites:
       - PT-002
     skills: [post_training.mask, post_training.logprob, post_training.objective]
+    validation: {level: oracle, field_runs: 0}
     assets: {problem_dir: curriculum/problems/PT-006-dpo-loss}
     interface: {language: python, framework: pytorch, symbol: dpo_loss}
     constraints:
@@ -117,6 +120,7 @@ problems:
     prerequisites:
       - PT-002
     skills: [post_training.mask, post_training.logprob, post_training.objective]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/PT-014-grpo-group-advantage}
     interface: {language: python, framework: pytorch, symbol: grpo_group_advantage}
     constraints:
@@ -152,6 +156,7 @@ problems:
     prerequisites:
       - PT-014
     skills: [post_training.mask, post_training.logprob, post_training.objective]
+    validation: {level: oracle, field_runs: 0}
     assets: {problem_dir: curriculum/problems/PT-015-grpo-loss}
     interface: {language: python, framework: pytorch, symbol: grpo_clipped_loss}
     constraints:

@@ -71,6 +71,8 @@ def record_review(
         return ReviewResult("implemented", False, reviewed.appended)
     if attempt.retention_stage is None:
         return ReviewResult("reviewed", False, reviewed.appended)
+    if not attempt.retention_verified:
+        raise LifecycleError("mastery blocked: attempt does not use verified retention assets")
     retention_type = f"retention_{attempt.retention_stage}_passed"
     append_event(
         paths.events_file, schema, profile_id=profile_id, event_type=retention_type,

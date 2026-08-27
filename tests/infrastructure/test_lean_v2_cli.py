@@ -29,7 +29,12 @@ def _cli_repo(tmp_path: Path) -> Path:
         REPO_ROOT / "curriculum" / "problems",
         root / "curriculum" / "problems",
     )
-    shutil.copytree(REPO_ROOT / "workspace", root / "workspace")
+    shutil.copytree(REPO_ROOT / "curriculum" / "retention", root / "curriculum" / "retention")
+    for name in ("schema", "templates", "demo"):
+        shutil.copytree(REPO_ROOT / "workspace" / name, root / "workspace" / name)
+    profiles = root / "workspace" / "profiles"
+    profiles.mkdir()
+    (profiles / ".gitkeep").write_text("", encoding="utf-8")
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)
     return root
 
@@ -237,3 +242,28 @@ def test_two_profiles_are_independent_and_mastery_unlocks_the_next_node(
     output = capsys.readouterr().out
     assert "FND-002 Sample Contract Validation" in output
     assert main(["start", "FND-002", "--profile", "learner-one"]) == 0
+
+
+def test_next_reports_mastery_blocked_without_verified_retention(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = _cli_repo(tmp_path)
+    monkeypatch.chdir(root)
+    main(["init", "--profile", "learner-one"])
+    paths = profile_paths(root, "learner-one")
+    attempt_dir = paths.submissions_root / "FND-002" / "attempt-0001"
+    attempt_dir.mkdir(parents=True)
+    submission = attempt_dir / "submission.py"
+    submission.write_text("def validate_sample(sample): return sample\n", encoding="utf-8")
+    digest = hashlib.sha256(submission.read_bytes()).hexdigest()
+    schema = event_schema_path(root)
+    append_event(paths.events_file, schema, profile_id="learner-one", event_type="task_started", problem_id="FND-002", attempt_id="attempt-0001", payload={"submission_relpath": submission.relative_to(root).as_posix()})
+    append_event(paths.events_file, schema, profile_id="learner-one", event_type="task_implemented", problem_id="FND-002", attempt_id="attempt-0001", payload={"submission_sha256": digest})
+    record_review(root, "learner-one", "FND-002", ReviewInput("passed", "passed", "Explains validation.", "Linear time.", "Covers invalid fields."), timestamp=datetime.now(timezone.utc) - timedelta(days=8))
+
+    assert main(["next", "--profile", "learner-one"]) == 0
+    output = capsys.readouterr().out
+    assert "MASTERY BLOCKED" in output
+    assert "FND-002 verified retention assets unavailable" in output

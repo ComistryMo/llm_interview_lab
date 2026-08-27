@@ -175,7 +175,8 @@ def _create_attempt(repo_root: Path, profile_id: str, problem: "Problem", attemp
         raise WorkspaceError("submission path already exists without a matching event")
     if not problem.ready or problem.problem_dir is None:
         raise WorkspaceError("planned problem cannot be started")
-    starter = problem.problem_dir / "starter.py"
+    variant = problem.retention_variant(repo_root, retention_stage) if retention_stage else None
+    starter = variant[0] if variant else problem.problem_dir / "starter.py"
     if not starter.is_file() or _is_obvious_link(starter):
         raise WorkspaceError("problem starter is missing or unsafe")
     starter_bytes = starter.read_bytes()
@@ -186,7 +187,12 @@ def _create_attempt(repo_root: Path, profile_id: str, problem: "Problem", attemp
         "starter_sha256": hashlib.sha256(starter_bytes).hexdigest(),
     }
     if retention_stage:
-        payload.update({"retention_stage": retention_stage, "variant_contract": problem.raw["retention"][retention_stage]})
+        metadata = problem.raw["retention"][retention_stage]
+        payload.update({
+            "retention_stage": retention_stage,
+            "retention_verified": True,
+            "variant_contract": metadata["description"],
+        })
     append_event(paths.events_file, event_schema_path(repo_root), profile_id=profile_id, event_type="task_started", problem_id=problem.id, attempt_id=attempt_id, payload=payload)
     return StartResult(attempt_id, submission_path, True, retention_stage)
 
@@ -222,6 +228,8 @@ def start_retention(repo_root: Path, profile_id: str, problem: "Problem", stage:
     paths = profile_paths(repo_root, profile_id)
     load_profile(paths, repo_root)
     state = reduce_events(read_events(paths.events_file, event_schema_path(repo_root)))
+    if problem.retention_variant(repo_root, stage) is None:
+        raise WorkspaceError(f"mastery blocked: verified {stage} retention assets unavailable")
     if (
         stage == "d2" and problem.id in state.retained_d2
     ) or (

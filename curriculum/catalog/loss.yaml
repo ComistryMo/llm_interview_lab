@@ -10,6 +10,7 @@ problems:
     prerequisites:
       - TNS-003
     skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/LOSS-007-stable-softmax}
     interface: {language: python, framework: pytorch, symbol: stable_softmax}
     constraints:
@@ -33,8 +34,16 @@ problems:
     invariants: [finite_for_large_finite_inputs, reference_alignment, gradient_connected]
     common_bugs: [missing_max_shift, wrong_reduction_axis, detached_intermediate, ignored_element_denominator]
     retention:
-      d2: Derive and reimplement the stable loss from an untouched starter.
-      d7: Debug a reduction or extreme-value variant and defend the gradient.
+      d2:
+        description: Implement stable log-softmax with a different output invariant.
+        assets: {root: curriculum/retention/LOSS-007/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: stable_log_softmax}
+        oracle_validated: true
+      d7:
+        description: Integrate stable softmax with a boolean mask and all-masked validation.
+        assets: {root: curriculum/retention/LOSS-007/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: masked_softmax}
+        oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch loss function documentation}
   - id: LOSS-008
@@ -47,6 +56,7 @@ problems:
     prerequisites:
       - LOSS-007
     skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/LOSS-008-logsumexp}
     interface: {language: python, framework: pytorch, symbol: stable_logsumexp}
     constraints:
@@ -83,6 +93,7 @@ problems:
     prerequisites:
       - LOSS-008
     skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/LOSS-013-bce-with-logits}
     interface: {language: python, framework: pytorch, symbol: bce_with_logits}
     constraints:
@@ -121,6 +132,7 @@ problems:
       - LOSS-008
       - TNS-006
     skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
+    validation: {level: oracle, field_runs: 0}
     assets: {problem_dir: curriculum/problems/LOSS-014-cross-entropy}
     interface: {language: python, framework: pytorch, symbol: cross_entropy}
     constraints:
@@ -145,8 +157,15 @@ problems:
     invariants: [finite_for_large_finite_inputs, reference_alignment, gradient_connected]
     common_bugs: [missing_max_shift, wrong_reduction_axis, detached_intermediate, ignored_element_denominator]
     retention:
-      d2: Derive and reimplement the stable loss from an untouched starter.
-      d7: Debug a reduction or extreme-value variant and defend the gradient.
+      d2:
+        description: Return per-example cross entropy rather than applying a reduction.
+        assets: {root: curriculum/retention/LOSS-014/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: per_example_cross_entropy}
+        oracle_validated: true
+      d7:
+        description: Integrate cross entropy with rank-3 token logits and an explicit loss mask.
+        assets: {root: curriculum/retention/LOSS-014/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: masked_token_cross_entropy}
+        oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch loss function documentation}
-

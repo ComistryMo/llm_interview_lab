@@ -28,6 +28,7 @@ class AttemptState:
     attempt_id: str
     submission_relpath: str | None = None
     retention_stage: str | None = None
+    retention_verified: bool = False
     implemented: bool = False
     reviewed: bool = False
     revision_required: bool = False
@@ -145,8 +146,10 @@ def _validate_contract(event: Mapping[str, Any]) -> None:
         return
     if problem_id is None or attempt_id is None:
         raise EventError(f"{event_type} requires problem_id and attempt_id")
-    if event_type == "task_started" and payload.get("retention_stage") not in {None, "d2", "d7"}:
-        raise EventError("task_started retention_stage must be d2 or d7")
+    if event_type == "task_started":
+        stage = payload.get("retention_stage")
+        if stage not in {None, "d2", "d7"}:
+            raise EventError("task_started retention_stage must be d2 or d7")
     if event_type == "public_tests_run":
         required = {"submission_sha256", "exit_code", "status", "passed", "failed", "duration_ms"}
         missing = sorted(required - set(payload))
@@ -219,6 +222,7 @@ def reduce_events(events: Iterable[Mapping[str, Any]]) -> WorkspaceState:
                 raise EventError(f"attempt started more than once: {problem_id}/{attempt_id}")
             state.attempts[key] = AttemptState(
                 problem_id, attempt_id, payload.get("submission_relpath"), payload.get("retention_stage"),
+                bool(payload.get("retention_verified", False)),
                 revision_required=bool(payload.get("revision_required", False)),
             )
             state.current_problem_id, state.current_attempt_id = problem_id, attempt_id

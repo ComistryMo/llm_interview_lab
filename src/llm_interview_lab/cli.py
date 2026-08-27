@@ -66,7 +66,9 @@ def _doctor(repo_root: Path) -> int:
         checks.append(("catalog", False, str(error)))
     else:
         ready = sum(problem.ready for problem in catalog.problems.values())
-        checks.append(("catalog", True, f"{ready} ready / {len(catalog.problems) - ready} planned, DAG valid"))
+        oracle = sum(problem.ready and problem.raw["validation"]["level"] in {"oracle", "field", "stable"} for problem in catalog.problems.values())
+        retention = sum(problem.ready and all(problem.retention_variant(repo_root, stage) for stage in ("d2", "d7")) for problem in catalog.problems.values())
+        checks.append(("catalog", True, f"{ready} ready / {len(catalog.problems) - ready} planned, {oracle} oracle, {retention} retention-ready, DAG valid"))
     try:
         demo_data = yaml.safe_load((repo_root / "workspace/demo/profile.yaml").read_text(encoding="utf-8"))
         demo = validate_profile_data(demo_data, repo_root)
@@ -137,15 +139,26 @@ def _next(repo_root: Path, profile_id: str, catalog: Catalog) -> int:
         print("  none")
     now = datetime.now().astimezone()
     retention_due: list[tuple[str, str]] = []
+    mastery_blocked: list[str] = []
     for problem_id in state.reviewed_at:
-        if problem_id not in state.retained_d2 and now >= retention_due_at(state, problem_id, "d2"):
-            retention_due.append((problem_id, "d2"))
-        elif problem_id in state.retained_d2 and problem_id not in state.retained_d7 and now >= retention_due_at(state, problem_id, "d7"):
-            retention_due.append((problem_id, "d7"))
+        problem = catalog.get(problem_id)
+        stage = "d2" if problem_id not in state.retained_d2 else "d7"
+        if problem_id in state.retained_d7:
+            continue
+        if problem.retention_variant(repo_root, stage) is None:
+            mastery_blocked.append(problem_id)
+        elif now >= retention_due_at(state, problem_id, stage):
+            retention_due.append((problem_id, stage))
     print("DUE RETENTION")
     if retention_due:
         for problem_id, stage in retention_due[:3]:
             print(f"  {problem_id} {stage}")
+    else:
+        print("  none")
+    print("MASTERY BLOCKED")
+    if mastery_blocked:
+        for problem_id in mastery_blocked[:3]:
+            print(f"  {problem_id} verified retention assets unavailable")
     else:
         print("  none")
     unlocked = tuple(
@@ -204,10 +217,16 @@ def _test(repo_root: Path, profile_id: str, problem: Problem) -> int:
     paths, _, _, state = _profile_state(repo_root, profile_id)
     attempt = _attempt(state, problem.id)
     assert problem.public_tests is not None and problem.symbol is not None
+    test_path, expected_symbol = problem.public_tests, problem.symbol
+    if attempt.retention_stage:
+        variant = problem.retention_variant(repo_root, attempt.retention_stage)
+        if variant is None or not attempt.retention_verified:
+            raise CliError("mastery blocked: retention attempt is not backed by verified assets")
+        _, test_path, expected_symbol = variant
     result = run_public_tests(
-        repo_root=repo_root, test_path=problem.public_tests,
+        repo_root=repo_root, test_path=test_path,
         submission_path=_submission(repo_root, attempt), submissions_root=paths.submissions_root,
-        expected_symbol=problem.symbol, time_limit_ms=problem.time_limit_ms, output_limit_kb=problem.output_limit_kb,
+        expected_symbol=expected_symbol, time_limit_ms=problem.time_limit_ms, output_limit_kb=problem.output_limit_kb,
     )
     append_event(paths.events_file, event_schema_path(repo_root), profile_id=profile_id, event_type="public_tests_run", problem_id=problem.id, attempt_id=attempt.attempt_id, payload={
         "submission_sha256": result.submission_sha256, "exit_code": result.exit_code, "status": result.status,

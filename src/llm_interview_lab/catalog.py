@@ -13,6 +13,7 @@ import yaml
 from .dag import DagError, topological_order
 
 PROBLEM_ASSETS = frozenset({"task.md", "starter.py", "test_public.py", "hints.md"})
+RETENTION_ASSETS = frozenset({"starter.py", "test_public.py"})
 
 
 class CatalogError(RuntimeError):
@@ -37,6 +38,13 @@ class Problem:
     @property
     def ready(self) -> bool:
         return self.status in {"ready", "stable"}
+
+    def retention_variant(self, repo_root: Path, stage: str) -> tuple[Path, Path, str] | None:
+        value = self.raw["retention"].get(stage)
+        if not isinstance(value, dict) or value.get("oracle_validated") is not True:
+            return None
+        root = _repository_path(repo_root, value["assets"]["root"], f"{self.id} {stage} retention")
+        return root / value["assets"]["starter"], root / value["assets"]["public_tests"], value["interface"]["symbol"]
 
 
 @dataclass(frozen=True)
@@ -159,6 +167,18 @@ def _validate_assets(repo_root: Path, problems: dict[str, Problem]) -> None:
             raise CatalogError(f"problem assets mismatch for {problem.id}; missing={sorted(PROBLEM_ASSETS - actual)}, extra={sorted(actual - PROBLEM_ASSETS)}")
         if not problem.public_tests.is_file():
             raise CatalogError(f"public test file is missing: {problem.id}")
+        for stage in ("d2", "d7"):
+            value = problem.raw["retention"][stage]
+            if not isinstance(value, dict):
+                continue
+            root = _repository_path(repo_root, value["assets"]["root"], f"{problem.id} {stage} retention")
+            if root.parts[-2:] != (problem.id, stage):
+                raise CatalogError(f"retention assets do not match problem and stage: {problem.id}/{stage}")
+            if not root.is_dir():
+                raise CatalogError(f"retention assets are missing: {problem.id}/{stage}")
+            actual = {p.name for p in root.iterdir() if p.name != "__pycache__" and p.suffix != ".pyc"}
+            if actual != RETENTION_ASSETS:
+                raise CatalogError(f"retention assets mismatch for {problem.id}/{stage}")
         ready_dirs.add(problem.problem_dir.resolve())
     problems_root = repo_root / "curriculum/problems"
     if problems_root.exists():

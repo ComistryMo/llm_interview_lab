@@ -1,5 +1,7 @@
 # AGT-006 — Tool-Calling Agent Loop
 
+本题的单一函数显式包含三段职责：校验并解析 model action、通过 registry 执行工具、把 observation 或 error 追加到防御性复制的 history/trajectory。它不是只转发 API 的循环；invalid action、unknown tool、invalid arguments 和执行异常都必须转成可继续推理的结构化 observation。
+
 ## Goal
 
 Implement one deterministic, local-only Agent data or runtime primitive.
@@ -28,4 +30,3 @@ Run `llm-lab test AGT-006 --profile <id>`. Tests cover valid flows, malformed ac
 ## Oral defense
 
 Explain schema validation, state transitions, invalid-action behavior, termination, replay determinism, and what production isolation remains out of scope.
-

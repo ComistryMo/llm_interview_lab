@@ -9,7 +9,8 @@ problems:
     difficulty: {concept: 3, coding: 4, debugging: 4}
     prerequisites:
       - FND-002
-    skills: [agent.schema, agent.state, agent.validation]
+    skills: [agent.schema, agent.validation]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/AGT-001-tool-schema}
     interface: {language: python, framework: stdlib, symbol: validate_tool_schema}
     constraints:
@@ -45,6 +46,7 @@ problems:
     prerequisites:
       - AGT-001
     skills: [agent.schema, agent.state, agent.validation]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/AGT-002-tool-registry}
     interface: {language: python, framework: stdlib, symbol: ToolRegistry}
     constraints:
@@ -79,7 +81,8 @@ problems:
     difficulty: {concept: 3, coding: 4, debugging: 4}
     prerequisites:
       - AGT-002
-    skills: [agent.schema, agent.state, agent.validation]
+    skills: [agent.schema, agent.state, agent.validation, agent.parser, agent.executor]
+    validation: {level: oracle, field_runs: 0}
     assets: {problem_dir: curriculum/problems/AGT-006-tool-calling-loop}
     interface: {language: python, framework: stdlib, symbol: run_tool_calling_loop}
     constraints:
@@ -101,8 +104,16 @@ problems:
     invariants: [deterministic_order, caller_input_not_mutated, explicit_termination]
     common_bugs: [unvalidated_arguments, hidden_mutation, infinite_loop, timestamp_reordering]
     retention:
-      d2: Rebuild the same local contract from an untouched starter.
-      d7: Debug an invalid-action, replay-order, or termination variant.
+      d2:
+        description: Parse, validate, and execute exactly one local tool action.
+        assets: {root: curriculum/retention/AGT-006/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: execute_tool_action}
+        oracle_validated: true
+      d7:
+        description: Replay a bounded action sequence with complete deterministic trajectory records.
+        assets: {root: curriculum/retention/AGT-006/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: replay_tool_actions}
+        oracle_validated: true
     sources:
       - {type: internal_original, title: LLM Interview Lab clean-room Agent exercise}
   - id: AGT-009
@@ -116,6 +127,7 @@ problems:
       - FND-005
       - AGT-006
     skills: [agent.schema, agent.state, agent.validation]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/AGT-009-trajectory-jsonl}
     interface: {language: python, framework: stdlib, symbol: TrajectoryJsonl}
     constraints:
@@ -141,4 +153,3 @@ problems:
       d7: Debug an invalid-action, replay-order, or termination variant.
     sources:
       - {type: internal_original, title: LLM Interview Lab clean-room Agent exercise}
-

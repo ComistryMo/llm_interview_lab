@@ -22,6 +22,7 @@ problems:
       - python.loop
       - python.exception
       - python.runtime_type
+    validation: {level: oracle, field_runs: 0}
     assets:
       problem_dir: curriculum/problems/FND-001-wrong-prediction-count
     interface:
@@ -63,8 +64,16 @@ problems:
       - type_annotation_assumed_to_validate_runtime_input
       - unreachable_code_after_return
     retention:
-      d2: Rewrite the same contract without viewing the previous submission.
-      d7: Return wrong prediction indices under an explicitly revised contract.
+      d2:
+        description: Compute a wrong-prediction rate through a new non-empty input contract.
+        assets: {root: curriculum/retention/FND-001/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: wrong_prediction_rate}
+        oracle_validated: true
+      d7:
+        description: Integrate record validation with collection of wrong record indices.
+        assets: {root: curriculum/retention/FND-001/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: wrong_record_indices}
+        oracle_validated: true
     sources:
       - type: internal_original
         title: LLM Interview Lab clean-room foundation exercise
@@ -84,6 +93,7 @@ problems:
       - python.dict
       - python.runtime_type
       - python.copy
+    validation: {level: contract, field_runs: 0}
     assets:
       problem_dir: curriculum/problems/FND-002-sample-contract-validation
     interface: {language: python, framework: stdlib, symbol: validate_sample}
@@ -127,6 +137,7 @@ problems:
       - python.list
       - python.loop
       - python.validation
+    validation: {level: contract, field_runs: 0}
     assets:
       problem_dir: curriculum/problems/FND-003-hard-sample-filter
     interface: {language: python, framework: stdlib, symbol: mine_hard_samples}
@@ -149,8 +160,16 @@ problems:
     invariants: [deterministic_output, input_not_mutated]
     common_bugs: [implicit_bool_acceptance, missing_nested_validation, accidental_aliasing]
     retention:
-      d2: Rewrite the same interface from an untouched starter without viewing prior code.
-      d7: Solve a deterministic boundary-focused variant and explain the changed invariant.
+      d2:
+        description: Return only qualifying sample IDs under a fresh threshold contract.
+        assets: {root: curriculum/retention/FND-003/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: hard_sample_ids}
+        oracle_validated: true
+      d7:
+        description: Summarize valid hard samples by category without mutating records.
+        assets: {root: curriculum/retention/FND-003/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: stdlib, symbol: hard_sample_counts}
+        oracle_validated: true
     sources:
       - {type: internal_original, title: LLM Interview Lab clean-room exercise}
   - id: FND-004
@@ -169,6 +188,7 @@ problems:
       - python.dict
       - python.aggregate
       - python.float
+    validation: {level: contract, field_runs: 0}
     assets:
       problem_dir: curriculum/problems/FND-004-hard-sample-summary
     interface: {language: python, framework: stdlib, symbol: summarize_hard_samples}
@@ -212,6 +232,7 @@ problems:
       - python.file
       - python.json
       - python.iterator
+    validation: {level: oracle, field_runs: 0}
     assets:
       problem_dir: curriculum/problems/FND-005-jsonl-streaming-io
     interface: {language: python, framework: stdlib, symbol: JsonlIO}
@@ -254,6 +275,7 @@ problems:
       - python.generator
       - python.slice
       - python.validation
+    validation: {level: contract, field_runs: 0}
     assets:
       problem_dir: curriculum/problems/FND-006-mini-batch-iterator
     interface: {language: python, framework: stdlib, symbol: iter_minibatches}

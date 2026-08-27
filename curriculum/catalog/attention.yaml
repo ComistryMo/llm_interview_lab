@@ -11,6 +11,7 @@ problems:
       - LOSS-007
       - TNS-010
     skills: [attention.shape, attention.mask, attention.gradient]
+    validation: {level: oracle, field_runs: 0}
     assets: {problem_dir: curriculum/problems/ATT-002-scaled-dot-product-attention}
     interface: {language: python, framework: pytorch, symbol: scaled_dot_product_attention}
     constraints:
@@ -49,6 +50,7 @@ problems:
       - ATT-002
       - TNS-002
     skills: [attention.shape, attention.mask, attention.gradient]
+    validation: {level: oracle, field_runs: 0}
     assets: {problem_dir: curriculum/problems/ATT-004-multi-head-attention}
     interface: {language: python, framework: pytorch, symbol: multi_head_attention}
     constraints:
@@ -72,8 +74,16 @@ problems:
     invariants: [output_shape_preserved, masked_probability_zero, gradient_or_cache_contract]
     common_bugs: [wrong_transpose_axes, wrong_softmax_dimension, missing_scale, mask_wrong_polarity]
     retention:
-      d2: Reimplement with different head and sequence dimensions from an untouched starter.
-      d7: Debug a mask, head-sharing, rotary-layout, or cache-append variant.
+      d2:
+        description: Return both multi-head output and attention probabilities under a new interface.
+        assets: {root: curriculum/retention/ATT-004/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: attention_with_probabilities}
+        oracle_validated: true
+      d7:
+        description: Integrate causal and padding masks in a multi-head attention forward pass.
+        assets: {root: curriculum/retention/ATT-004/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: causal_padded_attention}
+        oracle_validated: true
     sources:
       - {type: paper, title: Attention and rotary-position primary literature}
   - id: ATT-005
@@ -86,6 +96,7 @@ problems:
     prerequisites:
       - ATT-004
     skills: [attention.shape, attention.mask, attention.gradient]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/ATT-005-multi-query-attention}
     interface: {language: python, framework: pytorch, symbol: multi_query_attention}
     constraints:
@@ -121,8 +132,9 @@ problems:
     tier: core
     difficulty: {concept: 4, coding: 4, debugging: 5}
     prerequisites:
-      - ATT-005
+      - ATT-004
     skills: [attention.shape, attention.mask, attention.gradient]
+    validation: {level: oracle, field_runs: 0}
     assets: {problem_dir: curriculum/problems/ATT-006-grouped-query-attention}
     interface: {language: python, framework: pytorch, symbol: grouped_query_attention}
     constraints:
@@ -160,6 +172,7 @@ problems:
     prerequisites:
       - TNS-003
     skills: [attention.shape, attention.mask, attention.gradient]
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/ATT-007-rope}
     interface: {language: python, framework: pytorch, symbol: apply_rope}
     constraints:
@@ -194,9 +207,9 @@ problems:
     tier: core
     difficulty: {concept: 4, coding: 4, debugging: 5}
     prerequisites:
-      - ATT-006
-      - ATT-007
+      - ATT-002
     skills: [attention.shape, attention.mask, attention.gradient]
+    validation: {level: oracle, field_runs: 0}
     assets: {problem_dir: curriculum/problems/ATT-009-kv-cache}
     interface: {language: python, framework: pytorch, symbol: KVCache}
     constraints:
@@ -223,4 +236,3 @@ problems:
       d7: Debug a mask, head-sharing, rotary-layout, or cache-append variant.
     sources:
       - {type: paper, title: Attention and rotary-position primary literature}
-

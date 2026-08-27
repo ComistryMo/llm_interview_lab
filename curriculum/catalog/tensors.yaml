@@ -14,6 +14,7 @@ problems:
       - tensor.reshape
       - tensor.permute
       - tensor.contiguous
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/TNS-002-reshape-permute-contiguous}
     interface: {language: python, framework: pytorch, symbol: split_heads}
     constraints:
@@ -52,6 +53,7 @@ problems:
     skills:
       - tensor.broadcast
       - tensor.gradient
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/TNS-003-broadcasting}
     interface: {language: python, framework: pytorch, symbol: broadcast_add_bias}
     constraints:
@@ -90,6 +92,7 @@ problems:
     skills:
       - tensor.gather
       - tensor.index
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/TNS-006-gather}
     interface: {language: python, framework: pytorch, symbol: gather_last_dim}
     constraints:
@@ -127,6 +130,7 @@ problems:
     skills:
       - tensor.mask
       - tensor.broadcast
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/TNS-010-sequence-mask}
     interface: {language: python, framework: pytorch, symbol: sequence_mask}
     constraints:
@@ -167,6 +171,7 @@ problems:
       - tensor.gather
       - tensor.mask
       - tensor.gradient
+    validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/TNS-011-last-valid-token}
     interface: {language: python, framework: pytorch, symbol: last_valid_token}
     constraints:
@@ -189,8 +194,16 @@ problems:
     invariants: [documented_shape, dtype_device_preserved, input_not_mutated]
     common_bugs: [wrong_axis, implicit_cpu_tensor, gradient_detached, non_contiguous_view]
     retention:
-      d2: Reimplement the same tensor contract with different shapes and no prior code.
-      d7: Debug an axis, mask, or gradient variant selected from the catalog axes.
+      d2:
+        description: Gather the last token from explicit sequence lengths instead of a mask.
+        assets: {root: curriculum/retention/TNS-011/d2, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: token_at_lengths}
+        oracle_validated: true
+      d7:
+        description: Gather the final true position from a non-prefix boolean validity mask.
+        assets: {root: curriculum/retention/TNS-011/d7, starter: starter.py, public_tests: test_public.py}
+        interface: {language: python, framework: pytorch, symbol: last_true_token}
+        oracle_validated: true
     sources:
       - {type: official_docs, title: PyTorch tensor and autograd documentation}
   - id: TNS-013
@@ -206,6 +219,7 @@ problems:
       - tensor.autograd
       - tensor.detach
       - tensor.no_grad
+    validation: {level: oracle, field_runs: 0}
     assets: {problem_dir: curriculum/problems/TNS-013-autograd-detach-no-grad}
     interface: {language: python, framework: pytorch, symbol: autograd_probe}
     constraints:
