@@ -1,0 +1,144 @@
+schema_version: 2
+problems:
+  - id: AGT-001
+    title: Tool Schema
+    status: ready
+    domain: agent
+    tracks: [agent, llm_algorithm, post_training]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites:
+      - FND-002
+    skills: [agent.schema, agent.state, agent.validation]
+    assets: {problem_dir: curriculum/problems/AGT-001-tool-schema}
+    interface: {language: python, framework: stdlib, symbol: validate_tool_schema}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: fixture_expected
+        target: deterministic local action and event fixtures
+        description: Schemas, state transitions, termination, physical ordering, and non-mutation are checked.
+      oral_questions:
+        - What exact schemas cross the component boundary?
+        - How is an invalid action represented and recovered from?
+        - What guarantees termination and deterministic replay?
+        - Which production security or concurrency concerns remain out of scope?
+    variant_axes: [schema_shape, invalid_action, max_steps, trajectory_length]
+    invariants: [deterministic_order, caller_input_not_mutated, explicit_termination]
+    common_bugs: [unvalidated_arguments, hidden_mutation, infinite_loop, timestamp_reordering]
+    retention:
+      d2: Rebuild the same local contract from an untouched starter.
+      d7: Debug an invalid-action, replay-order, or termination variant.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room Agent exercise}
+  - id: AGT-002
+    title: Tool Registry
+    status: ready
+    domain: agent
+    tracks: [agent, llm_algorithm, post_training]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites:
+      - AGT-001
+    skills: [agent.schema, agent.state, agent.validation]
+    assets: {problem_dir: curriculum/problems/AGT-002-tool-registry}
+    interface: {language: python, framework: stdlib, symbol: ToolRegistry}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: fixture_expected
+        target: deterministic local action and event fixtures
+        description: Schemas, state transitions, termination, physical ordering, and non-mutation are checked.
+      oral_questions:
+        - What exact schemas cross the component boundary?
+        - How is an invalid action represented and recovered from?
+        - What guarantees termination and deterministic replay?
+        - Which production security or concurrency concerns remain out of scope?
+    variant_axes: [schema_shape, invalid_action, max_steps, trajectory_length]
+    invariants: [deterministic_order, caller_input_not_mutated, explicit_termination]
+    common_bugs: [unvalidated_arguments, hidden_mutation, infinite_loop, timestamp_reordering]
+    retention:
+      d2: Rebuild the same local contract from an untouched starter.
+      d7: Debug an invalid-action, replay-order, or termination variant.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room Agent exercise}
+  - id: AGT-006
+    title: Tool-Calling Agent Loop
+    status: ready
+    domain: agent
+    tracks: [agent, llm_algorithm, post_training]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites:
+      - AGT-002
+    skills: [agent.schema, agent.state, agent.validation]
+    assets: {problem_dir: curriculum/problems/AGT-006-tool-calling-loop}
+    interface: {language: python, framework: stdlib, symbol: run_tool_calling_loop}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: fixture_expected
+        target: deterministic local action and event fixtures
+        description: Schemas, state transitions, termination, physical ordering, and non-mutation are checked.
+      oral_questions:
+        - What exact schemas cross the component boundary?
+        - How is an invalid action represented and recovered from?
+        - What guarantees termination and deterministic replay?
+        - Which production security or concurrency concerns remain out of scope?
+    variant_axes: [schema_shape, invalid_action, max_steps, trajectory_length]
+    invariants: [deterministic_order, caller_input_not_mutated, explicit_termination]
+    common_bugs: [unvalidated_arguments, hidden_mutation, infinite_loop, timestamp_reordering]
+    retention:
+      d2: Rebuild the same local contract from an untouched starter.
+      d7: Debug an invalid-action, replay-order, or termination variant.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room Agent exercise}
+  - id: AGT-009
+    title: Trajectory JSONL
+    status: ready
+    domain: agent
+    tracks: [agent, llm_algorithm, post_training]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites:
+      - FND-005
+      - AGT-006
+    skills: [agent.schema, agent.state, agent.validation]
+    assets: {problem_dir: curriculum/problems/AGT-009-trajectory-jsonl}
+    interface: {language: python, framework: stdlib, symbol: TrajectoryJsonl}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: fixture_expected
+        target: deterministic local action and event fixtures
+        description: Schemas, state transitions, termination, physical ordering, and non-mutation are checked.
+      oral_questions:
+        - What exact schemas cross the component boundary?
+        - How is an invalid action represented and recovered from?
+        - What guarantees termination and deterministic replay?
+        - Which production security or concurrency concerns remain out of scope?
+    variant_axes: [schema_shape, invalid_action, max_steps, trajectory_length]
+    invariants: [deterministic_order, caller_input_not_mutated, explicit_termination]
+    common_bugs: [unvalidated_arguments, hidden_mutation, infinite_loop, timestamp_reordering]
+    retention:
+      d2: Rebuild the same local contract from an untouched starter.
+      d7: Debug an invalid-action, replay-order, or termination variant.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room Agent exercise}
+
