@@ -1,0 +1,15 @@
+schema_version: 1
+profile_id: default
+synthetic: false
+target_roles:
+  - ai_foundation
+experience_level:
+  python: beginner
+  algorithms: beginner
+  pytorch: beginner
+  llm: beginner
+weekly_hours: 10
+preferences:
+  pressure: medium
+  implementation_first: true
+  require_retention: true
