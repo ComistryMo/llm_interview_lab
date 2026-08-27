@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-interview-lab"
-version = "0.1.0"
+version = "0.2.0a1"
 description = "A gate-based, AI-assisted training lab for LLM algorithm interviews"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -46,7 +46,7 @@ include = ["llm_interview_lab*"]
 minversion = "8.0"
 testpaths = ["tests/infrastructure", "tests/regression"]
 pythonpath = [".", "src"]
-norecursedirs = [".external", "curriculum/problems", "workspace/profiles"]
+norecursedirs = [".external", "curriculum/problems", "curriculum/retention", "workspace/profiles"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
 markers = [
