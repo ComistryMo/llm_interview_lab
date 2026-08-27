@@ -11,7 +11,12 @@ import subprocess
 import sys
 from typing import Any
 
-from llm_interview_lab.catalog import CatalogError, Problem, load_catalog
+from llm_interview_lab.catalog import (
+    CatalogError,
+    Problem,
+    compute_problem_fingerprint,
+    load_catalog,
+)
 from llm_interview_lab.grader import GraderResult, run_public_tests
 from llm_interview_lab.workspace import find_repository_root
 
@@ -73,7 +78,10 @@ def _problem_block(text: str, problem_id: str) -> tuple[int, int, str]:
     start_match = re.search(rf"(?m)^  - id: {re.escape(problem_id)}\s*$", text)
     if start_match is None:
         raise OracleValidationError(f"Catalog node not found while updating: {problem_id}")
-    next_match = re.search(r"(?m)^  - id: [A-Z]+-[0-9]{3}\s*$", text[start_match.end():])
+    next_match = re.search(
+        r"(?m)^  - id: (?:[A-Z]+|CAP-[A-Z]+)-[0-9]{3}\s*$",
+        text[start_match.end():],
+    )
     end = start_match.end() + next_match.start() if next_match else len(text)
     return start_match.start(), end, text[start_match.start():end]
 
@@ -86,19 +94,20 @@ def _update_catalog(repo_root: Path, problem_id: str, stage: str | None) -> None
         start, end, block = _problem_block(text, problem_id)
         if stage is None:
             marker = re.search(
-                r"(?m)^    validation: \{level: (contract|oracle|field|stable), field_runs: ([0-9]+)\}$",
+                r"(?m)^    validation: \{level: (contract|oracle|field|stable), field_runs: ([0-9]+)(?:, fingerprint: [0-9a-f]{64})?\}$",
                 block,
             )
             if marker is None:
                 raise OracleValidationError("Catalog validation marker is missing")
-            if marker.group(1) != "contract":
-                return
-            updated, count = re.subn(
-                r"(?m)^    validation: \{level: contract, field_runs: ([0-9]+)\}$",
-                r"    validation: {level: oracle, field_runs: \1}",
-                block,
-                count=1,
-            )
+            if marker.group(1) == "contract":
+                updated, count = re.subn(
+                    r"(?m)^    validation: \{level: contract, field_runs: ([0-9]+)(?:, fingerprint: [0-9a-f]{64})?\}$",
+                    r"    validation: {level: oracle, field_runs: \1}",
+                    block,
+                    count=1,
+                )
+            else:
+                updated, count = block, 1
         else:
             stage_start = re.search(rf"(?m)^      {stage}:\s*$", block)
             if stage_start is None:
@@ -112,16 +121,38 @@ def _update_catalog(repo_root: Path, problem_id: str, stage: str | None) -> None
             )
             stage_block = block[stage_start.start():stage_end]
             if re.search(r"(?m)^        oracle_validated: true$", stage_block):
-                return
-            stage_updated, count = re.subn(
-                r"(?m)^        oracle_validated: false$",
-                "        oracle_validated: true",
-                stage_block,
-                count=1,
-            )
+                stage_updated, count = stage_block, 1
+            else:
+                stage_updated, count = re.subn(
+                    r"(?m)^        oracle_validated: false$",
+                    "        oracle_validated: true",
+                    stage_block,
+                    count=1,
+                )
             updated = block[:stage_start.start()] + stage_updated + block[stage_end:]
         if count != 1:
             raise OracleValidationError("Catalog validation marker could not be updated exactly once")
+        shard.write_text(text[:start] + updated + text[end:], encoding="utf-8", newline="\n")
+        return
+    raise OracleValidationError(f"Catalog shard not found for {problem_id}")
+
+
+def _update_fingerprint(repo_root: Path, problem_id: str) -> None:
+    problem = load_catalog(repo_root, verify_validation=False).get(problem_id)
+    fingerprint = compute_problem_fingerprint(repo_root, problem)
+    for shard in sorted((repo_root / "curriculum" / "catalog").glob("*.yaml")):
+        text = shard.read_text(encoding="utf-8")
+        if not re.search(rf"(?m)^  - id: {re.escape(problem_id)}\s*$", text):
+            continue
+        start, end, block = _problem_block(text, problem_id)
+        updated, count = re.subn(
+            r"(?m)^    validation: \{level: (contract|oracle|field|stable), field_runs: ([0-9]+)(?:, fingerprint: [0-9a-f]{64})?\}$",
+            rf"    validation: {{level: \1, field_runs: \2, fingerprint: {fingerprint}}}",
+            block,
+            count=1,
+        )
+        if count != 1:
+            raise OracleValidationError("Catalog fingerprint marker could not be updated exactly once")
         shard.write_text(text[:start] + updated + text[end:], encoding="utf-8", newline="\n")
         return
     raise OracleValidationError(f"Catalog shard not found for {problem_id}")
@@ -164,7 +195,7 @@ def _write_report(
 
 def validate(problem_id: str, stage: str | None = None) -> dict[str, Any]:
     repo_root = find_repository_root()
-    problem = load_catalog(repo_root).get(problem_id)
+    problem = load_catalog(repo_root, verify_validation=False).get(problem_id)
     if not problem.ready or problem.public_tests is None or problem.symbol is None:
         raise OracleValidationError("only ready problems can be oracle validated")
     submission, private_test, reports = _paths(repo_root, problem_id, stage)
@@ -186,6 +217,7 @@ def validate(problem_id: str, stage: str | None = None) -> dict[str, Any]:
             f"validation failed: public={public.status}, private={private.status}"
         )
     _update_catalog(repo_root, problem_id, stage)
+    _update_fingerprint(repo_root, problem_id)
     return report
 
 

@@ -132,7 +132,7 @@ problems:
       - LOSS-008
       - TNS-006
     skills: [math.numerical_stability, tensor.reduction, tensor.gradient]
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 734f3e1c42d67a8e45efd07182e25db1e59d243ee8eea896480dc0a3b1630088}
     assets: {problem_dir: curriculum/problems/LOSS-014-cross-entropy}
     interface: {language: python, framework: pytorch, symbol: cross_entropy}
     constraints:

@@ -52,6 +52,18 @@ def _require_ready(problem: Problem) -> None:
         raise CliError(f"problem is planned and has no runnable assets: {problem.id}")
 
 
+def _allow_experimental(profile: dict, explicit: bool) -> bool:
+    return explicit or bool(profile["preferences"].get("allow_experimental_problems", False))
+
+
+def _require_quality(problem: Problem, profile: dict, explicit: bool) -> None:
+    if not problem.recommendable and not _allow_experimental(profile, explicit):
+        raise CliError(
+            f"problem is contract-only: {problem.id}; use --allow-experimental "
+            "or set preferences.allow_experimental_problems=true"
+        )
+
+
 def _require_prerequisites(problem: Problem, state) -> None:
     missing = sorted(set(problem.prerequisites) - state.mastered)
     if missing:
@@ -68,7 +80,8 @@ def _doctor(repo_root: Path) -> int:
         ready = sum(problem.ready for problem in catalog.problems.values())
         oracle = sum(problem.ready and problem.raw["validation"]["level"] in {"oracle", "field", "stable"} for problem in catalog.problems.values())
         retention = sum(problem.ready and all(problem.retention_variant(repo_root, stage) for stage in ("d2", "d7")) for problem in catalog.problems.values())
-        checks.append(("catalog", True, f"{ready} ready / {len(catalog.problems) - ready} planned, {oracle} oracle, {retention} retention-ready, DAG valid"))
+        field_runs = sum(problem.field_runs for problem in catalog.problems.values() if problem.ready)
+        checks.append(("catalog", True, f"{ready} ready / {len(catalog.problems) - ready} planned, {oracle} oracle, {retention} retention-ready, {field_runs} field runs, DAG valid"))
     try:
         demo_data = yaml.safe_load((repo_root / "workspace/demo/profile.yaml").read_text(encoding="utf-8"))
         demo = validate_profile_data(demo_data, repo_root)
@@ -109,7 +122,7 @@ def _init(repo_root: Path, profile_id: str, tracks: tuple[str, ...], catalog: Ca
     return 0
 
 
-def _next(repo_root: Path, profile_id: str, catalog: Catalog) -> int:
+def _next(repo_root: Path, profile_id: str, catalog: Catalog, include_experimental: bool = False) -> int:
     _, profile, _, state = _profile_state(repo_root, profile_id)
     current = state.current_attempt()
     if current and state.problem_status(current.problem_id) == "mastered":
@@ -119,7 +132,10 @@ def _next(repo_root: Path, profile_id: str, catalog: Catalog) -> int:
     print("CURRENT")
     if current:
         problem = catalog.get(current.problem_id)
-        print(f"  {problem.id} {problem.title}  {state.problem_status(problem.id)}")
+        print(
+            f"  {problem.id} {problem.title}  {state.problem_status(problem.id)}  "
+            f"validation={problem.validation_level}"
+        )
         print("PREREQUISITES")
         if problem.prerequisites:
             for required in problem.prerequisites:
@@ -163,13 +179,21 @@ def _next(repo_root: Path, profile_id: str, catalog: Catalog) -> int:
         print("  none")
     unlocked = tuple(
         problem
-        for problem in catalog.unlocked(state.mastered, set(profile["target_roles"]))
+        for problem in catalog.unlocked(
+            state.mastered,
+            set(profile["target_roles"]),
+            include_experimental=_allow_experimental(profile, include_experimental),
+        )
         if state.problem_status(problem.id) == "not_started"
     )[:3]
     print("UNLOCKS")
     if unlocked:
         for problem in unlocked:
-            print(f"  {problem.id} {problem.title}")
+            retention = "yes" if all(problem.retention_variant(repo_root, stage) for stage in ("d2", "d7")) else "no"
+            print(
+                f"  {problem.id} {problem.title}  assets={problem.status} "
+                f"validation={problem.validation_level} retention={retention} field_runs={problem.field_runs}"
+            )
     else:
         print("  none")
     print("COMMAND")
@@ -190,6 +214,17 @@ def _next(repo_root: Path, profile_id: str, catalog: Catalog) -> int:
 def _show(problem: Problem) -> int:
     print(f"{problem.id}  {problem.title}")
     print(f"STATUS  {problem.status}")
+    if problem.ready:
+        retention = "yes" if all(problem.raw["retention"].get(stage) and isinstance(problem.raw["retention"][stage], dict) and problem.raw["retention"][stage].get("oracle_validated") is True for stage in ("d2", "d7")) else "no"
+        print(f"ASSETS  ready")
+        print(f"VALIDATION  {problem.validation_level}")
+        print(f"RETENTION  {retention}")
+        print(f"FIELD RUNS  {problem.field_runs}")
+    else:
+        print("ASSETS  planned")
+        print("VALIDATION  n/a")
+        print("RETENTION  no")
+        print("FIELD RUNS  0")
     print(f"PREREQUISITES  {', '.join(problem.prerequisites) or 'none'}")
     if not problem.ready or problem.problem_dir is None:
         print(f"DESCRIPTION  {problem.raw['description']}")
@@ -201,9 +236,10 @@ def _show(problem: Problem) -> int:
     return 0
 
 
-def _start(repo_root: Path, profile_id: str, problem: Problem) -> int:
+def _start(repo_root: Path, profile_id: str, problem: Problem, allow_experimental: bool = False) -> int:
     _require_ready(problem)
-    _, _, _, state = _profile_state(repo_root, profile_id)
+    _, profile, _, state = _profile_state(repo_root, profile_id)
+    _require_quality(problem, profile, allow_experimental)
     _require_prerequisites(problem, state)
     result = start_problem(repo_root, profile_id, problem)
     print(f"ATTEMPT {result.attempt_id}: {'created' if result.created else 'reused without overwrite'}")
@@ -280,14 +316,19 @@ def _retain(repo_root: Path, profile_id: str, problem: Problem, stage: str) -> i
     return 0
 
 
-def _catalog(catalog: Catalog, track_id: str | None) -> int:
+def _catalog(repo_root: Path, catalog: Catalog, track_id: str | None) -> int:
     if track_id and track_id not in catalog.tracks:
         raise CliError(f"unknown track: {track_id}")
     for problem_id in catalog.order:
         problem = catalog.problems[problem_id]
         if track_id and track_id not in problem.raw["tracks"]:
             continue
-        print(f"{problem.id:<9} {problem.status:<7} {problem.raw['tier']:<8} {problem.title}")
+        if problem.ready:
+            retention = "yes" if all(problem.retention_variant(repo_root, stage) for stage in ("d2", "d7")) else "no"
+            quality = f"validation={problem.validation_level} retention={retention} field_runs={problem.field_runs}"
+        else:
+            quality = "validation=n/a retention=no field_runs=0"
+        print(f"{problem.id:<12} assets={problem.status:<7} {quality}  {problem.title}")
     return 0
 
 
@@ -318,9 +359,9 @@ def _build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("doctor")
     init = commands.add_parser("init"); init.add_argument("--profile", required=True); init.add_argument("--track", action="append", default=[])
-    nxt = commands.add_parser("next"); nxt.add_argument("--profile", required=True)
+    nxt = commands.add_parser("next"); nxt.add_argument("--profile", required=True); nxt.add_argument("--include-experimental", action="store_true")
     show = commands.add_parser("show"); show.add_argument("problem_id")
-    start = commands.add_parser("start"); start.add_argument("problem_id"); start.add_argument("--profile", required=True)
+    start = commands.add_parser("start"); start.add_argument("problem_id"); start.add_argument("--profile", required=True); start.add_argument("--allow-experimental", action="store_true")
     test = commands.add_parser("test"); test.add_argument("problem_id"); test.add_argument("--profile", required=True)
     submit = commands.add_parser("submit"); submit.add_argument("problem_id"); submit.add_argument("--profile", required=True)
     review = commands.add_parser("review"); review.add_argument("problem_id"); review.add_argument("--profile", required=True); review.add_argument("--contract", choices=("passed", "failed"), required=True); review.add_argument("--oral", choices=("passed", "failed"), required=True); review.add_argument("--explanation", required=True); review.add_argument("--complexity", required=True); review.add_argument("--boundaries", required=True)
@@ -339,13 +380,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _doctor(repo_root)
         catalog = load_catalog(repo_root)
         if args.command == "init": return _init(repo_root, args.profile, tuple(args.track), catalog)
-        if args.command == "next": return _next(repo_root, args.profile, catalog)
-        if args.command == "catalog": return _catalog(catalog, args.track)
+        if args.command == "next": return _next(repo_root, args.profile, catalog, args.include_experimental)
+        if args.command == "catalog": return _catalog(repo_root, catalog, args.track)
         if args.command == "graph": return _graph(catalog, args.track)
         if args.command == "profile": return _profile_show(repo_root, args.profile_id)
         problem = catalog.get(args.problem_id)
         if args.command == "show": return _show(problem)
-        if args.command == "start": return _start(repo_root, args.profile, problem)
+        if args.command == "start": return _start(repo_root, args.profile, problem, args.allow_experimental)
         if args.command == "test": return _test(repo_root, args.profile, problem)
         if args.command == "submit": return _submit(repo_root, args.profile, problem)
         if args.command == "review": return _review(repo_root, args)

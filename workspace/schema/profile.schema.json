@@ -62,6 +62,9 @@
         },
         "require_retention": {
           "type": "boolean"
+        },
+        "allow_experimental_problems": {
+          "type": "boolean"
         }
       }
     }

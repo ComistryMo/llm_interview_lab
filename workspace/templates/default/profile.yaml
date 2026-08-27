@@ -13,3 +13,4 @@ preferences:
   pressure: medium
   implementation_first: true
   require_retention: true
+  allow_experimental_problems: false

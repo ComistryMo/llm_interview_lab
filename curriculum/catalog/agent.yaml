@@ -82,7 +82,7 @@ problems:
     prerequisites:
       - AGT-002
     skills: [agent.schema, agent.state, agent.validation, agent.parser, agent.executor]
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: de1e09429381466b2c92d65563648eab46f7beed87bbe000bc56cbb1b78309bc}
     assets: {problem_dir: curriculum/problems/AGT-006-tool-calling-loop}
     interface: {language: python, framework: stdlib, symbol: run_tool_calling_loop}
     constraints:

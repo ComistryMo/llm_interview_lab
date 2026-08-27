@@ -219,7 +219,7 @@ problems:
       - tensor.autograd
       - tensor.detach
       - tensor.no_grad
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: be84b1ac3e7e3a32121e6be69fecf2200097bce0a08d8e09da24b9a0eaead0dc}
     assets: {problem_dir: curriculum/problems/TNS-013-autograd-detach-no-grad}
     interface: {language: python, framework: pytorch, symbol: autograd_probe}
     constraints:

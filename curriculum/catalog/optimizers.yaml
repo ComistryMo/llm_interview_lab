@@ -118,7 +118,7 @@ problems:
     prerequisites:
       - OPT-004
     skills: [optimizer.state, optimizer.no_grad, optimizer.validation]
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: 3ba73dbd6677a150a68ee3e5181eaac9920d0fb632a5e71f204a51167706f2c4}
     assets: {problem_dir: curriculum/problems/OPT-005-adamw}
     interface: {language: python, framework: pytorch, symbol: adamw_step}
     constraints:

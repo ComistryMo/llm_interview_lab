@@ -88,7 +88,7 @@ problems:
       - TNS-003
       - TNS-013
     skills: [module.parameter, module.forward, tensor.gradient]
-    validation: {level: oracle, field_runs: 0}
+    validation: {level: oracle, field_runs: 0, fingerprint: f22b347046e89649b927891fa7aa181bd3ccf127402ef1de05dff54621494c9c}
     assets: {problem_dir: curriculum/problems/NNL-008-rmsnorm}
     interface: {language: python, framework: pytorch, symbol: RMSNorm}
     constraints:
