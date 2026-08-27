@@ -263,9 +263,9 @@ def test_best_practices_has_explicit_privacy_and_consent_boundaries() -> None:
     ):
         assert token in document
 
-    assert "Git ignore 只防误提交，不是备份，也不是模型供应商的隐私保证" in document
-    assert "CLI 和 context 不会自动上传材料" in document
-    assert "不要上传整个 Profile 或公司/客户内部材料" in document
+    assert "Git ignore prevents accidental commits; it is not a backup" in document
+    assert "The CLI and `context` command never upload materials automatically" in document
+    assert "Never upload the whole Profile or employer/client internal material" in document
 
 
 def test_best_practices_token_budget_matches_the_context_runtime() -> None:
@@ -274,6 +274,6 @@ def test_best_practices_token_budget_matches_the_context_runtime() -> None:
     assert "8 KiB" in document
     for excluded in EXCLUDED_CONTEXT:
         assert f"`{excluded}`" in document
-    assert "`policy_refs` 按 SHA-256 缓存" in document
-    assert "每轮只发送最新 context" in document
-    assert "不是让 AI 扫描仓库" in document
+    assert "`policy_refs` can be cached by SHA-256" in document
+    assert "send only the newest\ncontext for each turn" in document
+    assert "not an invitation for AI to\nscan the repository" in document

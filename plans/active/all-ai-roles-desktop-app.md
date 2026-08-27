@@ -65,8 +65,8 @@ code-signing, auto-update, and broad rewrites of existing coding exercises.
 
 - Model/content: `.venv\\Scripts\\python -m pytest tests/infrastructure/test_roles.py tests/infrastructure/test_role_interviews.py -q`
 - Application/CLI: `.venv\\Scripts\\python -m pytest tests/infrastructure/test_application.py tests/infrastructure/test_quickstart.py -q`
-- AI: `.venv\\Scripts\\python -m pytest tests/infrastructure/test_ai_connections.py tests/infrastructure/test_codex_backend.py -q`
-- Desktop: `.venv\\Scripts\\python -m pytest tests/desktop -q` with
+- AI: `.venv\\Scripts\\python -m pytest tests/infrastructure/test_ai_connections.py -q`
+- Desktop: `.venv\\Scripts\\python -m pytest tests/infrastructure/test_desktop.py -q` with
   `QT_QPA_PLATFORM=offscreen`.
 - Repository health: `.venv\\Scripts\\python -m pytest -q` and
   `.venv\\Scripts\\llm-lab.exe doctor`.
@@ -108,17 +108,28 @@ code-signing, auto-update, and broad rewrites of existing coding exercises.
   compatibly; roles may only reference the canonical ontology.
 - 2026-08-28: non-coding fixed items share one deterministic public loader and
   four-file asset contract; they do not masquerade as pytest Problems.
+- 2026-08-28: keep `any-llm` as the source-install adapter for native Anthropic
+  and Gemini protocols, but package a compact `httpx` OpenAI-compatible/Ollama
+  adapter in the portable executable. Including every provider SDK made the
+  Nuitka closure several thousand C files and was not viable for the Alpha.
+- 2026-08-28: standalone builds seed only public Catalog, Problem, retention,
+  schema and policy assets under `%LOCALAPPDATA%`; Profile directories remain
+  empty until the local user initializes one. A standalone marker replaces Git
+  ignore checks only outside a checkout and never weakens Profile path checks.
+- 2026-08-28: explicitly include public `.py` starter/test assets in the deploy
+  spec because Nuitka treats Python files as code and omits them from a generic
+  data-directory include. The artifact smoke test catches this class of drift.
 
 ## 8. Progress
 
 - [x] Recover Python 3.11 environment and run baseline.
 - [x] Create feature branch and inspect public architecture.
 - [x] Review requested README references and official Codex integration source.
-- [ ] Implement and test public role/skill/interview content model.
-- [ ] Implement and test interview/application vertical slice and quickstart.
-- [ ] Implement and test desktop application.
-- [ ] Implement and test AI connections and Codex backend.
-- [ ] Rewrite docs, capture real screenshots and verify packaging.
+- [x] Implement and test public role/skill/interview content model.
+- [x] Implement and test interview/application vertical slice and quickstart.
+- [x] Implement and test desktop application.
+- [x] Implement and test AI connections and Codex backend.
+- [x] Rewrite docs, capture real screenshots and verify packaging.
 - [ ] Run local/remote CI, merge and publish alpha prerelease.
 
 ## 9. Final retrospective

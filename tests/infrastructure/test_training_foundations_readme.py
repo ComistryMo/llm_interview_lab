@@ -419,7 +419,7 @@ def test_readme_mermaid_and_release_markers_are_github_compatible() -> None:
 
 def test_readme_is_honest_about_field_evidence_tests_and_local_execution() -> None:
     readme = _readme()
-    assert re.search(r"(不是|不构成).{0,20}(安全|恶意代码).{0,8}沙箱", readme)
-    assert re.search(r"(不是|不构成).{0,20}(隐藏测试|防作弊)", readme)
-    assert re.search(r"(?i)(public tests|公开测试).{0,24}(≠|不等于).{0,24}mastered", readme)
+    assert re.search(r"(?i)grader.{0,40}not a hostile-code security sandbox", readme)
+    assert re.search(r"(?i)field-tested runs.{0,12}\b0\b", readme)
+    assert re.search(r"(?i)public tests passed.{0,8}mastered", readme)
     assert "workspace/profiles/maintainer" not in readme
