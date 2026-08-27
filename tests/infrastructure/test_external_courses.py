@@ -7,10 +7,11 @@ import shutil
 
 import pytest
 
-from scripts.validate_curriculum import CurriculumValidationError, load_json
 from scripts.validate_external_courses import (
     CATALOG_RELATIVE,
     NAVIGATION_RELATIVE,
+    CurriculumValidationError,
+    load_json,
     main,
     validate_external_courses,
 )

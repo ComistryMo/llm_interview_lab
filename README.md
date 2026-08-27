@@ -1,33 +1,18 @@
 # LLM Interview Lab
 
-一个面向大众的、开源的 AI 算法面试手撕训练平台。
+一个面向大众的、clone 后即可使用的 AI 算法面试手撕训练平台。
 
-项目不把“一次测试通过”当作掌握，也不提供可直接复制的公共完整答案。固定课程、公开测试和解锁关系保持确定性；AI 可以解释、提示、审查和生成本地变式，但不能替学习者证明自己已经掌握。
-
-当前版本是 **LEAN-V2 Vertical Slice 1**：它先用一题打通完整工程闭环，再根据真实使用反馈扩展课程，而不是预先创建数百个空目录。
-
-## 核心特点
-
-- **Clone-first**：clone 一个仓库即可训练，不要求第二个项目或数据库；
-- **Repository-local Workspace**：个人答案和历史默认位于仓库内的 `workspace/profiles/<profile_id>/`；
-- **Git 隐私隔离**：真实 Profile 默认被 `.gitignore` 排除；
-- **Curriculum first**：课程节点、依赖、接口和测试契约由固定 Catalog 决定；
-- **答案隔离**：公共题目只有题面、starter、公开测试和分级提示；
-- **显式 submission grading**：课程测试只测试 Workspace submission，不会偷偷 import starter；
-- **Retention gates**：implemented、reviewed、D+2、D+7 与 mastered 是不同状态；
-- **AI at the edges**：AI 负责教学和个性化，本地确定性工具负责基础事实与测试证据。
+这里训练的是“能独立解释、实现、测试、调试并隔周迁移”，不是把一次公开测试通过包装成掌握。固定课程与解锁规则是确定性的；AI 可以教学、分级提示、审查和生成本地变式，但不能直接判定 mastery。
 
 ## 五分钟开始
 
-推荐 Python 3.11；项目最低版本保持 Python 3.10。
+需要 Python 3.10+，推荐 Python 3.11。
 
 ```bash
 git clone https://github.com/ComistryMo/llm_interview_lab.git
 cd llm_interview_lab
 python -m venv .venv
 ```
-
-激活环境：
 
 ```powershell
 # Windows PowerShell
@@ -39,93 +24,104 @@ python -m venv .venv
 . .venv/bin/activate
 ```
 
-安装并创建本地 Profile：
+激活环境后，在任一平台运行：
 
 ```bash
-python -m pip install -r requirements.txt
-llm-lab init --profile default
+python -m pip install -e .[dev]
+llm-lab init --profile default --track ai_foundation
 llm-lab doctor
 llm-lab next --profile default
-```
-
-`requirements.txt` 只是兼容入口；依赖及版本范围只在 `pyproject.toml` 维护。
-
-新 Profile 不要求姓名、公司或简历。初始化只会生成本地配置、空学习历史和必要目录。
-
-## 完成第一题
-
-当前固定课程只有一个 ready 节点：
-
-```text
-FND-001 Wrong Prediction Count
-```
-
-查看并开始：
-
-```bash
-llm-lab show FND-001
 llm-lab start FND-001 --profile default
 ```
 
-`start` 将无答案 starter 复制到：
-
-```text
-workspace/profiles/default/submissions/FND-001/attempt-0001/submission.py
-```
-
-编辑这个本地文件，然后运行：
+编辑输出的 `workspace/profiles/default/.../submission.py`，然后运行：
 
 ```bash
 llm-lab test FND-001 --profile default
 llm-lab submit FND-001 --profile default
-llm-lab next --profile default
 ```
 
-首次 `test` 预期失败，因为 starter 没有实现。课程测试由 grader 精确运行，并通过统一 plugin 注入当前 submission；不会导入 `starter.py`，也不会扫描其他 Profile。
+第一份 starter 预期测试失败；它不含答案。Tensor 及后续题另需：
 
-`submit` 只接受与当前文件 SHA-256 匹配的 passing test evidence。成功后状态最多是 `implemented`：
+```bash
+python -m pip install -e .[torch,dev]
+```
+
+## 完整训练闭环
 
 ```text
-Public tests: PASS
-Contract review: PENDING
-Oral defense: PENDING
-D+2 retention: PENDING
-D+7 retention: PENDING
-Mastery: NOT YET
+init + Track
+  → next → start → edit submission
+  → test → submit (implemented)
+  → contract + oral review (reviewed)
+  → D+2 clean rewrite (retained_d2)
+  → D+7 variant (mastered)
+  → prerequisite unlock
 ```
 
-## 第一版 CLI
+结构化 Review 示例：
 
-| 命令 | 是否写 Workspace | 用途 |
-|---|---:|---|
-| `llm-lab doctor` | 否 | 校验环境、Catalog、DAG、虚构 Demo 和 Git 隔离 |
-| `llm-lab init --profile <id>` | 是 | 创建或验证一个本地 Profile |
-| `llm-lab next --profile <id>` | 否 | 一屏展示当前任务和最多三个解锁项 |
-| `llm-lab show <problem_id>` | 否 | 展示固定题目契约 |
-| `llm-lab start <problem_id> --profile <id>` | 是 | 创建或幂等返回当前 attempt |
-| `llm-lab test <problem_id> --profile <id>` | 是 | 运行精确公开测试并写测试事件 |
-| `llm-lab submit <problem_id> --profile <id>` | 是 | 记录 submission 和 implemented 证据 |
+```bash
+llm-lab review FND-001 --profile default \
+  --contract passed --oral passed \
+  --explanation "Explained validation and counting branches" \
+  --complexity "O(n) time, O(1) auxiliary space" \
+  --boundaries "Rejects bool, empty input, and invalid container types"
+```
 
-本切片不包含 Web UI、数据库、账户系统、网络服务、多 Agent Runtime 或恶意代码沙箱。`llm-lab` 只执行学习者本人信任的本地代码；路径检查用于防止误加载，不构成安全隔离。
+到期后启动全新、无旧答案的复测 attempt：
+
+```bash
+llm-lab retain FND-001 --stage d2 --profile default
+llm-lab retain FND-001 --stage d7 --profile default
+```
+
+生产命令按 Review 事件时间计算 D+2/D+7；测试可以注入时钟。复测仍需 `test → submit → review`。只有公开测试、契约审查、口述、D+2 与 D+7 全部通过，确定性流程才写入 `task_mastered`。
+
+## CLI
+
+| 命令 | 作用 | 写 Workspace |
+|---|---|---:|
+| `llm-lab doctor` | 校验 Catalog、DAG、Demo 和 Git 隔离 | 否 |
+| `llm-lab init --profile ID [--track TRACK]` | 创建本地 Profile | 是 |
+| `llm-lab next --profile ID` | 一屏显示当前任务、复测和最多三个解锁项 | 否 |
+| `llm-lab show PROBLEM` | 显示固定题契约 | 否 |
+| `llm-lab start PROBLEM --profile ID` | 创建或幂等返回普通 attempt | 是 |
+| `llm-lab test PROBLEM --profile ID` | 在独立 pytest 子进程运行公开测试 | 是 |
+| `llm-lab submit PROBLEM --profile ID` | 绑定当前 SHA-256 测试证据 | 是 |
+| `llm-lab review PROBLEM ...` | 记录结构化契约与口述结果 | 是 |
+| `llm-lab retain PROBLEM --stage d2\|d7 ...` | 创建无旧答案的复测 attempt | 是 |
+| `llm-lab catalog [--track TRACK]` | 主动展开完整目录 | 否 |
+| `llm-lab graph --track TRACK` | 显示 Track DAG 边 | 否 |
+| `llm-lab profile show ID` | 从 events 动态汇总状态 | 否 |
+
+Tracks 包括 AI 基础、LLM、VLM、后训练、Agent、训练/推理系统，以及传统 ML、推荐、CV、GNN、生成模型和传统 RL 选修。
+
+## 课程与差异化
+
+当前固定图谱包含 38 个可运行题和 188 个 planned 节点。planned 节点只有 Catalog 元数据，不制造空目录。首批 ready 内容覆盖：
+
+- 真实数据任务中的 Python 与 JSONL；
+- shape、broadcast、gather、mask、last token、autograd；
+- Stable Softmax、LogSumExp、BCE、Cross Entropy；
+- SGD、Momentum、Adam、AdamW；
+- Linear、Embedding、RMSNorm；
+- Attention、MHA、MQA、GQA、RoPE、KV Cache；
+- SFT label、sequence logprob、DPO、GRPO；
+- Tool Schema、Registry、Agent Loop、Trajectory。
+
+每个 ready 题只有原创 `task.md`、无答案 `starter.py`、`test_public.py` 和 H1/H2/H3 `hints.md`。元数据统一在 `curriculum/catalog/*.yaml`，包含前置、三维难度、Oracle、口述题、变式轴、不变式、常见错误和复测契约。
+
+与普通题单相比，本项目把依赖解锁、提交 SHA、代码审查、口述、间隔复写和变式迁移放在同一个本地闭环中；课程测试只通过统一 loader 测试当前 Workspace submission，不会偷偷测试 starter。
 
 ## Workspace 与隐私
 
-公共仓库跟踪：
+真实学习数据默认位于仓库内部但不进入 Git：
 
 ```text
-workspace/README.md
-workspace/schema/
-workspace/templates/
-workspace/demo/
-workspace/profiles/.gitkeep
-```
-
-本地真实数据默认忽略：
-
-```text
-workspace/profiles/<profile_id>/
+workspace/profiles/<id>/
 ├── profile.yaml
-├── events.jsonl
+├── events.jsonl          # 唯一学习历史事实源
 ├── submissions/
 ├── generated/
 ├── private_tests/
@@ -134,7 +130,7 @@ workspace/profiles/<profile_id>/
 └── exports/
 ```
 
-可以验证隔离：
+公共仓库只跟踪 Schema、模板、完全虚构的 `workspace/demo/` 和 `.gitkeep`。验证方法：
 
 ```bash
 git check-ignore -v workspace/profiles/default/events.jsonl
@@ -142,103 +138,31 @@ git status --short
 git ls-files workspace/profiles
 ```
 
-最后一条命令在公共仓库中只应显示 `.gitkeep`。不要使用 `git add -f` 添加真实 Profile。
+不要使用 `git add -f` 提交真实 Profile。更多边界见 [Workspace](docs/workspace.md)。
 
-`workspace/demo/` 完全虚构，只用于 CI。CI 不读取真实 Profile；发布包也不应包含它们。
+## AI 教练
 
-## 唯一事实源
+把 [AGENTS.md](AGENTS.md) 与 [Coach Policy](coach/POLICY.md) 提供给能读取本地仓库的 AI。AI 可以：
 
-LEAN-V2 新闭环使用两类事实源：
+- 运行 `next/show/test`，解释当前契约和失败证据；
+- 按 H0—H5 控制提示；
+- 审查代码可读性、复杂度、数值稳定、shape/mask/dtype/device/gradient；
+- 完成结构化口述追问；
+- 按 Catalog 的 `variant_axes` 在本地 `generated/` 创建私人变式和测试。
 
-```text
-curriculum/catalog/*.yaml
-    固定课程节点、前置关系、接口、Runner、Oracle 和变式契约
+AI 不得修改固定 DAG、把生成题自动加入公共题库、替学习者补当前答案，或用测试通过直接写 mastery。项目不含模型 API、多 Agent Runtime 或后台服务。
 
-workspace/profiles/<profile_id>/events.jsonl
-    该 Profile 的学习历史；物理行顺序就是 reducer 顺序
-```
-
-Workspace 只引用 Problem ID，不复制课程定义。当前任务、进度、帮助统计和复测状态应由事件生成，不由用户同时维护多份 Markdown。
-
-旧 `curriculum/catalog.json`、`state/` 和相关脚本暂时保留为兼容层；Vertical Slice 1 不删除或改写其历史。它们不会被新 `llm-lab` 当作新 Profile 的事实源。
-
-## 题目结构
-
-一个 ready 固定题默认只有四个文件：
-
-```text
-curriculum/problems/<id>-<slug>/
-├── task.md
-├── starter.py
-├── test_public.py
-└── hints.md
-```
-
-结构化元数据只存在于 `curriculum/catalog/*.yaml`，不在题目目录重复维护。`planned` 节点只应存在于 Catalog；当前切片尚未登记大规模 planned 目录。
-
-公共仓库不提供真正隐藏测试。个性化变式和私人测试未来只进入本地 Workspace，不会自动加入公共课程。
-
-## AI 如何协助
-
-学习者可以让能读取仓库的 AI：
-
-- 解释当前题目的概念、输入输出和边界；
-- 按 H0–H5 控制提示强度；
-- 审查 Workspace submission 与测试证据；
-- 追问复杂度、异常、张量 shape 或数学原理；
-- 根据错误生成本地调试题和复测建议；
-- 检查“测试通过但契约未满足”的情况。
-
-AI 默认不应直接完成当前 submission，也不能仅凭测试通过写入 mastered。详细行为边界见 [AI 教练协议](docs/COACHING_PROTOCOL.md)。
-
-## Repository Health
-
-根 pytest 只收集基础设施和已接受回归，不自动运行课程 starter 或 learner submission：
+## 开发与安全边界
 
 ```bash
 python -m pytest --collect-only -q
 python -m pytest -q
 llm-lab doctor
-```
-
-旧兼容校验继续保留：
-
-```bash
-python scripts/check_environment.py
-python scripts/validate_curriculum.py
 python scripts/validate_external_courses.py
-python scripts/validate_state.py
-python scripts/export_handoff.py --dry-run
 ```
 
-当前旧训练 fixture 的精确测试仍可显式运行，但它不是 Repository Health：
+根 pytest 不收集课程 `test_public.py`、starter 或真实 Profile。Grader 提供精确路径、超时和输出截断，但不是恶意代码沙箱；只运行学习者本人信任的本地代码。
 
-```bash
-python -m pytest tests/stage00/test_task_00a1.py -q
-```
-
-## 兼容层说明
-
-早期版本提供 `scripts/create_private_workspace.py`，把公共 HEAD 复制成第二个私有仓库。该脚本和 Makefile 本切片继续保留，供已有用户迁移或回滚；它不再是新用户默认入口。
-
-现有外部课程 metadata 和固定 checkout 工具也继续保留，但不会被 `llm-lab init`、`next` 或 FND-001 自动启用。外部官方作业的 AI 帮助边界仍以其 Task Card 和上游政策为准。
-
-## 项目边界
-
-本仓库可以包含原创 toy problem、公开数据、公开论文/API 来源和完全虚构 Demo。不得提交：
-
-- 公司、客户或其他第三方的内部代码、数据、配置或指标；
-- 真实学习记录或简历事实；
-- 模型权重、日志、凭据或本地绝对路径；
-- 第三方题面、测试、starter、提示或答案的未授权复制；
-- 固定课程的公共完整答案。
-
-安全和来源政策见 [SECURITY.md](SECURITY.md) 与 [参考资料政策](docs/REFERENCE_POLICY.md)。
-
-## 当前状态与贡献
-
-当前是 alpha 纵向切片，不代表完整课程已经可用。只有 FND-001 已进入新固定 Catalog；Tensor、Loss、Optimizer、Transformer、VLM、后训练、Agent、推理和分布式节点尚未写入本切片。
-
-欢迎提交小而可验证的基础设施、测试和原创课程改进。现阶段不要批量生成空题目目录，也不要提交公共答案。贡献前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
+架构见 [docs/architecture.md](docs/architecture.md)，出题规范见 [docs/curriculum-authoring.md](docs/curriculum-authoring.md)，贡献规则见 [CONTRIBUTING.md](CONTRIBUTING.md)。外部课程兼容元数据被冻结在 `curriculum/external/`，不是默认路线，也不镜像上游答案或测试。
 
 License: [Apache-2.0](LICENSE).

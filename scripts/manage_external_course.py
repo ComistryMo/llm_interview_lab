@@ -22,21 +22,21 @@ from urllib.parse import urlsplit, urlunsplit
 import uuid
 
 try:
-    from scripts.validate_curriculum import (
+    from scripts.validate_external_courses import (
         REFERENCE_RELATIVE,
         REPO_ROOT,
         CurriculumValidationError,
         load_json,
+        validate_external_courses,
     )
-    from scripts.validate_external_courses import validate_external_courses
 except ModuleNotFoundError:  # Direct execution: python scripts/manage_external_course.py
-    from validate_curriculum import (  # type: ignore[no-redef]
+    from validate_external_courses import (  # type: ignore[no-redef]
         REFERENCE_RELATIVE,
         REPO_ROOT,
         CurriculumValidationError,
         load_json,
+        validate_external_courses,
     )
-    from validate_external_courses import validate_external_courses  # type: ignore[no-redef]
 
 
 UPSTREAM_REF = "refs/llm-interview-lab/upstream"
@@ -742,8 +742,8 @@ def _show_source(source: AssignmentSource) -> None:
         )
     )
     print(
-        "  aggregate only: choose exactly one canonical problem-group task below "
-        "as the private CURRENT_TASK"
+        "  aggregate only: canonical problem groups below are Preview-only "
+        "and do not enter the native Workspace"
     )
     prerequisites = assignment["prerequisites"]
     print(

@@ -1,2 +1,1 @@
--r requirements.txt
-torch>=2.2
+-e .[dev,torch]

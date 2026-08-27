@@ -222,7 +222,11 @@ def start_retention(repo_root: Path, profile_id: str, problem: "Problem", stage:
     paths = profile_paths(repo_root, profile_id)
     load_profile(paths, repo_root)
     state = reduce_events(read_events(paths.events_file, event_schema_path(repo_root)))
-    if stage == "d2" and problem.id in state.retained_d2 or stage == "d7" and problem.id in state.retained_d7:
+    if (
+        stage == "d2" and problem.id in state.retained_d2
+    ) or (
+        stage == "d7" and problem.id in state.retained_d7
+    ):
         raise WorkspaceError(f"{stage} retention already passed")
     if stage == "d7" and problem.id not in state.retained_d2:
         raise WorkspaceError("D+2 retention must pass before D+7")

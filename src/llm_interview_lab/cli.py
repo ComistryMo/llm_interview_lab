@@ -100,8 +100,9 @@ def _init(repo_root: Path, profile_id: str, tracks: tuple[str, ...], catalog: Ca
     if unknown:
         raise CliError(f"unknown track: {', '.join(sorted(unknown))}")
     result = init_profile(repo_root, profile_id, requested)
+    stored = load_profile(result.paths, repo_root)
     print(f"PROFILE {profile_id}: {'created' if result.created else 'already exists'}")
-    print(f"TRACKS: {', '.join(requested)}")
+    print(f"TRACKS: {', '.join(stored['target_roles'])}")
     print(f"NEXT: llm-lab next --profile {profile_id}")
     return 0
 
@@ -147,7 +148,11 @@ def _next(repo_root: Path, profile_id: str, catalog: Catalog) -> int:
             print(f"  {problem_id} {stage}")
     else:
         print("  none")
-    unlocked = catalog.unlocked(state.mastered, set(profile["target_roles"]))[:3]
+    unlocked = tuple(
+        problem
+        for problem in catalog.unlocked(state.mastered, set(profile["target_roles"]))
+        if state.problem_status(problem.id) == "not_started"
+    )[:3]
     print("UNLOCKS")
     if unlocked:
         for problem in unlocked:
@@ -282,8 +287,9 @@ def _profile_show(repo_root: Path, profile_id: str) -> int:
     _, profile, _, state = _profile_state(repo_root, profile_id)
     print(f"PROFILE {profile_id}")
     print(f"TRACKS {', '.join(profile['target_roles'])}")
+    problem_ids = {problem_id for problem_id, _ in state.attempts}
     for status in ("in_progress", "implemented", "reviewed", "retained_d2", "retained_d7", "mastered"):
-        count = sum(state.problem_status(problem_id) == status for problem_id, _ in state.attempts)
+        count = sum(state.problem_status(problem_id) == status for problem_id in problem_ids)
         print(f"{status.upper()} {count}")
     return 0
 

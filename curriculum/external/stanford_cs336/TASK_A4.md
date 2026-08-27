@@ -6,7 +6,7 @@
 
 根 MIT LICENSE 不能自动替第三方网页、书籍、模型权重、数据集或测试 fixture 授权；任何真实资产必须逐项审计 provenance。
 
-上游 checkout 含 A1 staff training implementation，因此也属于 `EXT-CS336-A1` 答案泄漏源；只有 A1 集成 Gate 通过并显式确认 spoiler 后才能安装。整份 assignment 是聚合 Gate；当前 `integration_status=inventory-audited` 只允许安装与 Preview，升级为 `implementation-ready` 后每次才可登记一个 `EXT-CS336-A4-<group>`。
+上游 checkout 含 A1 staff training implementation，因此也属于 `EXT-CS336-A1` 答案泄漏源；只有 A1 集成 Gate 通过并显式确认 spoiler 后才能安装。整份 assignment 是聚合 Gate；当前 `integration_status=inventory-audited` 只允许安装与 Preview，problem-group ID 不写入原生 Workspace。
 
 ## 前置 Gate
 

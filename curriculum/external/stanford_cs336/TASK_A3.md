@@ -6,7 +6,7 @@
 
 上游仓库中的 pytest 验证 API/dashboard/scheduler 服务，不验证学生的 scaling-law 分析。它们只能算上游基础设施健康证据，不能冒充作业通过。
 
-整份 assignment 是聚合 Gate；`isoflops` 与 `budgeted-search` 是两个独立 canonical task。当前 `integration_status=inventory-audited` 只允许 Preview；升级为 `implementation-ready` 后，每次才能把其中一个登记为唯一 `CURRENT_TASK`。
+整份 assignment 是聚合 Gate；`isoflops` 与 `budgeted-search` 是两个独立清单单元。当前 `integration_status=inventory-audited` 只允许 Preview，不写入原生 Workspace。
 
 ## 前置 Gate
 

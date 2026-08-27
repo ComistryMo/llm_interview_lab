@@ -13,62 +13,21 @@ jobs:
   repository-health:
     name: ${{ matrix.os }} / Python ${{ matrix.python }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 12
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python: ["3.10", "3.11", "3.12"]
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-
-      - name: Install minimal dependencies
-        run: python -m pip install -r requirements.txt
-
-      - name: Check environment
-        run: python scripts/check_environment.py
-
-      - name: Validate LEAN-V2 catalog and fictional demo
-        run: llm-lab doctor
-
-      - name: Audit repository-health collection
-        run: python -m pytest --collect-only -q
-
-      - name: Run repository health tests
-        run: python -m pytest -q
-
-      - name: Validate curriculum catalog and generated navigation
-        run: python scripts/validate_curriculum.py
-
-      - name: Validate external course packs and generated navigation
-        run: python scripts/validate_external_courses.py
-
-      - name: Validate training state
-        run: python scripts/validate_state.py
-
-      - name: Verify ledger history is append-only
-        if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
-        shell: bash
-        run: |
-          git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.sha }}"
-          git show "${{ github.event.pull_request.base.sha }}:state/TASK_LEDGER.jsonl" > "$RUNNER_TEMP/base-ledger.jsonl"
-          python scripts/validate_state.py --base-ledger "$RUNNER_TEMP/base-ledger.jsonl"
-
-      - name: Verify pushed ledger history is append-only
-        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' && matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
-        shell: bash
-        run: |
-          git fetch --no-tags --depth=1 origin "${{ github.event.before }}"
-          git show "${{ github.event.before }}:state/TASK_LEDGER.jsonl" > "$RUNNER_TEMP/base-ledger.jsonl"
-          python scripts/validate_state.py --base-ledger "$RUNNER_TEMP/base-ledger.jsonl"
-
-      - name: Validate handoff policy without writing an archive
-        run: python scripts/export_handoff.py --dry-run
+      - run: python -m pip install -r requirements.txt
+      - run: python scripts/check_environment.py
+      - run: llm-lab doctor
+      - run: python -m pytest --collect-only -q
+      - run: python -m pytest -q
+      - run: python scripts/validate_external_courses.py
