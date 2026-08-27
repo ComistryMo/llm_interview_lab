@@ -184,6 +184,28 @@ def update_career_intent(
     return updated
 
 
+def update_role_preferences(
+    repo_root: Path,
+    profile_id: str,
+    role_preferences: Mapping[str, Any],
+    *,
+    target_roles: tuple[str, ...] | None = None,
+) -> dict[str, Any]:
+    """Atomically store a public-role selection without changing Practice events."""
+
+    if not isinstance(role_preferences, Mapping):
+        raise WorkspaceError("role preferences must be an object")
+    paths = profile_paths(repo_root, profile_id)
+    ensure_profile_is_ignored(repo_root, profile_id)
+    profile = load_profile(paths, repo_root)
+    updated = {**profile, "role_preferences": dict(role_preferences)}
+    if target_roles is not None:
+        updated["target_roles"] = list(dict.fromkeys(target_roles))
+    validate_profile_data(updated, repo_root)
+    _atomic_write_profile(repo_root, profile_id, paths.profile_file, updated)
+    return updated
+
+
 def _git_path_is_ignored(repo_root: Path, candidate: Path) -> bool:
     relative = candidate.relative_to(repo_root).as_posix()
     result = subprocess.run(["git", "-C", str(repo_root), "check-ignore", "-q", "--", relative], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

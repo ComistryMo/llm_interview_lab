@@ -102,6 +102,33 @@
         }
       }
     },
+    "role_preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_role", "seniority", "skill_self_assessment", "ai_mode"],
+      "properties": {
+        "primary_role": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "seniority": {
+          "enum": ["intern", "new_grad", "mid", "senior"]
+        },
+        "skill_self_assessment": {
+          "type": "object",
+          "maxProperties": 20,
+          "propertyNames": {"pattern": "^skill\\."},
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          }
+        },
+        "ai_mode": {
+          "enum": ["disabled", "provider", "codex"]
+        }
+      }
+    },
     "preferences": {
       "type": "object",
       "additionalProperties": false,

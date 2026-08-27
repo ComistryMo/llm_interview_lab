@@ -14,6 +14,7 @@ from typing import Sequence
 
 import yaml
 
+from .application import ApplicationError, ApplicationService
 from .catalog import Catalog, CatalogError, Problem, load_catalog
 from .context import (
     ContextError,
@@ -54,6 +55,8 @@ from .interviews import (
     start_interview,
 )
 from .materials import MATERIAL_KINDS, MaterialError, add_material, get_material, list_materials
+from .role_interviews import RoleInterviewError
+from .roles import RoleCatalogError, load_role_catalog
 from .submissions import SubmissionError, inspect_submission
 from .workspace import (
     WorkspaceError, ensure_profile_is_ignored, event_schema_path, find_repository_root,
@@ -147,6 +150,20 @@ def _doctor(repo_root: Path) -> int:
         retention = sum(problem.ready and all(problem.retention_variant(repo_root, stage) for stage in ("d2", "d7")) for problem in catalog.problems.values())
         field_runs = sum(problem.field_runs for problem in catalog.problems.values() if problem.ready)
         checks.append(("catalog", True, f"{ready} ready / {len(catalog.problems) - ready} planned, {oracle} oracle, {retention} retention-ready, {field_runs} field runs, DAG valid"))
+        if (repo_root / "curriculum/skills/ontology.yaml").is_file():
+            try:
+                role_catalog = load_role_catalog(repo_root, curriculum=catalog)
+            except RoleCatalogError as error:
+                checks.append(("roles", False, str(error)))
+            else:
+                checks.append(
+                    (
+                        "roles",
+                        True,
+                        f"{len(role_catalog.skills)} skills / {len(role_catalog.roles)} roles / "
+                        f"{len(role_catalog.blueprints)} blueprints / {len(role_catalog.items)} fixed items",
+                    )
+                )
     try:
         demo_data = yaml.safe_load((repo_root / "workspace/demo/profile.yaml").read_text(encoding="utf-8"))
         demo = validate_profile_data(demo_data, repo_root)
@@ -990,10 +1007,141 @@ def _interview_report(repo_root: Path, catalog: Catalog, profile_id: str, interv
     return 0
 
 
+def _quickstart(repo_root: Path, args) -> int:
+    service = ApplicationService(repo_root)
+    role_id = args.role
+    if role_id is None and not args.non_interactive and sys.stdin.isatty():
+        cards = service.role_cards()
+        print("Choose a target role:")
+        for index, card in enumerate(cards, 1):
+            print(f"  {index}. {card['title']}")
+        choice = input("Role [4]: ").strip() or "4"
+        try:
+            role_id = cards[int(choice) - 1]["id"]
+        except (ValueError, IndexError) as error:
+            raise CliError("role selection is invalid") from error
+    role_id = role_id or "ai_algorithm_research_engineer"
+    result = service.initialize_profile(
+        args.profile,
+        role_id=role_id,
+        seniority=args.seniority,
+        ai_mode=args.ai,
+    )
+    dashboard = service.dashboard(args.profile)
+    print(f"PROFILE {args.profile}: {'created' if result['created'] else 'ready'}")
+    role = service.roles.resolve_role(role_id)
+    print(f"ROLE {role.title} ({args.seniority})")
+    print(f"AI {'disabled' if args.ai == 'disabled' else args.ai}")
+    if dashboard["recommended_quests"]:
+        quest = dashboard["recommended_quests"][0]
+        print(f"RECOMMENDED QUEST {quest['id']} {quest['title']}")
+    if dashboard["current"]:
+        current = dashboard["current"]
+        print(f"CURRENT {current['problem_id']} {current['title']}")
+        print(f"NEXT llm-lab test {current['problem_id']} --profile {args.profile}")
+        return 0
+    if not dashboard["unlocks"]:
+        print("NEXT llm-lab next --profile " + args.profile)
+        return 0
+    problem = dashboard["unlocks"][0]
+    started = service.start_practice(args.profile, problem["problem_id"])
+    submission_path = Path(started["submission_path"])
+    try:
+        display_path = submission_path.relative_to(repo_root).as_posix()
+    except ValueError:
+        display_path = submission_path.name
+    print(f"STARTED {problem['problem_id']} {problem['title']}")
+    print(f"SUBMISSION {display_path}")
+    print(f"NEXT llm-lab test {problem['problem_id']} --profile {args.profile}")
+    return 0
+
+
+def _role_interview_create(repo_root: Path, args) -> int:
+    service = ApplicationService(repo_root)
+    session = service.create_interview(
+        args.profile,
+        role_id=args.role,
+        seniority=args.seniority,
+        difficulty=args.difficulty,
+        ai_mode=args.ai,
+        material_ids=tuple(args.material),
+        consent_materials=args.consent_materials,
+        seed=args.seed,
+    )
+    print(f"ROLE INTERVIEW {session['interview_id']}: ready")
+    print(f"ROLE {session['role_id']} / {session['seniority']}")
+    print(f"BLUEPRINT {session['blueprint_id']} / {session['duration_minutes']} minutes")
+    print(f"QUESTIONS {len(session['questions'])}")
+    print(
+        f"START llm-lab interview role-start {session['interview_id']} "
+        f"--profile {args.profile}"
+    )
+    return 0
+
+
+def _role_interview_current(repo_root: Path, args) -> int:
+    value = ApplicationService(repo_root).current_interview(args.profile, args.interview_id)
+    if args.json:
+        print(json.dumps(value, ensure_ascii=False, indent=2))
+        return 0
+    question = value["question"]
+    print(f"REMAINING {value['remaining_seconds']} seconds")
+    if question is None:
+        print("QUESTION none; finish and score the interview")
+        return 0
+    print(f"QUESTION {question['question_id']} {question['kind']} — {question['title']}")
+    print(question["prompt"].rstrip())
+    if question["kind"] == "coding":
+        print(
+            f"TEST llm-lab interview role-test {args.interview_id} --profile {args.profile}"
+        )
+    return 0
+
+
+def _role_interview_answer(repo_root: Path, args) -> int:
+    answer = _read_private_text(args.file, "interview answer", 50_000)
+    ApplicationService(repo_root).answer_interview(
+        args.profile, args.interview_id, args.question, answer
+    )
+    print(f"ANSWER {args.question}: archived in the current Profile")
+    return 0
+
+
+def _role_interview_score(repo_root: Path, args) -> int:
+    raw = _read_private_text(args.scores_file, "rubric scores", 16_000)
+    try:
+        scores = yaml.safe_load(raw)
+    except yaml.YAMLError as error:
+        raise CliError("rubric scores must be valid YAML or JSON") from error
+    if not isinstance(scores, dict):
+        raise CliError("rubric scores must be an object")
+    evidence = args.evidence
+    if args.evidence_file:
+        evidence = _read_private_text(args.evidence_file, "assessment evidence", 8_000)
+    ApplicationService(repo_root).score_interview(
+        args.profile,
+        args.interview_id,
+        args.question,
+        scores,
+        evidence=evidence,
+        source=args.source,
+        confidence=args.confidence,
+        fatal_issues=tuple(args.fatal_issue),
+    )
+    print(f"ASSESSMENT {args.question}: archived with evidence")
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="llm-lab", description="Repository-local AI algorithm interview training")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("doctor")
+    quickstart = commands.add_parser("quickstart", help="create a Profile, select a role, and start one recommended task")
+    quickstart.add_argument("--profile", default="default")
+    quickstart.add_argument("--role")
+    quickstart.add_argument("--seniority", choices=("intern", "new_grad", "mid", "senior"), default="new_grad")
+    quickstart.add_argument("--ai", choices=("disabled", "provider", "codex"), default="disabled")
+    quickstart.add_argument("--non-interactive", action="store_true")
     init = commands.add_parser("init"); init.add_argument("--profile", required=True); init.add_argument("--track", action="append", default=[])
     nxt = commands.add_parser("next"); nxt.add_argument("--profile", required=True); nxt.add_argument("--include-experimental", action="store_true"); nxt.add_argument("--quest")
     show = commands.add_parser("show"); show.add_argument("problem_id")
@@ -1154,6 +1302,31 @@ def _build_parser() -> argparse.ArgumentParser:
     interview_report.add_argument("interview_id")
     interview_report.add_argument("--profile", required=True)
     interview_report.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    role_create = interview_sub.add_parser("role-create", help="freeze a role/seniority blueprint")
+    role_create.add_argument("--profile", default="default")
+    role_create.add_argument("--role", required=True)
+    role_create.add_argument("--seniority", choices=("intern", "new_grad", "mid"), default="new_grad")
+    role_create.add_argument("--difficulty", choices=("easy", "medium", "hard"), default="medium")
+    role_create.add_argument("--ai", choices=("disabled", "provider", "codex"), default="disabled")
+    role_create.add_argument("--material", action="append", default=[])
+    role_create.add_argument("--consent-materials", action="store_true")
+    role_create.add_argument("--seed", type=int, default=0)
+    role_start = interview_sub.add_parser("role-start")
+    role_start.add_argument("interview_id"); role_start.add_argument("--profile", default="default")
+    role_current = interview_sub.add_parser("role-current")
+    role_current.add_argument("interview_id"); role_current.add_argument("--profile", default="default"); role_current.add_argument("--json", action="store_true")
+    role_answer = interview_sub.add_parser("role-answer")
+    role_answer.add_argument("interview_id"); role_answer.add_argument("--profile", default="default"); role_answer.add_argument("--question", required=True); role_answer.add_argument("--file", required=True)
+    role_test = interview_sub.add_parser("role-test")
+    role_test.add_argument("interview_id"); role_test.add_argument("--profile", default="default")
+    role_score = interview_sub.add_parser("role-score")
+    role_score.add_argument("interview_id"); role_score.add_argument("--profile", default="default"); role_score.add_argument("--question", required=True); role_score.add_argument("--scores-file", required=True); role_score.add_argument("--source", choices=("human", "ai", "self"), required=True); role_score.add_argument("--confidence", choices=("low", "medium", "high"), required=True); role_score.add_argument("--fatal-issue", action="append", default=[])
+    role_score_evidence = role_score.add_mutually_exclusive_group(required=True)
+    role_score_evidence.add_argument("--evidence"); role_score_evidence.add_argument("--evidence-file")
+    role_finish = interview_sub.add_parser("role-finish")
+    role_finish.add_argument("interview_id"); role_finish.add_argument("--profile", default="default"); role_finish.add_argument("--summary", default=""); role_finish.add_argument("--confirm-incomplete", action="store_true")
+    role_report = interview_sub.add_parser("role-report")
+    role_report.add_argument("interview_id"); role_report.add_argument("--profile", default="default"); role_report.add_argument("--format", choices=("markdown", "json"), default="markdown")
     return parser
 
 
@@ -1163,6 +1336,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         repo_root = find_repository_root()
         if args.command == "doctor":
             return _doctor(repo_root)
+        if args.command == "quickstart":
+            return _quickstart(repo_root, args)
         if args.command == "material":
             if args.material_command == "add": return _material_add(repo_root, args)
             if args.material_command == "list": return _material_list(repo_root, args.profile, args.json)
@@ -1192,6 +1367,31 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.interview_command == "score": return _interview_score(repo_root, catalog, args)
             if args.interview_command == "finish": return _interview_finish(repo_root, catalog, args.profile, args.interview_id, args.summary, args.summary_file, args.confirm_incomplete)
             if args.interview_command == "report": return _interview_report(repo_root, catalog, args.profile, args.interview_id, args.format)
+            if args.interview_command == "role-create": return _role_interview_create(repo_root, args)
+            if args.interview_command == "role-start":
+                session = ApplicationService(repo_root).start_interview(args.profile, args.interview_id)
+                print(f"ROLE INTERVIEW {session['interview_id']}: active")
+                print(f"NEXT llm-lab interview role-current {args.interview_id} --profile {args.profile}")
+                return 0
+            if args.interview_command == "role-current": return _role_interview_current(repo_root, args)
+            if args.interview_command == "role-answer": return _role_interview_answer(repo_root, args)
+            if args.interview_command == "role-test":
+                result = ApplicationService(repo_root).test_interview_coding(args.profile, args.interview_id)
+                if result.output: print(result.output)
+                print(f"INTERVIEW CODING TESTS: {result.status.upper()}")
+                print("PRACTICE MASTERY: UNCHANGED")
+                return 0 if result.status == "passed" else 1 if result.status == "failed" else 2
+            if args.interview_command == "role-score": return _role_interview_score(repo_root, args)
+            if args.interview_command == "role-finish":
+                session = ApplicationService(repo_root).finish_interview(args.profile, args.interview_id, summary=args.summary, confirm_incomplete=args.confirm_incomplete)
+                result = session["result"]
+                print(f"ROLE INTERVIEW {args.interview_id}: {result['completion_status']}")
+                print(f"SCORE {result['overall_score']:.1f}")
+                print("PRACTICE MASTERY: UNCHANGED")
+                return 0 if result["completion_status"] == "completed" else 1
+            if args.interview_command == "role-report":
+                print(ApplicationService(repo_root).interview_report(args.profile, args.interview_id, format_name=args.format))
+                return 0
             raise CliError("unknown interview command")
         problem = catalog.get(args.problem_id)
         if args.command == "show": return _show(problem)
@@ -1201,7 +1401,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "review": return _review(repo_root, args)
         if args.command == "retain": return _retain(repo_root, args.profile, problem, args.stage)
         raise CliError("unknown command")
-    except (CatalogError, CliError, ContextError, EventError, GraderError, InterviewError, LifecycleError, MaterialError, SubmissionError, WorkspaceError) as error:
+    except (ApplicationError, CatalogError, CliError, ContextError, EventError, GraderError, InterviewError, LifecycleError, MaterialError, RoleCatalogError, RoleInterviewError, SubmissionError, WorkspaceError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
 
