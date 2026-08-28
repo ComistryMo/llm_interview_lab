@@ -89,13 +89,13 @@ jobs:
           cache: pip
       - name: Install optional desktop and AI dependencies
         run: python -m pip install -e ".[desktop,ai,dev]"
-      - name: Verify desktop, provider, and interview workflows
+      - name: Verify desktop first-run workflows
         run: >-
           python -m pytest
           tests/infrastructure/test_desktop.py
-          tests/infrastructure/test_ai_connections.py
-          tests/infrastructure/test_application_service.py
-          tests/infrastructure/test_role_interviews.py
+          tests/infrastructure/test_onboarding_completion_hotfix.py
+          tests/infrastructure/test_onboarding_qml_hotfix.py
+          tests/infrastructure/test_windows_startup_hotfix.py
           -q
       - name: Build Windows standalone application
         shell: pwsh
