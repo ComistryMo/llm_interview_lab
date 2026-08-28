@@ -10,6 +10,8 @@ import sys
 import tempfile
 import zipfile
 
+from PySide6.QtGui import QImage
+
 
 FORBIDDEN_REPORT_FRAGMENTS = (
     "workspace/profiles/maintainer",
@@ -135,10 +137,24 @@ def main() -> int:
             cwd=root,
         )
         screenshot_size = screenshot.stat().st_size if screenshot.is_file() else 0
-        if smoke.returncode or screenshot_size < 10_000:
+        image = QImage(str(screenshot)) if screenshot.is_file() else QImage()
+        sampled_colors = {
+            image.pixelColor(x, y).rgba()
+            for x in range(0, image.width(), max(1, image.width() // 8))
+            for y in range(0, image.height(), max(1, image.height() // 8))
+        }
+        screenshot_valid = (
+            not image.isNull()
+            and image.width() >= 1100
+            and image.height() >= 700
+            and len(sampled_colors) >= 4
+        )
+        if smoke.returncode or not screenshot_valid:
             raise SystemExit(
                 "desktop GUI smoke failed: "
-                f"returncode={smoke.returncode} screenshot_bytes={screenshot_size}\n"
+                f"returncode={smoke.returncode} screenshot_bytes={screenshot_size} "
+                f"dimensions={image.width()}x{image.height()} "
+                f"sampled_colors={len(sampled_colors)}\n"
                 + smoke.stdout
                 + smoke.stderr
             )
