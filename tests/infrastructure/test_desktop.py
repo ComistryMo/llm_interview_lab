@@ -297,6 +297,10 @@ def test_desktop_release_configuration_is_portable_and_separate_from_core_ci() -
     assert "check_desktop_artifact.py" in desktop_job
     assert "LLMInterviewLab-Windows-x64-portable.zip" in desktop_job
     assert "New-Item -ItemType Directory -Force -Path dist/desktop" in desktop_job
+    assert "mode = standalone" in spec
+    assert "mode = onefile" not in spec
+    assert "--bundle-root dist/release/LLMInterviewLab" in desktop_job
+    assert "LLMInterviewLab-Windows-x64.exe" not in desktop_job
     assert "curriculum/problems/=**/*.py" in spec
     assert "curriculum/retention/=**/*.py" in spec
     assert "--include-package=httpx" in spec

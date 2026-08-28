@@ -24,7 +24,7 @@ plugins =
 
 [nuitka]
 macos.permissions = 
-mode = onefile
+mode = standalone
 extra_args = --quiet --assume-yes-for-downloads --noinclude-qt-translations --windows-console-mode=attach --include-package=llm_interview_lab --include-package=pytest --include-package=keyring --include-package=httpx --nofollow-import-to=any_llm --nofollow-import-to=anthropic --nofollow-import-to=google.genai --nofollow-import-to=ollama --nofollow-import-to=openai --include-data-dir=curriculum=runtime_assets/curriculum --include-data-files=curriculum/problems=runtime_assets/curriculum/problems/=**/*.py --include-data-files=curriculum/retention=runtime_assets/curriculum/retention/=**/*.py --include-data-dir=workspace/schema=runtime_assets/workspace/schema --include-data-dir=workspace/templates=runtime_assets/workspace/templates --include-data-dir=coach=runtime_assets/coach --include-data-files=AGENTS.md=runtime_assets/AGENTS.md --include-data-files=.gitignore=runtime_assets/.gitignore --report=desktop-nuitka-report.xml
 
 [buildozer]

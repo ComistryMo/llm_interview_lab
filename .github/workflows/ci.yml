@@ -84,7 +84,7 @@ jobs:
           tests/infrastructure/test_application_service.py
           tests/infrastructure/test_role_interviews.py
           -q
-      - name: Build Windows executable
+      - name: Build Windows standalone application
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist/desktop | Out-Null
@@ -95,34 +95,24 @@ jobs:
           Copy-Item -LiteralPath scripts/pysidedeploy.spec -Destination dist/pysidedeploy-ci.spec
           python scripts/generate_desktop_icons.py --output dist/icons
           pyside6-deploy -c dist/pysidedeploy-ci.spec -f
-          Copy-Item -LiteralPath dist/desktop/LLMInterviewLab.exe -Destination dist/desktop/LLMInterviewLab-Windows-x64.exe
-      - name: Verify packaged executable and privacy boundary
-        run: >-
-          python scripts/check_desktop_artifact.py
-          dist/desktop/LLMInterviewLab-Windows-x64.exe
-          --report desktop-nuitka-report.xml
-      - name: Assemble portable release
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path dist/release/LLMInterviewLab | Out-Null
-          Copy-Item -LiteralPath dist/desktop/LLMInterviewLab-Windows-x64.exe -Destination dist/release/LLMInterviewLab/
+          $executables = @(Get-ChildItem -Path dist/desktop -Recurse -Filter LLMInterviewLab.exe)
+          if ($executables.Count -ne 1) {
+            throw "Expected one standalone LLMInterviewLab.exe, found $($executables.Count)"
+          }
+          New-Item -ItemType Directory -Force -Path dist/release | Out-Null
+          Copy-Item -LiteralPath $executables[0].Directory.FullName -Destination dist/release/LLMInterviewLab -Recurse
           Copy-Item -LiteralPath LICENSE -Destination dist/release/LLMInterviewLab/
           Copy-Item -LiteralPath docs/third-party-notices.md -Destination dist/release/LLMInterviewLab/THIRD_PARTY_NOTICES.md
           Copy-Item -LiteralPath docs/desktop-app.md -Destination dist/release/LLMInterviewLab/README.md
           Compress-Archive -Path dist/release/LLMInterviewLab -DestinationPath dist/release/LLMInterviewLab-Windows-x64-portable.zip
-          $files = @(
-            'dist/desktop/LLMInterviewLab-Windows-x64.exe',
-            'dist/release/LLMInterviewLab-Windows-x64-portable.zip'
-          )
-          $lines = foreach ($file in $files) {
-            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLowerInvariant()
-            "$hash  $([IO.Path]::GetFileName($file))"
-          }
-          Set-Content -LiteralPath dist/release/SHA256SUMS-Windows.txt -Value $lines -Encoding utf8
-      - name: Inspect unpacked portable archive
+          $file = 'dist/release/LLMInterviewLab-Windows-x64-portable.zip'
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLowerInvariant()
+          Set-Content -LiteralPath dist/release/SHA256SUMS-Windows.txt -Value "$hash  $([IO.Path]::GetFileName($file))" -Encoding utf8
+      - name: Verify standalone executable and privacy boundary
         run: >-
           python scripts/check_desktop_artifact.py
-          dist/desktop/LLMInterviewLab-Windows-x64.exe
+          dist/release/LLMInterviewLab/LLMInterviewLab.exe
+          --bundle-root dist/release/LLMInterviewLab
           --report desktop-nuitka-report.xml
           --archive dist/release/LLMInterviewLab-Windows-x64-portable.zip
       - name: Upload Windows portable artifact
@@ -130,7 +120,6 @@ jobs:
         with:
           name: LLMInterviewLab-Windows-x64
           path: |
-            dist/desktop/LLMInterviewLab-Windows-x64.exe
             dist/release/LLMInterviewLab-Windows-x64-portable.zip
             dist/release/SHA256SUMS-Windows.txt
           if-no-files-found: error
