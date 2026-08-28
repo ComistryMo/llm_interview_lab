@@ -131,7 +131,7 @@ code-signing, auto-update, and broad rewrites of existing coding exercises.
 - [x] Implement and test AI connections and Codex backend.
 - [x] Rewrite docs, capture real screenshots and verify packaging.
 - [x] Run local and eight-job remote CI.
-- [ ] Merge PR #4 and publish the alpha prerelease.
+- [x] Merge PR #4 and publish the alpha prerelease.
 
 ## 9. Final retrospective
 
@@ -149,6 +149,7 @@ Evidence at the release gate:
   3.10/3.11/3.12 on Ubuntu and Windows, CPU PyTorch, and Windows packaging.
 - The portable executable starts outside a checkout, reports version
   0.4.0a1, seeds only public assets, and passes the Profile/oracle/secret scan.
-- Draft PR #4 is the only merge path; no history rewrite or real Profile was
-  used. Final merge, prerelease creation, and plan archival remain delivery
-  operations rather than product implementation work.
+- PR #4 merged as `9c58743` after its complete check suite passed. Main run
+  33134640043 then passed all eight jobs, and `v0.4.0-alpha.1` was published as
+  a prerelease with the verified executable and portable ZIP. No history
+  rewrite or real Profile was used.
