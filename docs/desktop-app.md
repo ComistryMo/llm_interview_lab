@@ -6,8 +6,7 @@
 
 | 平台 | 文件 | 说明 |
 |---|---|---|
-| Windows 10 / 11 x64 | `LLMInterviewLab-Windows-x64-portable.zip` | 推荐，解压后运行其中的 EXE |
-| Windows 10 / 11 x64 | `LLMInterviewLab-Windows-x64.exe` | 单文件构建，首次启动可能更慢 |
+| Windows 10 / 11 x64 | `LLMInterviewLab-Windows-x64-portable.zip` | 推荐，完整解压后运行 `LLMInterviewLab/LLMInterviewLab.exe` |
 | macOS 12+ Apple Silicon | `LLMInterviewLab-macOS-arm64.dmg` | 推荐，拖入 Applications |
 | macOS 12+ Apple Silicon | `LLMInterviewLab-macOS-arm64.app.zip` | 适合直接解压与自动化验证 |
 | 开发者 | 源码安装 | 支持调试、完整可选依赖和贡献流程 |
@@ -118,6 +117,8 @@ GUI 依赖是可选依赖，不会拖入核心 CLI 测试矩阵。CI 使用离�
 ## 排错
 
 - **窗口无法启动：** 先运行 `llm-lab-gui --smoke-test`，再从设置打开日志目录；源码用户运行 `python -m pip install -e ".[desktop,ai,dev]"`。
+- **Windows 双击无窗口：** 查看原生错误框中的错误编号和
+  `%LOCALAPPDATA%\LLMInterviewLab\logs\bootstrap.log`；确保解压了完整目录，而不是只复制 EXE。
 - **Ollama 连接失败：** 确认 Ollama 已启动，地址通常为 `http://127.0.0.1:11434`，然后重新测试。
 - **Codex 未检测到：** macOS Finder 不一定继承 Shell PATH；从设置选择 Codex 可执行文件。
 - **密钥环不可用：** 应用不会写明文 Key。继续使用 No-AI，并先修复系统 Keychain / Credential Manager。

@@ -4,17 +4,17 @@
 
 - Windows 10 / 11 x64；
 - 普通用户推荐 `LLMInterviewLab-Windows-x64-portable.zip`；
-- 单文件下载为 `LLMInterviewLab-Windows-x64.exe`；
 - `SHA256SUMS.txt` 或 Windows 校验清单用于验证完整性。
 
-Portable ZIP 解压后运行 `LLMInterviewLab-Windows-x64.exe`。不要直接在压缩包预览器中运行。
+Portable ZIP 是完整的 standalone 目录。请先完整解压，再双击
+`LLMInterviewLab\LLMInterviewLab.exe`；不要从压缩包预览器中运行，也不要只复制 EXE。
+旧 Alpha 的 single-file EXE 启动慢且早期错误不可见，不再作为推荐下载。
 
 ## 签名说明
 
 Alpha 可能没有商业代码签名证书。Windows SmartScreen 的来源提示不等于项目已经通过 Microsoft 认证。下载后先校验 SHA-256，只从项目 Release 页面获取文件；哈希不一致时不要运行。
 
 ```powershell
-Get-FileHash .\LLMInterviewLab-Windows-x64.exe -Algorithm SHA256
 Get-FileHash .\LLMInterviewLab-Windows-x64-portable.zip -Algorithm SHA256
 ```
 
@@ -34,8 +34,11 @@ Alpha.1 旧目录 `%LOCALAPPDATA%\LLMInterviewLab` 只在用户确认后迁移�
 
 ## 常见问题
 
-- **窗口没有显示：** 从 PowerShell 运行 `LLMInterviewLab-Windows-x64.exe --smoke-test`，再查看设置中的日志目录；
-- **首次启动慢：** 单文件构建需要解包；Portable ZIP 中的单文件仍可能受杀毒扫描影响；
+- **窗口没有显示：** 新版会显示原生中文错误框。请记录错误编号，并查看
+  `%LOCALAPPDATA%\LLMInterviewLab\logs\bootstrap.log`；
+- **提示运行资源缺失：** 重新完整解压 ZIP；EXE 旁边的 Qt 依赖和
+  `runtime_assets` 目录不可删除；
+- **首次启动慢：** 安全软件可能首次扫描 standalone 目录；请等待可见窗口，不要连续双击；
 - **PyTorch 题不可用：** 便携包不承诺捆绑完整 CPU PyTorch，源码安装 `.[torch,dev]`；
 - **Ollama 失败：** 启动 Ollama 并检查 `http://127.0.0.1:11434`；
 - **SmartScreen：** 先核对 Release 与 SHA-256，不要关闭全局安全防护；
@@ -51,3 +54,15 @@ llm-lab-gui
 ```
 
 本地 Grader 会执行用户本人信任的代码，不是恶意代码安全沙箱。
+
+## 发布前双击验收
+
+发布候选必须在 Windows 11 实机或 VM 上只构建一次并逐项确认：
+
+1. 从普通英文路径解压并双击，五秒内出现窗口或明确加载反馈；
+2. 从含空格和中文的路径解压并双击；
+3. 断网并选择 No-AI，完成岗位选择后进入第一题或首页；
+4. 退出重启后，刚创建的学习档案仍然存在；
+5. 在候选副本中临时移走 `runtime_assets`，确认出现含错误编号和日志位置的原生错误框。
+
+验收只使用虚构学习档案；结束后删除故障注入副本，不修改真实用户数据。

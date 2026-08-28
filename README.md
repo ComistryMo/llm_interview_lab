@@ -60,8 +60,7 @@ LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）�
 
 | 你使用的环境 | 推荐方式 |
 |---|---|
-| Windows 10 / 11 x64 | 下载 `LLMInterviewLab-Windows-x64-portable.zip` |
-| 只需要单文件 Windows 版本 | 下载 `LLMInterviewLab-Windows-x64.exe` |
+| Windows 10 / 11 x64 | 下载 `LLMInterviewLab-Windows-x64-portable.zip`，完整解压后运行 `LLMInterviewLab/LLMInterviewLab.exe` |
 | Apple Silicon Mac（M1 及更新） | 下载 `LLMInterviewLab-macOS-arm64.dmg` |
 | 需要直接解压验证的 Apple Silicon Mac | 下载 `LLMInterviewLab-macOS-arm64.app.zip` |
 | Intel Mac | Alpha.2 暂不提供未经真实运行验证的 x86_64 包 |

@@ -84,7 +84,6 @@ def test_download_names_and_platform_job_are_consistent() -> None:
     readme = _read("README.md")
     workflow = _read(".github/workflows/ci.yml")
     expected = (
-        "LLMInterviewLab-Windows-x64.exe",
         "LLMInterviewLab-Windows-x64-portable.zip",
         "LLMInterviewLab-macOS-arm64.app.zip",
         "LLMInterviewLab-macOS-arm64.dmg",
