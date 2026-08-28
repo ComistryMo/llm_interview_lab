@@ -24,14 +24,14 @@ Item {
                 Column {
                     id: detailsColumn
                     width: detailsScroll.availableWidth; spacing: 12
-                    Text { width: parent.width; text: app.currentTask.problem_id || "No active task"; color: root.palette.accent; font.bold: true; font.pixelSize: 12 }
-                    Text { width: parent.width; text: app.currentTask.title || "Choose an exercise"; color: root.palette.text; font.pixelSize: 21; font.bold: true; wrapMode: Text.Wrap }
-                    StatusPill { text: app.currentTask.validation || "not started"; tone: root.palette.success }
+                    Text { width: parent.width; text: app.currentTask.problem_id || "暂无当前题目"; color: root.palette.accent; font.bold: true; font.pixelSize: 12 }
+                    Text { width: parent.width; text: app.currentTask.title || "选择一道题开始"; color: root.palette.text; font.pixelSize: 21; font.bold: true; wrapMode: Text.Wrap }
+                    StatusPill { text: app.currentTask.validation || "尚未开始"; tone: root.palette.success }
                     Rectangle { width: parent.width; height: 1; color: root.palette.border }
-                    Text { width: parent.width; text: app.currentTask.task || "Open an unlocked problem from Learn."; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
+                    Text { width: parent.width; text: app.currentTask.task || "请先从刷题训练中打开已解锁的题目。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
                     Rectangle { width: parent.width; height: 1; color: root.palette.border }
-                    Text { text: "Lifecycle"; color: root.palette.text; font.bold: true }
-                    Button { width: detailsColumn.width; text: "Contract + oral review"; onClicked: reviewDialog.open() }
+                Text { text: "掌握流程"; color: root.palette.text; font.bold: true }
+                Button { width: detailsColumn.width; text: "契约审查 + 口述答辩"; onClicked: reviewDialog.open() }
                     Row {
                         width: detailsColumn.width; spacing: 8
                         Button { width: (parent.width - 8) / 2; text: "D+2"; onClicked: app.startRetentionStage("d2") }
@@ -51,9 +51,9 @@ Item {
                     Layout.fillWidth: true
                     Text { text: "submission.py"; color: root.palette.text; font.bold: true }
                     Item { Layout.fillWidth: true }
-                    Button { text: "Save"; flat: true; onClicked: app.saveSubmission(editor.text) }
-                    Button { text: "Test"; highlighted: true; enabled: !app.busy; onClicked: { app.saveSubmission(editor.text); app.runTests() } }
-                    Button { text: "Submit"; enabled: !app.busy; onClicked: app.submitCurrent() }
+                    Button { text: "保存"; flat: true; onClicked: app.saveSubmission(editor.text) }
+                    Button { text: "运行测试"; highlighted: true; enabled: !app.busy; onClicked: { app.saveSubmission(editor.text); app.runTests() } }
+                    Button { text: "提交"; enabled: !app.busy; onClicked: app.submitCurrent() }
                 }
                 TextArea {
                     id: editor
@@ -75,10 +75,10 @@ Item {
                     color: root.palette.surface; border.color: root.palette.border
                     ScrollView {
                         anchors.fill: parent; anchors.margins: 12; clip: true
-                        Text { width: parent.width; text: app.testOutput || "Test output appears here."; color: root.palette.text; font.family: "Cascadia Mono, Consolas, monospace"; font.pixelSize: 12; wrapMode: Text.Wrap }
+                        Text { width: parent.width; text: app.testOutput || "公开测试输出会显示在这里。"; color: root.palette.text; font.family: "Cascadia Mono, Consolas, monospace"; font.pixelSize: 12; wrapMode: Text.Wrap }
                     }
                 }
-                Text { text: "Public tests passing is implementation evidence—not mastery."; color: root.palette.warning; font.pixelSize: 12; font.bold: true }
+                    Text { text: "公开测试通过只是实现证据，不等于已掌握。"; color: root.palette.warning; font.pixelSize: 12; font.bold: true }
             }
         }
 
@@ -92,19 +92,29 @@ Item {
                 anchors.fill: parent; anchors.margins: 16; spacing: 12
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "AI Coach"; color: root.palette.text; font.bold: true; font.pixelSize: 17 }
+                    Text { text: "AI 教练"; color: root.palette.text; font.bold: true; font.pixelSize: 17 }
                     Item { Layout.fillWidth: true }
                     Button { text: "×"; flat: true; onClicked: root.coachOpen = false }
                 }
-                Text { text: "H0–H5 boundaries apply. The coach cannot silently edit this submission."; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; font.pixelSize: 12 }
-                ComboBox { id: helpLevel; Layout.fillWidth: true; model: ["H1 · syntax/docs", "H2 · concept", "H3 · steps"] }
+                Text { text: "遵守 H0–H5 帮助边界；AI 教练不能静默修改当前答案。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; font.pixelSize: 12 }
+                ComboBox {
+                    id: helpLevel
+                    Layout.fillWidth: true
+                    model: [
+                        {id: "H1", label: "H1 · 文档 / 语法"},
+                        {id: "H2", label: "H2 · 概念方向"},
+                        {id: "H3", label: "H3 · 结构步骤"}
+                    ]
+                    textRole: "label"
+                    valueRole: "id"
+                }
                 Rectangle {
                     Layout.fillWidth: true; Layout.fillHeight: true; color: root.palette.surfaceAlt; radius: 8
-                    ScrollView { anchors.fill: parent; anchors.margins: 10; Text { id: coachTranscript; width: parent.width; color: root.palette.text; wrapMode: Text.Wrap; text: "Ask for a bounded hint or code review.\n" } }
+                    ScrollView { anchors.fill: parent; anchors.margins: 10; Text { id: coachTranscript; width: parent.width; color: root.palette.text; wrapMode: Text.Wrap; text: "可以请求限定范围的提示或代码审查。\n" } }
                 }
-                TextArea { id: coachInput; Layout.fillWidth: true; Layout.preferredHeight: 76; placeholderText: "Ask about the current task…"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.background; radius: 8; border.color: root.palette.border } }
-                CheckBox { id: shareSubmission; text: "Share submission in preview" }
-                Button { text: "Preview context"; Layout.fillWidth: true; onClicked: app.navigate("coach") }
+                TextArea { id: coachInput; Layout.fillWidth: true; Layout.preferredHeight: 76; placeholderText: "询问当前题目的概念、提示或审查……"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.background; radius: 8; border.color: root.palette.border } }
+                CheckBox { id: shareSubmission; text: "在上下文预览中包含当前答案" }
+                Button { text: "查看上下文预览"; Layout.fillWidth: true; onClicked: app.navigate("coach") }
             }
         }
     }
@@ -112,13 +122,13 @@ Item {
     Button {
         visible: !root.coachOpen
         anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 14
-        text: "AI Coach"
+            text: "AI 教练"
         onClicked: root.coachOpen = true
     }
 
     Dialog {
         id: reviewDialog
-        title: "Contract and oral review"
+        title: "契约审查与口述答辩"
         modal: true
         anchors.centerIn: parent
         width: Math.min(620, parent.width - 48)
@@ -132,13 +142,13 @@ Item {
         )
         ColumnLayout {
             width: parent.width; spacing: 10
-            Text { text: "Review records evidence. It cannot skip D+2/D+7 or directly grant mastery."; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
-            TextArea { id: explanation; Layout.fillWidth: true; Layout.preferredHeight: 80; placeholderText: "Explain the implementation and invariants"; wrapMode: Text.Wrap }
-            TextField { id: complexity; Layout.fillWidth: true; placeholderText: "Time and space complexity" }
-            TextArea { id: boundaries; Layout.fillWidth: true; Layout.preferredHeight: 70; placeholderText: "Boundary cases, errors, and non-mutation"; wrapMode: Text.Wrap }
+                Text { text: "审查只记录证据，不能跳过 D+2 / D+7，也不能直接授予“已掌握”。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                TextArea { id: explanation; Layout.fillWidth: true; Layout.preferredHeight: 80; placeholderText: "解释实现思路与不变式"; wrapMode: Text.Wrap }
+                TextField { id: complexity; Layout.fillWidth: true; placeholderText: "时间与空间复杂度" }
+                TextArea { id: boundaries; Layout.fillWidth: true; Layout.preferredHeight: 70; placeholderText: "边界情况、异常和输入不变性"; wrapMode: Text.Wrap }
             RowLayout {
-                CheckBox { id: contractPassed; text: "Contract review passed" }
-                CheckBox { id: oralPassed; text: "Oral defense passed" }
+                    CheckBox { id: contractPassed; text: "契约审查通过" }
+                    CheckBox { id: oralPassed; text: "口述答辩通过" }
             }
         }
     }

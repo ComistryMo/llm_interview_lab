@@ -1,7 +1,7 @@
 import QtQuick
 
 Rectangle {
-    property string text: "Ready"
+    property string text: "就绪"
     property color tone: "#2563eb"
     implicitWidth: label.implicitWidth + 18
     implicitHeight: 26
