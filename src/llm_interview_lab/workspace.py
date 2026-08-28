@@ -235,6 +235,11 @@ def ensure_profile_is_ignored(repo_root: Path, profile_id: str) -> None:
         paths.interviews_root / "privacy-probe" / "session.json",
         paths.submissions_root / "privacy-probe" / "submission.py",
     )
+    # Validate lexical components before invoking Git.  On POSIX, git
+    # check-ignore refuses to traverse a directory symlink and returns 128;
+    # surface the more precise profile-integrity error instead.
+    for candidate in probes:
+        ensure_profile_path_is_safe(repo_root, profile_id, candidate)
     if not all(_git_path_is_ignored(repo_root, candidate) for candidate in probes):
         raise WorkspaceError(
             "workspace Profile is not fully ignored by Git; refusing private writes"

@@ -373,7 +373,9 @@ def _paths(
         try:
             ensure_profile_is_ignored(repo_root, profile_id)
         except WorkspaceError as error:
-            raise InterviewError("current Profile is not protected by Git ignore") from error
+            raise InterviewError(
+                "current Profile path is invalid or not protected by Git ignore"
+            ) from error
     profiles_root = repo_root / "workspace/profiles"
     _reject_linked_components(paths.root, profiles_root)
     _safe_directory(paths.root, profiles_root)
@@ -1184,6 +1186,9 @@ def run_coding_test(
     assert path is not None and session["coding_submission_relpath"] is not None
     profile_root = profile_paths(repo_root.resolve(), profile_id).root
     submission = profile_root.joinpath(*session["coding_submission_relpath"].split("/"))
+    # Reject a replaced coding directory before consulting interview progress;
+    # a path-integrity failure is more fundamental than question ordering.
+    _safe_file(submission, root / "coding")
     current = _next_unanswered_question(repo_root, profile_id, session)
     if current is None or current["kind"] != "coding":
         raise InterviewError("the coding question is not current")
