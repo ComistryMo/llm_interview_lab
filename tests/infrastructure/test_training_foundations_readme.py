@@ -266,16 +266,17 @@ def test_readme_is_a_concise_product_page_with_required_section_order() -> None:
     assert 250 <= len(readme.splitlines()) <= 450
 
     groups = (
-        ("why this project", "为什么"),
-        ("start in 5 minutes", "五分钟"),
-        ("learning loop", "学习闭环"),
-        ("choose a track", "选择路线", "选择 track"),
-        ("golden quests", "golden quest"),
-        ("use with ai", "与 ai", "ai 教练"),
-        ("what makes it different", "有何不同", "差异"),
-        ("workspace", "隐私"),
+        ("why this project", "这是什么项目"),
+        ("choose a track", "适合哪些 AI 岗位"),
+        ("start in 5 minutes", "下载与三分钟开始"),
+        ("gui", "GUI 使用流程"),
+        ("learning loop", "如何开始训练"),
+        ("interview", "如何进行模拟面试"),
+        ("use with ai", "如何接入 ai"),
+        ("what makes it different", "项目的差异化"),
+        ("workspace", "个人数据与隐私"),
         ("project status", "项目状态"),
-        ("contributing", "贡献"),
+        ("contributing", "参与贡献"),
         ("roadmap",),
     )
     positions = [_heading_position(readme, aliases) for aliases in groups]
@@ -329,7 +330,7 @@ def test_readme_ai_prompt_and_boundaries_match_the_coach_policy() -> None:
         assert term.lower() in normalized_policy.lower(), term
 
     assert "workspace/profiles/<id>/" in readme
-    assert "Bring Your Own AI" in readme
+    assert "Bring Your Own AI" in readme or "自带 AI" in readme
 
 
 def test_readme_status_is_derived_from_the_current_catalog() -> None:
@@ -354,8 +355,7 @@ def test_readme_status_is_derived_from_the_current_catalog() -> None:
             rf"(?im){re.escape(label)}[^\n]*\b{value}\b", readme
         ), f"README does not report {label}={value}"
     version = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    if 'version = "0.3.0a1"' in version:
-        assert statistics["Field-tested"] == 0
+    assert statistics["Field-tested"] == 0
 
 
 def _assert_exact_case(path: Path) -> None:
@@ -419,7 +419,7 @@ def test_readme_mermaid_and_release_markers_are_github_compatible() -> None:
 
 def test_readme_is_honest_about_field_evidence_tests_and_local_execution() -> None:
     readme = _readme()
-    assert re.search(r"(?i)grader.{0,40}not a hostile-code security sandbox", readme)
-    assert re.search(r"(?i)field-tested runs.{0,12}\b0\b", readme)
-    assert re.search(r"(?i)public tests passed.{0,8}mastered", readme)
+    assert re.search(r"(?i)grader.{0,100}(not a hostile-code security sandbox|不构成恶意代码安全沙箱)", readme)
+    assert re.search(r"(?i)(field-tested runs|field runs|field-tested).{0,20}\b0\b|实际 field runs.{0,20}\b0\b", readme)
+    assert re.search(r"(?i)(public tests passed|公开测试).{0,40}(mastered|已掌握)", readme)
     assert "workspace/profiles/maintainer" not in readme

@@ -47,6 +47,19 @@ jobs:
       - run: python -m pytest tests/infrastructure/test_cpu_torch_validation.py -q
       - run: llm-lab doctor
 
+  documentation:
+    name: 中文文档契约 / Python 3.11
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pytest tests/infrastructure/test_chinese_docs.py tests/infrastructure/test_training_foundations_readme.py -q
+
   desktop-windows:
     name: Windows Desktop / Python 3.11
     runs-on: windows-latest
@@ -75,26 +88,93 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist/desktop | Out-Null
-          pyside6-deploy -c scripts/pysidedeploy.spec -f
+          $scripts = python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
+          $env:PATH = "$scripts;$env:PATH"
+          $env:NUITKA_CACHE_DIR = "$env:RUNNER_TEMP\\nuitka-cache"
+          New-Item -ItemType Directory -Force -Path $env:NUITKA_CACHE_DIR | Out-Null
+          Copy-Item -LiteralPath scripts/pysidedeploy.spec -Destination dist/pysidedeploy-ci.spec
+          python scripts/generate_desktop_icons.py --output dist/icons
+          pyside6-deploy -c dist/pysidedeploy-ci.spec -f
+          Copy-Item -LiteralPath dist/desktop/LLMInterviewLab.exe -Destination dist/desktop/LLMInterviewLab-Windows-x64.exe
       - name: Verify packaged executable and privacy boundary
         run: >-
           python scripts/check_desktop_artifact.py
-          dist/desktop/LLMInterviewLab.exe
+          dist/desktop/LLMInterviewLab-Windows-x64.exe
           --report desktop-nuitka-report.xml
       - name: Assemble portable release
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist/release/LLMInterviewLab | Out-Null
-          Copy-Item -LiteralPath dist/desktop/LLMInterviewLab.exe -Destination dist/release/LLMInterviewLab/
+          Copy-Item -LiteralPath dist/desktop/LLMInterviewLab-Windows-x64.exe -Destination dist/release/LLMInterviewLab/
           Copy-Item -LiteralPath LICENSE -Destination dist/release/LLMInterviewLab/
           Copy-Item -LiteralPath docs/third-party-notices.md -Destination dist/release/LLMInterviewLab/THIRD_PARTY_NOTICES.md
           Copy-Item -LiteralPath docs/desktop-app.md -Destination dist/release/LLMInterviewLab/README.md
-          Compress-Archive -Path dist/release/LLMInterviewLab -DestinationPath dist/release/llm-interview-lab-windows-x64.zip
+          Compress-Archive -Path dist/release/LLMInterviewLab -DestinationPath dist/release/LLMInterviewLab-Windows-x64-portable.zip
+          $files = @(
+            'dist/desktop/LLMInterviewLab-Windows-x64.exe',
+            'dist/release/LLMInterviewLab-Windows-x64-portable.zip'
+          )
+          $lines = foreach ($file in $files) {
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLowerInvariant()
+            "$hash  $([IO.Path]::GetFileName($file))"
+          }
+          Set-Content -LiteralPath dist/release/SHA256SUMS-Windows.txt -Value $lines -Encoding utf8
+      - name: Inspect unpacked portable archive
+        run: >-
+          python scripts/check_desktop_artifact.py
+          dist/desktop/LLMInterviewLab-Windows-x64.exe
+          --report desktop-nuitka-report.xml
+          --archive dist/release/LLMInterviewLab-Windows-x64-portable.zip
       - name: Upload Windows portable artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: llm-interview-lab-windows-x64
+          name: LLMInterviewLab-Windows-x64
           path: |
-            dist/release/llm-interview-lab-windows-x64.zip
-            dist/release/LLMInterviewLab/LLMInterviewLab.exe
+            dist/desktop/LLMInterviewLab-Windows-x64.exe
+            dist/release/LLMInterviewLab-Windows-x64-portable.zip
+            dist/release/SHA256SUMS-Windows.txt
+          if-no-files-found: error
+
+  desktop-macos-arm64:
+    name: macOS 15 arm64 Desktop / Python 3.11
+    runs-on: macos-15
+    timeout-minutes: 120
+    env:
+      PYTHONUTF8: "1"
+      QT_QPA_PLATFORM: offscreen
+      QT_QUICK_BACKEND: software
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Report pinned runner architecture
+        run: |
+          sw_vers
+          uname -m
+          python3 --version
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install optional desktop and AI dependencies
+        run: python -m pip install -e ".[desktop,ai,dev]"
+      - name: Run core and macOS desktop tests
+        run: python -m pytest -q
+      - name: Build, sign ad-hoc, and smoke-test the application
+        run: |
+          export PATH="$(python -c 'import sysconfig; print(sysconfig.get_path("scripts"))'):$PATH"
+          export NUITKA_CACHE_DIR="$RUNNER_TEMP/nuitka-cache"
+          mkdir -p "$NUITKA_CACHE_DIR"
+          python scripts/build_macos_desktop.py
+      - name: Inspect the ZIP and mounted DMG privacy boundary
+        run: >-
+          python scripts/check_macos_artifact.py
+          dist/release-macos/LLMInterviewLab-macOS-arm64.app.zip
+          dist/release-macos/LLMInterviewLab-macOS-arm64.dmg
+      - name: Upload macOS Apple Silicon artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: LLMInterviewLab-macOS-arm64
+          path: |
+            dist/release-macos/LLMInterviewLab-macOS-arm64.app.zip
+            dist/release-macos/LLMInterviewLab-macOS-arm64.dmg
+            dist/release-macos/SHA256SUMS.txt
           if-no-files-found: error

@@ -292,7 +292,7 @@ def test_desktop_release_configuration_is_portable_and_separate_from_core_ci() -
     assert ".[desktop" not in repository_job
     assert "torch" not in desktop_job.lower()
     assert "check_desktop_artifact.py" in desktop_job
-    assert "llm-interview-lab-windows-x64.zip" in desktop_job
+    assert "LLMInterviewLab-Windows-x64-portable.zip" in desktop_job
     assert "New-Item -ItemType Directory -Force -Path dist/desktop" in desktop_job
     assert "curriculum/problems/=**/*.py" in spec
     assert "curriculum/retention/=**/*.py" in spec
@@ -306,4 +306,8 @@ def test_desktop_release_configuration_is_portable_and_separate_from_core_ci() -
         REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/ConnectionsPage.qml"
     ).read_text(encoding="utf-8")
     assert "pendingApproval.diff" in connections_qml
-    assert "Approve once" in connections_qml
+    assert "仅批准本次" in connections_qml
+    assert "desktop-macos-arm64:" in workflow
+    assert "runs-on: macos-15" in workflow
+    assert "LLMInterviewLab-macOS-arm64.app.zip" in workflow
+    assert "LLMInterviewLab-macOS-arm64.dmg" in workflow
