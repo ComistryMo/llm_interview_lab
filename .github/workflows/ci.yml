@@ -5,12 +5,22 @@ on:
     branches: [main, "refactor/**"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      job:
+        description: "Run the full workflow or one release job"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - desktop-windows
 
 permissions:
   contents: read
 
 jobs:
   repository-health:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all'
     name: ${{ matrix.os }} / Python ${{ matrix.python }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 12
@@ -33,6 +43,7 @@ jobs:
       - run: python scripts/validate_external_courses.py
 
   cpu-pytorch-validation:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all'
     name: Ubuntu / Python 3.11 / CPU PyTorch
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -48,6 +59,7 @@ jobs:
       - run: llm-lab doctor
 
   documentation:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all'
     name: 中文文档契约 / Python 3.11
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -61,6 +73,7 @@ jobs:
       - run: python -m pytest tests/infrastructure/test_chinese_docs.py tests/infrastructure/test_training_foundations_readme.py -q
 
   desktop-windows:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all' || inputs.job == 'desktop-windows'
     name: Windows Desktop / Python 3.11
     runs-on: windows-latest
     timeout-minutes: 90
@@ -135,6 +148,7 @@ jobs:
           if-no-files-found: error
 
   desktop-macos-arm64:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all'
     name: macOS 15 arm64 Desktop / Python 3.11
     runs-on: macos-15
     timeout-minutes: 120

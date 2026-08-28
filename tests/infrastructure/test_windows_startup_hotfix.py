@@ -114,3 +114,13 @@ def test_windows_release_uses_one_standalone_portable_bundle() -> None:
     assert "--bundle-root" in checker
     assert "runtime_assets/curriculum" in checker
     assert '"startup_stage": "first_window"' in checker
+    assert "screenshot_bytes=" in checker
+
+
+def test_screenshot_captures_the_qt_quick_scene() -> None:
+    entrypoint = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/main.py"
+    ).read_text(encoding="utf-8")
+
+    assert "window.grabWindow()" in entrypoint
+    assert "screen.grabWindow(window.winId())" not in entrypoint

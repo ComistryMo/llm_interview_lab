@@ -134,9 +134,13 @@ def main() -> int:
             env=environment,
             cwd=root,
         )
-        if smoke.returncode or not screenshot.is_file() or screenshot.stat().st_size < 10_000:
+        screenshot_size = screenshot.stat().st_size if screenshot.is_file() else 0
+        if smoke.returncode or screenshot_size < 10_000:
             raise SystemExit(
-                "desktop GUI smoke failed: " + smoke.stdout + smoke.stderr
+                "desktop GUI smoke failed: "
+                f"returncode={smoke.returncode} screenshot_bytes={screenshot_size}\n"
+                + smoke.stdout
+                + smoke.stderr
             )
         profiles = root / "local-app-data/LLMInterviewLab/workspace/profiles"
         if not profiles.is_dir() or any(profiles.iterdir()):

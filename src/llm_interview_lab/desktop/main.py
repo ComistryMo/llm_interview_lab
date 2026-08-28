@@ -233,8 +233,10 @@ def main(argv: list[str] | None = None) -> int:
         def capture() -> None:
             try:
                 window = engine.rootObjects()[0]
-                screen = window.screen() or QGuiApplication.primaryScreen()
-                image = screen.grabWindow(window.winId())
+                # Capture the Qt Quick scene itself. Screen.grabWindow() is
+                # unreliable for offscreen standalone builds because there is
+                # no native desktop surface for the window handle.
+                image = window.grabWindow()
                 if image.isNull() or not image.save(str(destination), "PNG"):
                     raise RuntimeError("the rendered window could not be captured")
             except Exception as error:
