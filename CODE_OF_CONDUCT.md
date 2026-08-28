@@ -1,27 +1,29 @@
-# Contributor Covenant Code of Conduct
+# 社区行为准则
 
-## Our Pledge
+## 我们的承诺
 
-We as members, contributors, and maintainers pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
+我们希望每位参与者都能在不受年龄、身体状况、民族、性别认同与表达、经验水平、教育背景、国籍、外貌、种族、宗教、性取向或社会经济状况影响的情况下，参与一个开放、友善且安全的社区。
 
-We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
+## 期望的行为
 
-## Our Standards
+- 尊重不同经验、观点和技术背景；
+- 对事不对人，给出具体、可执行的反馈；
+- 承认错误，接受合理纠正；
+- 保护学习者隐私、公司机密和未公开材料；
+- 在课程、测试、文档和 AI 辅助内容中尊重版权与学术诚信。
 
-Positive behavior includes empathy, respectful feedback, accountability, and focusing criticism on work rather than people. Unacceptable behavior includes harassment, discriminatory language, trolling, insults, publishing others' private information, or conduct reasonably considered inappropriate in a professional setting.
+以下行为不可接受：骚扰、侮辱、歧视、威胁、跟踪、发布他人隐私信息、未经许可传播答案或私有材料，以及其他会使参与者感到不安全的行为。
 
-## Enforcement Responsibilities
+## 适用范围
 
-Project maintainers are responsible for clarifying and enforcing these standards. They may remove, edit, or reject contributions and communications that violate this Code of Conduct.
+本准则适用于项目仓库、Issue、Pull Request、讨论区、发布渠道，以及代表本项目参与其他公开活动的场景。
 
-## Scope
+## 报告与处理
 
-This Code applies in project spaces and when an individual officially represents the project in public spaces.
+请不要在公开 Issue 中披露受害者信息或敏感证据。通过维护者 GitHub 主页提供的私密联系方式报告，并只提供处理所需的最小信息。维护者会以保密、相称和一致的方式调查，并可采取提醒、删除内容、临时限制或永久移除等措施。
 
-## Enforcement
+安全漏洞或数据泄露请按 [SECURITY.md](SECURITY.md) 报告。
 
-Report abuse through the private contact route described in [SECURITY.md](SECURITY.md). Do not open a public issue containing personal or sensitive information. Reports will be reviewed promptly and fairly.
+## 来源
 
-## Attribution
-
-Adapted from the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html).
+本准则参考 [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)，使用自然中文重写并针对本项目的学习隐私边界做了精简。若本文件与适用平台规则冲突，以平台规则和适用法律为准。

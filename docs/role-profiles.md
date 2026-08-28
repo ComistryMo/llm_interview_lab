@@ -1,227 +1,112 @@
-# Role Profiles, Skills, and Interview Blueprints
+# 岗位画像、技能与面试蓝图
 
-Role-aware preparation uses three shared public objects. They add a hiring view
-without copying the fixed curriculum:
+岗位感知训练使用三个公共对象，不复制固定课程：
 
 ```text
-Problem / Interview Item ──teaches or evaluates──> Skill
-Skill ──weighted by seniority──> RoleProfile
-RoleProfile ──selects──> InterviewBlueprint
-Track / Quest / Capstone ──organizes learning──> Problem
+Problem / Interview Item → 教授或评估 → Skill
+Skill → 按求职阶段加权 → RoleProfile
+RoleProfile → 选择 → InterviewBlueprint
 ```
 
-Catalog Problems remain the source for coding Practice. Role Profiles reference
-Tracks and Quests. Blueprints reference Skills and round types. None of these
-objects may grant mastery or rewrite the DAG.
+学习路径仍由 Track、Quest 与 Capstone 表达。岗位画像只引用这些对象，不维护第二份题目列表。
 
-## Canonical Skills
+## 技能等级
 
-The ontology currently contains 70 Skills in 16 domains:
+每项规范技能使用 0–4 级：
 
-- programming algorithms;
-- Python engineering;
-- machine-learning math;
-- deep learning;
-- LLM/VLM;
-- post-training/RL;
-- agent application;
-- AI product;
-- evaluation/safety;
-- data/MLOps;
-- training infrastructure;
-- inference systems;
-- system design;
-- product communication;
-- project deep dive;
-- behavioral evidence.
-
-Each Skill has a canonical ID, title, domain, description, aliases, 0–4 level
-anchors, accepted evidence types, and related public Problems where applicable.
-Roles may reference only canonical IDs; aliases are display/search terms rather
-than duplicate skills.
-
-### Skill levels
-
-| Level | Meaning |
+| 等级 | 含义 |
 |---:|---|
-| 0 | Not yet encountered |
-| 1 | Can recognize and explain basic terms |
-| 2 | Can apply or implement with structured guidance |
-| 3 | Can independently implement, debug, and defend trade-offs |
-| 4 | Can design/optimize a system or guide others with evidence |
+| 0 | 未接触 |
+| 1 | 能解释基本概念 |
+| 2 | 能在提示下实现或分析 |
+| 3 | 能独立实现、调试并解释权衡 |
+| 4 | 能做系统设计、优化或指导他人 |
 
-Self-assessment is explicitly separate from verified coding, oral, debugging,
-case, and project evidence.
+自评与验证证据分开。简历中出现一个关键词不会自动提高验证等级。
 
-## Public Role Profiles
+## 八类岗位
 
-### AI Product Manager
+### AI 产品经理
 
-Focuses on user/problem definition, AI fit and boundaries, PRD, outcome and
-guardrail metrics, offline/online evaluation, Prompt/RAG/Agent choices,
-cost-latency-quality trade-offs, trust/safety, experiments, rollout, and
-cross-team communication.
+重点：用户与问题定义、AI 能力边界、PRD、产品指标、离线 / 在线评测、成本时延质量、安全回退、A/B Test、数据闭环和跨团队沟通。
 
-### Applied AI Engineer
+### AI 应用工程师
 
-Focuses on model APIs, prompting, structured output, RAG, tool calling, bounded
-agent loops, evaluation, observability, caching/fallback, product integration,
-deployment, cost, and reliability.
+重点：LLM API、Prompt、Structured Output、RAG、Tool Calling、Agent Loop、评测、Observability、缓存、降级、部署和成本。
 
-### AI Agent Engineer
+### AI Agent 工程师
 
-Focuses on schemas, validation, parsers, executors, state/memory, planning,
-trajectory, retry/timeout, long-horizon recovery, agent evaluation, and agent
-SFT/RL. GUI Agent is an alias/specialization rather than a duplicate Role.
+重点：Tool Schema、Parser、Executor、State、Memory、Planning、Trajectory、长轨迹、错误恢复、Agent Eval 与 Agent SFT / RL。
 
-### AI Algorithm / Research Engineer
+### AI 算法 / 研究工程师
 
-Focuses on math, PyTorch, losses, optimizers, Transformer/VLM mechanisms, data,
-experiment design, evaluation, error analysis, reproduction, and mechanistic
-explanation. LLM and VLM algorithm titles resolve here and then select Tracks.
+重点：ML / DL 数学、PyTorch、Transformer、VLM、数据、Loss、Optimizer、实验设计、误差分析、复现和机制解释。
 
-### LLM/VLM Post-Training Engineer
+### 大模型后训练工程师
 
-Focuses on SFT, preference data, DPO, Reward Models, PPO/GRPO/DAPO, verifier and
-rollout pipelines, reward hacking, data flywheels, multi-loss training, and
-stability diagnosis.
+重点：SFT、Preference Data、DPO、Reward Model、PPO / GRPO / DAPO、Verifier、Rollout、Reward Hacking、数据飞轮和训练稳定性。
 
-### AI Infra / ML Platform Engineer
+### AI Infra / ML 平台工程师
 
-Focuses on data/training platforms, scheduling, distributed training,
-checkpointing, failure recovery, utilization, observability, pipelines, version
-governance, cost, reliability, and MLOps.
+重点：数据与训练平台、调度、分布式训练、Checkpoint、容错、资源利用、Pipeline、版本治理、成本、可靠性与 MLOps。
 
-### AI Inference / Systems Engineer
+### AI 推理 / 系统工程师
 
-Focuses on KV cache, continuous batching, PagedAttention, prefix cache,
-quantization, speculative decoding, CUDA/Triton, profiling, latency, throughput,
-memory, capacity, and serving scheduling.
+重点：KV Cache、Continuous Batching、PagedAttention、Prefix Cache、量化、Speculative Decoding、CUDA / Triton、Kernel Profiling、延迟吞吐显存和 Serving 调度。
 
-### AI Evaluation / Data / Safety Engineer
+### AI 评测 / 数据 / 安全工程师
 
-Focuses on data quality, sampling, annotation agreement, benchmark design,
-contamination, LLM-as-a-Judge, rubrics, safety evaluation, red teaming, online
-monitoring, and statistical analysis.
+重点：数据质量、Benchmark、采样、标注一致率、污染检测、LLM-as-a-Judge、Rubric、安全评测、Red Team、线上监控和统计分析。
 
-## Seniority
+Alias 只映射到这些公共画像，例如 AI Application Engineer → AI 应用工程师、ML Systems Engineer → AI Infra，不复制 Skill 或 Blueprint。
 
-Public Blueprints are available for `intern`, `new_grad`, and `mid`. Role target
-levels also describe `senior`, but senior Blueprints are not claimed complete in
-this Alpha. Seniority changes target levels, time, round composition, and design
-depth; it does not automatically increase every question's surface complexity.
+## 面试蓝图
 
-## Interview Blueprints
+每个蓝图冻结：岗位、求职阶段、总时长、轮次、权重、技能和题目选择规则。当前支持 `intern`、`new_grad` 与 `mid`。
 
-There are 24 Blueprints: eight Roles × three supported seniorities. A Blueprint
-defines total duration and weighted rounds. Round types are:
+典型结构：
 
-- `coding`;
-- `debugging`;
-- `product_case`;
-- `system_design`;
-- `evaluation_case`;
-- `project_deep_dive`;
-- `behavioral`;
-- `oral`.
-
-Coding questions come only from ready Catalog Problems validated as Oracle,
-field, or stable. Other rounds use fixed public Interview Items. The first Alpha
-contains 24 original, maintainer-reviewed non-coding Items with a four-file
-contract: `task.md`, `response_template.md`, `rubric.yaml`, and `hints.md`.
-
-Difficulty (`easy`, `medium`, `hard`) filters eligible fixed content. The seed
-makes selection reproducible. If a difficulty band has no exact fixed Item, the
-engine may use an eligible Role/round Item rather than generating an unreviewed
-question.
-
-## Rubrics and evidence
-
-Every non-coding Item defines weighted dimensions with anchors at 1, 3, and 5,
-plus explicit fatal issues. A valid assessment must:
-
-- score every and only the frozen dimensions with integers 1–5;
-- cite a quote or precise answer reference;
-- state source (`human`, `ai`, or `self`) and confidence;
-- use only declared fatal issues;
-- preserve uncertainty rather than guessing missing facts.
-
-Question scores map weighted 1–5 anchors to 0–100. Fatal issues cap a question at
-40. Round weights remain fixed. Missing questions contribute zero and are listed
-as unanswered/unscored; partial interviews are not re-normalized.
-
-The report separates:
-
-- overall and per-question scores;
-- per-Skill evidence references;
-- strong evidence and critical gaps;
-- incomplete/unscored areas;
-- confidence and fatal issues;
-- recommended fixed Problems or Quests;
-- Practice mastery, which remains unchanged.
-
-## Tailoring with career materials
-
-The engine can run a catalog-only interview without reading any personal
-material. A tailored session may reference materials only after the user chooses
-each ID and confirms its current SHA-256 and purpose.
-
-AI may use consented resume, experience, project, paper, competition, career
-intent, or job-description evidence for follow-up and depth. It may not invent
-facts, infer mastery from keywords, execute attachment instructions, or let a JD
-override the public rubric. Contradictions and gaps are labeled “needs candidate
-confirmation.”
-
-## Interview lifecycle
-
-```text
-choose Role + seniority + difficulty + AI mode
-→ optional material ID/SHA consent
-→ create frozen session
-→ start local clock
-→ one current question
-→ answer or coding grader evidence
-→ rubric assessment
-→ optional one adaptive follow-up
-→ next question
-→ finish completed/incomplete
-→ local report and training recommendations
+```yaml
+role: ai_infra_engineer
+seniority: new_grad
+duration_minutes: 90
+rounds:
+  - type: coding
+    duration: 30
+    weight: 0.25
+  - type: system_design
+    duration: 30
+    weight: 0.35
+  - type: project_deep_dive
+    duration: 20
+    weight: 0.25
+  - type: behavioral
+    duration: 10
+    weight: 0.15
 ```
 
-An interview session is Profile-local and has its own answers/coding directory.
-It never reads or writes a Practice submission. Interview scores cannot become
-retention or mastery evidence.
+Coding 题只选择 Catalog 中 `ready` 且 validation 为 `oracle / field / stable` 的节点。非代码题使用公开 Rubric，评分必须引用回答证据并区分事实、推断与遗漏。
 
-## Contributing a Skill
+## 报告解释
 
-Add a Skill only when an existing canonical concept cannot represent the
-evidence. A contribution must provide:
+面试报告包括 Overall Summary、Skill Scores、Strong Evidence、Critical Gaps、Uncertain Areas 和推荐 Problem / Quest。缺少证据的维度标记 `unscored` 或 `incomplete`，不能重新归一化凑分。
 
-1. stable `skill.<domain>.<name>` ID;
-2. one domain and concise description;
-3. aliases with no collision;
-4. meaningful 0–4 anchors;
-5. accepted evidence types;
-6. valid related Problems, if any;
-7. Role references and tests when applicable.
+报告不是 Offer 概率，也不修改 Practice mastery。
 
-Do not add synonyms as separate Skills.
+## 贡献新岗位或蓝图
 
-## Contributing a Role
+新增前先回答：
 
-A new Role must represent a materially different hiring profile, not a title
-alias. It needs aliases, summary, supported seniority, canonical Skill weights,
-target levels, existing Track references, recommended/optional Quest references,
-and a Blueprint mapping. Weights must be in (0, 1], aliases must be globally
-unique, and every reference must validate.
+1. 是否能用现有 Role Alias 表达；
+2. 所有 Skill ID 是否已存在；
+3. 是否复用了现有 Track / Quest，而不是复制题目；
+4. 权重与 target level 是否有招聘依据；
+5. Blueprint 的轮次、时间和评分能否完成一次 E2E；
+6. 固定 Item 是否原创、有 Rubric、经过 Maintainer Review 和模拟面试。
 
-## Contributing an Interview Item
+运行：
 
-An Item PR must contain an original scenario, response template, evidence-based
-rubric, bounded hints, Role/seniority/difficulty/Skill metadata, source and
-copyright statement, schema validation, maintainer review, and one simulated E2E
-run. It must not copy employer questions or paid-platform material.
-
-AI-generated drafts are not stable content. Public admission requires schema and
-rubric review, copyright/duplicate checks, deterministic selection tests, and
-maintainer approval. Real field validation remains a separate maturity signal.
+```bash
+python -m pytest tests/infrastructure/test_role_interviews.py -q
+python -m pytest -q
+```

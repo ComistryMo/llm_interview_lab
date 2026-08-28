@@ -1,209 +1,126 @@
-# Windows Desktop App
+# 桌面应用指南
 
-The desktop Alpha is the recommended entry point for learners who want one
-window for career materials, Practice, mock interviews, progress, and optional
-AI. It is a native Qt Quick application built on the same Python services as the
-CLI; it does not call the CLI or parse terminal output for ordinary operations.
+桌面版是普通学习者的推荐入口。它使用 PySide6 + Qt Quick，并直接复用与 CLI 相同的 Catalog、Workspace、Planner、Grader、面试引擎与生命周期；普通业务不会调用 CLI 子进程，也不会解析终端输出。
 
-## Choose an installation
+## 安装选择
 
-### Portable Windows Alpha
+| 平台 | 文件 | 说明 |
+|---|---|---|
+| Windows 10 / 11 x64 | `LLMInterviewLab-Windows-x64-portable.zip` | 推荐，解压后运行其中的 EXE |
+| Windows 10 / 11 x64 | `LLMInterviewLab-Windows-x64.exe` | 单文件构建，首次启动可能更慢 |
+| macOS 12+ Apple Silicon | `LLMInterviewLab-macOS-arm64.dmg` | 推荐，拖入 Applications |
+| macOS 12+ Apple Silicon | `LLMInterviewLab-macOS-arm64.app.zip` | 适合直接解压与自动化验证 |
+| 开发者 | 源码安装 | 支持调试、完整可选依赖和贡献流程 |
 
-1. Download `llm-interview-lab-windows-x64.zip` from the matching prerelease.
-2. Extract the archive to a normal user-writable folder.
-3. Run `LLMInterviewLab.exe`.
+Intel Mac 没有经过真实 Artifact 启动验证，本版不提供 x86_64 或 Universal2 下载承诺。平台细节见 [Windows](windows.md) 与 [macOS](macos.md)。
 
-The portable app seeds public curriculum assets under
-`%LOCALAPPDATA%\LLMInterviewLab` and keeps Profiles there. On an upgrade it
-replaces public assets only. It never copies, scans, removes, or migrates
-`workspace/profiles/` automatically.
+## 首次启动
 
-The first portable Alpha intentionally omits CPU PyTorch to keep the executable
-small enough to download and validate. It supports onboarding, career materials,
-role interviews, AI connections, and Foundation exercises. Use a source install
-for Tensor, optimizer, Transformer, and post-training coding exercises.
+最多四步：
 
-### Source install — full feature set
+1. 输入学习档案名称；
+2. 从八类岗位中选择目标岗位；
+3. 评估 6–8 项相关技能，或选择“跳过，从基础开始”；
+4. 选择“暂不连接 AI”、普通 LLM API 或 Codex。
 
-Use Python 3.11 on Windows:
+默认值是 `profile=default`、校招阶段、实验题关闭、No-AI。自评只影响推荐，不会授予掌握状态。
 
-```powershell
-git clone https://github.com/ComistryMo/llm_interview_lab.git
-cd llm_interview_lab
-py -3.11 -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install -e ".[desktop,ai,torch,dev]"
+## 页面
+
+### 首页
+
+只提供两个主要动作：**继续训练** 与 **开始模拟面试**。次级信息包括目标岗位、当前路线、到期复测、最近面试和 AI 状态。
+
+### 求职材料
+
+只添加你拥有、已脱敏且确实需要的文件。文件存在不等于 AI 可以读取；每场面试必须对 material ID、用途和当前 SHA-256 重新授权。PDF / DOCX 当前作为不透明附件保存，不会自动送入 AI 上下文。
+
+### 刷题训练
+
+默认展示岗位推荐路线。答题工作区包括题面、答案编辑器、公开测试、提交、契约审查、口述答辩、D+2 / D+7 以及可折叠 AI 教练。自动保存不会授权 AI 读取答案。
+
+### 模拟面试
+
+选择岗位、求职阶段、难度与面试官模式。系统冻结面试蓝图并一次展示一个问题；代码题由本地 Grader 判定，非代码题按 Rubric 记录回答证据。结束后报告保存在当前学习档案，且不会修改 Practice mastery。
+
+### AI 教练与连接
+
+上下文预览列出将发送的每个部分。普通 Provider 只接收确认文本；Codex 使用官方 App Server，并对写文件和高风险命令展示审批卡片与 Diff。详见 [AI 连接](ai-connections.md)。
+
+### 学习进度
+
+自评与验证证据分开显示。岗位准备度只是本地规划指标，不是 Offer 概率或录用判断。
+
+### 设置
+
+可调整主题和字号、打开数据与日志目录、选择 Codex 可执行文件。Alpha.1 Windows 数据迁移必须由用户确认；应用先复制、计算 SHA-256、保留本地备份，再切换到新位置，绝不删除源目录。
+
+## 快捷键
+
+| 操作 | Windows / Linux | macOS |
+|---|---|---|
+| 设置 | 系统菜单 | `Command + ,` |
+| 运行公开测试 | `Ctrl + R` | `Command + R` |
+| 答题页主安全动作（运行测试） | `Ctrl + Enter` | `Command + Enter` |
+| 退出 | `Alt + F4` | `Command + Q` |
+
+提交、审批和覆盖类操作不会绑定容易误触的全局快捷键。
+
+## 数据位置
+
+- 源码 / CLI：仓库内 `workspace/`；
+- 打包桌面：Qt `QStandardPaths.AppDataLocation`；
+- Windows 与 macOS 均不会把真实数据写入 EXE、`.app/Contents/` 或安装目录；
+- 设置页会显示并打开实际目录。
+
+日志使用小型滚动文件，默认不上传，不记录 API Key、Authorization Header、完整材料、完整答案、Oracle、Private Tests 或其他学习档案。
+
+## 无 AI 模式
+
+以下故障都不应阻止本地训练：断网、缺少或错误 Key、429 / 500、Ollama 未启动、Codex 未安装或未登录、Keyring 不可用。界面会给出中文下一步，并保留 No-AI 入口。
+
+## 源码运行
+
+```bash
+python -m venv .venv
+# 激活环境
+python -m pip install -e ".[desktop,ai,dev]"
 llm-lab-gui
 ```
 
-No AI connection is required. To omit provider libraries, install
-`.[desktop,torch,dev]` instead.
+离屏 Smoke：
 
-## Four-step onboarding
-
-1. **Profile** — enter a local ID such as `default`.
-2. **Role** — choose one of eight Role Profiles.
-3. **Self-assessment** — rate only the most relevant Skills from 0 to 4, or skip.
-4. **AI** — keep the default **Use without AI**, connect a provider, or connect
-   Codex later.
-
-Self-assessment influences readiness views and recommendations. It is not
-verified evidence and never unlocks a Problem or grants mastery.
-
-## Pages
-
-### Home
-
-Home has one primary action: **Continue**. It summarizes the current Role,
-current Practice task, pending Review/Retention, mastered count, recommended
-Quests, last interview, and AI connection state. The full DAG is deliberately
-not shown here.
-
-### Career profile
-
-Add a single, user-owned, sanitized material at a time. The app copies it into
-the current ignored Profile and records its kind, title, size, relative path,
-SHA-256, and whether it may be considered for AI consent. It never recursively
-scans a resume directory.
-
-Supported categories include resume, career intent, internship, project, paper,
-competition, interview question, job description, portfolio, research, and
-other. Text intended for AI should be UTF-8 Markdown or plain text. PDF/DOCX may
-be archived locally but are opaque in this Alpha.
-
-### Learn
-
-The default view shows the Role path and recommended Quest cards. Each Problem
-shows difficulty, asset status, validation level, prerequisites, retention
-availability, and lock state. Experimental contract-only nodes are visible in
-the advanced Catalog but are not recommended by default.
-
-### Exercise Workspace
-
-The screen keeps four concerns visible without mixing their authority:
-
-- task contract and prerequisites;
-- the current `submission.py`, saved atomically;
-- public test output from the isolated grader subprocess;
-- Review, D+2/D+7, and an optional AI Coach drawer.
-
-Use **Save → Test → Submit → Review**. A Review requires an explanation,
-complexity, boundary conditions, contract result, and oral result. D+2/D+7 can
-start only when deterministic lifecycle rules permit them. Each retention stage
-creates a new attempt and does not copy the old answer.
-
-The editor is intentionally modest; it is not an IDE replacement. For complex
-work, edit the printed/Profile path in VS Code and use the desktop app for task,
-test, lifecycle, and AI context.
-
-### Interview
-
-Choose Role, seniority, difficulty, AI mode, and optionally exactly one
-consented material. Starting a session freezes its Blueprint, question text,
-rubric, material ID/SHA, seed, and deadline.
-
-Only one main question is visible at a time. Non-coding rounds record an answer
-and evidence-backed rubric assessment. Coding rounds expose a session-local
-starter and run the normal grader; they never reuse a Practice submission.
-Adaptive AI follow-up is archived under the current main question and does not
-alter the frozen plan.
-
-Finishing produces a Profile-local report with completion state, overall score,
-Skill scores, question evidence, confidence, fatal issues, gaps, and uncertainty.
-Missing rounds stay zero/unscored; the report is never re-normalized to look
-better and never estimates an offer probability.
-
-### AI Coach
-
-Preview the exact context before sending. Practice modes are COACH, TEACHER
-(H1/H2/H3), and REVIEWER. Interviewer mode is bound to the frozen current
-question. Repository Agent mode is for maintainers and requires explicit Codex
-approval for proposed writes/commands.
-
-### Progress
-
-Progress separates self-reported and verified Skill evidence. It shows mastered
-Problems, Quest progress, retention due, help-level usage, and local interview
-scores. Contract-only Problems and interview scores do not count as mastery.
-
-### Connections and Settings
-
-Connections manages no-AI, provider, and Codex modes. Provider metadata is
-Profile-local; secrets use the system keyring. Settings controls light/dark/system
-theme and font scale. The app restores non-sensitive UI preferences on restart.
-
-## Recommended daily workflow
-
-1. Open Home and follow **Continue** rather than browsing the whole Catalog.
-2. Complete one primary Practice task; do due retention before new content.
-3. Run tests locally before asking AI for help.
-4. Use the lowest sufficient help level and keep the Context Preview small.
-5. Submit only when the current SHA has passing evidence.
-6. Complete Contract + Oral Review in your own words.
-7. Run a role interview weekly; use its weakest cited Skills to choose the next
-   Quest, not as mastery evidence.
-8. Back up the ignored Profile to a private encrypted location.
-
-## Accessibility and keyboard use
-
-- Windows 125% and 150% scaling are supported through Qt high-DPI handling.
-- Tab and Shift+Tab traverse controls; Enter/Space activate focused buttons.
-- Focus and status use text/borders in addition to color.
-- Font scale is adjustable from 85% to 140%.
-- Long task text, code, transcripts, and output are scrollable.
-- Minimum window size is 1080×680; 1280×800 or larger is recommended.
-
-## Troubleshooting
-
-### The app starts but a PyTorch exercise cannot import torch
-
-The portable Alpha does not bundle PyTorch. Use the source install with
-`.[desktop,torch,dev]`.
-
-### Codex shows “Not found”
-
-Install and authenticate the Codex CLI through its official instructions, then
-restart the desktop app. The workbench launches `codex app-server --listen
-stdio://`; it does not scrape the interactive terminal.
-
-### A provider key cannot be saved
-
-Confirm the operating-system keyring is available and the `ai` extra is
-installed. The app deliberately refuses to fall back to a plaintext key file.
-
-### A remote provider call fails
-
-Use **Test Connection**. Authentication, rate-limit, timeout, and server errors
-are sanitized so secrets are not echoed. Confirm model ID and endpoint; custom
-endpoints are accepted only for OpenAI-compatible and Ollama connections.
-
-The portable Alpha bundles OpenAI-compatible support (including Ollama's `/v1`
-endpoint). Run the source installation with `.[desktop,ai,dev]` when native
-Anthropic or Gemini protocol support is required.
-
-### The local grader hangs
-
-The grader has per-Problem time and output limits and runs in a child process.
-It is not a security sandbox; only run code you trust.
-
-## Development and packaging
-
-```powershell
-python -m pip install -e ".[desktop,ai,dev]"
-$env:QT_QPA_PLATFORM = "offscreen"
-python -m pytest tests/infrastructure/test_desktop.py -q
-Remove-Item Env:QT_QPA_PLATFORM
-pyside6-deploy -c scripts/pysidedeploy.spec -f
-python scripts/check_desktop_artifact.py `
-  dist/desktop/LLMInterviewLab.exe `
-  --report desktop-nuitka-report.xml
+```bash
+llm-lab-gui --smoke-test
+llm-lab-gui --screenshot desktop-home.png --screenshot-page home
 ```
 
-The release checker launches a fresh standalone instance using a temporary
-`LOCALAPPDATA`, verifies a real rendered window screenshot, checks the version,
-rejects private/oracle paths in the build report, and verifies that no Profile is
-packaged or created during smoke startup.
+## 开发与打包
 
-Windows CI builds only on Python 3.11. The normal cross-platform matrix does not
-install PySide6 or provider SDKs. Installer, code signing, automatic update, and
-store distribution are later work.
+Windows 使用：
+
+```powershell
+python scripts/generate_desktop_icons.py --output dist/icons
+pyside6-deploy -c scripts/pysidedeploy.spec -f
+```
+
+macOS Apple Silicon 使用：
+
+```bash
+python scripts/build_macos_desktop.py
+python scripts/check_macos_artifact.py \
+  dist/release-macos/LLMInterviewLab-macOS-arm64.app.zip \
+  dist/release-macos/LLMInterviewLab-macOS-arm64.dmg
+```
+
+GUI 依赖是可选依赖，不会拖入核心 CLI 测试矩阵。CI 使用离屏 QML Smoke、Fake Provider、Fake Codex 和 Mock Keyring，不访问真实账户。
+
+## 排错
+
+- **窗口无法启动：** 先运行 `llm-lab-gui --smoke-test`，再从设置打开日志目录；源码用户运行 `python -m pip install -e ".[desktop,ai,dev]"`。
+- **Ollama 连接失败：** 确认 Ollama 已启动，地址通常为 `http://127.0.0.1:11434`，然后重新测试。
+- **Codex 未检测到：** macOS Finder 不一定继承 Shell PATH；从设置选择 Codex 可执行文件。
+- **密钥环不可用：** 应用不会写明文 Key。继续使用 No-AI，并先修复系统 Keychain / Credential Manager。
+- **PyTorch 题缺少依赖：** 源码安装执行 `python -m pip install -e ".[torch,dev]"`。
+
+本地 Grader 只用于运行你本人信任的代码，不是恶意代码安全沙箱。
