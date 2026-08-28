@@ -4,7 +4,7 @@ project_dir = ..
 input_file = src/llm_interview_lab/desktop/main.py
 exec_directory = dist/desktop
 project_file = 
-icon = 
+icon = dist/icons/LLMInterviewLab.ico
 
 [python]
 python_path = 
@@ -14,7 +14,7 @@ android_packages =
 [qt]
 qml_files = src/llm_interview_lab/desktop/qml/Main.qml,src/llm_interview_lab/desktop/qml/components/LabCard.qml,src/llm_interview_lab/desktop/qml/components/StatusPill.qml,src/llm_interview_lab/desktop/qml/pages/OnboardingPage.qml,src/llm_interview_lab/desktop/qml/pages/HomePage.qml,src/llm_interview_lab/desktop/qml/pages/CareerPage.qml,src/llm_interview_lab/desktop/qml/pages/LearnPage.qml,src/llm_interview_lab/desktop/qml/pages/ExercisePage.qml,src/llm_interview_lab/desktop/qml/pages/InterviewPage.qml,src/llm_interview_lab/desktop/qml/pages/CoachPage.qml,src/llm_interview_lab/desktop/qml/pages/ProgressPage.qml,src/llm_interview_lab/desktop/qml/pages/ConnectionsPage.qml,src/llm_interview_lab/desktop/qml/pages/SettingsPage.qml
 excluded_qml_plugins = QtQuick3D,QtCharts,QtWebEngine,QtTest,QtSensors
-modules = Core,Gui,Qml,Quick,QuickControls2
+modules = Core,Gui,Qml,Quick,QuickControls2,Svg
 plugins = 
 
 [android]

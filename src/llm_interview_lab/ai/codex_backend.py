@@ -5,13 +5,64 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 import shutil
+import sys
 from typing import Any, AsyncIterator, Awaitable, Callable
+
+from llm_interview_lab import __version__
 
 
 class CodexBackendError(RuntimeError):
     """Raised for App Server transport or protocol failures."""
+
+
+def discover_codex_executable(configured: str | Path | None = None) -> str | None:
+    """Find Codex without assuming a Finder-launched macOS app inherited shell PATH."""
+
+    candidates: list[Path] = []
+    if configured:
+        candidates.append(Path(configured).expanduser())
+    discovered = shutil.which("codex")
+    if discovered:
+        candidates.append(Path(discovered))
+    home = Path.home()
+    if sys.platform == "darwin":
+        candidates.extend(
+            [
+                Path("/opt/homebrew/bin/codex"),
+                Path("/usr/local/bin/codex"),
+                home / ".local/bin/codex",
+                home / ".npm-global/bin/codex",
+                home / ".volta/bin/codex",
+                home / ".bun/bin/codex",
+            ]
+        )
+    elif sys.platform == "win32":
+        app_data = os.environ.get("APPDATA")
+        local_data = os.environ.get("LOCALAPPDATA")
+        if app_data:
+            candidates.append(Path(app_data) / "npm/codex.cmd")
+        if local_data:
+            candidates.append(Path(local_data) / "Programs/codex/codex.exe")
+    else:
+        candidates.extend(
+            [
+                Path("/usr/local/bin/codex"),
+                home / ".local/bin/codex",
+                home / ".npm-global/bin/codex",
+                home / ".volta/bin/codex",
+            ]
+        )
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve(strict=True)
+        except (OSError, RuntimeError):
+            continue
+        if resolved.is_file() and (sys.platform == "win32" or os.access(resolved, os.X_OK)):
+            return str(resolved)
+    return None
 
 
 @dataclass(frozen=True)
@@ -35,11 +86,12 @@ class CodexAppServerBackend:
         self,
         workspace_root: Path,
         *,
-        executable: str = "codex",
+        executable: str | Path | None = None,
         process_factory: Callable[..., Awaitable[Any]] | None = None,
     ) -> None:
         self.workspace_root = workspace_root.resolve()
-        self.executable = executable
+        self.executable = str(executable) if executable else "codex"
+        self._configured_executable = executable
         self._process_factory = process_factory or asyncio.create_subprocess_exec
         self._process: Any | None = None
         self._reader_task: asyncio.Task | None = None
@@ -48,16 +100,18 @@ class CodexAppServerBackend:
         self._next_request_id = 1
 
     def available(self) -> bool:
-        return shutil.which(self.executable) is not None
+        return discover_codex_executable(self._configured_executable) is not None
 
     async def connect(self) -> dict[str, Any]:
         if self._process is not None:
             raise CodexBackendError("Codex App Server is already connected")
-        if not self.available() and self._process_factory is asyncio.create_subprocess_exec:
+        resolved = discover_codex_executable(self._configured_executable)
+        if resolved is None and self._process_factory is asyncio.create_subprocess_exec:
             raise CodexBackendError("Codex executable was not found")
+        executable = resolved or self.executable
         try:
             self._process = await self._process_factory(
-                self.executable,
+                executable,
                 "app-server",
                 "--listen",
                 "stdio://",
@@ -77,7 +131,7 @@ class CodexAppServerBackend:
                 "clientInfo": {
                     "name": "llm_interview_lab",
                     "title": "LLM Interview Lab",
-                    "version": "0.4.0-alpha.1",
+                    "version": __version__,
                 },
                 "capabilities": {"experimentalApi": False},
             },

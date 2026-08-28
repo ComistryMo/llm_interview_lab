@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from importlib import import_module
+import inspect
 import json
 import time
 from typing import Any, AsyncIterator, Awaitable, Callable, Sequence
@@ -184,7 +185,7 @@ class OpenAICompatibleChatProvider:
         close = getattr(client, "close", None)
         if close is not None:
             result = close()
-            if result is not None:
+            if inspect.isawaitable(result):
                 await result
 
     async def test_connection(self) -> ConnectionResult:
