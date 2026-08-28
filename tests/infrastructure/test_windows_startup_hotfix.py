@@ -106,6 +106,8 @@ def test_windows_release_uses_one_standalone_portable_bundle() -> None:
 
     assert "mode = standalone" in spec
     assert "mode = onefile" not in spec
+    assert "Directory.Name -eq 'LLMInterviewLab.dist'" in workflow
+    assert "Rename-Item -LiteralPath $generatedExecutable -NewName 'LLMInterviewLab.exe'" in workflow
     assert "dist/release/LLMInterviewLab/LLMInterviewLab.exe" in workflow
     assert "LLMInterviewLab-Windows-x64-portable.zip" in workflow
     assert "LLMInterviewLab-Windows-x64.exe" not in workflow

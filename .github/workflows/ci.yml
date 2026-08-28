@@ -95,12 +95,22 @@ jobs:
           Copy-Item -LiteralPath scripts/pysidedeploy.spec -Destination dist/pysidedeploy-ci.spec
           python scripts/generate_desktop_icons.py --output dist/icons
           pyside6-deploy -c dist/pysidedeploy-ci.spec -f
-          $executables = @(Get-ChildItem -Path dist/desktop -Recurse -Filter LLMInterviewLab.exe)
+          # pyside6-deploy names the executable after the input file (main.exe)
+          # inside the title-named .dist directory.  Normalize that generated
+          # name only in the release bundle so the public launch path stays
+          # stable for Explorer users.
+          $executables = @(Get-ChildItem -Path dist/desktop -Recurse -File -Filter *.exe |
+            Where-Object { $_.Directory.Name -eq 'LLMInterviewLab.dist' })
           if ($executables.Count -ne 1) {
-            throw "Expected one standalone LLMInterviewLab.exe, found $($executables.Count)"
+            throw "Expected one standalone executable in LLMInterviewLab.dist, found $($executables.Count)"
           }
           New-Item -ItemType Directory -Force -Path dist/release | Out-Null
           Copy-Item -LiteralPath $executables[0].Directory.FullName -Destination dist/release/LLMInterviewLab -Recurse
+          $releaseExecutable = Join-Path dist/release/LLMInterviewLab 'LLMInterviewLab.exe'
+          $generatedExecutable = Join-Path dist/release/LLMInterviewLab $executables[0].Name
+          if ($generatedExecutable -ne $releaseExecutable) {
+            Rename-Item -LiteralPath $generatedExecutable -NewName 'LLMInterviewLab.exe'
+          }
           Copy-Item -LiteralPath LICENSE -Destination dist/release/LLMInterviewLab/
           Copy-Item -LiteralPath docs/third-party-notices.md -Destination dist/release/LLMInterviewLab/THIRD_PARTY_NOTICES.md
           Copy-Item -LiteralPath docs/desktop-app.md -Destination dist/release/LLMInterviewLab/README.md
