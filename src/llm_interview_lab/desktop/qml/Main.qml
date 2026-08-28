@@ -191,14 +191,23 @@ ApplicationWindow {
 
     Popup {
         id: toastPopup
+        objectName: "globalToast"
         x: window.width - width - 30
-        y: window.height - height - 30
+        // Keep transient feedback away from the bottom onboarding CTA.
+        y: 82
         width: Math.min(440, message.implicitWidth + 40)
         height: 52
         modal: false
         closePolicy: Popup.NoAutoClose
         background: Rectangle { color: window.dark ? "#293244" : "#172033"; radius: 9 }
-        contentItem: Text { id: message; color: "white"; wrapMode: Text.Wrap; verticalAlignment: Text.AlignVCenter }
+        contentItem: Text {
+            id: message
+            color: "white"
+            wrapMode: Text.Wrap
+            verticalAlignment: Text.AlignVCenter
+            anchors.fill: parent
+            anchors.margins: 14
+        }
         Timer { id: toastTimer; interval: 3600; onTriggered: toastPopup.close() }
     }
     Connections {
