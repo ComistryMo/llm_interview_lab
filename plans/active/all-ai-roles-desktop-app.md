@@ -130,8 +130,25 @@ code-signing, auto-update, and broad rewrites of existing coding exercises.
 - [x] Implement and test desktop application.
 - [x] Implement and test AI connections and Codex backend.
 - [x] Rewrite docs, capture real screenshots and verify packaging.
-- [ ] Run local/remote CI, merge and publish alpha prerelease.
+- [x] Run local and eight-job remote CI.
+- [ ] Merge PR #4 and publish the alpha prerelease.
 
 ## 9. Final retrospective
 
-Pending completion.
+Implementation and validation are complete on the feature branch. The release
+adds 70 canonical skills, eight Role Profiles, 24 seniority-aware Blueprints,
+24 fixed non-coding interview items, the shared role interview engine, scoped
+AI/Codex connections, and a PySide6/Qt Quick Windows application without adding
+a server, database, web frontend, account system, or multi-Agent runtime.
+
+Evidence at the release gate:
+
+- Windows repository health: 340 passed, 11 platform-permission skips.
+- Ubuntu 3.11 reproduction: 341 passed, 2 optional-dependency skips.
+- GitHub Actions run 33129774111: all eight jobs passed, including Python
+  3.10/3.11/3.12 on Ubuntu and Windows, CPU PyTorch, and Windows packaging.
+- The portable executable starts outside a checkout, reports version
+  0.4.0a1, seeds only public assets, and passes the Profile/oracle/secret scan.
+- Draft PR #4 is the only merge path; no history rewrite or real Profile was
+  used. Final merge, prerelease creation, and plan archival remain delivery
+  operations rather than product implementation work.

@@ -1,39 +1,84 @@
 # Changelog
 
-本项目使用 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 风格，并遵循语义化版本。
+Notable project changes are documented here using the
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Release tags
+follow semantic versioning and Alpha releases are not stable APIs.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.1] - 2026-08-28
+
 ### Added
 
-- 38 道原创 ready 固定题与 188 个 planned Catalog 节点；
-- 12 条岗位 Track、11 条 Quest、8 个 planned Capstone；
-- repository-local 多 Profile Workspace 与 append-only event reducer；
-- `start → test → submit → review → D+2 → D+7 → mastered` CLI 闭环；
-- 统一 submission loader、pytest 子进程、超时、输出截断与 SHA-256 证据；
-- 固定 commit 的外部参考兼容清单与许可证审计。
+- A canonical ontology of 70 skills across 16 domains, eight Role Profiles,
+  seniority-aware Interview Blueprints, and 24 original non-coding interview
+  items with evidence-based rubrics.
+- A local-first PySide6 and Qt Quick Windows desktop workbench for onboarding,
+  career materials, Practice, mock interviews, progress, settings, and AI
+  connections.
+- Optional OpenAI-compatible, OpenAI, Ollama, Anthropic, Gemini, and Codex
+  connections with context preview, system-keyring credentials, and explicit
+  Codex approvals.
+- A role-aware `llm-lab quickstart` path and deterministic structured interview
+  lifecycle shared by the CLI and desktop application.
+- Windows portable packaging, GUI smoke tests, privacy inspection, five real
+  application screenshots, and focused desktop/AI/role documentation.
 
 ### Changed
 
-- 固定课程事实源收敛为 `curriculum/catalog/*.yaml`；
-- 个人学习历史事实源收敛为每个 Profile 的 `events.jsonl`；
-- README、架构、Workspace、出题规范和 AI 教练边界收敛为少量维护文档。
+- Public positioning now describes a role-aware AI interview workbench rather
+  than only an algorithm exercise repository.
+- Profile path validation now reports symlink and reparse failures consistently
+  across Windows and POSIX before invoking Git.
+
+### Security
+
+- Real Profiles, career materials, submissions, interview records, secrets,
+  private tests, and maintainer oracles remain outside tracked release assets.
+- Remote AI receives only the fields selected in Context Preview; API keys are
+  referenced through the operating-system keyring rather than stored in YAML.
+
+## [0.3.0-alpha.1] - 2026-08-27
+
+### Added
+
+- Continuous Tensor and Stable Loss and Optimizer and Training Loop Golden
+  Quests, including two validated integration Capstones.
+- A product-focused README with verified CLI onboarding and bounded BYO-AI
+  guidance.
+
+## [0.2.0-alpha.2] - 2026-08-27
+
+### Added
+
+- The first end-to-end Python Data Reliability Golden Quest and Capstone.
+- Quality-aware planning, oracle fingerprints, deterministic retention assets,
+  and a minimal anonymous field-validation record format.
+
+## [0.2.0-alpha.1] - 2026-08-27
+
+### Added
+
+- The repository-local multi-Profile Workspace, Catalog/DAG validation, local
+  grader, and `start -> test -> submit -> review -> retain -> mastered` CLI.
+- Public curriculum validation levels, maintainer oracle validation, and the
+  first retention-ready fixed exercises.
 
 ### Removed
 
-- 公共维护者答案、状态、review、progress 与 handoff fixture；
-- 重复的 Markdown 状态、旧 JSON Catalog、旧导航和被 CLI 替代的脚本。
+- Tracked maintainer answers, personal state, reviews, progress, and handoff
+  fixtures. Ignored local Profile data was preserved without rewriting history.
 
 ## [0.1.0] - 2026-08-26
 
 ### Added
 
-- Stage 00 训练原型；
-- Python 3.10+ 环境检查和分层 pytest 入口；
-- 精确时间语义的任务 ledger 与状态校验；
-- fail-closed handoff 导出器；
-- 无答案私人 workspace 生成器；
-- 公共文档、治理文件和跨平台 CI。
+- The Stage 00 training prototype, Python environment checks, scoped pytest
+  entry points, privacy-oriented handoff export, and initial public governance.
 
-[Unreleased]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.1...HEAD
+[0.4.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.3.0-alpha.1...v0.4.0-alpha.1
+[0.3.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.2.0-alpha.2...v0.3.0-alpha.1
+[0.2.0-alpha.2]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.2.0-alpha.1...v0.2.0-alpha.2
+[0.2.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.1.0...v0.2.0-alpha.1
 [0.1.0]: https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.1.0
