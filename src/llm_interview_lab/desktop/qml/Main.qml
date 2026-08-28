@@ -13,7 +13,9 @@ ApplicationWindow {
     minimumHeight: 680
     visible: true
     title: "LLM Interview Lab"
-    Material.theme: backend.theme === "dark" ? Material.Dark : Material.Light
+    Material.theme: backend.theme === "dark" ? Material.Dark
+                    : backend.theme === "light" ? Material.Light
+                    : Material.System
     Material.accent: "#2563eb"
 
     property bool dark: Material.theme === Material.Dark
@@ -31,6 +33,36 @@ ApplicationWindow {
     })
     font.pixelSize: Math.round(14 * backend.fontScale)
     color: colors.background
+
+    menuBar: MenuBar {
+        Menu {
+            title: "应用"
+            Action { text: "关于 LLM Interview Lab"; onTriggered: aboutDialog.open() }
+            MenuSeparator {}
+            Action { text: "设置"; shortcut: StandardKey.Preferences; onTriggered: backend.navigate("settings") }
+            Action { text: "退出"; shortcut: StandardKey.Quit; onTriggered: Qt.quit() }
+        }
+        Menu {
+            title: "训练"
+            Action { text: "继续训练"; onTriggered: backend.navigate("home") }
+            Action { text: "运行公开测试"; shortcut: StandardKey.Refresh; enabled: backend.currentPage === "exercise"; onTriggered: backend.runTests() }
+        }
+    }
+
+    Shortcut {
+        sequences: ["Ctrl+Return", "Meta+Return"]
+        enabled: backend.currentPage === "exercise"
+        onActivated: backend.runTests()
+    }
+
+    // Keep the documented test shortcut available on both Windows/Linux and
+    // macOS.  StandardKey.Refresh is platform-dependent and does not map to
+    // Ctrl/Command+R in every Qt style, so declare the concrete sequences too.
+    Shortcut {
+        sequences: ["Ctrl+R", "Meta+R"]
+        enabled: backend.currentPage === "exercise"
+        onActivated: backend.runTests()
+    }
 
     onClosing: backend.shutdown()
 
@@ -59,20 +91,20 @@ ApplicationWindow {
                     ColumnLayout {
                         spacing: 0
                         Text { text: "LLM Interview Lab"; color: window.colors.text; font.bold: true; font.pixelSize: 15 }
-                        Text { text: "Local training workbench"; color: window.colors.muted; font.pixelSize: 11 }
+                        Text { text: "本地 AI 面试训练工作台"; color: window.colors.muted; font.pixelSize: 11 }
                     }
                 }
 
                 Repeater {
                     model: [
-                        {id: "home", label: "Home"},
-                        {id: "career", label: "Career profile"},
-                        {id: "learn", label: "Learn"},
-                        {id: "interview", label: "Interview"},
-                        {id: "coach", label: "AI Coach"},
-                        {id: "progress", label: "Progress"},
-                        {id: "connections", label: "Connections"},
-                        {id: "settings", label: "Settings"}
+                        {id: "home", label: backend.uiText("nav.home")},
+                        {id: "career", label: backend.uiText("nav.career")},
+                        {id: "learn", label: backend.uiText("nav.learn")},
+                        {id: "interview", label: backend.uiText("nav.interview")},
+                        {id: "coach", label: backend.uiText("nav.coach")},
+                        {id: "progress", label: backend.uiText("nav.progress")},
+                        {id: "connections", label: backend.uiText("nav.connections")},
+                        {id: "settings", label: backend.uiText("nav.settings")}
                     ]
                     delegate: Button {
                         id: navButton
@@ -99,9 +131,9 @@ ApplicationWindow {
 
                 Item { Layout.fillHeight: true }
                 Rectangle { Layout.fillWidth: true; height: 1; color: window.colors.border }
-                Text { text: "Profile"; color: window.colors.muted; font.pixelSize: 11 }
+                Text { text: "学习档案"; color: window.colors.muted; font.pixelSize: 11 }
                 Text { text: backend.profileId; color: window.colors.text; font.weight: Font.DemiBold; elide: Text.ElideRight; Layout.fillWidth: true }
-                Text { text: "Alpha · local-first"; color: window.colors.muted; font.pixelSize: 11 }
+                Text { text: "Alpha · 数据默认保存在本机"; color: window.colors.muted; font.pixelSize: 11 }
             }
         }
 
@@ -120,13 +152,13 @@ ApplicationWindow {
                     anchors.leftMargin: 28
                     anchors.rightMargin: 28
                     Text {
-                        text: ({home:"Home", career:"Career profile", learn:"Learning path", exercise:"Exercise workspace", interview:"Mock interview", coach:"AI coach", progress:"Progress", connections:"AI connections", settings:"Settings"})[backend.currentPage] || "LLM Interview Lab"
+                        text: ({home:"首页", career:"求职材料", learn:"刷题训练", exercise:"答题工作区", interview:"模拟面试", coach:"AI 教练", progress:"学习进度", connections:"AI 连接", settings:"设置"})[backend.currentPage] || "LLM Interview Lab"
                         color: window.colors.text
                         font.pixelSize: 20
                         font.weight: Font.DemiBold
                     }
                     Item { Layout.fillWidth: true }
-                    StatusPill { text: backend.aiStatus; tone: backend.aiStatus.indexOf("connected") >= 0 ? window.colors.success : window.colors.muted }
+                    StatusPill { text: backend.aiStatus; tone: backend.aiStatus.indexOf("已连接") >= 0 || backend.aiStatus.indexOf("就绪") >= 0 ? window.colors.success : window.colors.muted }
                     BusyIndicator { running: backend.busy; visible: running; implicitWidth: 28; implicitHeight: 28 }
                 }
             }
@@ -172,5 +204,21 @@ ApplicationWindow {
     Connections {
         target: backend
         function onToast(text) { message.text = text; toastPopup.open(); toastTimer.restart() }
+    }
+
+    Dialog {
+        id: aboutDialog
+        title: "关于 LLM Interview Lab"
+        modal: true
+        standardButtons: Dialog.Ok
+        anchors.centerIn: parent
+        width: 440
+        contentItem: Text {
+            width: 400
+            text: "v0.4.0-alpha.2\n\n本地优先、岗位感知、AI 辅助的面试训练工作台。\n无需连接 AI 也可完整使用固定课程与手动模拟面试。"
+            color: window.colors.text
+            wrapMode: Text.Wrap
+            lineHeight: 1.35
+        }
     }
 }

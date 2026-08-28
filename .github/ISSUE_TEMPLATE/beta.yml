@@ -1,48 +1,48 @@
-name: Golden Quest Alpha feedback
-description: Report one real Python Data Reliability run without sharing private data.
-title: "[Golden Quest] "
+name: Golden Quest Alpha 反馈
+description: 记录一次真实的 Python Data Reliability 体验，不上传私人数据
+title: "[Golden Quest 反馈] "
 labels: ["beta-feedback"]
 body:
   - type: markdown
     attributes:
-      value: "Do not attach submissions, private tests, employer data, or workspace/profiles content."
+      value: "请勿附上 Submission、Private Tests、公司材料或 workspace/profiles 内容。"
   - type: input
     id: background
-    attributes: {label: User background, description: "Broad, non-identifying level such as Python beginner or ML student."}
+    attributes: {label: 使用背景, description: "只写不识别个人身份的概况，例如 Python 初学者或机器学习学生。"}
     validations: {required: true}
   - type: input
     id: install_time
-    attributes: {label: Install time, placeholder: "4 minutes"}
+    attributes: {label: 安装耗时, placeholder: "4 分钟"}
   - type: input
     id: first_task_time
-    attributes: {label: Time to first task, placeholder: "7 minutes"}
+    attributes: {label: 到第一题的耗时, placeholder: "7 分钟"}
   - type: input
     id: completed
-    attributes: {label: Completed nodes}
+    attributes: {label: 已完成节点}
   - type: dropdown
     id: quest_completion
     attributes:
-      label: Quest completion
-      options: ["Completed through CAP-FND-001", "Completed FND-001—006", "Partially completed", "Blocked before first task"]
+      label: 闯关完成情况
+      options: ["已完成至 CAP-FND-001", "已完成 FND-001—006", "部分完成", "第一题前被阻塞"]
     validations: {required: true}
   - type: textarea
     id: contract_confusion
-    attributes: {label: Contract confusion}
+    attributes: {label: 契约不清楚的地方}
   - type: textarea
     id: misleading_test
-    attributes: {label: Misleading test}
+    attributes: {label: 可能误导的测试}
   - type: textarea
     id: hint_leakage
-    attributes: {label: Hint leakage}
+    attributes: {label: 提示是否泄露答案}
   - type: textarea
     id: d2_usefulness
-    attributes: {label: D+2 usefulness}
+    attributes: {label: D+2 是否有用}
   - type: textarea
     id: d7_usefulness
-    attributes: {label: D+7 usefulness}
+    attributes: {label: D+7 是否有用}
   - type: textarea
     id: blocker
-    attributes: {label: Blocking bug, description: "Include OS, Python version, command, and sanitized output."}
+    attributes: {label: 阻塞问题, description: "请包含操作系统、版本、命令和脱敏输出。"}
   - type: textarea
     id: free_text
-    attributes: {label: Free-text feedback}
+    attributes: {label: 其他反馈}

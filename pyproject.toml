@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-interview-lab"
-version = "0.4.0a1"
+version = "0.4.0a2"
 description = "A local-first, role-aware, AI-coached interview workbench for AI careers"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -50,7 +50,7 @@ where = ["src"]
 include = ["llm_interview_lab*"]
 
 [tool.setuptools.package-data]
-llm_interview_lab = ["desktop/qml/**/*.qml"]
+llm_interview_lab = ["desktop/qml/**/*.qml", "desktop/resources/*"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

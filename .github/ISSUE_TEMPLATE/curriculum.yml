@@ -1,46 +1,46 @@
-name: Curriculum proposal
-description: Propose one bounded training task or improve an existing task
-title: "[Curriculum]: "
+name: 课程建议
+description: 提议一项边界清楚的训练任务，或改进现有任务
+title: "[Curriculum] "
 labels: [curriculum]
 body:
   - type: input
     id: task
     attributes:
-      label: Task ID or proposed ID
+      label: 任务 ID 或建议 ID
       placeholder: LOSS-001
     validations:
       required: true
   - type: textarea
     id: gap
     attributes:
-      label: Learning gap and prerequisites
-      description: Describe the observable gap and the Gate that should unlock this task.
+      label: 能力缺口与前置
+      description: 描述可观察的能力缺口，以及解锁本题所需的 Gate。
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
-      label: Deliverable and acceptance evidence
-      description: Specify implementation scope, tests, oral questions, and D+2/D+7 variants.
+      label: 产物与验收证据
+      description: 说明实现范围、测试、口述问题和 D+2 / D+7 变式。
     validations:
       required: true
   - type: textarea
     id: metadata
     attributes:
-      label: Runtime, route, and reference exposure
-      description: State the job route, CPU/Torch/CUDA minimum, GPU acceptance policy, and whether external material is preview-safe or post-review-only.
+      label: 运行环境、岗位路线与参考资料
+      description: 说明岗位路线、CPU / Torch / CUDA 最低要求、GPU 验收策略，以及外部材料是否允许预习。
     validations:
       required: true
   - type: checkboxes
     id: contribution
     attributes:
-      label: Contribution confirmation
+      label: 贡献确认
       options:
-        - label: The proposal contains no complete solution or answer-leaking test.
+        - label: 建议中不包含完整答案或泄露实现的测试。
           required: true
-        - label: It contains no employer/client data, logs, paths, metrics, or internal identifiers.
+        - label: 不包含公司 / 客户数据、日志、路径、指标或内部标识。
           required: true
-        - label: I will not create empty future task files without tested content.
+        - label: 我不会为尚无已验证内容的未来任务创建空目录。
           required: true
-        - label: Any external design influence is independently written and registered at a fixed revision.
+        - label: 外部设计影响均已独立重写，并登记固定版本与许可证。
           required: true

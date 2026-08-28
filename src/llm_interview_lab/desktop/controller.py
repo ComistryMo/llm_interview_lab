@@ -11,8 +11,9 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from PySide6.QtCore import QObject, Property, QRunnable, QSettings, QThreadPool, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QDesktopServices
 
-from ..ai.codex_backend import CodexAppServerBackend, CodexEvent
+from ..ai.codex_backend import CodexAppServerBackend, CodexEvent, discover_codex_executable
 from ..ai.connections import (
     ConnectionConfigError,
     delete_connection,
@@ -28,6 +29,8 @@ from ..ai.providers import create_chat_provider
 from ..application import ApplicationService
 from ..lifecycle import ReviewInput
 from ..workspace import ensure_profile_path_is_safe, profile_paths, validate_profile_id
+from .i18n import friendly_error, localize_role, text
+from .runtime import is_packaged_desktop, migrate_legacy_desktop_data
 
 
 class WorkerSignals(QObject):
@@ -132,6 +135,8 @@ class AppController(QObject):
         profile_id: str = "default",
         demo_page: str | None = None,
         service: ApplicationService | None = None,
+        legacy_data_root: Path | None = None,
+        log_root: Path | None = None,
     ) -> None:
         super().__init__()
         self.repo_root = repo_root.resolve()
@@ -149,18 +154,23 @@ class AppController(QObject):
         self._materials: list[dict[str, Any]] = []
         self._pending_ai_assessment: dict[str, Any] | None = None
         self._busy = False
-        self._ai_status = "Disconnected"
+        self._ai_status = text("status.ai_offline")
         self._workers: set[Worker] = set()
         self._thread_pool = QThreadPool.globalInstance()
         self._settings = QSettings("ComistryMo", "LLMInterviewLab")
         self._theme = str(self._settings.value("theme", "system"))
         self._font_scale = float(self._settings.value("fontScale", 1.0))
+        self._codex_executable = str(self._settings.value("codexExecutable", ""))
+        self._legacy_data_root = legacy_data_root.resolve() if legacy_data_root else None
+        self._legacy_migration_dismissed = False
+        self._log_root = (log_root or (self.repo_root / "logs")).resolve()
         self._codex_loop: asyncio.AbstractEventLoop | None = None
         self._codex_thread: threading.Thread | None = None
         self._codex_backend: CodexAppServerBackend | None = None
         self._codex_thread_id: str | None = None
         self._codex_turn_id: str | None = None
         self._codex_diff = ""
+        self._shutdown_done = False
         if demo_page:
             self._load_demo(demo_page)
         else:
@@ -181,7 +191,7 @@ class AppController(QObject):
             "task": "Implement numerically stable cross entropy for batched logits.\n\nInput shape: logits [B, C], targets [B].",
         }
         self._submission = "def cross_entropy(logits, targets):\n    # Your implementation\n    raise NotImplementedError\n"
-        self._test_output = "Ready — public tests have not run yet."
+        self._test_output = "尚未运行公开测试。"
         self._interview = {
             "interview_id": "role-interview-demo",
             "status": "active",
@@ -200,7 +210,7 @@ class AppController(QObject):
             },
         }
         self._connections = [
-            {"connection_id": "ollama-local", "provider_id": "ollama", "display_name": "Local Ollama", "model": "qwen", "status": "Not tested"},
+            {"connection_id": "ollama-local", "provider_id": "ollama", "display_name": "本地 Ollama", "model": "qwen", "status": "尚未测试"},
         ]
         self._materials = [
             {
@@ -214,6 +224,7 @@ class AppController(QObject):
                 "ai_access": True,
             }
         ]
+        self._localize_dashboard()
 
     @Property(str, notify=stateChanged)
     def profileId(self) -> str:
@@ -225,7 +236,7 @@ class AppController(QObject):
 
     @Property("QVariantList", notify=stateChanged)
     def roles(self) -> list[dict[str, Any]]:
-        return self.service.role_cards()
+        return [localize_role(card) for card in self.service.role_cards()]
 
     @Property("QVariantMap", notify=stateChanged)
     def dashboard(self) -> dict[str, Any]:
@@ -255,6 +266,14 @@ class AppController(QObject):
     def connections(self) -> list[dict[str, Any]]:
         return self._connections
 
+    @Property("QVariantList", constant=True)
+    def providerOptions(self) -> list[str]:
+        """Expose only adapters shipped by the current distribution."""
+
+        if is_packaged_desktop():
+            return ["openai", "openai-compatible", "ollama"]
+        return ["openai", "openai-compatible", "ollama", "anthropic", "gemini"]
+
     @Property("QVariantList", notify=stateChanged)
     def materials(self) -> list[dict[str, Any]]:
         return self._materials
@@ -281,7 +300,40 @@ class AppController(QObject):
 
     @Property(bool, notify=aiStateChanged)
     def codexAvailable(self) -> bool:
-        return CodexAppServerBackend(self.repo_root).available()
+        return discover_codex_executable(self._codex_executable or None) is not None
+
+    @Property(str, notify=stateChanged)
+    def dataDirectory(self) -> str:
+        return str(self.repo_root)
+
+    @Property(str, notify=stateChanged)
+    def logDirectory(self) -> str:
+        return str(self._log_root)
+
+    @Property(str, notify=stateChanged)
+    def codexExecutable(self) -> str:
+        return self._codex_executable
+
+    @Property(bool, notify=stateChanged)
+    def legacyMigrationAvailable(self) -> bool:
+        return self._legacy_data_root is not None and not self._legacy_migration_dismissed
+
+    @Property(str, notify=stateChanged)
+    def legacyDataDirectory(self) -> str:
+        return str(self._legacy_data_root) if self._legacy_data_root else ""
+
+    @Slot(str, result=str)
+    def uiText(self, key: str) -> str:
+        return text(key)
+
+    def _show_error(self, error: BaseException | str) -> None:
+        self.toast.emit(friendly_error(error))
+
+    def _localize_dashboard(self) -> None:
+        role = self._dashboard.get("role")
+        if isinstance(role, dict) and role.get("primary_role"):
+            localized = localize_role({"id": role["primary_role"]})
+            role["title"] = localized.get("title", role.get("title", ""))
 
     def _set_busy(self, value: bool) -> None:
         if self._busy != value:
@@ -301,7 +353,7 @@ class AppController(QObject):
         def failed(message: str) -> None:
             self._workers.discard(worker)
             self._set_busy(False)
-            self.toast.emit(message)
+            self._show_error(message)
 
         worker.signals.completed.connect(done)
         worker.signals.failed.connect(failed)
@@ -337,19 +389,20 @@ class AppController(QObject):
             return
         try:
             self._dashboard = self.service.dashboard(self._profile_id)
+            self._localize_dashboard()
             self._problems = self.service.problem_cards(self._profile_id)
             current = self.service.current_submission(self._profile_id)
             if current:
                 self._current_task = self.service.problem_view(current["problem_id"])
                 self._submission = current["text"]
             self._connections = [
-                {**config.__dict__, "status": "Saved"}
+                {**config.__dict__, "status": "已保存，尚未测试"}
                 for config in list_connections(self.repo_root, self._profile_id)
             ]
             self._materials = self.service.material_cards(self._profile_id)
             self._onboarding = False
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
         self.stateChanged.emit()
 
     @Slot(str, str, str, str, str)
@@ -379,14 +432,14 @@ class AppController(QObject):
             else:
                 self.navigate("home")
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str, str, str, bool)
     def addMaterial(
         self, source_url: str, kind: str, title: str, ai_access: bool
     ) -> None:
         if self._profile_id == "demo":
-            self.toast.emit("Demo materials are synthetic and read-only")
+            self.toast.emit("演示材料完全虚构且为只读。")
             return
         try:
             source = (
@@ -402,9 +455,9 @@ class AppController(QObject):
                 ai_access=ai_access,
             )
             self.refresh()
-            self.toast.emit("Material copied into the ignored local Profile")
+            self.toast.emit("材料已复制到本地学习档案，Git 默认忽略该目录。")
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str)
     def openProblem(self, problem_id: str) -> None:
@@ -416,12 +469,12 @@ class AppController(QObject):
             assert current is not None
             self._current_task = self.service.problem_view(problem_id)
             self._submission = current["text"]
-            self._test_output = "Ready — run public tests when your attempt is complete."
+            self._test_output = "可以开始：完成本次作答后运行公开测试。"
             self._page = "exercise"
             self.stateChanged.emit()
             self.pageChanged.emit()
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str)
     def saveSubmission(self, text: str) -> None:
@@ -444,16 +497,16 @@ class AppController(QObject):
                 os.fsync(stream.fileno())
             os.replace(temporary, path)
             self._submission = text
-            self.toast.emit("Saved locally")
+            self.toast.emit("已保存到本机。")
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot()
     def runTests(self) -> None:
         if not self._current_task:
             return
         if self._profile_id == "demo":
-            self._test_output = "5 passed in 0.18s\n\nPublic tests: PASS · Mastery: NOT YET"
+            self._test_output = "5 passed in 0.18s\n\n公开测试：PASS · 掌握状态：尚未达到"
             self.stateChanged.emit()
             return
         problem_id = self._current_task["problem_id"]
@@ -461,7 +514,7 @@ class AppController(QObject):
         def complete(result) -> None:
             self._test_output = (
                 (result.output + "\n\n" if result.output else "")
-                + f"Public tests: {result.status.upper()} · Mastery: NOT YET"
+                + f"公开测试：{result.status.upper()} · 掌握状态：尚未达到"
             )
             self.stateChanged.emit()
 
@@ -473,20 +526,20 @@ class AppController(QObject):
     @Slot()
     def submitCurrent(self) -> None:
         if not self._current_task or self._profile_id == "demo":
-            self.toast.emit("Demo submission is not recorded")
+            self.toast.emit("演示模式不会记录提交。")
             return
         try:
             result = self.service.submit_practice(
                 self._profile_id, self._current_task["problem_id"]
             )
             self.toast.emit(
-                "Implemented; contract and oral review remain"
+                "实现已通过；仍需完成契约审查和口述答辩。"
                 if result["implemented"]
-                else "Submission recorded; current tests are not passing"
+                else "提交已记录，但当前公开测试尚未通过。"
             )
             self.refresh()
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str, str, str, bool, bool)
     def reviewCurrent(
@@ -498,7 +551,7 @@ class AppController(QObject):
         oral_passed: bool,
     ) -> None:
         if not self._current_task or self._profile_id == "demo":
-            self.toast.emit("A real active Practice attempt is required")
+            self.toast.emit("请先在真实学习档案中开始一道题。")
             return
         try:
             result = self.service.review_practice(
@@ -513,16 +566,16 @@ class AppController(QObject):
                 ),
             )
             self.toast.emit(
-                f"Review recorded: {result.status}; mastery is determined by the lifecycle"
+                f"审查已记录：{result.status}。是否掌握仍由确定性学习流程判定。"
             )
             self.refresh()
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str)
     def startRetentionStage(self, stage: str) -> None:
         if not self._current_task or self._profile_id == "demo":
-            self.toast.emit("A real reviewed Practice problem is required")
+            self.toast.emit("请先完成该题的实现与审查。")
             return
         try:
             problem_id = self._current_task["problem_id"]
@@ -532,13 +585,13 @@ class AppController(QObject):
                 raise RuntimeError("retention attempt was not created")
             self._submission = current["text"]
             self._test_output = (
-                f"{stage.upper()} attempt {result['attempt_id']} is independent; "
-                "the previous submission was not copied."
+                f"{stage.upper()} 复测尝试 {result['attempt_id']} 独立创建；"
+                "系统没有复制上一次答案。"
             )
             self.stateChanged.emit()
-            self.toast.emit(f"Started verified {stage.upper()} retention attempt")
+            self.toast.emit(f"已开始经过验证的 {stage.upper()} 间隔复测。")
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str, str, str)
     def createInterview(self, role_id: str, seniority: str, difficulty: str) -> None:
@@ -557,7 +610,7 @@ class AppController(QObject):
             self._load_interview(session["interview_id"])
             self.navigate("interview")
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str, str, str, str)
     def createConfiguredInterview(
@@ -582,7 +635,7 @@ class AppController(QObject):
             self._load_interview(session["interview_id"])
             self.navigate("interview")
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str, str, str, str, bool, str)
     def createTailoredInterview(
@@ -612,7 +665,7 @@ class AppController(QObject):
             self._load_interview(session["interview_id"])
             self.navigate("interview")
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     def _load_interview(self, interview_id: str) -> None:
         current = self.service.current_interview(self._profile_id, interview_id)
@@ -653,14 +706,14 @@ class AppController(QObject):
                 self._profile_id, self._interview["interview_id"], text
             )
             self._interview["coding_text"] = text
-            self.toast.emit("Interview answer saved inside this local session")
+            self.toast.emit("回答已保存到本机的本场面试记录。")
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str)
     def runInterviewCoding(self, text: str) -> None:
         if self._profile_id == "demo":
-            self._test_output = "4 passed in 0.16s\n\nCoding evidence: PASS"
+            self._test_output = "4 passed in 0.16s\n\n代码证据：PASS"
             self.stateChanged.emit()
             return
         try:
@@ -668,13 +721,13 @@ class AppController(QObject):
                 self._profile_id, self._interview["interview_id"], text
             )
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
             return
 
         def complete(result) -> None:
             self._test_output = (
                 (result.output + "\n\n" if result.output else "")
-                + f"Coding evidence: {result.status.upper()}"
+                + f"代码证据：{result.status.upper()}"
             )
             self.stateChanged.emit()
 
@@ -688,7 +741,7 @@ class AppController(QObject):
     @Slot()
     def recordInterviewCodingRound(self) -> None:
         if self._profile_id == "demo":
-            self.toast.emit("Synthetic coding round recorded")
+            self.toast.emit("演示代码环节已记录。")
             return
         question = self._interview.get("question")
         if not question or question.get("kind") != "coding":
@@ -716,7 +769,7 @@ class AppController(QObject):
             )
             self._load_interview(self._interview["interview_id"])
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str, int, str)
     def answerInterview(self, answer: str, score: int, evidence: str) -> None:
@@ -735,7 +788,7 @@ class AppController(QObject):
         try:
             scores = json.loads(scores_json)
         except (TypeError, json.JSONDecodeError):
-            self.toast.emit("Manual rubric scores are invalid")
+            self.toast.emit("人工评分不符合当前 Rubric，请检查各维度分数。")
             return
         self._record_manual_interview_assessment(answer, scores, evidence)
 
@@ -743,7 +796,7 @@ class AppController(QObject):
         self, answer: str, scores: Any, evidence: str
     ) -> None:
         if self._profile_id == "demo":
-            self.toast.emit("Demo answer recorded locally for this preview")
+            self.toast.emit("演示回答已在本次预览中记录。")
             return
         question = self._interview.get("question")
         if not question:
@@ -773,7 +826,7 @@ class AppController(QObject):
             )
             self._load_interview(interview_id)
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str, str, bool)
     def assessInterviewWithProvider(
@@ -783,9 +836,7 @@ class AppController(QObject):
         if not question or question.get("kind") == "coding":
             return
         if self._profile_id == "demo":
-            self.toast.emit(
-                "Demo AI assessment: evidence required; Practice mastery unchanged"
-            )
+            self.toast.emit("演示 AI 评分需要证据；不会改变刷题掌握状态。")
             return
         interview_id = self._interview["interview_id"]
         question_id = question["question_id"]
@@ -861,7 +912,7 @@ class AppController(QObject):
                 )
                 self._load_interview(interview_id)
             except Exception as error:
-                self.toast.emit(str(error))
+                self._show_error(error)
 
         self._background(operation, complete)
 
@@ -892,24 +943,24 @@ class AppController(QObject):
             self._pending_ai_assessment = None
             self._load_interview(interview_id)
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot()
     def finishInterview(self) -> None:
         if self._profile_id == "demo":
-            self.toast.emit("Demo report: 76/100 · Practice mastery unchanged")
+            self.toast.emit("演示报告：76/100；刷题训练的掌握状态不会改变。")
             return
         try:
             session = self.service.finish_interview(
                 self._profile_id,
                 self._interview["interview_id"],
-                summary="Local structured interview completed.",
+                summary="本地结构化模拟面试已完成。",
                 confirm_incomplete=True,
             )
             self._interview = session
             self.stateChanged.emit()
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str, str, str, str, str, str)
     def saveConnection(
@@ -933,9 +984,9 @@ class AppController(QObject):
                 api_key=api_key or None,
             )
             self.refresh()
-            self.toast.emit("Connection saved; API key is in the system keyring")
+            self.toast.emit("连接已保存；API Key 仅存入系统密钥环。")
         except (ConnectionConfigError, CredentialError) as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str)
     def deleteConnection(self, connection_id: str) -> None:
@@ -943,12 +994,12 @@ class AppController(QObject):
             delete_connection(self.repo_root, self._profile_id, connection_id)
             self.refresh()
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str)
     def testConnection(self, connection_id: str) -> None:
         if self._profile_id == "demo":
-            self.toast.emit("Synthetic demo connection check completed")
+            self.toast.emit("虚构演示连接检查完成。")
             return
 
         def operation():
@@ -969,9 +1020,9 @@ class AppController(QObject):
         def complete(result) -> None:
             for item in self._connections:
                 if item["connection_id"] == connection_id:
-                    item["status"] = "Connected" if result.ok else "Failed"
+                    item["status"] = "已连接" if result.ok else "连接失败"
             self.stateChanged.emit()
-            self.toast.emit(result.message)
+            self.toast.emit("连接成功。" if result.ok else friendly_error(result.message))
 
         self._background(operation, complete)
 
@@ -987,10 +1038,10 @@ class AppController(QObject):
             return {
                 "estimated_tokens": 286,
                 "parts": [
-                    {"id": "policy", "label": "AI policy", "selected": True, "sensitive": False},
-                    {"id": "task", "label": "Current public task", "selected": True, "sensitive": False},
-                    {"id": "submission", "label": "Selected current submission", "selected": include_submission, "sensitive": True},
-                    {"id": "test", "label": "Latest public test summary", "selected": include_test_output, "sensitive": False},
+                    {"id": "policy", "label": "AI 行为规则", "selected": True, "sensitive": False},
+                    {"id": "task", "label": "当前公开题面", "selected": True, "sensitive": False},
+                    {"id": "submission", "label": "选中的当前答案", "selected": include_submission, "sensitive": True},
+                    {"id": "test", "label": "最近公开测试摘要", "selected": include_test_output, "sensitive": False},
                 ],
             }
         try:
@@ -1017,7 +1068,7 @@ class AppController(QObject):
                 ],
             }
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
             return {"estimated_tokens": 0, "parts": []}
 
     @Slot(str, bool, result="QVariantMap")
@@ -1081,7 +1132,7 @@ class AppController(QObject):
                 ],
             }
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
             return {"estimated_tokens": 0, "parts": []}
 
     @Slot(str, str, bool)
@@ -1132,7 +1183,7 @@ class AppController(QObject):
 
             return asyncio.run(collect())
 
-        self._background(operation, lambda _: self.toast.emit("AI response completed"))
+        self._background(operation, lambda _: self.toast.emit("AI 回答完成。"))
 
     def _ensure_codex_loop(self) -> asyncio.AbstractEventLoop:
         if self._codex_loop is not None:
@@ -1171,7 +1222,7 @@ class AppController(QObject):
                 self._codex_turn_id = turn.get("id") or event.params.get("turnId")
                 self._codex_diff = ""
             elif event.method == "turn/completed":
-                self._ai_status = "Codex ready"
+                self._ai_status = text("status.codex_ready")
                 self.aiStateChanged.emit()
             elif event.requires_approval:
                 params = event.params
@@ -1179,12 +1230,12 @@ class AppController(QObject):
                     {
                         "request_id": str(event.request_id),
                         "action": event.method,
-                        "scope": params.get("cwd", "current repository"),
+                        "scope": params.get("cwd", "当前仓库"),
                         "files": params.get("changes", []),
                         "diff": params.get("diff") or self._codex_diff,
                         "command": params.get("command", ""),
-                        "reason": params.get("reason", "No reason supplied"),
-                        "risk": "This may run a command or change files. Review before approval.",
+                        "reason": params.get("reason", "未提供原因"),
+                        "risk": "该操作可能运行命令或修改文件。批准前请核对范围与 Diff。",
                     }
                 )
 
@@ -1194,28 +1245,31 @@ class AppController(QObject):
             loop = self._ensure_codex_loop()
 
             async def connect() -> None:
-                self._codex_backend = CodexAppServerBackend(self.repo_root)
+                self._codex_backend = CodexAppServerBackend(
+                    self.repo_root,
+                    executable=self._codex_executable or None,
+                )
                 await self._codex_backend.connect()
                 account = await self._codex_backend.account()
                 if account.get("account") is None:
                     raise RuntimeError("Codex is not signed in")
                 response = await self._codex_backend.start_thread(mode=mode)
                 self._codex_thread_id = response["thread"]["id"]
-                self._ai_status = "Codex connected"
+                self._ai_status = text("status.codex_connected")
                 self.aiStateChanged.emit()
                 asyncio.create_task(self._pump_codex())
 
             future = asyncio.run_coroutine_threadsafe(connect(), loop)
             future.add_done_callback(
-                lambda value: self.toast.emit(str(value.exception())) if value.exception() else None
+                lambda value: self._show_error(value.exception()) if value.exception() else None
             )
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str)
     def sendCodexMessage(self, message: str) -> None:
         if self._codex_loop is None or self._codex_backend is None or not self._codex_thread_id:
-            self.toast.emit("Connect Codex first")
+            self.toast.emit("请先连接 Codex；也可以继续使用无需 AI 的本地功能。")
             return
         asyncio.run_coroutine_threadsafe(
             self._codex_backend.start_turn(self._codex_thread_id, message),
@@ -1245,14 +1299,14 @@ class AppController(QObject):
                 preview.selected_text + "\n\n## Learner request\n" + message
             )
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str, bool)
     def sendCodexInterviewAnswer(
         self, answer: str, include_materials: bool = True
     ) -> None:
         if not self._interview.get("interview_id"):
-            self.toast.emit("Start an interview first")
+            self.toast.emit("请先开始一场模拟面试。")
             return
         try:
             preview = build_role_interview_context_preview(
@@ -1268,7 +1322,7 @@ class AppController(QObject):
                 "one adaptive follow-up. Do not change Practice mastery."
             )
         except Exception as error:
-            self.toast.emit(str(error))
+            self._show_error(error)
 
     @Slot(str, str)
     def resolveCodexApproval(self, request_id: str, decision: str) -> None:
@@ -1305,13 +1359,64 @@ class AppController(QObject):
         self._settings.setValue("fontScale", self._font_scale)
         self.stateChanged.emit()
 
+    @Slot(str)
+    def setCodexExecutable(self, value: str) -> None:
+        candidate = QUrl(value).toLocalFile() if value.startswith("file:") else value
+        path = Path(candidate).expanduser()
+        resolved = discover_codex_executable(path)
+        if resolved is None:
+            self.toast.emit(text("error.codex_missing"))
+            return
+        self._codex_executable = resolved
+        self._settings.setValue("codexExecutable", self._codex_executable)
+        self.aiStateChanged.emit()
+        self.stateChanged.emit()
+        self.toast.emit("Codex 可执行文件位置已保存。")
+
+    @Slot()
+    def clearCodexExecutable(self) -> None:
+        self._codex_executable = ""
+        self._settings.remove("codexExecutable")
+        self.aiStateChanged.emit()
+        self.stateChanged.emit()
+
+    @Slot()
+    def openDataDirectory(self) -> None:
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.repo_root)))
+
+    @Slot()
+    def openLogDirectory(self) -> None:
+        self._log_root.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._log_root)))
+
+    @Slot()
+    def dismissLegacyMigration(self) -> None:
+        self._legacy_migration_dismissed = True
+        self.stateChanged.emit()
+
+    @Slot()
+    def migrateLegacyData(self) -> None:
+        if self._legacy_data_root is None:
+            return
+        try:
+            migrate_legacy_desktop_data(self._legacy_data_root, self.repo_root)
+            self._legacy_data_root = None
+            self._legacy_migration_dismissed = False
+            self.refresh()
+            self.toast.emit("旧版学习档案已复制并校验，原目录和本地备份均已保留。")
+        except Exception as error:
+            self._show_error(error)
+
     @Slot()
     def shutdown(self) -> None:
+        if self._shutdown_done:
+            return
+        self._shutdown_done = True
         if self._codex_loop and self._codex_backend:
-            future = asyncio.run_coroutine_threadsafe(
-                self._codex_backend.close(), self._codex_loop
-            )
             try:
+                future = asyncio.run_coroutine_threadsafe(
+                    self._codex_backend.close(), self._codex_loop
+                )
                 future.result(timeout=4)
             except Exception:
                 pass

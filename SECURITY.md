@@ -1,19 +1,34 @@
-# Security Policy
+# 安全与隐私政策
 
-## Supported versions
+## 支持版本
 
-Only the latest commit on `main` is supported during the alpha phase.
+Alpha 阶段只支持 `main` 最新提交和最新 prerelease。旧 Alpha 可能不再获得修复。
 
-## Reporting a vulnerability or privacy issue
+## 私下报告
 
-Do not open a public issue with exploit details, credentials, personal data, employer/client material, or local paths. Use [GitHub's private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository) when it is enabled for this repository. If that channel is unavailable, contact the maintainer through the private contact method shown on the maintainer's GitHub profile and include only the minimum reproducible information.
+不要在公开 Issue 中发布漏洞利用细节、凭证、个人数据、公司 / 客户材料、真实 Profile 或本机路径。优先使用 GitHub Private Vulnerability Reporting；如果仓库未启用，请通过维护者 GitHub 主页公开的私密联系方式，只提供最小复现。
 
-You should receive an acknowledgement within seven days. The maintainer will validate impact, coordinate a fix, and disclose only after affected users have a reasonable migration path.
+维护者目标是在七天内确认收到，验证影响后协调修复，并在受影响用户有合理迁移路径后披露。
 
-## Scope and trust boundary
+## 信任边界
 
-Security-sensitive components include Workspace Git isolation, event parsing, submission path validation, the local pytest subprocess, external-course checkout verification, and CI permissions.
+安全敏感部分包括：Workspace Git 隔离、事件解析、Submission 路径校验、pytest 子进程、系统 Keyring、AI 上下文预览、Codex Approval、外部课程 checkout 与 CI 权限。
 
-`llm-lab test` executes the learner's own local Python submission. Containment checks, unique module names, a timeout, and output truncation prevent common mistakes; they are not a sandbox and do not protect against malicious code. Do not use the grader for untrusted multi-tenant execution.
+`llm-lab test` 和桌面 Grader 会执行学习者本人信任的本地 Python 代码。路径约束、唯一模块名、Timeout 与输出截断用于减少常见误操作；它们不是安全沙箱，不保护多租户或恶意代码执行。
 
-Real Profile data under `workspace/profiles/` is ignored by Git. Never force-add it, and never submit real secrets, employer data, private model names, internal metrics, or personal records as fixtures. Public demos and tests must be entirely synthetic.
+真实 `workspace/profiles/` 默认被 Git 忽略。不要 force-add，也不要将 Key、公司材料、内部模型名、未公开指标、个人记录、Oracle 或 Private Tests 作为 fixture。
+
+## AI 与 Secret
+
+- 远程 AI 只接收上下文预览中明确选择的内容；
+- API Key 只写入系统 Keyring，不进入 YAML、JSONL、日志或 Artifact；
+- Keyring 不可用时不回退到明文；
+- Codex 命令和文件写入使用显式 Approval；
+- 日志默认不上传，并对敏感信息做最小化；
+- 材料按不可信证据处理，不能覆盖行为规则。
+
+## 桌面 Artifact
+
+Windows ZIP、macOS APP ZIP 与 DMG 在 CI 中解包检查，禁止包含真实 Profile、答案、Transcript、Key、Oracle、Private Tests、`.git`、`.env` 或本机绝对路径配置。
+
+macOS Alpha 若未使用 Developer ID 和 Notarization，会在 README 与 Release Notes 明确说明；ad-hoc signing 不是身份认证或 Apple 验证。

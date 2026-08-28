@@ -1,86 +1,91 @@
 # LLM Interview Lab
 
-> A local-first, role-aware, AI-coached interview workbench for building verifiable skills through structured role interviews, tested exercises, oral review, and spaced retention.
+[简体中文](README.md) | [English](README.en.md)
+
+> 一个本地优先、岗位感知、AI 辅助的 AI 面试训练工作台：用岗位技能图谱、固定课程、结构化模拟面试、代码测试与间隔复测，把“看懂”变成“能独立实现和解释”。
 
 [![CI](https://github.com/ComistryMo/llm_interview_lab/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ComistryMo/llm_interview_lab/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/ComistryMo/llm_interview_lab?include_prereleases)](https://github.com/ComistryMo/llm_interview_lab/releases)
 [![Python](https://img.shields.io/badge/Python-3.10--3.12-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![License](https://img.shields.io/github/license/ComistryMo/llm_interview_lab)](LICENSE)
-[![Status](https://img.shields.io/badge/status-alpha-orange)](#project-status)
+[![Status](https://img.shields.io/badge/status-alpha-orange)](#项目状态)
 
-[**Download Windows App**](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.1) ·
-[**Start in 5 Minutes**](#start-in-5-minutes) ·
-[**Browse Curriculum**](#choose-a-track) ·
-[**Connect Your AI**](#use-with-ai)
+[**下载桌面应用**](#下载与三分钟开始) ·
+[**三分钟开始（Start in 5 Minutes）**](#下载与三分钟开始) ·
+[**浏览课程（Browse Curriculum）**](#如何开始训练) ·
+[**连接 AI（Use with AI）**](#如何接入-ai)
 
-![LLM Interview Lab desktop home](docs/images/desktop-home.png)
+![LLM Interview Lab 中文桌面首页](docs/images/desktop-home.png)
 
-**Role-aware paths · Tested exercises · Structured interviews · AI coaching · Retention**
+**岗位路线 · 经过测试的练习 · 结构化模拟面试 · AI 教练 · 间隔复测**
 
-This is not a random question list, a one-pass mastery badge, or an excuse for AI
-to write a learner's answer. One local Profile brings together career materials,
-Practice, timed mock interviews, evidence-backed reports, and optional AI help.
+这不是随机题单，不是一次测试通过就宣布掌握，也不是让 AI 代写答案。
+你可以只刷题，也可以结合自己的脱敏求职材料进行针对性模拟面试；不用连接 AI 也能完整使用确定性的本地功能。
 
-The Windows desktop app is the recommended entry point. The complete CLI remains
-available for developers, automation, and contributors. Both use the same local
-Catalog, Profile, grader, interview engine, and lifecycle rules.
+## 这是什么项目
 
-## Why This Project
+LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）：
 
-- **Role-aware preparation.** Eight Role Profiles map a canonical skill ontology
-  to seniority-aware interview blueprints, without duplicating the curriculum.
-- **Dependency-aware curriculum.** Hard prerequisites form a deterministic DAG;
-  Quests provide a recommended narrative and Capstones test integration.
-- **Structured interviews.** A fixed Blueprint controls rounds, time, weights,
-  public questions, rubric dimensions, evidence, and incomplete outcomes.
-- **Private local Workspace.** Career materials, answers, reports, and connection
-  metadata live in `workspace/profiles/<id>/`, ignored by Git by default.
-- **Deterministic evidence.** Public tests, timers, hashes, unlocks, and retention
-  are local code paths. AI prose cannot turn itself into objective evidence.
-- **Explicit AI boundaries.** Use no AI, a BYO chat provider, or Codex. Context is
-  previewable; secrets use the system keyring; AI never grants mastery.
-- **Retention before mastery.** A passing implementation still needs contract and
-  oral review plus verified D+2 and D+7 attempts where those assets exist.
+- **求职材料：** 保存简历、求职意向、项目、论文、比赛、岗位 JD 与真实面试问题；只有逐场明确授权的材料才可进入 AI 上下文。
+- **刷题训练：** 固定题目按硬依赖组成 DAG，闯关路线（Quest）提供推荐顺序，综合关卡（Capstone）验证组合能力。
+- **模拟面试：** 按岗位、求职阶段、难度和时长冻结面试蓝图；一次一个问题，代码题来自经过验证的固定题库，结束后生成有证据的评分卡并留档。
 
-The workbench supports these public Role Profiles:
+核心设计：
 
-| Role | Typical interview focus |
+- 硬依赖、测试、计时、解锁和掌握状态由确定性代码计算。
+- 公开测试通过只是实现证据；契约审查、口述答辩和 D+2 / D+7 间隔复测共同组成掌握条件。
+- AI 可以解释、提示、审查和追问，但不能自行授予“已掌握”。
+- 真实答案、材料、面试记录和连接配置默认保存在本机，并被 Git 忽略。
+
+## 适合哪些 AI 岗位
+
+第一版提供八类公共岗位画像。岗位 Alias 复用同一技能图谱，不复制课程：
+
+| 岗位 | 典型面试重点 |
 |---|---|
-| AI Product Manager | Problem framing, metrics, risk, delivery, trade-offs |
-| Applied AI Engineer | LLM integration, RAG, tools, reliability, evaluation |
-| AI Agent Engineer | Tool schemas, execution, state, recovery, agent evaluation |
-| AI Algorithm / Research Engineer | Math, PyTorch, Transformer/VLM, experiments |
-| Post-Training Engineer | SFT, preference data, reward, DPO/PPO/GRPO |
-| AI Infra / ML Platform Engineer | Pipelines, distributed training, reliability |
-| AI Inference / Systems Engineer | Serving, KV cache, quantization, kernels |
-| AI Evaluation / Data / Safety Engineer | Data quality, rubrics, leakage, safety |
+| AI 产品经理 | 问题定义、指标、评测、安全、成本与交付 |
+| AI 应用工程师 | LLM API、RAG、Tool Calling、可靠性与评测 |
+| AI Agent 工程师 | Tool、Parser、Executor、State、Trajectory 与恢复 |
+| AI 算法 / 研究工程师 | 数学、PyTorch、Transformer / VLM 与实验设计 |
+| 大模型后训练工程师 | SFT、Preference、Reward、DPO、PPO / GRPO |
+| AI Infra / ML 平台工程师 | 数据与训练平台、分布式、Checkpoint 与可观测性 |
+| AI 推理 / 系统工程师 | KV Cache、Serving、量化、Kernel 与性能分析 |
+| AI 评测 / 数据 / 安全工程师 | 数据质量、Rubric、污染检测、安全与统计分析 |
 
-Aliases such as AI Application Engineer, LLM Product Manager, Research Engineer,
-ML Systems Engineer, and Inference Optimization Engineer resolve to these shared
-profiles instead of creating duplicate skill graphs.
+详见[岗位画像与面试蓝图](docs/role-profiles.md)。
 
-## Start in 5 Minutes
+## 下载与三分钟开始
 
-### Windows desktop — recommended
+当前版本是 **v0.4.0-alpha.2**。桌面版适合普通用户；源码安装适合开发者、贡献者和需要完整 PyTorch 环境的用户。
 
-1. Open the [v0.4.0 desktop Alpha release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.1).
-2. Download `llm-interview-lab-windows-x64.zip` and extract it.
-3. Run `LLMInterviewLab.exe`.
-4. Create a Profile, select a Role and seniority, then keep **Use without AI** or
-   configure a connection later.
-5. Choose **Continue** to start the first verified task.
+| 你使用的环境 | 推荐方式 |
+|---|---|
+| Windows 10 / 11 x64 | 下载 `LLMInterviewLab-Windows-x64-portable.zip` |
+| 只需要单文件 Windows 版本 | 下载 `LLMInterviewLab-Windows-x64.exe` |
+| Apple Silicon Mac（M1 及更新） | 下载 `LLMInterviewLab-macOS-arm64.dmg` |
+| 需要直接解压验证的 Apple Silicon Mac | 下载 `LLMInterviewLab-macOS-arm64.app.zip` |
+| Intel Mac | Alpha.2 暂不提供未经真实运行验证的 x86_64 包 |
+| 开发者或贡献者 | 源码安装 |
+| 不希望连接 AI | 首次启动选择“暂不连接 AI” |
 
-The portable Alpha stores its public assets and private Profiles under
-`%LOCALAPPDATA%\LLMInterviewLab`. It creates no account and sends no telemetry.
-It currently does **not** bundle CPU PyTorch; install from source for Tensor,
-Transformer, optimizer, and post-training coding exercises. Role interviews,
-career materials, Foundation exercises, and manual/no-AI workflows are available
-in the portable build.
+[前往 v0.4.0-alpha.2 下载页](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.2)
 
-### Clone-first CLI and full desktop
+下载后只需：
 
-Core CLI supports Python 3.10–3.12. Python 3.11 is recommended and is required
-for the optional multi-provider AI bundle.
+```text
+打开应用
+→ 创建学习档案
+→ 选择目标岗位
+→ 选择是否连接 AI（默认不连接）
+→ 点击“开始训练”
+```
+
+普通桌面用户不需要打开终端、编辑 YAML、记 Problem ID 或理解事件 Schema。
+Windows 细节见 [Windows 指南](docs/windows.md)，macOS 细节见 [macOS 指南](docs/macos.md)。
+
+### 源码安装
+
+Python 3.11 是推荐版本；核心 CLI 支持 Python 3.10–3.12。
 
 ```bash
 git clone https://github.com/ComistryMo/llm_interview_lab.git
@@ -88,7 +93,7 @@ cd llm_interview_lab
 python -m venv .venv
 ```
 
-Activate the environment:
+激活环境：
 
 ```powershell
 # Windows PowerShell
@@ -100,7 +105,14 @@ Activate the environment:
 . .venv/bin/activate
 ```
 
-Install the core and start one command at a time:
+安装并启动：
+
+```bash
+python -m pip install -e ".[desktop,ai,dev]"
+llm-lab-gui
+```
+
+只使用 CLI：
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -111,175 +123,130 @@ llm-lab start FND-001 --profile default
 llm-lab test FND-001 --profile default
 ```
 
-The public starter is expected to fail: it defines the interface, not the
-answer. Edit the `submission.py` path printed by `start`, then run `test` again.
-
-For the full Windows GUI, optional AI adapters, and CPU PyTorch exercises:
-
-```powershell
-python -m pip install -e ".[desktop,ai,torch,dev]"
-llm-lab-gui
-```
-
-For CLI-only PyTorch practice, use the smaller optional set:
+公开 starter 预期会失败：它只定义接口，不包含答案。根据 `start` 输出编辑当前 `submission.py`，再运行同一条测试命令。
+PyTorch 题使用：
 
 ```bash
 python -m pip install -e ".[torch,dev]"
 ```
 
-Or let the CLI ask only the first essential choices:
+也可以让 CLI 只询问最必要的首次选择：
 
 ```bash
 llm-lab quickstart
 ```
 
-See [Desktop App](docs/desktop-app.md) for installation and troubleshooting,
-[Workspace](docs/workspace.md) for local storage, and
-[Best Practices](docs/best-practices.md) for a complete first session.
+## GUI 使用流程
 
-### GUI tour
+首次启动最多四步：创建学习档案、选择岗位、可跳过的能力自评、选择 AI。默认选择 **暂不连接 AI**。
 
-The four-step onboarding asks only for a Profile, Role, brief self-assessment,
-and optional AI connection. Self-assessment changes recommendations; it never
-grants mastery.
+![四步首次启动](docs/images/desktop-onboarding.png)
 
-![Desktop onboarding](docs/images/desktop-onboarding.png)
+首页只突出两个动作：**继续训练** 与 **开始模拟面试**。完整课程、技能和连接配置不会挤在首页。
 
 <details>
-<summary>Exercise Workspace, Interview Room, and Connections</summary>
+<summary>查看答题、面试和 AI 连接界面</summary>
 
-The Exercise Workspace keeps the contract, answer, test output, lifecycle, and
-AI drawer together. AI cannot silently edit the answer.
+答题工作区把题面、答案、公开测试、审查、间隔复测和可折叠 AI 教练放在一起。AI 不会静默修改编辑器内容。
 
-![Exercise Workspace](docs/images/desktop-exercise.png)
+![答题工作区](docs/images/desktop-exercise.png)
 
-The Interview Room freezes one question at a time, keeps a local clock, and
-separates the answer from rubric evidence. Coding rounds use a session-local
-copy and the existing grader.
+模拟面试室一次只展示一个主问题，保留本地计时与 Transcript，并将固定 Rubric 客观证据和 AI / 人工判断分开。
 
-![Interview Room](docs/images/desktop-interview.png)
+![模拟面试室](docs/images/desktop-interview.png)
 
-No AI is the default. Provider keys go to the operating-system keyring; Codex
-uses its official App Server protocol and explicit approvals.
+AI 连接页面默认强调无需 AI 的本地模式。远程服务发送前必须经过上下文预览；Codex 写操作显示审批卡片与 Diff。
 
-![AI Connections](docs/images/desktop-connections.png)
+![AI 连接](docs/images/desktop-connections.png)
 
 </details>
 
-## How the Learning Loop Works
+## 如何开始训练
 
 ```mermaid
 flowchart LR
-    A[Choose Role / Track] --> B[Solve]
-    B --> C[Public Tests]
-    C --> D[Contract + Oral Review]
-    D --> E[D+2 Rewrite]
-    E --> F[D+7 Transfer]
-    F --> G[Mastered]
-    G --> H[Unlock]
-    H --> I[Capstone]
+    A[选择岗位路线] --> B[独立作答]
+    B --> C[公开测试]
+    C --> D[契约审查与口述答辩]
+    D --> E[D+2 等价重写]
+    E --> F[D+7 调试或迁移]
+    F --> G[已掌握]
+    G --> H[解锁下一节点]
+    H --> I[综合关卡]
 ```
 
-> **Public tests passed ≠ mastered.**
+> **公开测试通过 ≠ 已掌握。**
 
-Practice states are `not_started → in_progress → implemented → reviewed →
-retained_d2 → retained_d7 → mastered`. Missing verified retention assets block
-mastery rather than silently weakening the rule. D+2/D+7 attempts do not copy or
-show the previous answer.
+刷题状态依次为 `not_started → in_progress → implemented → reviewed → retained_d2 → retained_d7 → mastered`。
+没有经过验证的复测资产时，系统会明确阻止进入 `mastered`，不会降低标准。
 
-Interview scores are a separate evidence stream. They do not mutate Practice,
-retention, or mastery. A completed report contains question and Skill scores,
-cited evidence, confidence, fatal issues, uncertainty, and recommended training.
-It never claims an offer probability.
-
-## Choose a Track
-
-Role Profiles weight Skills and recommend existing Tracks and Quests. Tracks do
-not duplicate Problem metadata, and interview Blueprints do not rewrite the DAG.
-
-| Track | Focus | Inspect |
-|---|---|---|
-| AI Foundation | Python, Tensor, loss, optimizer, training basics | `llm-lab graph --track ai_foundation` |
-| LLM Algorithm | Transformer, language-model training, post-training | `llm-lab graph --track llm_algorithm` |
-| VLM Algorithm | Multimodal data, model flow, training, evaluation | `llm-lab graph --track vlm_algorithm` |
-| Post-Training | SFT, preference, reward, policy optimization | `llm-lab graph --track post_training` |
-| Agent | Tool calling, trajectory, evaluation, agent training | `llm-lab graph --track agent` |
-| Systems | Distributed training, inference, quantization, GPU | `llm-lab graph --track systems` |
+默认 Planner 只推荐 `oracle`、`field` 或 `stable` 节点。仅达到 `contract` 的实验题仍可在完整 Catalog 中查看，但需要主动开启实验题。
 
 ```bash
 llm-lab catalog
+llm-lab graph --track ai_foundation
 llm-lab graph --quest tensor_and_autograd
-llm-lab next --profile default
 ```
 
-By default, the Planner recommends only `oracle`, `field`, or `stable` Problems.
-Contract-only items remain visible but require an explicit experimental opt-in.
+当前连续可走通的 Golden Quest：
 
-## Current Golden Quests
-
-Three continuous coding Quests are currently verified end to end:
-
-| Quest | Required Problems | Capstone | Validation |
+| 闯关路线 | 必修题 | 综合关卡 | 当前验证 |
 |---|---:|---|---|
-| Python Data Reliability | 6 | Hard Sample Data Pipeline | Oracle + D+2/D+7 |
-| Tensor & Stable Loss | 9 | Masked Sequence Classification Loss | Oracle + D+2/D+7 |
-| Optimizer & Training Loop | 6 | Tiny Sequence Classifier Trainer | Oracle + D+2/D+7 |
+| Python Data Reliability | 6 | Hard Sample Data Pipeline | Oracle + D+2 / D+7 |
+| Tensor & Stable Loss | 9 | Masked Sequence Classification Loss | Oracle + D+2 / D+7 |
+| Optimizer & Training Loop | 6 | Tiny Sequence Classifier Trainer | Oracle + D+2 / D+7 |
 
-The broader Catalog contains ready and experimental nodes for Attention, KV
-cache, post-training, Agent loops, VLM, inference, distributed systems, and
-electives. A `ready` asset is not automatically Oracle-validated; the status is
-shown in the GUI and CLI.
+## 如何进行模拟面试
 
-## Use with AI
+1. 选择岗位、求职阶段、难度和面试官模式。
+2. 可选一份已脱敏材料；应用会展示 material ID、用途和当前 SHA-256，并逐场请求同意。
+3. 面试蓝图冻结后一次只问一个问题；代码题只从 `ready` 且达到 `oracle / field / stable` 的固定题库选择。
+4. 本地计时器和 Grader 是时间与代码结果的事实来源。
+5. 结束后生成整体摘要、Skill 分数、证据、关键缺口、不确定项与推荐训练节点，并保存到当前学习档案。
 
-AI is optional. LLM Interview Lab follows **Bring Your Own AI** and provides two
-different integration paths.
+面试分数不会改变刷题训练、间隔复测或 `mastered`。项目不会生成虚假的 Offer 概率。
+更多说明见[结构化模拟面试](docs/interviews.md)。
 
-### Built-in desktop connections
-
-- **Source installs** use a unified provider layer for OpenAI, Anthropic,
-  Gemini, Ollama, and OpenAI-compatible endpoints. Python 3.11 and the `ai`
-  extra are required.
-- The compact **Windows portable Alpha** bundles OpenAI, OpenAI-compatible, and
-  Ollama `/v1` support. Native Anthropic/Gemini adapters remain available from
-  a source install instead of inflating the first executable with every SDK.
-- **Codex** uses the official App Server JSONL protocol for threads, turns,
-  streaming events, cancel/retry, diffs, and explicit command/file approvals.
-- **No AI** keeps Catalog, grader, review, retention, and manual interviews fully
-  usable without credentials or network calls.
-
-Before a remote request, **Context Preview** lists the exact selected parts and
-SHA-256 values. The default context is limited to the current public task,
-explicitly selected current answer, latest test summary, Role/Skill, help level,
-and AI policy. It excludes other Profiles, old answers, private tests, Oracle,
-Git history, API keys, and unselected career materials.
-
-Career-tailored interviews require an explicit material ID, allowed purpose,
-current SHA-256, and per-session consent. Material text is untrusted evidence:
-it cannot issue commands or override repository policy.
-
-<details>
-<summary>Career materials and catalog interview CLI</summary>
-
-Add and inspect one sanitized material at a time, or start without any material:
+开发者也可以直接使用同一套本地 CLI（不需要连接 AI）：
 
 ```bash
-llm-lab material add --profile default --kind resume --file PATH --title "Sanitized resume"
+llm-lab material add --profile default --kind resume --file resume.md
 llm-lab material list --profile default
-llm-lab interview create --profile default --mode catalog
-llm-lab interview create --profile default --mode tailored \
-  --material MATERIAL_ID --consent-materials
+llm-lab interview candidates --profile default --track llm_algorithm --difficulty medium
+llm-lab interview create --profile default --mode catalog --track llm_algorithm --difficulty medium --duration 30
+llm-lab interview create --profile default --mode tailored --track llm_algorithm --difficulty medium --duration 30 --material MATERIAL_ID --consent-materials
 ```
 
-The `--allow-ai` material flag only establishes eligibility. A tailored session
-still requires the current material SHA-256 and explicit consent.
+## 如何接入 AI
 
-</details>
+这里采用 Bring Your Own AI（自带 AI）方式：你可以选择自己的服务，也可以完全不连接。
 
-### Repo-aware coding agents
+AI 是可选能力。支持两种不同用途：
 
-Codex, Claude Code, Cursor Agent, and similar local agents can use the repository
-without the GUI. Start at the repository root and copy this prompt:
+| 方式 | 适合什么场景 | 能力边界 |
+|---|---|---|
+| 普通 LLM API | 解释、分级提示、只读审查、面试追问 | 只收到上下文预览中勾选的文本，不能操作仓库 |
+| Codex | 读取获准文件、运行测试、流式事件、显示 Diff | 使用官方 App Server；命令和写文件遵守 Sandbox 与显式审批 |
+| 无 AI | 固定课程、测试、复测、手动模拟面试 | 完全本地，无需网络、账号或密钥 |
+
+桌面便携包重点验证 OpenAI、OpenAI-compatible 与 Ollama 协议；Anthropic / Gemini 的统一 Provider 适配器保留在源码安装中。
+CI 只使用 Fake Provider、Fake Codex 与 Mock Keyring，不调用真实付费 API。
+
+### 普通 LLM API
+
+流程被收敛为：选择服务 → 填写 Key 或本地地址 → 选择模型 → 保存 → 测试连接。
+高级 Endpoint 和连接 ID 放在折叠区域。API Key 只进入系统密钥环：Windows 使用 Credential Manager，macOS 使用 Keychain；密钥环不可用时不会降级为明文文件。
+
+### Codex
+
+Codex 与聊天 API 不是同一个接口。桌面应用使用官方 App Server 的 Thread、Turn、流式事件、Cancel、Retry、Diff 和 Approval。
+macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Homebrew 与常见用户目录，也允许在设置中手动选择 Codex 可执行文件。
+
+任何写文件或高风险命令都会显示：操作、范围、文件、命令、原因、风险以及 Diff。应用不会自动批准全部写操作。
+
+### Repo-aware AI 启动 Prompt
+
+在仓库根目录启动 Codex、Claude Code、Cursor Agent 等能够读取本地仓库的工具，然后复制：
 
 ```text
 Read AGENTS.md and coach/POLICY.md.
@@ -297,69 +264,49 @@ Switch to REVIEWER only after I ask for review.
 Do not mark a problem as mastered yourself.
 ```
 
-### Chat-only AI
+浏览器中的 ChatGPT / Claude 无法访问本地仓库时，只提供当前 `task.md`、你主动选择的答案、脱敏后的测试输出和期望帮助等级；不要上传整个 `workspace/profiles/` 或任何公司内部材料。
 
-For a browser chat that cannot read local files, send only the current `task.md`,
-the answer you choose to share, sanitized test output, and desired help level.
-Do not upload the whole Profile, employer code, private data, or confidential
-documents. A chat response cannot change local mastery.
+详见 [AI 连接与隐私](docs/ai-connections.md)。
 
-| AI can help with | AI cannot automatically do |
+## Codex 与普通 API 的区别
+
+- 普通 API 只处理你在上下文预览中确认发送的文本；它不能自行读取本地文件或运行命令。
+- Codex 是仓库感知 Agent，可在审批与 Sandbox 约束下读取获准文件、运行测试并提出 Diff。
+- Coach / Teacher / Reviewer / Interviewer 模式默认不直接修改学习者答案。
+- Repository Agent 只面向维护和贡献场景，写操作仍需审批。
+- 两者都不能依据一次测试通过授予 `mastered`。
+
+## 项目的差异化
+
+| 常见学习方式 | LLM Interview Lab |
 |---|---|
-| Explain current prerequisites | Modify an answer in REVIEWER mode |
-| Provide H1/H2/H3 hints | Grant mastery from one passing test |
-| Review code, tests, traceback, shapes and masks | Change the fixed curriculum DAG |
-| Conduct oral defense and adaptive interview follow-up | Add generated items to the public Catalog |
-| Cite answer evidence against a fixed rubric | Treat public tests as anti-cheating hidden tests |
-| Suggest the next fixed Problem or Quest | Upload a Profile or prove hostile code is safe |
+| 平铺随机题单 | 具有硬依赖的课程 DAG 与推荐闯关路线 |
+| 做完一次即结束 | 契约审查 + 口述答辩 + D+2 + D+7 |
+| 只看测试是否通过 | 代码、边界、解释、调试和迁移证据 |
+| AI 直接给答案 | H0–H5 受约束教练模式 |
+| 个人代码混入公共仓库 | Git 忽略的本地学习档案 |
+| 所有用户相同顺序 | 岗位画像 + 目标阶段 + 前置依赖 + 个人证据 |
+| 面试反馈是自由聊天 | 冻结蓝图、计时、Rubric、证据和本地报告 |
+| 临时生成题直接入库 | 固定公共课程与私人 AI 变式分离 |
 
-**AI is a coach and reviewer, not the final authority for mastery.** Detailed
-provider, credential, privacy, and Codex behavior is in
-[AI Connections](docs/ai-connections.md).
+## 个人数据与隐私
 
-## What Makes It Different
+源码模式使用仓库内 `workspace/profiles/<id>/`。打包桌面版使用操作系统应用数据目录：
 
-| Common pattern | LLM Interview Lab |
-|---|---|
-| Flat or random question list | Hard-dependency DAG plus recommended Quests |
-| Finish once and move on | Review plus verified D+2 and D+7 |
-| Only check whether tests pass | Code, contract, oral, debugging, retention |
-| AI writes the answer | H0-H5 modes with explicit read/write boundaries |
-| Resume and code mixed into public content | Git-ignored local Profile with consented materials |
-| Same sequence for every learner | Role, seniority, Track, prerequisites, evidence |
-| Interview feedback is free-form chat | Frozen Blueprint, clock, rubric, evidence, report |
-| Generated prompt becomes public content | Fixed curriculum and private AI variants stay separate |
+- Windows：当前用户的标准 App Data 位置；
+- macOS：`~/Library/Application Support/LLM Interview Lab/` 对应的 Qt `AppDataLocation`；
+- `.app` 内部、`/Applications/` 和公开仓库不会保存真实学习数据。
 
-## Local Workspace & Privacy
+真实学习档案、答案、求职材料、面试记录、AI 私人变式和连接元数据默认只保存在本机。Git ignore 只防止误提交，不是加密、备份或 Provider 隐私保证。
 
-Every real learner uses one repository-local Profile:
+本地 Grader 只执行用户本人信任的代码。路径检查用于避免误加载，不构成恶意代码安全沙箱。
+日志默认不上传，也不记录 API Key、Authorization Header、完整简历、完整答案、Oracle 或 Private Tests。
 
-```text
-workspace/profiles/<id>/
-├── profile.yaml          # role, seniority, preferences
-├── events.jsonl          # Practice history source of truth
-├── materials/            # explicit manifest + local copies
-├── submissions/          # Practice answers
-├── interviews/           # sessions, answers, reports
-├── generated/            # private AI variants
-└── connections.json      # metadata and key references, never plaintext keys
-```
+## 项目状态
 
-Git ignore prevents accidental commits; it is not encryption, backup, or a
-provider privacy guarantee. API keys are stored by the system keyring (Windows
-Credential Manager on Windows). The project has no account, telemetry, database,
-cloud sync, or server. Only content confirmed in Context Preview is sent when a
-remote provider is used.
+截至 **v0.4.0-alpha.2**，数字由当前 Catalog 与公共模型核对：
 
-The local grader executes code the user trusts. Path checks prevent accidental
-loading of the wrong answer; the grader is **not a hostile-code security sandbox**.
-See [Workspace](docs/workspace.md) before adding career or company-related material.
-
-## Project Status
-
-As of **v0.4.0-alpha.1**:
-
-| Measure | Current public state |
+| 指标 | 当前状态 |
 |---|---:|
 | Ready Problems | 41 |
 | Planned Problems | 188 |
@@ -371,43 +318,50 @@ As of **v0.4.0-alpha.1**:
 | Interview Blueprints | 24 |
 | Fixed non-coding interview Items | 24 |
 
-This is an **Alpha**. The deterministic core and existing Golden Quests are
-well-tested, but the Windows desktop, provider integrations, and cross-role
-interview content still need real field validation. The numbers above do not
-claim every ready Problem is numerically validated or that any Role path is
-complete. Public tests are visible learning contracts, not hidden anti-cheating
-tests, and current field runs remain honestly zero.
+这是 **Alpha**，不是 Beta 或 Stable。Windows 与 macOS 桌面、真实 Provider 和跨岗位面试内容仍需要真实用户验证；当前 field runs 诚实保持 0。
+`ready` 不自动等于完成数值 Oracle 验证，公开测试也不是隐藏的防作弊测试。
 
-## Contributing
+## 常见问题
 
-- Report a broken contract or misleading test with a
-  [curriculum issue](https://github.com/ComistryMo/llm_interview_lab/issues/new?template=curriculum.yml).
-- Report a desktop, CLI, packaging, or privacy bug with a
-  [bug issue](https://github.com/ComistryMo/llm_interview_lab/issues/new?template=bug.yml).
-- Improve a fixed Problem, interview Item, Skill, Role, or Blueprint by following
-  [CONTRIBUTING.md](CONTRIBUTING.md),
-  [Curriculum Authoring](docs/curriculum-authoring.md), and
-  [Role Profiles](docs/role-profiles.md).
-- Submit real field feedback only through the short
-  [Alpha/Beta feedback form](https://github.com/ComistryMo/llm_interview_lab/issues/new?template=beta.yml).
+### 不连接 AI 能用吗？
 
-Do not submit complete learner solutions, private Profile data, copied interview
-content, employer materials, or unverifiable model-generated questions.
+可以。课程、DAG、公开测试、Review、D+2 / D+7、进度计算和手动模拟面试均可本地使用。
+
+### API Key 保存在哪里？
+
+系统密钥环。普通配置只保存 Provider、模型、Endpoint 和非敏感 `key_reference`；密钥不会写入 Profile、events、日志或 Release Artifact。
+
+### 我的答案会被上传吗？
+
+不会自动上传。只有你在上下文预览中明确勾选并确认发送的内容才会进入远程请求。Codex 的文件访问还受到当前模式、read allowlist、Sandbox 和审批约束。
+
+### macOS 为什么会显示 Gatekeeper 提示？
+
+Alpha.2 默认是 ad-hoc 签名、未使用 Apple Developer ID 且未经过 Notarization 的测试构建。请先核对 `SHA256SUMS.txt`，再从系统“隐私与安全”页面确认打开。不要运行校验值不一致的文件。
+
+### Intel Mac 可以用吗？
+
+本版只发布在固定 Apple Silicon Runner 上真实构建并启动验证的 arm64 包，不把交叉编译或重命名当作 Intel / Universal 支持。Intel 用户可以尝试源码运行，但不属于本版桌面 Artifact 承诺。
+
+## 参与贡献
+
+- 契约不清或测试误导：[课程问题](https://github.com/ComistryMo/llm_interview_lab/issues/new?template=curriculum.yml)
+- 桌面、CLI、打包或隐私错误：[Bug 报告](https://github.com/ComistryMo/llm_interview_lab/issues/new?template=bug.yml)
+- 真实 Alpha 体验：[体验反馈](https://github.com/ComistryMo/llm_interview_lab/issues/new?template=beta.yml)
+- 贡献规范：[CONTRIBUTING.md](CONTRIBUTING.md) 与[课程编写指南](docs/curriculum-authoring.md)
+
+不要提交完整学习者答案、真实学习档案、雇主材料、来源不明的面试题或未经人工验证的 AI 内容。
 
 ## Roadmap
 
-The next useful work is deliberately narrow:
+近期只保留三个方向：
 
-1. Field-validate the Windows desktop and eight Role Blueprints.
-2. Build continuous Transformer and Post-Training role-aware Quests.
-3. Add reviewed private AI variants without weakening deterministic mastery.
+1. 真实验证 Windows / macOS 桌面和八类岗位面试蓝图；
+2. 建设连续的 Transformer 与 Post-Training 闯关路线；
+3. 在不削弱确定性 mastery 的前提下增加经过审查的私人 AI 变式。
 
-Installer signing, auto-update, cloud sync, Web UI, and multi-agent runtime are
-not part of this Alpha.
+自动更新、云同步、Web UI、账号系统和多 Agent Runtime 不属于当前 Alpha。
 
 ## License
 
-[Apache-2.0](LICENSE). Public exercises and interview scenarios are original,
-clean-room assets; paper, framework, and official-document sources are recorded
-in the public metadata. The optional desktop bundle ships its
-[third-party notices](docs/third-party-notices.md) alongside the executable.
+[Apache-2.0](LICENSE)。`LICENSE` 英文原文具有法律效力；课程和面试内容采用原创 clean-room 设计，来源记录在公共元数据中。桌面包同时提供[第三方软件声明](docs/third-party-notices.md)。

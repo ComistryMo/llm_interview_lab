@@ -1,39 +1,113 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import "../components"
 
-Item {
+Flickable {
     id: root
     required property var app
     required property var palette
+    contentWidth: width
+    contentHeight: content.implicitHeight + 60
+    clip: true
+
     ColumnLayout {
-        anchors.fill: parent; anchors.margins: 30; spacing: 16
-        Text { text: "Appearance and local behavior"; color: root.palette.text; font.pixelSize: 24; font.bold: true }
+        id: content
+        x: 30; y: 28; width: parent.width - 60; spacing: 16
+
+        Text { text: "设置"; color: root.palette.text; font.pixelSize: 24; font.bold: true }
+        Text { text: "调整显示、查看本地数据，并在 Finder 启动无法继承 PATH 时指定 Codex。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+
         LabCard {
-            Layout.fillWidth: true; Layout.preferredHeight: 210; cardColor: root.palette.surface; borderColor: root.palette.border
-            Text { text: "Theme"; color: root.palette.text; font.bold: true }
+            Layout.fillWidth: true; Layout.preferredHeight: 205
+            cardColor: root.palette.surface; borderColor: root.palette.border
+            Text { text: "外观"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
             RowLayout {
                 width: parent.width
                 Repeater {
-                    model: ["system", "light", "dark"]
-                    delegate: Button { required property string modelData; text: modelData; checkable: true; checked: app.theme === modelData; onClicked: app.setTheme(modelData) }
+                    model: [{id:"system", label:"跟随系统"}, {id:"light", label:"浅色"}, {id:"dark", label:"深色"}]
+                    delegate: Button {
+                        required property var modelData
+                        text: modelData.label
+                        checkable: true
+                        checked: app.theme === modelData.id
+                        onClicked: app.setTheme(modelData.id)
+                    }
                 }
             }
-            Text { text: "Text size"; color: root.palette.text; font.bold: true }
+            Text { text: "文字大小"; color: root.palette.text; font.bold: true }
             RowLayout {
                 width: parent.width
                 Slider { from: 0.85; to: 1.4; value: app.fontScale; stepSize: 0.05; Layout.fillWidth: true; onMoved: app.setFontScale(value) }
                 Text { text: Math.round(app.fontScale * 100) + "%"; color: root.palette.muted }
             }
         }
+
         LabCard {
-            Layout.fillWidth: true; Layout.preferredHeight: 190; cardColor: root.palette.surface; borderColor: root.palette.border
-            Text { text: "Local-first boundaries"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
-            Text { width: parent.width; text: "Profile and submissions stay under workspace/profiles/<id>/ and are ignored by Git. The app has no telemetry, account system, server, or cloud sync. The local grader executes code you trust; it is not a hostile-code sandbox."; color: root.palette.muted; wrapMode: Text.Wrap }
-            Button { text: "Refresh local state"; onClicked: app.refresh() }
+            Layout.fillWidth: true; Layout.preferredHeight: 230
+            cardColor: root.palette.surface; borderColor: root.palette.border
+            Text { text: "本地数据"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
+            Text { width: parent.width; text: "学习档案、答案和面试记录默认只保存在本机。应用不提供遥测、账号或云同步。"; color: root.palette.muted; wrapMode: Text.Wrap }
+            Text { width: parent.width; text: "数据目录：" + app.dataDirectory; color: root.palette.text; elide: Text.ElideMiddle; font.pixelSize: 12 }
+            Text { width: parent.width; text: "日志目录：" + app.logDirectory; color: root.palette.text; elide: Text.ElideMiddle; font.pixelSize: 12 }
+            RowLayout {
+                Button { text: "打开数据目录"; onClicked: app.openDataDirectory() }
+                Button { text: "打开日志目录"; onClicked: app.openLogDirectory() }
+                Button { text: "刷新本地状态"; onClicked: app.refresh() }
+            }
         }
-        Item { Layout.fillHeight: true }
-        Text { text: "LLM Interview Lab · role-aware Windows Desktop Alpha"; color: root.palette.muted; font.pixelSize: 12 }
+
+        LabCard {
+            Layout.fillWidth: true; Layout.preferredHeight: 190
+            cardColor: root.palette.surface; borderColor: root.palette.border
+            Text { text: "Codex 可执行文件"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
+            Text { width: parent.width; text: app.codexExecutable || "自动查找（PATH、Homebrew 和常见用户目录）"; color: root.palette.muted; elide: Text.ElideMiddle }
+            RowLayout {
+                Button { text: "选择 Codex"; onClicked: codexPicker.open() }
+                Button { text: "恢复自动查找"; enabled: !!app.codexExecutable; onClicked: app.clearCodexExecutable() }
+            }
+            Text { width: parent.width; text: "未检测到 Codex 不会影响本地训练或普通 LLM API。"; color: root.palette.muted; wrapMode: Text.Wrap }
+        }
+
+        LabCard {
+            Layout.fillWidth: true; Layout.preferredHeight: 130
+            cardColor: root.palette.surface; borderColor: root.palette.border
+            Text { text: "安全边界"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
+            Text { width: parent.width; text: "本地 Grader 只用于运行你本人信任的代码，不是恶意代码安全沙箱。连接远程 AI 前请核对上下文预览。"; color: root.palette.muted; wrapMode: Text.Wrap }
+        }
+
+        Text { text: "LLM Interview Lab v0.4.0-alpha.2 · 中文优先桌面体验"; color: root.palette.muted; font.pixelSize: 12 }
+    }
+
+    FileDialog {
+        id: codexPicker
+        title: "选择 Codex 可执行文件"
+        fileMode: FileDialog.OpenFile
+        onAccepted: app.setCodexExecutable(selectedFile.toString())
+    }
+
+    Dialog {
+        id: migrationDialog
+        visible: app.legacyMigrationAvailable
+        modal: true
+        title: "发现旧版桌面数据"
+        anchors.centerIn: parent
+        width: 560
+        standardButtons: Dialog.NoButton
+        contentItem: ColumnLayout {
+            spacing: 14
+            Text {
+                Layout.fillWidth: true
+                text: "检测到 v0.4.0-alpha.1 的学习档案。迁移会先复制、计算 SHA-256 并保留备份；不会删除或覆盖旧目录。\n\n旧目录：" + app.legacyDataDirectory
+                color: root.palette.text
+                wrapMode: Text.Wrap
+            }
+            RowLayout {
+                Item { Layout.fillWidth: true }
+                Button { text: "稍后处理"; onClicked: { app.dismissLegacyMigration(); migrationDialog.close() } }
+                Button { text: "安全复制"; highlighted: true; onClicked: { app.migrateLegacyData(); migrationDialog.close() } }
+            }
+        }
     }
 }

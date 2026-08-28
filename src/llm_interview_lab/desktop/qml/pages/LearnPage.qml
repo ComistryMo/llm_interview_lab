@@ -8,6 +8,16 @@ Item {
     required property var app
     required property var palette
 
+    function statusText(value) {
+        return ({not_started: "未开始", in_progress: "进行中", implemented: "已实现",
+                 reviewed: "已审查", retained_d2: "已完成 D+2", retained_d7: "已完成 D+7",
+                 mastered: "已掌握"})[value] || value || "未开始"
+    }
+    function validationText(value) {
+        return ({oracle: "Oracle 已验证", field: "已完成实测", stable: "稳定",
+                 contract: "契约级实验"})[value] || value || "未验证"
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 28
@@ -15,11 +25,11 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             ColumnLayout {
-                Text { text: "Recommended role path"; color: root.palette.text; font.pixelSize: 24; font.bold: true }
-                Text { text: "Quest order is guidance; prerequisites are the hard DAG."; color: root.palette.muted }
+                Text { text: "推荐岗位路线"; color: root.palette.text; font.pixelSize: 24; font.bold: true }
+                Text { text: "闯关顺序用于学习引导，prerequisites 才是不可绕过的 DAG 硬依赖。"; color: root.palette.muted }
             }
             Item { Layout.fillWidth: true }
-            ComboBox { model: ["Recommended", "All ready", "Advanced graph"] }
+            ComboBox { model: ["推荐路线", "全部已就绪题目", "高级依赖图"] }
         }
 
         ListView {
@@ -45,13 +55,13 @@ Item {
                     ColumnLayout {
                         Layout.fillWidth: true; spacing: 4
                         Text { text: modelData.problem_id + "  " + modelData.title; color: root.palette.text; font.bold: true; font.pixelSize: 16 }
-                        Text { text: modelData.prerequisites && modelData.prerequisites.length ? "Requires " + modelData.prerequisites.join(", ") : "Foundation node"; color: root.palette.muted; font.pixelSize: 12 }
+                        Text { text: modelData.prerequisites && modelData.prerequisites.length ? "前置：" + modelData.prerequisites.join(", ") : "基础节点"; color: root.palette.muted; font.pixelSize: 12 }
                         RowLayout {
-                            StatusPill { text: modelData.validation; tone: modelData.validation === "oracle" ? root.palette.success : root.palette.warning }
-                            StatusPill { text: modelData.retention ? "D+2 / D+7" : "No retention"; tone: modelData.retention ? root.palette.accent : root.palette.muted }
+                            StatusPill { text: root.validationText(modelData.validation); tone: ["oracle", "field", "stable"].indexOf(modelData.validation) >= 0 ? root.palette.success : root.palette.warning }
+                            StatusPill { text: modelData.retention ? "D+2 / D+7 可用" : "暂无间隔复测"; tone: modelData.retention ? root.palette.accent : root.palette.muted }
                         }
                     }
-                    Button { text: modelData.locked ? "Locked" : (modelData.status === "in_progress" ? "Continue" : "Open"); enabled: !modelData.locked && modelData.asset_status !== "planned"; onClicked: app.openProblem(modelData.problem_id) }
+                    Button { text: modelData.locked ? "未解锁" : (modelData.status === "in_progress" ? "继续" : "打开"); enabled: !modelData.locked && modelData.asset_status !== "planned"; onClicked: app.openProblem(modelData.problem_id) }
                 }
             }
         }

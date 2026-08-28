@@ -1,38 +1,38 @@
-name: Bug report
-description: Report a reproducible problem in repository tooling or documentation
-title: "[Bug]: "
+name: Bug 报告
+description: 报告可复现的功能、桌面应用、课程工具或文档问题
+title: "[Bug] "
 labels: [bug]
 body:
   - type: markdown
     attributes:
-      value: Do not include personal data, learner answers, secrets, or employer/client material.
+      value: 请勿提交个人数据、学习者答案、Secret、公司或客户材料。截图和日志必须先脱敏。
   - type: textarea
     id: problem
     attributes:
-      label: Problem
-      description: What happened, and what did you expect?
+      label: 问题与预期
+      description: 实际发生了什么？你期望什么行为？
     validations:
       required: true
   - type: textarea
     id: reproduce
     attributes:
-      label: Minimal reproduction
-      description: Include commands and sanitized output. Remove absolute local paths.
+      label: 最小复现
+      description: 请包含必要命令和脱敏输出，并移除本机绝对路径。
     validations:
       required: true
   - type: input
     id: platform
     attributes:
-      label: Platform and Python version
-      placeholder: Windows 11, Python 3.12
+      label: 平台和版本
+      placeholder: Windows 11 / macOS 15 arm64，桌面版或 Python 3.12
     validations:
       required: true
   - type: checkboxes
     id: safety
     attributes:
-      label: Safety confirmation
+      label: 隐私确认
       options:
-        - label: I removed credentials, personal data, local paths, and third-party confidential material.
+        - label: 我已移除凭证、个人数据、本机路径和第三方保密材料。
           required: true
-        - label: I did not include a learner's complete solution.
+        - label: 我没有提交学习者的完整答案。
           required: true

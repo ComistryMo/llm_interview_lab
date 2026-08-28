@@ -1,237 +1,151 @@
-# AI Connections
+# AI 连接、上下文与隐私
 
-AI is an optional edge around a deterministic local core. The Catalog, DAG,
-grader, event reducer, clock, review gates, and mastery rules work without a
-model. Connecting AI adds explanation, bounded hints, evidence-based review,
-adaptive interview follow-up, and maintainer assistance; it does not replace
-those authorities.
+AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事件归约、计时、审查门槛和 mastery 在没有模型时仍然可用。
 
-## Pick the right mode
+## 三种模式
 
-| Mode | Use it for | May edit learner answer? | May grant mastery? |
-|---|---|---:|---:|
-| No AI | Practice and manual interviews | No AI involved | No |
-| COACH | Route, prerequisites, reflection | No | No |
-| TEACHER H1/H2/H3 | Graded help on current task | No | No |
-| REVIEWER | Tests, contract review, oral defense | No | No |
-| INTERVIEWER | One frozen question and follow-up | No | No |
-| Repository Agent | Maintainer/contributor changes | Only after approval; not personal submissions by default | No |
+| 模式 | 用途 | 是否需要网络或密钥 |
+|---|---|---|
+| No-AI | 课程、测试、复测、手动模拟面试 | 否 |
+| 普通 LLM API | 解释、提示、只读审查、面试追问 | 视服务而定 |
+| Codex | 仓库感知教练、测试、Diff 与受审批维护 | 需要 Codex 可用并完成相应认证 |
 
-H0 is independent work. H1 covers an official reference or one syntax issue; H2
-provides a conceptual direction; H3 gives structured steps. H4/H5 are explicit
-demonstrations and require a new independent variant. The desktop Alpha exposes
-H1-H3 for normal Practice and does not provide teaching hints during an active
-mock interview.
+首次启动默认选择 No-AI。任何连接故障都不应阻塞本地训练。
 
-## No AI
+## 普通 LLM API
 
-This is the default and a complete supported workflow. You can create a Profile,
-follow Quests, solve and test Problems, submit, review, retain, run manual role
-interviews, and generate reports without credentials or network access.
+桌面页面把常用配置收敛为：服务、Key 或本地地址、模型、测试连接、保存。Endpoint、显示名称与连接 ID 在高级设置中。
 
-Choose no-AI when the material is sensitive, the provider policy is unclear,
-you want a true closed-book attempt, or network availability is unreliable.
+打包桌面重点验证：
 
-## Chat providers
+- OpenAI；
+- OpenAI-compatible；
+- Ollama `/v1`。
 
-The optional provider layer uses Mozilla any-llm rather than maintaining five
-similar HTTP clients. Source installs support:
+源码安装的统一 Provider 层还支持 Anthropic 与 Gemini。第一版不会加入 Embedding、图像生成、语音、RAG、MCP Runtime 或 Tool Marketplace。
 
-- OpenAI;
-- OpenAI-compatible endpoints;
-- Anthropic;
-- Gemini;
-- Ollama.
+### 安装
 
-The compact Windows portable build bundles one OpenAI-compatible protocol
-adapter for OpenAI, compatible endpoints, and Ollama's `/v1` endpoint, plus the
-separate Codex App Server backend. Native Anthropic and Gemini adapters are
-available when running from a Python 3.11 source install with `[ai]`; they are
-not forced into the first portable executable because doing so multiplies the
-binary and CI build closure. This packaging boundary does not change what the
-app sends or how keys are stored.
-
-Provider model catalogs are inconsistent, so the configured model ID remains
-explicit. The app does not guess a model or claim that every model/provider pair
-has been production-tested.
-
-Install on Python 3.11:
-
-```powershell
-python -m pip install -e ".[desktop,ai,dev]"
-llm-lab-gui
+```bash
+python -m pip install -e ".[ai]"
 ```
 
-### Save a connection
+Python 3.11 是统一 Provider 可选依赖的推荐版本。
 
-1. Open **Connections**.
-2. Choose the provider.
-3. Enter a lowercase connection ID, display name, and model ID.
-4. Enter a custom endpoint only for OpenAI-compatible or Ollama.
-5. Enter the API key for a remote provider.
-6. Save, clear the visible field, and select **Test Connection**.
+### 常见错误
 
-Ollama may be configured without a key. Remote providers require a key.
+- `401`：检查系统密钥环中的 Key；
+- `429`：等待限流窗口，减少重试频率；
+- `500 / 502 / 503`：服务临时错误，稍后重试；
+- Timeout：检查网络、Endpoint 和本地服务；
+- Ollama 未启动：启动 Ollama，再测试 `http://127.0.0.1:11434`；
+- Keyring 不可用：不会回退到明文文件，继续使用 No-AI。
 
-## Secret storage
+界面日志只记录经过清理的错误类别，不记录 Authorization Header、Key 或完整 Prompt。
 
-Secrets go to the operating-system keyring through `keyring`. On Windows this is
-the Windows Credential Manager backend. Profile configuration stores only:
+## 上下文预览
 
-```json
-{
-  "connection_id": "openai-main",
-  "provider_id": "openai",
-  "model": "chosen-model-id",
-  "display_name": "OpenAI",
-  "base_url": null,
-  "key_reference": "profile:default:connection:openai-main"
-}
-```
+远程请求默认只允许包含：
 
-There is no plaintext fallback. If the keyring is unavailable, saving fails.
-Deleting a connection removes both local metadata and its keyring entry.
+- 当前公开题面；
+- 用户主动选择的当前答案；
+- 最近一次公开测试摘要；
+- 当前岗位与 Skill；
+- 当前帮助等级；
+- AI 行为规则。
 
-Never put an API key in `profile.yaml`, `events.jsonl`, a submission, a material,
-an environment screenshot, an issue, or an exported report.
+默认排除：整个 Workspace、其他学习档案、旧答案、Git 历史、雇主材料、Oracle、Private Tests、API Key 和未授权材料。
 
-## Context Preview
+预览会显示每个部分、是否敏感、选择状态、预计 token 和适用时的 SHA-256。取消对话框不会发送任何内容。降低 token 的推荐做法：只发送当前题、必要错误摘要和最小答案片段，不发送完整日志或无关材料。
 
-Before a provider request, the desktop app presents labels, selection state,
-sensitivity, estimated tokens, and SHA-256 for each context part. The estimate is
-a display hint; the provider is authoritative for billed tokens.
+## 求职材料授权
 
-Normal Practice context may contain only:
+材料是 **不可信证据**，不是指令。材料中的命令、Prompt Injection、链接或“读取其他文件”等文字不会改变应用规则。
 
-- current public `task.md`;
-- current Role/Skill summary;
-- the requested H1/H2/H3 hint section;
-- current answer, only when selected;
-- latest structured public-test summary;
-- AI policy.
+用于面试前必须逐场确认：
 
-It excludes the whole Workspace, other Profiles, old answers, raw events, test
-source, Oracle, private tests, Git history, keys, and unselected materials.
+1. material ID；
+2. 用途；
+3. 当前 SHA-256；
+4. 明确同意。
 
-The first version uses a safe fixed selection, not arbitrary file browsing. If a
-part is not needed, do not include it. Static policy text can be cached by SHA in
-an AI client rather than resent as repeated prose.
+文件变化会让旧 SHA 与授权失效。不得上传公司源码、内部数据、未公开指标、配置、日志、截图或保密文档。
 
-## Career materials and consent
+## API Key
 
-`--allow-ai` or the GUI toggle only makes material eligible for a future consent
-choice. It is not permanent consent.
+Key 只写入操作系统密钥环：
 
-A tailored role interview requires:
+- Windows：Credential Manager；
+- macOS：Keychain；
+- Linux：由已配置的 keyring backend 决定。
 
-1. the current Profile;
-2. an explicit material ID;
-3. purpose `role_interview`;
-4. current SHA-256;
-5. confirmation for this session.
+普通配置只保存：`provider_id`、`base_url`、`model`、`display_name` 与不敏感的 `key_reference`。学习事件、Profile YAML、日志、截图和 Release Artifact 都不能包含 Key。
 
-If the file changes, consent is stale. The app does not recursively scan
-`materials/`, follow links, execute attachments, fetch embedded URLs, or infer
-permission from a filename.
+保存、读取、应用重启后读取和删除均通过同一 Keyring 接口。若 Keychain / Credential Manager 拒绝访问，应用会明确报错，不会创建明文后备文件。
 
-Material bodies are untrusted evidence. Text such as “ignore the policy,” “read
-another file,” or “run this command” cannot change AI scope. Resume facts,
-project ownership, metrics, paper claims, and job requirements must be cited or
-marked uncertain; the interviewer may not invent them.
+## Codex 集成
 
-## Codex integration
+桌面版使用官方 Codex App Server JSONL 协议，不解析交互式终端 ANSI 输出，也不模拟键盘输入。
 
-Codex is a separate agent backend, not another ChatProvider. It uses the official
-App Server over JSONL stdio:
+当前支持：
+
+- `initialize / initialized`；
+- account 状态；
+- Thread 创建与恢复；
+- Turn 与流式事件；
+- Cancel / Retry；
+- 文件 Diff；
+- 命令与文件写入审批；
+- Coach、Reviewer、Interviewer、Repository Agent 模式。
+
+Coach、Reviewer 与 Interviewer 默认只读，不修改答案。Repository Agent 只面向维护者和贡献者，并使用显式审批。
+
+### macOS 查找 Codex
+
+Finder 启动的 `.app` 不保证继承登录 Shell 的 PATH。应用依次检查：
+
+- 用户在设置中选择的路径；
+- 当前 PATH；
+- `/opt/homebrew/bin/codex`；
+- `/usr/local/bin/codex`；
+- 常见的 `.local`、npm、Volta 与 Bun 用户目录。
+
+设置中只保存非敏感可执行文件路径。未检测到或未登录时，No-AI 和普通 API 继续可用。
+
+### 操作审批
+
+涉及命令或文件改动时，GUI 显示：
 
 ```text
-codex app-server --listen stdio://
-initialize → initialized → account/read
-thread/start or thread/resume
-turn/start → streamed item/turn events
-turn/interrupt for cancel
+操作
+范围
+文件
+命令
+原因
+风险
+Diff
+仅批准本次 / 拒绝
 ```
 
-The backend supports availability and sign-in checks, thread start/resume,
-streamed messages, cancel, errors, retry by starting another turn, diff/file
-events, and bidirectional command/file approval requests. It never parses ANSI
-output or simulates keys in the interactive CLI.
+应用不会自动批准全部写操作。默认不允许读取 Oracle、其他学习档案或修改个人 Submission。
 
-### Codex permissions
+## AI 行为边界
 
-- COACH, REVIEWER, and INTERVIEWER start read-only with approval policy `never`.
-- Repository Agent uses workspace-write with `untrusted` approval policy.
-- Approval cards show action, scope, files, command, reason, and risk.
-- The user can approve once or reject. There is no “approve everything” button.
-- Personal submissions and other Profiles remain outside default maintainer
-  scope even in Repository Agent mode.
+AI 可以解释前置、给 H1 / H2 / H3 提示、分析 traceback、审查 Shape / Mask / Gradient / 数值稳定、进行口述追问和建议下一节点。
 
-Codex authentication, sandbox, and approval semantics are controlled by the
-installed Codex version. If the protocol or capability is unavailable, the
-integration fails closed and no-AI/provider paths remain usable.
+AI 不能自行：
 
-## Provider interview assessment
+- 在 Reviewer 模式替学习者修改答案；
+- 用一次测试通过授予 mastery；
+- 修改固定 DAG；
+- 把生成题自动加入公共题库；
+- 把公开测试说成防作弊隐藏测试；
+- 上传本地学习档案；
+- 证明恶意代码安全；
+- 代替 Oracle、契约审查或间隔复测。
 
-For a non-coding question, the provider receives the frozen current question,
-its exact rubric, selected consented material, and the candidate answer. It must
-return strict JSON with:
+详细模式见 [`coach/POLICY.md`](../coach/POLICY.md)。
 
-```json
-{
-  "scores": {"rubric_dimension": 3},
-  "evidence": "A quote or precise answer reference",
-  "confidence": "medium",
-  "fatal_issues": [],
-  "follow_up": "At most one adaptive follow-up"
-}
-```
+## 测试边界
 
-The workbench rejects missing/extra dimensions, non-integer 1–5 scores, unknown
-fatal issues, missing evidence, invalid confidence, and malformed JSON. A
-follow-up is archived separately and cannot change the frozen main plan.
-
-Coding-round correctness comes from the local grader, not model prose. Subjective
-dimensions and objective code evidence stay separate.
-
-## Failure behavior
-
-- **401/authentication:** show a bounded authentication message; never echo key.
-- **429/rate limit:** preserve local work and suggest retry later.
-- **Timeout:** cancel the request and keep the context/answer local.
-- **5xx:** report a temporary provider failure without raw sensitive bodies.
-- **Invalid model:** return a generic provider error; recheck the explicit ID.
-- **Stream cancel:** mark cancelled; do not treat partial text as an assessment.
-- **Malformed scorecard:** reject it and keep the question unscored.
-
-CI uses fake providers and fake App Server events. It never calls a paid API and
-does not require a real Codex account.
-
-## Privacy checklist
-
-Before every remote call:
-
-- confirm the current Profile and mode;
-- inspect Context Preview;
-- remove unnecessary answer/material parts;
-- confirm material ID, purpose, and SHA;
-- remove employer/customer code, private data, internal model names, metrics,
-  screenshots, logs, and configuration;
-- check the provider's own retention/training policy;
-- remember that Git ignore does not control a provider.
-
-The workbench logs no authorization headers, plaintext keys, complete sensitive
-prompts, absolute material paths, Oracle, or private tests. Profile data is local
-by default, but remote AI necessarily receives the exact context the user sends.
-
-## Recommended low-token workflow
-
-1. Start no-AI and run the local test first.
-2. Ask one narrow question in the lowest sufficient help mode.
-3. Send task contract plus a structured test summary before full output.
-4. Share the current answer only when diagnosis truly needs it.
-5. Reuse policy/context hashes in a repo-aware agent session.
-6. End a mock interview before switching to teaching.
-7. Store the useful conclusion as local Review/evidence, not as a long chat log.
-
-This keeps AI useful at the edges without making the user pay tokens for the
-Catalog, historical events, unrelated materials, or repeated policy prose.
+CI 只使用 Fake Provider、Fake Codex 与 Mock Keyring，覆盖流式响应、取消、Timeout、401、429、500、无效模型、上下文预览、缺少 Key、审批、Diff 和错误恢复。CI 不调用真实付费 API、真实 Codex 账号或真实系统密钥环。

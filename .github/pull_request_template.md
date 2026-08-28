@@ -1,18 +1,19 @@
-## Why
+## 为什么修改
 
-## What changed
+## 修改内容
 
-## Verification
+## 实际验证
 
 ```text
 llm-lab doctor
 python -m pytest -q
 ```
 
-## Checklist
+## 检查清单
 
-- [ ] One bounded change; authoritative Catalog/events sources remain unique.
-- [ ] Ready problems include four assets, five tests, oral questions, hints, and retention.
-- [ ] No public solution, real Profile, internal material, credential, weight, log, or local path.
-- [ ] External influences are license-checked and the task/tests are clean-room originals.
-- [ ] AI-assisted content was checked by a human for math, tests, copyright, and privacy.
+- [ ] 本 PR 只处理一个边界清楚的问题；Catalog / events 事实源仍然唯一。
+- [ ] 新增的 Ready 题包含四项资产、至少五个测试、口述问题、提示和间隔复测。
+- [ ] 不包含公共答案、真实 Profile、内部材料、凭证、权重、日志或本机绝对路径。
+- [ ] 外部影响已检查许可证；题面和测试为 clean-room 原创设计。
+- [ ] AI 辅助内容已由人工检查数学、测试、版权、隐私和中文表达。
+- [ ] 已说明未运行的检查和原因，没有用 skip / xfail 隐藏回归。

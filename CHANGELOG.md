@@ -1,82 +1,83 @@
-# Changelog
+# 变更日志
 
-Notable project changes are documented here using the
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Release tags
-follow semantic versioning and Alpha releases are not stable APIs.
+重要变更按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 记录。版本号遵循语义化版本；Alpha 是预发布版本，公开接口仍可能调整。
 
-## [Unreleased]
+## [未发布]
+
+## [0.4.0-alpha.2] - 2026-08-28
+
+### 新增
+
+- 中文成为 README、用户文档、社区模板和桌面界面的规范语言，并保留精简英文 README 作为翻译；
+- macOS Apple Silicon 桌面构建：`.app.zip`、`.dmg`、应用 Bundle 元数据、原创 `.icns`、Ad-hoc Signing、架构检查、GUI Smoke 和隐私检查；
+- 源码模式与打包桌面模式的统一数据位置解析：源码继续使用仓库内 `workspace/`，桌面应用使用系统应用数据目录；
+- Finder 启动场景下的 Codex 常见路径探测和用户自选可执行文件；
+- Windows / macOS 使用说明、术语表和中文文档契约测试。
+
+### 改进
+
+- 首次启动收敛为四步，默认“不连接 AI”；首页只保留“继续训练”和“开始模拟面试”两个主动作；
+- AI 连接表单减少必填项，错误信息提供可执行的中文下一步；
+- Provider 和 Codex 延迟探测，不阻塞首窗口和 No-AI 本地流程；
+- 桌面端支持打开数据目录和日志目录；旧版 Windows 数据仅在用户确认后迁移，迁移前备份并校验 SHA-256；
+- Windows Artifact 采用固定公开文件名，并与 macOS Artifact 一起接受解包后的隐私检查。
+
+### 安全与发布状态
+
+- API Key 继续只存入系统 Keyring；Keyring 不可用时不会回退到明文文件；
+- 真实 Profile、求职材料、Submission、Transcript、Oracle、Private Tests、Secret 和 Git 历史不会进入桌面 Artifact；
+- macOS Alpha 使用 Ad-hoc Signing，**未使用 Apple Developer ID 签名，也未经过 Apple Notarization**；
+- 本版只发布经过 arm64 Runner 构建和启动验证的 Apple Silicon 包，不宣称 Intel Mac 或 Universal2 支持；
+- 真实 Field Runs 仍为 0，不把自动化测试计作真实用户验证。
 
 ## [0.4.0-alpha.1] - 2026-08-28
 
-### Added
+### 新增
 
-- A canonical ontology of 70 skills across 16 domains, eight Role Profiles,
-  seniority-aware Interview Blueprints, and 24 original non-coding interview
-  items with evidence-based rubrics.
-- A local-first PySide6 and Qt Quick Windows desktop workbench for onboarding,
-  career materials, Practice, mock interviews, progress, settings, and AI
-  connections.
-- Optional OpenAI-compatible, OpenAI, Ollama, Anthropic, Gemini, and Codex
-  connections with context preview, system-keyring credentials, and explicit
-  Codex approvals.
-- A role-aware `llm-lab quickstart` path and deterministic structured interview
-  lifecycle shared by the CLI and desktop application.
-- Windows portable packaging, GUI smoke tests, privacy inspection, five real
-  application screenshots, and focused desktop/AI/role documentation.
+- 70 项规范技能、16 个技能域、8 个岗位画像、分级面试蓝图和 24 个带证据 Rubric 的原创非代码面试题；
+- 基于 PySide6 / Qt Quick 的 Windows 本地桌面工作台，覆盖首次启动、求职材料、刷题、模拟面试、进度、设置和 AI 连接；
+- OpenAI-compatible、OpenAI、Ollama、Anthropic、Gemini 与 Codex 可选连接，上下文预览、系统 Keyring 和 Codex 显式操作审批；
+- `llm-lab quickstart` 与 CLI / GUI 共用的确定性面试生命周期；
+- Windows Portable 打包、GUI Smoke、Artifact 隐私检查和五张真实界面截图。
 
-### Changed
+### 调整
 
-- Public positioning now describes a role-aware AI interview workbench rather
-  than only an algorithm exercise repository.
-- Profile path validation now reports symlink and reparse failures consistently
-  across Windows and POSIX before invoking Git.
-
-### Security
-
-- Real Profiles, career materials, submissions, interview records, secrets,
-  private tests, and maintainer oracles remain outside tracked release assets.
-- Remote AI receives only the fields selected in Context Preview; API keys are
-  referenced through the operating-system keyring rather than stored in YAML.
+- 项目定位从算法手撕题库升级为岗位感知的本地 AI 面试训练工作台；
+- Windows / POSIX 在调用 Git 前统一检查 Profile 的 symlink / reparse 边界。
 
 ## [0.3.0-alpha.1] - 2026-08-27
 
-### Added
+### 新增
 
-- Continuous Tensor and Stable Loss and Optimizer and Training Loop Golden
-  Quests, including two validated integration Capstones.
-- A product-focused README with verified CLI onboarding and bounded BYO-AI
-  guidance.
+- 可连续走通的 Tensor & Stable Loss、Optimizer & Training Loop 两条 Golden Quest，以及两个经过验证的综合关卡；
+- 经过 clean-clone 验证的产品首页和受约束的 Bring Your Own AI 指南。
 
 ## [0.2.0-alpha.2] - 2026-08-27
 
-### Added
+### 新增
 
-- The first end-to-end Python Data Reliability Golden Quest and Capstone.
-- Quality-aware planning, oracle fingerprints, deterministic retention assets,
-  and a minimal anonymous field-validation record format.
+- 第一条端到端 Python Data Reliability Golden Quest 和综合关卡；
+- 质量门槛、Oracle Fingerprint、确定性间隔复测资产和最小匿名 Field Validation 记录格式。
 
 ## [0.2.0-alpha.1] - 2026-08-27
 
-### Added
+### 新增
 
-- The repository-local multi-Profile Workspace, Catalog/DAG validation, local
-  grader, and `start -> test -> submit -> review -> retain -> mastered` CLI.
-- Public curriculum validation levels, maintainer oracle validation, and the
-  first retention-ready fixed exercises.
+- 仓库内多学习档案个人工作区、Catalog / DAG 校验、本地 Grader 和 `start -> test -> submit -> review -> retain -> mastered` CLI；
+- 课程验证等级、维护者 Oracle 验证和首批可复测固定题。
 
-### Removed
+### 移除
 
-- Tracked maintainer answers, personal state, reviews, progress, and handoff
-  fixtures. Ignored local Profile data was preserved without rewriting history.
+- Git 跟踪的维护者答案、个人状态、Review、进度和 Handoff fixture；保留被忽略的本地档案，未重写历史。
 
 ## [0.1.0] - 2026-08-26
 
-### Added
+### 新增
 
-- The Stage 00 training prototype, Python environment checks, scoped pytest
-  entry points, privacy-oriented handoff export, and initial public governance.
+- Stage 00 训练原型、Python 环境检查、限定 pytest 入口、隐私交接导出和初始开源治理。
 
-[Unreleased]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.1...HEAD
+[未发布]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.2...HEAD
+[0.4.0-alpha.2]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.1...v0.4.0-alpha.2
 [0.4.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.3.0-alpha.1...v0.4.0-alpha.1
 [0.3.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.2.0-alpha.2...v0.3.0-alpha.1
 [0.2.0-alpha.2]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.2.0-alpha.1...v0.2.0-alpha.2

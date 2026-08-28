@@ -8,6 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 
 FORBIDDEN_REPORT_FRAGMENTS = (
@@ -22,6 +23,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("executable", type=Path)
     parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--archive", type=Path)
     args = parser.parse_args()
     executable = args.executable.resolve()
     if not executable.is_file() or executable.suffix.lower() != ".exe":
@@ -30,6 +32,18 @@ def main() -> int:
     for fragment in FORBIDDEN_REPORT_FRAGMENTS:
         if fragment.lower() in report:
             raise SystemExit(f"desktop build report contains forbidden content: {fragment}")
+    if args.archive:
+        with zipfile.ZipFile(args.archive) as archive:
+            names = [name.replace("\\", "/").lower() for name in archive.namelist()]
+        for fragment in (
+            *FORBIDDEN_REPORT_FRAGMENTS,
+            "events.jsonl",
+            "submission.py",
+            ".git/",
+            ".env",
+        ):
+            if any(fragment.replace("\\", "/").lower() in name for name in names):
+                raise SystemExit(f"desktop archive contains forbidden content: {fragment}")
     scratch_parent_value = os.environ.get("LLM_LAB_BUILD_TEMP")
     scratch_parent = (
         Path(scratch_parent_value).resolve()
@@ -67,6 +81,19 @@ def main() -> int:
         if version.returncode or "llm-lab-gui" not in version.stdout:
             raise SystemExit(
                 f"desktop --version failed: {version.stdout}{version.stderr}"
+            )
+        smoke_cycle = subprocess.run(
+            [str(executable), "--smoke-test"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=root,
+            env=environment,
+        )
+        if smoke_cycle.returncode or '"status": "ok"' not in smoke_cycle.stdout:
+            raise SystemExit(
+                f"desktop event-loop smoke failed: {smoke_cycle.stdout}{smoke_cycle.stderr}"
             )
         screenshot = root / "home.png"
         smoke = subprocess.run(

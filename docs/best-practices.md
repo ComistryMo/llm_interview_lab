@@ -1,320 +1,209 @@
-# Best Practices
+# 最佳实践：从第一次启动到稳定训练
 
-This is the recommended path for a new learner. It keeps the first session
-short, protects private material, uses AI only when useful, and preserves the
-difference between “a test passed” and “I can independently do this.”
+这份指南给出推荐使用方式。目标是降低操作成本、保护隐私、节省 AI token，并始终区分“测试通过”和“能够独立完成”。
 
-## 1. Pick one entry point
+## 1. 先选择一个入口
 
-Use the **Windows desktop app** if you want a guided flow and one window. Use the
-**CLI** if you are comfortable with a terminal, want automation, or plan to
-contribute. Both use the same Catalog, Profile, events, grader, and interview
-engine, so switching later does not lose progress.
+- 想要引导式体验：使用 Windows / macOS 桌面版；
+- 想写脚本、贡献课程或调试：使用 CLI；
+- 想让仓库感知 AI 帮助：在当前仓库启动 Codex 等 Agent；
+- 只想刷题：无需添加求职材料或连接 AI；
+- 想进行针对性面试：先添加最少的脱敏材料，再逐场授权。
 
-Do not connect AI during setup unless you already know why you need it. No-AI is
-the safest and simplest default.
+不要同时对同一个学习档案运行多个写入实例；`events.jsonl` 第一版不支持多进程并发写。
 
-## 2. First desktop session
+## 2. 第一次使用桌面版
 
-1. Download and extract the current Windows Alpha.
-2. Start `LLMInterviewLab.exe`.
-3. Create Profile `default` (or another non-identifying local ID).
-4. Select the closest Role and `new_grad` unless another level clearly applies.
-5. Skip Skill self-assessment if unsure.
-6. Keep **Use without AI**.
-7. On Home, select **Continue**.
-8. Read only the current task and prerequisites.
-9. Write an independent attempt before opening AI Coach.
-
-The portable app is intentionally lightweight and does not bundle CPU PyTorch.
-For Tensor/LLM exercises, use the source install described in
-[Desktop App](desktop-app.md).
-
-## 3. First CLI session
-
-```bash
-git clone https://github.com/ComistryMo/llm_interview_lab.git
-cd llm_interview_lab
-python -m venv .venv
+```text
+创建学习档案
+→ 选择目标岗位
+→ 跳过或完成简短自评
+→ 保持“暂不连接 AI”
+→ 开始第一题
 ```
 
-Activate and install:
+先在 No-AI 模式验证课程、保存和测试都正常，再决定是否添加远程服务。这样容易区分本地问题与 Provider 问题。
 
-```powershell
-.venv\Scripts\Activate.ps1
+## 3. 第一次使用 CLI
+
+```bash
 python -m pip install -e ".[dev]"
-```
-
-```bash
-. .venv/bin/activate
-python -m pip install -e ".[dev]"
-```
-
-Then:
-
-```bash
-llm-lab quickstart
+llm-lab init --profile default --track ai_foundation
 llm-lab doctor
 llm-lab next --profile default
-```
-
-Or use the explicit deterministic path:
-
-```bash
-llm-lab init --profile default --track ai_foundation
 llm-lab start FND-001 --profile default
 llm-lab test FND-001 --profile default
 ```
 
-The starter should fail until you implement the contract. Edit the current
-`submission.py`, not `starter.py` or the public test.
+starter 第一次失败是正常现象。只编辑 `start` 输出的当前 `submission.py`，不要修改公共题面、starter 或测试来制造通过。
 
-## 4. Choose a Role without overfitting
+### 常用命令速查
 
-Pick the Role that best matches the work you want to be evaluated on, not every
-keyword on your resume. Common mappings:
-
-- building LLM features end to end → Applied AI Engineer;
-- tool-using/GUI agents → AI Agent Engineer;
-- model mechanisms and experiments → AI Algorithm / Research Engineer;
-- SFT/preference/RL pipelines → Post-Training Engineer;
-- training platforms → AI Infra / ML Platform Engineer;
-- serving, quantization, kernels → AI Inference / Systems Engineer;
-- benchmarks, data, judge/safety → AI Evaluation / Data / Safety Engineer;
-- problem framing, metrics, rollout → AI Product Manager.
-
-Aliases resolve to a shared Role. You can change Role later without rewriting
-Practice history. A Role recommends Tracks/Quests; hard unlocks still come only
-from Problem prerequisites and mastery.
-
-## 5. Follow one current task
-
-Do not browse 188 planned nodes before every session. Default views should show:
-
-- one current task;
-- due Review/Retention;
-- current prerequisites;
-- at most three unlocked choices;
-- one next command/action.
-
-Prioritize due D+2/D+7 before new content. Use the full Catalog or graph only for
-intentional planning:
+下面的命令均为真实 CLI 入口；按需使用，不必一次全部执行。
 
 ```bash
+llm-lab quickstart
+llm-lab init --profile default --track ai_foundation
+llm-lab doctor
+llm-lab next --profile default
 llm-lab catalog
 llm-lab graph --track ai_foundation
-llm-lab graph --quest tensor_and_autograd
-```
-
-## 6. Practice in evidence order
-
-Use this sequence for every fixed coding Problem:
-
-1. **Contract:** restate types, shapes, errors, mutation policy, forbidden APIs,
-   and numerical constraints.
-2. **Independent implementation:** write the simplest readable solution.
-3. **Public tests:** run the exact local grader command.
-4. **Debug:** classify failure as syntax, contract, shape/mask, numeric,
-   algorithm, state, or explanation.
-5. **Submit:** bind current passing evidence to the current SHA.
-6. **Contract Review:** check requirements beyond green tests.
-7. **Oral Defense:** explain design, complexity, edge cases, and alternatives.
-8. **D+2:** rewrite from a different starter/interface without old code.
-9. **D+7:** debug or integrate the same capability under changed conditions.
-10. **Mastery:** accept only the deterministic lifecycle result.
-
-If retention assets do not exist, stop at `reviewed`. Do not manually create a
-mastery event or treat a mock-interview score as retention.
-
-## 7. Use the lowest sufficient AI help
-
-```text
-H0  independent
-H1  official reference or one syntax question
-H2  conceptual direction
-H3  structured steps, no full function
-H4  key code fragment; requires a new independent variant
-H5  complete demonstration on a different private variant; zero mastery weight
-```
-
-Recommended escalation:
-
-1. attempt independently;
-2. read traceback and contract;
-3. request H1 only if blocked on syntax/reference;
-4. request H2 for a conceptual mismatch;
-5. request H3 only after another concrete attempt;
-6. use H4/H5 as a deliberate demonstration and schedule a clean variant.
-
-Never ask a Reviewer to “fix while reviewing.” That destroys the evidence the
-review is meant to measure.
-
-## 8. Minimize AI context and token use
-
-For a repo-aware agent, always generate the bounded context for the current
-mode:
-
-```bash
+llm-lab graph --quest quest.python_data_reliability
+llm-lab profile show default
+llm-lab mistakes --profile default
 llm-lab context --profile default --mode coach
 llm-lab context --profile default --mode teacher --help-level H2
 llm-lab context --profile default --mode reviewer
 llm-lab context --profile default --mode interviewer --interview INTERVIEW_ID
-```
-
-Treat `read_allowlist` as complete. Do not ask the agent to scan the Profile,
-Catalog shards, old answers, tests, or Git history. Static policy can be reused
-by hash if the agent supports a persistent session.
-
-The serialized context has a hard **8 KiB** ceiling. It explicitly excludes
-`future_interview_prompts`, `future_problem_assets`, `material_bodies`,
-`old_submissions`, `other_profiles`, `private_tests`, `public_test_source`, and
-`raw_events`. `policy_refs` can be cached by SHA-256; send only the newest
-context for each turn. This is a bounded handoff, not an invitation for AI to
-scan the repository.
-
-For a chat-only model, send only:
-
-1. current task;
-2. selected current answer, when necessary;
-3. sanitized structured test output;
-4. requested help level.
-
-One narrow question is usually better than a large “review everything” prompt.
-
-## 9. Add career material safely
-
-Keep original resumes, papers, and project documents outside the repository.
-Create a small sanitized copy for the Profile. Add one file explicitly and
-inspect its manifest entry/SHA.
-
-```bash
-llm-lab material add --profile default --kind resume \
-  --file ../private/resume-sanitized.md \
-  --title "Sanitized resume" --allow-ai
+llm-lab show FND-001
+llm-lab start FND-001 --profile default
+llm-lab test FND-001 --profile default
+llm-lab submit FND-001 --profile default
+llm-lab review FND-001 --profile default --contract passed --oral passed --explanation "说明实现" --complexity "O(n)" --boundaries "覆盖空输入"
+llm-lab retain FND-001 --stage d2 --profile default
+llm-lab retain FND-001 --stage d7 --profile default
 llm-lab material list --profile default
+llm-lab material add --profile default --kind resume --file resume.md
+llm-lab interview candidates --profile default --track llm_algorithm --difficulty medium
+llm-lab interview create --profile default --mode catalog --track llm_algorithm --difficulty medium --duration 30
+llm-lab interview start INTERVIEW_ID --profile default
+llm-lab interview current INTERVIEW_ID --profile default
+llm-lab interview finish INTERVIEW_ID --profile default
 ```
 
-Do not add employer/customer code, private data, internal configurations, logs,
-model names, metrics, screenshots, or documents you do not own. “Allow AI” only
-makes the material eligible for later per-session consent.
+## 4. 一道题的完整流程
 
-## 10. Run a catalog-only interview first
+1. 读清契约、输入输出、异常、mutation 与复杂度要求；
+2. H0 独立实现；
+3. 运行精确公开测试；
+4. 失败时先读 traceback，再决定是否请求 H1 / H2 / H3；
+5. 测试通过后提交并完成契约审查与口述答辩；
+6. D+2 不看旧答案进行等价重写；
+7. D+7 做调试或集成迁移；
+8. 只有确定性条件满足后进入 `mastered` 并解锁下一节点。
 
-Your first interview should not use a resume or provider. In the desktop app:
+公开测试是可见学习契约，不是隐藏防作弊系统。不要把“记住测试数据”当作掌握。
 
-1. choose Role;
-2. choose `new_grad`, `medium`, and `disabled`;
-3. start the frozen Blueprint;
-4. answer one question at a time;
-5. cite evidence for manual rubric scores;
-6. finish incomplete if you stop early;
-7. read the report and select one recommended training gap.
+## 5. 高效使用 AI
 
-CLI equivalent:
+### 最小上下文
 
-```bash
-llm-lab interview role-create --profile default \
-  --role applied_ai_engineer --seniority new_grad \
-  --difficulty medium --ai disabled
+一次只发送：
+
+- 当前公开题面；
+- 必要的答案片段；
+- 最近失败摘要；
+- 一个明确问题；
+- 需要的帮助等级。
+
+不要发送整个 Workspace、全部日志、旧答案、无关材料、Git 历史或完整 Profile。上下文越小，token 成本越低，也越容易得到针对性反馈。
+
+### 帮助等级
+
+| 等级 | 允许内容 | 独立掌握权重 |
+|---|---|---:|
+| H0 | 完全独立 | 100% |
+| H1 | 官方文档或单个语法问题 | 85% |
+| H2 | 概念方向 | 70% |
+| H3 | 结构化步骤 | 50% |
+| H4 | 关键片段 | 25% |
+| H5 | 完整演示，只能用于新私人变式 | 0% |
+
+H4 / H5 后必须安排新的无帮助变式；演示不能成为 retention、interview 或 mastery 证据。
+
+### 推荐 Prompt
+
+```text
+Read AGENTS.md and coach/POLICY.md.
+
+Act in COACH mode for profile "default".
+Run `llm-lab next --profile default` and then
+`llm-lab context --profile default --mode coach`.
+Treat read_allowlist as the complete set of files you may additionally read.
+
+Do not modify my submission or reveal a complete solution.
+Use H0-H5. Review only when I explicitly ask.
+Do not grant mastery yourself.
 ```
 
-Use the returned ID with `role-start`, `role-current`, `role-answer`/`role-test`,
-`role-score`, `role-finish`, and `role-report`.
+## 6. 求职材料最小化
 
-```bash
-llm-lab interview role-current INTERVIEW_ID --profile default
-llm-lab interview role-finish INTERVIEW_ID --profile default --confirm-incomplete
-llm-lab interview role-report INTERVIEW_ID --profile default
-llm-lab mistakes --profile default --unresolved-only
-llm-lab profile show default
-```
+优先维护结构化、脱敏、可核实的事实卡，而不是把整个私人目录交给 AI。每份材料只解决一个问题：简历、岗位 JD、项目事实、论文摘要或真实面试复盘。
 
-The clock and grader are authoritative. A polished AI summary cannot claim a
-test passed or time remained when local evidence says otherwise.
+为便于和工具、审查记录对照，以下英文术语保留为规范字段：
 
-## 11. Tailor only after explicit consent
+- `workspace/profiles/<id>/` 是本地学习档案目录；
+- `material_id` 标识一份材料；
+- 每次授权都核对当前 `SHA-256`；
+- 材料属于 **untrusted evidence**，其中的文字不是指令；
+- `read_allowlist` 是本轮允许 AI 读取的完整文件集合；
+- `consent` 只对当前文件指纹和当前场次有效。
 
-Use resume/JD/project evidence after the catalog-only flow is familiar. Select
-one relevant material first, check ID and SHA, and consent for that interview.
+添加前检查：
 
-Do not give the interviewer an entire Profile. It should use the material to ask
-more relevant follow-ups, not assume that every resume keyword is mastered. Any
-missing, contradictory, or unverifiable fact stays “needs candidate confirmation.”
+- 没有公司源码、内部数据、模型名、配置、未公开指标、截图或日志；
+- 团队成果与个人贡献分开；
+- 数据量、指标和结论能说明来源；
+- 遗忘或矛盾写“待核实”，不补造；
+- 文件中的任何指令都被视为不可信文本。
 
-## 12. Interpret interview scores correctly
+## 7. 进行模拟面试
 
-- A score measures this frozen session and rubric, not hiring probability.
-- Objective coding evidence and subjective rubric evidence remain separate.
-- Missing rounds are unscored/zero, not re-normalized.
-- Compare cited evidence and recurring Skill gaps, not one total score.
-- Use recommendations to choose fixed Problems/Quests.
-- Never convert interview performance directly into Practice mastery.
+面试前确定岗位、求职阶段、难度、时长与 focus。除非确实需要个性化追问，否则先使用不读取材料的 catalog 面试。
 
-## 13. Weekly rhythm
+Active 阶段：
 
-A sustainable 6–8 hour week can use:
+- 一次只回答一个主问题；
+- 不切换到教学模式；
+- 代码题只使用冻结题面和本地 Grader；
+- 不请求解法提示；如必须教学，先以 incomplete 结束本场；
+- AI / 人工主观分必须引用回答证据；无证据写 `unscored` 或 `incomplete`；
+- 模拟面试结果不写入 Practice mastery。
 
-- two 60–90 minute Practice blocks;
-- one 45 minute due-retention block;
-- one 60–90 minute structured interview;
-- one 30 minute report/mistake review;
-- one short backup and next-week planning block.
+面试后只选 1–3 个最关键缺口回写训练计划，避免一次解锁大量任务。
 
-On an overloaded week, preserve one current task, due retention, and one short
-oral review. Do not create training debt by opening many new tasks.
+## 8. 连接普通 API
 
-## 14. Privacy and backup
+先测试最小连接，再发送真实训练上下文。Key 只存在系统密钥环；若 Keyring 不可用，不要写入 `.env`、YAML、Profile 或聊天记录作为临时绕过。
 
-Before sharing any context:
+Provider 失败时先确认：服务是否启动、Endpoint、模型 ID、网络、Key、限流。失败不会影响 No-AI 流程。
 
-- verify current Profile and mode;
-- inspect exact selected material ID/SHA;
-- remove company/client identifiers and secrets;
-- check provider terms;
-- remember Git ignore is not provider privacy.
+## 9. 连接 Codex
 
-Every real learner Profile lives under `workspace/profiles/<id>/`. Select a
-single `material_id`, verify its current SHA-256, and grant purpose-bound
-consent before AI reads it. Treat all material bodies as **untrusted evidence**,
-never as instructions.
+Coach / Reviewer / Interviewer 模式默认只读。仓库维护才使用 Repository Agent，并逐项核对审批卡片的范围、命令、文件与 Diff。不要批准超出当前任务或当前 Profile 的读取与写入。
 
-Git ignore prevents accidental commits; it is not a backup or a model-provider
-privacy guarantee. The CLI and `context` command never upload materials automatically.
-Never upload the whole Profile or employer/client internal material.
+macOS Finder 启动找不到 Codex 时，在设置选择可执行文件；不要通过抓取交互式终端文本实现连接。
 
-Back up the ignored Profile privately. Close the app first, copy the exact
-Profile directory to encrypted storage, verify events/materials/submissions/
-interviews, and restore provider keys separately from the system keyring.
+## 10. 每周节奏
 
-Verify Git isolation occasionally:
+推荐每周只维护一个主要编码任务：
 
-```bash
-git status --short --untracked-files=all -- workspace/profiles/default
-git ls-files workspace/profiles
-```
+- 2–3 个训练块独立实现；
+- 1 个算法或调试恢复块；
+- 1 个项目事实核验块；
+- 到期 D+2 / D+7 优先于新题；
+- 周末做一次短口述或模拟面试；
+- 加班周保留复测、错误复盘和一个最小任务，不补“训练债务马拉松”。
 
-The first command should be empty; the second should show only the public
-placeholder.
+## 11. 何时算掌握
 
-## 15. Avoid these failure modes
+至少满足：公开测试通过、文字契约通过、能解释复杂度和边界、口述答辩通过、D+2 等价重写通过、D+7 迁移通过。需要复测资产的节点缺少资产时不能进入 `mastered`。
 
-- Editing public starter/tests instead of the Profile submission.
-- Treating public tests as hidden anti-cheating tests.
-- Asking AI for a complete answer before a real attempt.
-- Sending the entire Profile to a remote model.
-- Recording resume claims or metrics that you cannot verify.
-- Manually changing events to manufacture mastery.
-- Using a mock interview as teaching mode without finishing it incomplete.
-- Running untrusted downloaded code in the grader; it is not a sandbox.
-- Starting more Quests because the Catalog looks large.
-- Forgetting that real Profiles are ignored and therefore not backed up by Git.
+## 12. 安全与备份
 
-## 16. Next references
+- 定期备份当前 Profile 到用户自己的加密位置；
+- 不提交真实 Profile；
+- 不上传整个 Profile 给聊天 AI；
+- 不运行不信任的 submission；本地 Grader 不是恶意代码沙箱；
+- 下载桌面包后核对 `SHA256SUMS.txt`；
+- macOS 未公证 Alpha 只通过系统“隐私与安全”确认自己核验过的文件。
 
-- [Desktop App](desktop-app.md)
-- [Workspace and privacy](workspace.md)
-- [AI Connections and Codex](ai-connections.md)
-- [Role Profiles and Blueprints](role-profiles.md)
-- [Interview CLI details](interviews.md)
-- [Curriculum authoring](curriculum-authoring.md)
-- [Coach policy](../coach/POLICY.md)
+对应的英文安全约束是：**Git ignore prevents accidental commits; it is not a backup**。The CLI and `context` command never upload materials automatically。Never upload the whole Profile or employer/client internal material。
+
+`context` 的序列化上下文上限为 **8 KiB**；`policy_refs` can be cached by SHA-256，但每轮应 **send only the newest
+context for each turn**。`read_allowlist` is **not an invitation for AI to
+scan the repository**；它只允许读取明确列出的文件。
+
+默认不把这些内容放进上下文：`future_interview_prompts`、
+`future_problem_assets`、`material_bodies`、`old_submissions`、
+`other_profiles`、`private_tests`、`public_test_source`、`raw_events`。
