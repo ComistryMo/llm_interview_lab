@@ -1,0 +1,26 @@
+dimensions:
+  objective_clarity:
+    weight: 0.25
+    anchors:
+      1: Optimizes utilization as the only goal.
+      3: Names fairness and latency but leaves policy priority vague.
+      5: Defines measurable objectives, classes, constraints and conflict policy.
+  scheduling_design:
+    weight: 0.30
+    anchors:
+      1: Uses FIFO or one priority queue without placement reasoning.
+      3: Adds quotas and backfill but weak topology or gang semantics.
+      5: Connects admission, fair share, fit, topology, gang and backfill behavior.
+  preemption_reliability:
+    weight: 0.20
+    anchors:
+      1: Kills any lower-priority job without cost or state analysis.
+      3: Restricts preemption but lacks checkpoint-aware decisions.
+      5: Models recovery cost, safe points, budgets, draining and failure outcomes.
+  operability:
+    weight: 0.25
+    anchors:
+      1: Provides no starvation or policy diagnostics.
+      3: Tracks queue and utilization but weak decision explainability.
+      5: Exposes wait, slowdown, fairness, fragmentation, decisions and alerts.
+fatal_issues: [utilization_only, unbounded_starvation, unsafe_preemption]

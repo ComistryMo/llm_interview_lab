@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-interview-lab"
-version = "0.3.0a1"
-description = "A gate-based, AI-assisted training lab for LLM algorithm interviews"
+version = "0.4.0a1"
+description = "A local-first, role-aware, AI-coached interview workbench for AI careers"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
 authors = [{ name = "ComistryMo" }]
-keywords = ["llm", "interview", "pytorch", "post-training", "learning"]
+keywords = ["ai", "llm", "interview", "mock-interview", "pytorch", "post-training", "learning"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Education",
@@ -27,10 +27,17 @@ dependencies = [
 
 [project.scripts]
 llm-lab = "llm_interview_lab.cli:main"
+llm-lab-gui = "llm_interview_lab.desktop.main:main"
 
 [project.optional-dependencies]
 test = []
 torch = ["torch>=2.2"]
+desktop = ["PySide6>=6.8,<7"]
+ai = [
+    "any-llm-sdk[openai,anthropic,gemini,ollama]>=1.26,<2; python_version >= '3.11'",
+    "httpx>=0.28,<1",
+    "keyring>=25,<26",
+]
 dev = []
 
 [project.urls]
@@ -41,6 +48,9 @@ Issues = "https://github.com/ComistryMo/llm_interview_lab/issues"
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["llm_interview_lab*"]
+
+[tool.setuptools.package-data]
+llm_interview_lab = ["desktop/qml/**/*.qml"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

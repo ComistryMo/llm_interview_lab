@@ -11,7 +11,7 @@ from pathlib import Path
 import re
 import stat
 import subprocess
-from typing import Any, TYPE_CHECKING
+from typing import Any, Mapping, TYPE_CHECKING
 
 from jsonschema import Draft202012Validator
 import yaml
@@ -22,7 +22,16 @@ if TYPE_CHECKING:
     from .catalog import Problem
 
 PROFILE_ID_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
-PROFILE_SUBDIRECTORIES = ("submissions", "generated", "private_tests", "reviews", "cache", "exports")
+PROFILE_SUBDIRECTORIES = (
+    "submissions",
+    "generated",
+    "private_tests",
+    "reviews",
+    "cache",
+    "exports",
+    "materials",
+    "interviews",
+)
 
 
 class WorkspaceError(RuntimeError):
@@ -35,6 +44,8 @@ class ProfilePaths:
     profile_file: Path
     events_file: Path
     submissions_root: Path
+    materials_root: Path
+    interviews_root: Path
 
 
 @dataclass(frozen=True)
@@ -56,7 +67,9 @@ def find_repository_root(start: Path | None = None) -> Path:
     if candidate.is_file():
         candidate = candidate.parent
     for directory in (candidate, *candidate.parents):
-        if (directory / "pyproject.toml").is_file() and (directory / "curriculum").is_dir() and (directory / "workspace").is_dir():
+        source_checkout = (directory / "pyproject.toml").is_file()
+        desktop_runtime = (directory / ".llm-lab-standalone.json").is_file()
+        if (source_checkout or desktop_runtime) and (directory / "curriculum").is_dir() and (directory / "workspace").is_dir():
             return directory
     raise WorkspaceError("run llm-lab inside a cloned llm_interview_lab repository")
 
@@ -69,7 +82,14 @@ def validate_profile_id(profile_id: str) -> str:
 
 def profile_paths(repo_root: Path, profile_id: str) -> ProfilePaths:
     root = repo_root / "workspace/profiles" / validate_profile_id(profile_id)
-    return ProfilePaths(root, root / "profile.yaml", root / "events.jsonl", root / "submissions")
+    return ProfilePaths(
+        root,
+        root / "profile.yaml",
+        root / "events.jsonl",
+        root / "submissions",
+        root / "materials",
+        root / "interviews",
+    )
 
 
 def event_schema_path(repo_root: Path) -> Path:
@@ -101,6 +121,9 @@ def validate_profile_data(data: Any, repo_root: Path) -> dict[str, Any]:
 
 
 def load_profile(paths: ProfilePaths, repo_root: Path) -> dict[str, Any]:
+    ensure_profile_path_is_safe(
+        repo_root, paths.root.name, paths.profile_file, must_exist=True
+    )
     try:
         data = yaml.safe_load(paths.profile_file.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, yaml.YAMLError) as error:
@@ -111,7 +134,90 @@ def load_profile(paths: ProfilePaths, repo_root: Path) -> dict[str, Any]:
     return validated
 
 
+def _atomic_write_profile(
+    repo_root: Path,
+    profile_id: str,
+    path: Path,
+    value: Mapping[str, Any],
+) -> None:
+    """Replace one validated Profile file without exposing a partial write."""
+
+    ensure_profile_path_is_safe(repo_root, profile_id, path, must_exist=True)
+    temporary = path.with_name(f".{path.name}.{os.urandom(8).hex()}.tmp")
+    ensure_profile_path_is_safe(repo_root, profile_id, temporary)
+    try:
+        content = yaml.safe_dump(
+            dict(value), sort_keys=False, allow_unicode=True
+        ).encode("utf-8")
+        with temporary.open("xb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    except (OSError, UnicodeError, yaml.YAMLError) as error:
+        raise WorkspaceError("profile.yaml could not be written atomically") from error
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def update_career_intent(
+    repo_root: Path,
+    profile_id: str,
+    career_intent: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Atomically replace the optional career intent in one explicit Profile.
+
+    ``profile.yaml`` remains the current configuration source of truth.  This
+    operation deliberately does not append a Practice event or rewrite any
+    learning history.
+    """
+
+    if not isinstance(career_intent, Mapping):
+        raise WorkspaceError("career intent must be an object")
+    paths = profile_paths(repo_root, profile_id)
+    ensure_profile_is_ignored(repo_root, profile_id)
+    profile = load_profile(paths, repo_root)
+    updated = {**profile, "career_intent": dict(career_intent)}
+    validate_profile_data(updated, repo_root)
+    _atomic_write_profile(repo_root, profile_id, paths.profile_file, updated)
+    return updated
+
+
+def update_role_preferences(
+    repo_root: Path,
+    profile_id: str,
+    role_preferences: Mapping[str, Any],
+    *,
+    target_roles: tuple[str, ...] | None = None,
+) -> dict[str, Any]:
+    """Atomically store a public-role selection without changing Practice events."""
+
+    if not isinstance(role_preferences, Mapping):
+        raise WorkspaceError("role preferences must be an object")
+    paths = profile_paths(repo_root, profile_id)
+    ensure_profile_is_ignored(repo_root, profile_id)
+    profile = load_profile(paths, repo_root)
+    updated = {**profile, "role_preferences": dict(role_preferences)}
+    if target_roles is not None:
+        updated["target_roles"] = list(dict.fromkeys(target_roles))
+    validate_profile_data(updated, repo_root)
+    _atomic_write_profile(repo_root, profile_id, paths.profile_file, updated)
+    return updated
+
+
 def _git_path_is_ignored(repo_root: Path, candidate: Path) -> bool:
+    standalone_marker = repo_root / ".llm-lab-standalone.json"
+    if standalone_marker.is_file() and not (repo_root / ".git").exists():
+        try:
+            candidate.resolve().relative_to(
+                (repo_root / "workspace/profiles").resolve()
+            )
+        except (OSError, ValueError):
+            return False
+        return True
     relative = candidate.relative_to(repo_root).as_posix()
     result = subprocess.run(["git", "-C", str(repo_root), "check-ignore", "-q", "--", relative], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if result.returncode not in {0, 1}:
@@ -120,18 +226,52 @@ def _git_path_is_ignored(repo_root: Path, candidate: Path) -> bool:
 
 
 def ensure_profile_is_ignored(repo_root: Path, profile_id: str) -> None:
-    if not _git_path_is_ignored(repo_root, profile_paths(repo_root, profile_id).events_file):
-        raise WorkspaceError("workspace profile path is not ignored by Git")
+    paths = profile_paths(repo_root, profile_id)
+    probes = (
+        paths.root,
+        paths.profile_file,
+        paths.events_file,
+        paths.materials_root / "manifest.json",
+        paths.interviews_root / "privacy-probe" / "session.json",
+        paths.submissions_root / "privacy-probe" / "submission.py",
+    )
+    # Validate lexical components before invoking Git.  On POSIX, git
+    # check-ignore refuses to traverse a directory symlink and returns 128;
+    # surface the more precise profile-integrity error instead.
+    for candidate in probes:
+        ensure_profile_path_is_safe(repo_root, profile_id, candidate)
+    if not all(_git_path_is_ignored(repo_root, candidate) for candidate in probes):
+        raise WorkspaceError(
+            "workspace Profile is not fully ignored by Git; refusing private writes"
+        )
+
+
+def _ensure_profile_subdirectories(repo_root: Path, paths: ProfilePaths) -> None:
+    """Add missing layout directories without rewriting Profile facts."""
+
+    for name in PROFILE_SUBDIRECTORIES:
+        directory = paths.root / name
+        ensure_profile_path_is_safe(repo_root, paths.root.name, directory)
+        if directory.exists():
+            if not directory.is_dir() or _is_obvious_link(directory):
+                raise WorkspaceError(f"profile subdirectory is invalid: {name}")
+            continue
+        directory.mkdir()
+        ensure_profile_path_is_safe(
+            repo_root, paths.root.name, directory, must_exist=True
+        )
 
 
 def init_profile(repo_root: Path, profile_id: str, track_ids: tuple[str, ...] | None = None) -> InitResult:
     paths = profile_paths(repo_root, profile_id)
     ensure_profile_is_ignored(repo_root, profile_id)
+    ensure_profile_path_is_safe(repo_root, profile_id, paths.root)
     if paths.root.exists():
         if not paths.root.is_dir():
             raise WorkspaceError("profile path exists and is not a directory")
         load_profile(paths, repo_root)
         read_events(paths.events_file, event_schema_path(repo_root))
+        _ensure_profile_subdirectories(repo_root, paths)
         return InitResult(paths, False)
     try:
         template = yaml.safe_load((repo_root / "workspace/templates/default/profile.yaml").read_text(encoding="utf-8"))
@@ -145,8 +285,8 @@ def init_profile(repo_root: Path, profile_id: str, track_ids: tuple[str, ...] | 
         template["target_roles"] = list(dict.fromkeys(track_ids))
     validate_profile_data(template, repo_root)
     paths.root.mkdir(parents=True, exist_ok=False)
-    for name in PROFILE_SUBDIRECTORIES:
-        (paths.root / name).mkdir()
+    ensure_profile_path_is_safe(repo_root, profile_id, paths.root, must_exist=True)
+    _ensure_profile_subdirectories(repo_root, paths)
     paths.profile_file.write_text(yaml.safe_dump(template, sort_keys=False, allow_unicode=True), encoding="utf-8", newline="\n")
     append_event(paths.events_file, event_schema_path(repo_root), profile_id=profile_id, event_type="profile_created", problem_id=None, attempt_id=None, payload={"synthetic": False, "target_roles": template["target_roles"]})
     return InitResult(paths, True)
@@ -165,6 +305,71 @@ def _is_obvious_link(path: Path) -> bool:
         return False
     attributes = getattr(file_stat, "st_file_attributes", 0)
     return stat.S_ISLNK(file_stat.st_mode) or bool(attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
+
+
+def ensure_profile_path_is_safe(
+    repo_root: Path,
+    profile_id: str,
+    candidate: Path | None = None,
+    *,
+    must_exist: bool = False,
+) -> Path:
+    """Validate one lexical path inside an unlinked repository-local Profile.
+
+    This prevents accidental traversal through symlinks and Windows reparse
+    points.  It is a path-integrity check for trusted local use, not a sandbox
+    for hostile code.
+    """
+
+    repository = repo_root.resolve()
+    profiles_root = repository / "workspace/profiles"
+    profile_root = profiles_root / validate_profile_id(profile_id)
+    target = (candidate or profile_root).absolute()
+    try:
+        profile_root.absolute().relative_to(profiles_root.absolute())
+        target.relative_to(profile_root.absolute())
+    except ValueError as error:
+        raise WorkspaceError("Profile path is outside workspace/profiles") from error
+
+    if not profiles_root.is_dir() or _is_obvious_link(profiles_root):
+        raise WorkspaceError("workspace/profiles must be a regular, unlinked directory")
+
+    current = profiles_root
+    relative = target.relative_to(profiles_root)
+    for part in relative.parts:
+        current = current / part
+        if _is_obvious_link(current):
+            raise WorkspaceError("Profile path must not use a symlink or reparse point")
+        if current.exists() and current != target and not current.is_dir():
+            raise WorkspaceError("Profile path contains a non-directory component")
+
+    if must_exist and not target.exists():
+        raise WorkspaceError("required Profile path is missing")
+
+    try:
+        resolved_profiles = profiles_root.resolve(strict=True)
+        if profile_root.exists():
+            resolved_profile = profile_root.resolve(strict=True)
+            resolved_profile.relative_to(resolved_profiles)
+        else:
+            resolved_profile = profile_root
+
+        if target.exists():
+            resolved_target = target.resolve(strict=True)
+            if profile_root.exists():
+                resolved_target.relative_to(resolved_profile)
+        else:
+            parent = target.parent
+            while not parent.exists() and parent != profile_root.parent:
+                parent = parent.parent
+            resolved_parent = parent.resolve(strict=True)
+            if profile_root.exists():
+                resolved_parent.relative_to(resolved_profile)
+            else:
+                resolved_parent.relative_to(resolved_profiles)
+    except (OSError, ValueError) as error:
+        raise WorkspaceError("Profile path escapes workspace/profiles") from error
+    return target
 
 
 def _create_attempt(repo_root: Path, profile_id: str, problem: "Problem", attempt_id: str, retention_stage: str | None) -> StartResult:
@@ -201,6 +406,21 @@ def start_problem(repo_root: Path, profile_id: str, problem: "Problem") -> Start
     paths = profile_paths(repo_root, profile_id)
     load_profile(paths, repo_root)
     state = reduce_events(read_events(paths.events_file, event_schema_path(repo_root)))
+    blocking = sorted(
+        {
+            attempt.problem_id
+            for attempt in state.attempts.values()
+            if attempt.retention_stage is None
+            and attempt.problem_id != problem.id
+            and state.problem_status(attempt.problem_id)
+            in {"in_progress", "implemented"}
+        }
+    )
+    if blocking:
+        raise WorkspaceError(
+            "finish the current implementation or review before starting another: "
+            + ", ".join(blocking)
+        )
     initial = [attempt for attempt in state.attempts_for(problem.id) if attempt.retention_stage is None]
     if state.problem_implemented(problem.id):
         raise WorkspaceError("problem is already implemented; use retain after review")

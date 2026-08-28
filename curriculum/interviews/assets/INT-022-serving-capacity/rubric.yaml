@@ -1,0 +1,26 @@
+dimensions:
+  workload_model:
+    weight: 0.25
+    anchors:
+      1: Uses request rate and average length only.
+      3: Adds prompt/output distributions but weak burst or class handling.
+      5: Defines distributions, bursts, classes, SLOs and concurrency evidence.
+  capacity_reasoning:
+    weight: 0.30
+    anchors:
+      1: Picks a replica count without memory or service-time reasoning.
+      3: Models weights and KV cache but weak queue or phase separation.
+      5: Connects memory, prefill, decode, batching, utilization and headroom.
+  scheduling_reliability:
+    weight: 0.25
+    anchors:
+      1: Accepts all traffic and lets queues grow.
+      3: Adds admission and autoscaling but incomplete overload behavior.
+      5: Defines class-aware queues, bounds, degradation, failover and recovery.
+  validation:
+    weight: 0.20
+    anchors:
+      1: Validates with one synthetic average request.
+      3: Load-tests distributions but misses saturation or quality checks.
+      5: Replays realistic mixes, finds knees, checks quality and stages rollout.
+fatal_issues: [average_only_capacity, unbounded_queue, conflates_ttft_and_decode]

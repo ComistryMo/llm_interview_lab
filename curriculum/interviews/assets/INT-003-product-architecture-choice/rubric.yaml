@@ -1,0 +1,26 @@
+dimensions:
+  requirements:
+    weight: 0.25
+    anchors:
+      1: Selects a technology before clarifying the workflow.
+      3: Captures the main task but misses authority or freshness constraints.
+      5: Clarifies evidence, actions, risk, freshness, latency and success.
+  option_reasoning:
+    weight: 0.30
+    anchors:
+      1: Uses buzzwords without comparing alternatives.
+      3: Compares two approaches with incomplete trade-offs.
+      5: Draws explicit decision boundaries across prompting, retrieval, workflow and agent.
+  safety_and_reliability:
+    weight: 0.25
+    anchors:
+      1: Grants broad actions or ignores conflicting sources.
+      3: Adds citations and approval but lacks failure-state detail.
+      5: Uses least privilege, source authority, validation, approval and fallback.
+  evolution_plan:
+    weight: 0.20
+    anchors:
+      1: Proposes a permanent architecture with no evidence gates.
+      3: Names future phases but not measurable triggers.
+      5: Defines reversible stages and evidence-based migration triggers.
+fatal_issues: [technology_first, unrestricted_actions, no_evaluation]

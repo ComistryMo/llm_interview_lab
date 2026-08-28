@@ -1,0 +1,193 @@
+schema_version: 1
+roles:
+  - id: ai_product_manager
+    title: AI Product Manager
+    aliases: [LLM Product Manager, Agent Product Manager]
+    summary: Define valuable AI behavior, measurable quality and safe product delivery.
+    seniority: [intern, new_grad, mid, senior]
+    skill_weights:
+      skill.ai_product.problem_framing: &pm_primary {weight: 1.0, target_level: {intern: 1, new_grad: 2, mid: 3, senior: 4}}
+      skill.ai_product.prd: *pm_primary
+      skill.ai_product.metrics: *pm_primary
+      skill.ai_product.delivery: *pm_primary
+      skill.ai_product.cost_quality: *pm_primary
+      skill.evaluation_safety.benchmarks: &pm_secondary {weight: 0.8, target_level: {intern: 1, new_grad: 2, mid: 3, senior: 3}}
+      skill.evaluation_safety.safety_eval: *pm_secondary
+      skill.product_communication.stakeholders: *pm_primary
+      skill.product_communication.storytelling: *pm_secondary
+      skill.system_design.tradeoffs: *pm_secondary
+    required_tracks: [ai_foundation]
+    recommended_quests: [python_data_reliability, agent_runtime]
+    optional_quests: [vlm_data_flow, efficient_inference]
+    interview_blueprints:
+      intern: interview.ai_product_manager.intern
+      new_grad: interview.ai_product_manager.new_grad
+      mid: interview.ai_product_manager.mid
+
+  - id: applied_ai_engineer
+    title: Applied AI Engineer
+    aliases: [AI Product Engineer, AI Application Engineer, LLM Application Engineer, AI Solutions Engineer]
+    summary: Build reliable LLM applications that connect product workflows, tools and evaluation.
+    seniority: [intern, new_grad, mid, senior]
+    skill_weights:
+      skill.python_engineering.data_contracts: &app_primary {weight: 1.0, target_level: {intern: 2, new_grad: 3, mid: 3, senior: 4}}
+      skill.agent_application.tool_calling: *app_primary
+      skill.agent_application.agent_loop: *app_primary
+      skill.agent_application.reliability: *app_primary
+      skill.agent_application.evaluation: *app_primary
+      skill.llm_vlm.context_management: &app_secondary {weight: 0.8, target_level: {intern: 1, new_grad: 2, mid: 3, senior: 4}}
+      skill.evaluation_safety.benchmarks: *app_secondary
+      skill.inference_systems.serving: *app_secondary
+      skill.system_design.reliability: *app_secondary
+      skill.ai_product.cost_quality: *app_secondary
+    required_tracks: [agent, ai_foundation]
+    recommended_quests: [python_data_reliability, agent_runtime]
+    optional_quests: [efficient_inference, transformer_forward]
+    interview_blueprints:
+      intern: interview.applied_ai_engineer.intern
+      new_grad: interview.applied_ai_engineer.new_grad
+      mid: interview.applied_ai_engineer.mid
+
+  - id: ai_agent_engineer
+    title: AI Agent Engineer
+    aliases: [Agent Engineer, GUI Agent Engineer]
+    summary: Design, implement and evaluate bounded tool-using agent systems.
+    seniority: [intern, new_grad, mid, senior]
+    skill_weights:
+      skill.agent_application.tool_calling: &agent_primary {weight: 1.0, target_level: {intern: 2, new_grad: 3, mid: 4, senior: 4}}
+      skill.agent_application.agent_loop: *agent_primary
+      skill.agent_application.state_memory: *agent_primary
+      skill.agent_application.planning: *agent_primary
+      skill.agent_application.reliability: *agent_primary
+      skill.agent_application.evaluation: *agent_primary
+      skill.post_training_rl.sft: &agent_secondary {weight: 0.7, target_level: {intern: 1, new_grad: 2, mid: 3, senior: 4}}
+      skill.post_training_rl.policy_optimization: *agent_secondary
+      skill.evaluation_safety.leakage: *agent_secondary
+      skill.system_design.reliability: *agent_secondary
+    required_tracks: [agent]
+    recommended_quests: [agent_runtime, python_data_reliability]
+    optional_quests: [post_training_quest, vlm_data_flow]
+    interview_blueprints:
+      intern: interview.ai_agent_engineer.intern
+      new_grad: interview.ai_agent_engineer.new_grad
+      mid: interview.ai_agent_engineer.mid
+
+  - id: ai_algorithm_research_engineer
+    title: AI Algorithm / Research Engineer
+    aliases: [AI Algorithm Engineer, Research Engineer, LLM Algorithm Engineer, VLM Algorithm Engineer]
+    summary: Explain, implement and experimentally validate modern model algorithms.
+    seniority: [intern, new_grad, mid, senior]
+    skill_weights:
+      skill.machine_learning_math.linear_algebra: &alg_primary {weight: 1.0, target_level: {intern: 2, new_grad: 3, mid: 4, senior: 4}}
+      skill.machine_learning_math.optimization: *alg_primary
+      skill.deep_learning.tensor_ops: *alg_primary
+      skill.deep_learning.autograd: *alg_primary
+      skill.deep_learning.losses: *alg_primary
+      skill.llm_vlm.attention: *alg_primary
+      skill.llm_vlm.transformer: *alg_primary
+      skill.llm_vlm.vlm_architecture: &alg_secondary {weight: 0.8, target_level: {intern: 1, new_grad: 2, mid: 3, senior: 4}}
+      skill.data_mlops.experiments: *alg_secondary
+      skill.project_deep_dive.experiments: *alg_secondary
+    required_tracks: [llm_algorithm, ai_foundation]
+    recommended_quests: [tensor_and_autograd, optimizer_training_loop, transformer_forward]
+    optional_quests: [vlm_data_flow, post_training_quest]
+    interview_blueprints:
+      intern: interview.ai_algorithm_research_engineer.intern
+      new_grad: interview.ai_algorithm_research_engineer.new_grad
+      mid: interview.ai_algorithm_research_engineer.mid
+
+  - id: post_training_engineer
+    title: LLM/VLM Post-Training Engineer
+    aliases: [RLHF Engineer, Alignment Engineer, LLM Post-Training Engineer]
+    summary: Build and diagnose supervised, preference and policy-optimization pipelines.
+    seniority: [intern, new_grad, mid, senior]
+    skill_weights:
+      skill.post_training_rl.sft: &pt_primary {weight: 1.0, target_level: {intern: 2, new_grad: 3, mid: 4, senior: 4}}
+      skill.post_training_rl.preference_data: *pt_primary
+      skill.post_training_rl.reward_modeling: *pt_primary
+      skill.post_training_rl.policy_optimization: *pt_primary
+      skill.post_training_rl.grpo: *pt_primary
+      skill.post_training_rl.verification: *pt_primary
+      skill.deep_learning.losses: &pt_secondary {weight: 0.8, target_level: {intern: 2, new_grad: 3, mid: 3, senior: 4}}
+      skill.deep_learning.optimizers: *pt_secondary
+      skill.data_mlops.data_quality: *pt_secondary
+      skill.data_mlops.experiments: *pt_secondary
+    required_tracks: [post_training, llm_algorithm]
+    recommended_quests: [tensor_and_autograd, optimizer_training_loop, post_training_quest]
+    optional_quests: [vlm_data_flow, agent_runtime]
+    interview_blueprints:
+      intern: interview.post_training_engineer.intern
+      new_grad: interview.post_training_engineer.new_grad
+      mid: interview.post_training_engineer.mid
+
+  - id: ai_infra_engineer
+    title: AI Infra / ML Platform Engineer
+    aliases: [ML Platform Engineer, Training Platform Engineer, ML Systems Engineer]
+    summary: Operate reliable, observable and efficient data and training platforms.
+    seniority: [intern, new_grad, mid, senior]
+    skill_weights:
+      skill.training_infra.distributed: &infra_primary {weight: 1.0, target_level: {intern: 1, new_grad: 2, mid: 3, senior: 4}}
+      skill.training_infra.checkpointing: *infra_primary
+      skill.training_infra.scheduling: *infra_primary
+      skill.training_infra.observability: *infra_primary
+      skill.data_mlops.pipelines: *infra_primary
+      skill.data_mlops.reproducibility: *infra_primary
+      skill.system_design.requirements: &infra_secondary {weight: 0.9, target_level: {intern: 1, new_grad: 2, mid: 3, senior: 4}}
+      skill.system_design.tradeoffs: *infra_secondary
+      skill.system_design.reliability: *infra_secondary
+      skill.inference_systems.capacity: &infra_support {weight: 0.6, target_level: {intern: 1, new_grad: 2, mid: 3, senior: 3}}
+    required_tracks: [systems, ai_foundation]
+    recommended_quests: [python_data_reliability, distributed_training]
+    optional_quests: [optimizer_training_loop, efficient_inference]
+    interview_blueprints:
+      intern: interview.ai_infra_engineer.intern
+      new_grad: interview.ai_infra_engineer.new_grad
+      mid: interview.ai_infra_engineer.mid
+
+  - id: ai_inference_systems_engineer
+    title: AI Inference / Systems Engineer
+    aliases: [Inference Optimization Engineer, LLM Serving Engineer, GPU Inference Engineer]
+    summary: Optimize model serving across memory, latency, throughput and kernels.
+    seniority: [intern, new_grad, mid, senior]
+    skill_weights:
+      skill.inference_systems.kv_cache: &inf_primary {weight: 1.0, target_level: {intern: 2, new_grad: 3, mid: 4, senior: 4}}
+      skill.inference_systems.serving: *inf_primary
+      skill.inference_systems.quantization: *inf_primary
+      skill.inference_systems.kernels: *inf_primary
+      skill.inference_systems.capacity: *inf_primary
+      skill.llm_vlm.attention: &inf_secondary {weight: 0.8, target_level: {intern: 2, new_grad: 3, mid: 4, senior: 4}}
+      skill.programming_algorithms.caching: *inf_secondary
+      skill.system_design.requirements: *inf_secondary
+      skill.system_design.tradeoffs: *inf_secondary
+      skill.system_design.reliability: *inf_secondary
+    required_tracks: [systems, llm_algorithm]
+    recommended_quests: [transformer_forward, efficient_inference]
+    optional_quests: [distributed_training, tensor_and_autograd]
+    interview_blueprints:
+      intern: interview.ai_inference_systems_engineer.intern
+      new_grad: interview.ai_inference_systems_engineer.new_grad
+      mid: interview.ai_inference_systems_engineer.mid
+
+  - id: ai_evaluation_data_safety_engineer
+    title: AI Evaluation / Data / Safety Engineer
+    aliases: [AI Quality Engineer, LLM Evaluation Engineer, AI Data Engineer, AI Safety Evaluation Engineer]
+    summary: Produce trustworthy data, benchmarks, rubrics and safety evidence.
+    seniority: [intern, new_grad, mid, senior]
+    skill_weights:
+      skill.evaluation_safety.rubrics: &eval_primary {weight: 1.0, target_level: {intern: 2, new_grad: 3, mid: 4, senior: 4}}
+      skill.evaluation_safety.benchmarks: *eval_primary
+      skill.evaluation_safety.leakage: *eval_primary
+      skill.evaluation_safety.safety_eval: *eval_primary
+      skill.evaluation_safety.llm_judge: *eval_primary
+      skill.data_mlops.data_quality: *eval_primary
+      skill.machine_learning_math.statistics: &eval_secondary {weight: 0.9, target_level: {intern: 2, new_grad: 3, mid: 4, senior: 4}}
+      skill.ai_product.metrics: *eval_secondary
+      skill.product_communication.storytelling: &eval_support {weight: 0.7, target_level: {intern: 1, new_grad: 2, mid: 3, senior: 4}}
+      skill.project_deep_dive.experiments: *eval_support
+    required_tracks: [ai_foundation]
+    recommended_quests: [python_data_reliability, vlm_data_flow]
+    optional_quests: [agent_runtime, post_training_quest]
+    interview_blueprints:
+      intern: interview.ai_evaluation_data_safety_engineer.intern
+      new_grad: interview.ai_evaluation_data_safety_engineer.new_grad
+      mid: interview.ai_evaluation_data_safety_engineer.mid

@@ -1,0 +1,26 @@
+dimensions:
+  failure_isolation:
+    weight: 0.30
+    anchors:
+      1: Treats every failure as invalid JSON.
+      3: Separates syntax and schema but misses semantic grounding.
+      5: Builds a layered taxonomy with reproducible evidence at each boundary.
+  validation_design:
+    weight: 0.30
+    anchors:
+      1: Trusts provider output or uses unsafe evaluation.
+      3: Uses schema validation with incomplete domain checks.
+      5: Uses safe parsing, strict schema, domain validation and provenance checks.
+  recovery_policy:
+    weight: 0.20
+    anchors:
+      1: Retries all failures indefinitely.
+      3: Bounds retries but treats deterministic failures as transient.
+      5: Classifies retryability, budgets attempts and supplies explicit fallback.
+  verification:
+    weight: 0.20
+    anchors:
+      1: Offers no tests or production diagnostics.
+      3: Tests known examples but omits mutation or rate evidence.
+      5: Covers contract cases, adversarial values, regression slices and monitoring.
+fatal_issues: [unsafe_eval, unbounded_retry, equates_schema_with_truth]

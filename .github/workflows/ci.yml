@@ -46,3 +46,55 @@ jobs:
       - run: python -m pip install -r requirements.txt
       - run: python -m pytest tests/infrastructure/test_cpu_torch_validation.py -q
       - run: llm-lab doctor
+
+  desktop-windows:
+    name: Windows Desktop / Python 3.11
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      PYTHONUTF8: "1"
+      QT_QPA_PLATFORM: offscreen
+      QT_QUICK_BACKEND: software
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install optional desktop and AI dependencies
+        run: python -m pip install -e ".[desktop,ai,dev]"
+      - name: Verify desktop, provider, and interview workflows
+        run: >-
+          python -m pytest
+          tests/infrastructure/test_desktop.py
+          tests/infrastructure/test_ai_connections.py
+          tests/infrastructure/test_application_service.py
+          tests/infrastructure/test_role_interviews.py
+          -q
+      - name: Build Windows executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/desktop | Out-Null
+          pyside6-deploy -c scripts/pysidedeploy.spec -f
+      - name: Verify packaged executable and privacy boundary
+        run: >-
+          python scripts/check_desktop_artifact.py
+          dist/desktop/LLMInterviewLab.exe
+          --report desktop-nuitka-report.xml
+      - name: Assemble portable release
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/release/LLMInterviewLab | Out-Null
+          Copy-Item -LiteralPath dist/desktop/LLMInterviewLab.exe -Destination dist/release/LLMInterviewLab/
+          Copy-Item -LiteralPath LICENSE -Destination dist/release/LLMInterviewLab/
+          Copy-Item -LiteralPath docs/third-party-notices.md -Destination dist/release/LLMInterviewLab/THIRD_PARTY_NOTICES.md
+          Copy-Item -LiteralPath docs/desktop-app.md -Destination dist/release/LLMInterviewLab/README.md
+          Compress-Archive -Path dist/release/LLMInterviewLab -DestinationPath dist/release/llm-interview-lab-windows-x64.zip
+      - name: Upload Windows portable artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: llm-interview-lab-windows-x64
+          path: |
+            dist/release/llm-interview-lab-windows-x64.zip
+            dist/release/LLMInterviewLab/LLMInterviewLab.exe
+          if-no-files-found: error

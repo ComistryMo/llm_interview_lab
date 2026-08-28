@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
 
 import pytest
 
-from llm_interview_lab.catalog import PROBLEM_ASSETS, load_catalog
+import llm_interview_lab.catalog as catalog_module
+from llm_interview_lab.catalog import CatalogError, PROBLEM_ASSETS, load_catalog
 from llm_interview_lab.dag import DagError, topological_order
 
 
@@ -30,6 +32,65 @@ def test_ready_problem_has_exactly_four_public_assets() -> None:
 
     assert {path.name for path in problem.problem_dir.iterdir()} == PROBLEM_ASSETS
     assert not (problem.problem_dir / "solution.py").exists()
+
+
+def test_catalog_rejects_a_link_or_reparse_problem_asset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    protected = (
+        REPO_ROOT / "curriculum/problems/FND-001-wrong-prediction-count/hints.md"
+    ).resolve()
+    original = catalog_module._is_obvious_link
+    monkeypatch.setattr(
+        catalog_module,
+        "_is_obvious_link",
+        lambda path: path.resolve() == protected or original(path),
+    )
+
+    with pytest.raises(CatalogError, match="regular, unlinked"):
+        load_catalog(REPO_ROOT)
+
+
+@pytest.mark.parametrize(
+    "relative",
+    (
+        "curriculum/schema/catalog.schema.json",
+        "curriculum/catalog/foundation.yaml",
+    ),
+)
+def test_catalog_rejects_a_link_or_reparse_metadata_source(
+    monkeypatch: pytest.MonkeyPatch,
+    relative: str,
+) -> None:
+    protected = (REPO_ROOT / relative).resolve()
+    original = catalog_module._is_obvious_link
+    monkeypatch.setattr(
+        catalog_module,
+        "_is_obvious_link",
+        lambda path: path.resolve() == protected or original(path),
+    )
+
+    with pytest.raises(CatalogError, match="linked path is not allowed"):
+        load_catalog(REPO_ROOT)
+
+
+def test_catalog_does_not_follow_a_shard_symlink_into_a_profile(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repository"
+    shutil.copytree(REPO_ROOT / "curriculum", root / "curriculum")
+    private = root / "workspace/profiles/learner-one/cache/private-catalog.yaml"
+    private.parent.mkdir(parents=True)
+    private.write_text("problems: []\n", encoding="utf-8")
+    shard = root / "curriculum/catalog/foundation.yaml"
+    shard.unlink()
+    try:
+        shard.symlink_to(private)
+    except OSError as error:
+        pytest.skip(f"symlink creation is unavailable on this platform: {error}")
+
+    with pytest.raises(CatalogError, match="linked path is not allowed"):
+        load_catalog(root)
 
 
 def test_runner_and_oracle_are_separate_catalog_objects() -> None:
@@ -91,3 +152,13 @@ def test_dag_rejects_unknown_prerequisite_and_cycle() -> None:
         topological_order({"FND-001": ["FND-999"]})
     with pytest.raises(DagError, match="cycle"):
         topological_order({"FND-001": ["FND-002"], "FND-002": ["FND-001"]})
+
+
+def test_transformer_quest_exposes_linear_softmax_mask_and_attention_without_false_hard_edges() -> None:
+    catalog = load_catalog(REPO_ROOT)
+    sequence = catalog.quests["transformer_forward"].problem_ids
+
+    assert sequence.index("NNL-001") < sequence.index("LOSS-007") < sequence.index("ATT-002")
+    assert sequence.index("TNS-010") < sequence.index("ATT-002")
+    assert "NNL-001" not in catalog.get("LOSS-007").prerequisites
+    assert set(catalog.get("ATT-002").prerequisites) == {"LOSS-007", "TNS-010"}

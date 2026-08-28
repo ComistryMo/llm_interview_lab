@@ -27,8 +27,8 @@ quests:
     description: Build trainable primitives and stateful updates, then integrate them in a deterministic toy trainer.
   - id: transformer_forward
     title: Transformer Forward
-    problem_ids: [NNL-001, NNL-002, NNL-008, ATT-002, ATT-004, ATT-005, ATT-006, ATT-007, ATT-009, ATT-008]
-    description: Progress from primitive layers through attention variants and one decoder block.
+    problem_ids: [NNL-001, NNL-002, NNL-008, TNS-010, LOSS-007, ATT-002, ATT-004, ATT-005, ATT-006, ATT-007, ATT-009, ATT-008]
+    description: Connect primitive layers, sequence masks, and stable Softmax to attention variants and one decoder block.
   - id: tiny_decoder
     title: Tiny Decoder
     problem_ids: [TOK-003, NNL-005, ATT-008, ATT-010, ATT-011, ATT-012]

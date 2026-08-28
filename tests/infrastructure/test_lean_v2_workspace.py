@@ -49,8 +49,8 @@ def _workspace_repo(tmp_path: Path) -> Path:
     return root
 
 
-def _starter_problem(root: Path) -> Problem:
-    problem_dir = root / "curriculum" / "problems" / "FND-001-test"
+def _starter_problem(root: Path, problem_id: str = "FND-001") -> Problem:
+    problem_dir = root / "curriculum" / "problems" / f"{problem_id}-test"
     problem_dir.mkdir(parents=True)
     (problem_dir / "starter.py").write_text(
         "def count_wrong_predictions(label, predictions):\n"
@@ -59,7 +59,7 @@ def _starter_problem(root: Path) -> Problem:
     )
     retention: dict[str, object] = {}
     for stage, symbol in (("d2", "wrong_rate"), ("d7", "wrong_indices")):
-        variant = root / "curriculum" / "retention" / "FND-001" / stage
+        variant = root / "curriculum" / "retention" / problem_id / stage
         variant.mkdir(parents=True)
         (variant / "starter.py").write_text(
             f"def {symbol}(*args, **kwargs):\n    raise NotImplementedError\n",
@@ -68,12 +68,12 @@ def _starter_problem(root: Path) -> Problem:
         (variant / "test_public.py").write_text("def test_placeholder(submission):\n    assert submission\n", encoding="utf-8")
         retention[stage] = {
             "description": f"verified {stage} variant",
-            "assets": {"root": f"curriculum/retention/FND-001/{stage}", "starter": "starter.py", "public_tests": "test_public.py"},
+            "assets": {"root": f"curriculum/retention/{problem_id}/{stage}", "starter": "starter.py", "public_tests": "test_public.py"},
             "interface": {"language": "python", "framework": "stdlib", "symbol": symbol},
             "oracle_validated": True,
         }
     return Problem(
-        id="FND-001",
+        id=problem_id,
         title="Workspace test problem",
         status="ready",
         prerequisites=(),
@@ -248,6 +248,17 @@ def test_start_reuses_unfinished_attempt_without_overwriting(tmp_path: Path) -> 
     assert not second.created
     assert second.attempt_id == "attempt-0001"
     assert second.submission_path.read_text(encoding="utf-8") == "# learner edit\n"
+
+
+def test_core_workspace_refuses_a_second_active_problem(tmp_path: Path) -> None:
+    root = _workspace_repo(tmp_path)
+    init_profile(root, "learner-one")
+    first = _starter_problem(root, "FND-001")
+    second = _starter_problem(root, "FND-002")
+    start_problem(root, "learner-one", first)
+
+    with pytest.raises(WorkspaceError, match="finish the current implementation"):
+        start_problem(root, "learner-one", second)
 
 
 def test_start_refuses_implemented_attempt(tmp_path: Path) -> None:

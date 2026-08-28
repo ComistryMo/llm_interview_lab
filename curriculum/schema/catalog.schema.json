@@ -35,9 +35,11 @@
           "required": ["id", "title", "status", "domain", "tracks", "tier", "difficulty", "prerequisites", "skills", "validation", "assets", "interface", "constraints", "assessment", "variant_axes", "invariants", "common_bugs", "retention", "sources"],
           "properties": {
             "id": {"$ref": "#/$defs/id"}, "legacy_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "title": {"type": "string", "minLength": 1},
+            "kind": {"enum": ["coding", "debugging", "product_case", "system_design", "evaluation_case", "project_deep_dive", "behavioral", "oral"]},
             "status": {"enum": ["ready", "stable"]}, "domain": {"$ref": "#/$defs/slug"}, "tracks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/slug"}},
             "tier": {"enum": ["core", "advanced", "elective"]}, "difficulty": {"$ref": "#/$defs/difficulty"}, "prerequisites": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
             "skills": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.]*$"}},
+            "canonical_skills": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^skill\\.[a-z0-9_]+(?:\\.[a-z0-9_]+)+$"}},
             "validation": {"type": "object", "additionalProperties": false, "required": ["level", "field_runs"], "properties": {"level": {"enum": ["contract", "oracle", "field", "stable"]}, "field_runs": {"type": "integer", "minimum": 0}, "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
             "assets": {"type": "object", "additionalProperties": false, "required": ["problem_dir"], "properties": {"problem_dir": {"type": "string", "pattern": "^curriculum/problems/(?:[A-Z]+|CAP-[A-Z]+)-[0-9]{3}-[a-z0-9-]+$"}}},
             "interface": {"type": "object", "additionalProperties": false, "required": ["language", "framework", "symbol"], "properties": {"language": {"const": "python"}, "framework": {"enum": ["stdlib", "pytorch"]}, "symbol": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"}}},
@@ -63,8 +65,9 @@
         {"$ref": "#/$defs/base_problem"},
         {"type": "object", "additionalProperties": false, "required": ["id", "title", "status", "domain", "tracks", "tier", "difficulty", "prerequisites", "problem_type", "description"], "properties": {
           "id": {"$ref": "#/$defs/id"}, "title": {"type": "string", "minLength": 1}, "status": {"const": "planned"}, "domain": {"$ref": "#/$defs/slug"},
+          "kind": {"enum": ["coding", "debugging", "product_case", "system_design", "evaluation_case", "project_deep_dive", "behavioral", "oral"]},
           "tracks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/slug"}}, "tier": {"enum": ["core", "advanced", "elective"]}, "difficulty": {"$ref": "#/$defs/difficulty"},
-          "prerequisites": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}, "problem_type": {"enum": ["implementation", "debugging", "design", "derivation", "integration"]}, "description": {"type": "string", "minLength": 1}
+          "prerequisites": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}, "canonical_skills": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^skill\\.[a-z0-9_]+(?:\\.[a-z0-9_]+)+$"}}, "problem_type": {"enum": ["implementation", "debugging", "design", "derivation", "integration"]}, "description": {"type": "string", "minLength": 1}
         }}
       ]
     },

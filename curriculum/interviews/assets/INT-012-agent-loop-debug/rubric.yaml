@@ -1,0 +1,26 @@
+dimensions:
+  evidence_model:
+    weight: 0.25
+    anchors:
+      1: Uses only the final error message.
+      3: Captures actions and observations but misses normalized state or timing.
+      5: Defines privacy-aware state, action, arguments, result, error and transition evidence.
+  causal_debugging:
+    weight: 0.30
+    anchors:
+      1: Blames the model without isolation.
+      3: Lists several causes with incomplete discriminating tests.
+      5: Uses controlled replay and boundary probes to eliminate causes.
+  safeguards:
+    weight: 0.20
+    anchors:
+      1: Only increases max steps.
+      3: Adds duplicate detection without semantic or user behavior.
+      5: Bounds budgets, detects equivalent repetition and returns explicit outcomes.
+  durable_verification:
+    weight: 0.25
+    anchors:
+      1: Fixes one trace with no regression suite.
+      3: Adds the failing trace but no variations or invariants.
+      5: Adds deterministic replay, variants, invariants and production monitors.
+fatal_issues: [unbounded_retry, logs_sensitive_observation, no_root_cause_evidence]

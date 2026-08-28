@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ComistryMo/llm_interview_lab/workspace/schema/material.schema.json",
+  "title": "LLM Interview Lab private material manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "materials"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "materials": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/material"}
+    }
+  },
+  "$defs": {
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "relative_path",
+        "sha256",
+        "size_bytes",
+        "title",
+        "tags",
+        "ai_access"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "relative_path": {"pattern": "\\.(pdf|docx)$"}
+            }
+          },
+          "then": {
+            "properties": {
+              "ai_access": {"const": false}
+            }
+          }
+        }
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$"
+        },
+        "kind": {
+          "enum": [
+            "resume",
+            "career_intent",
+            "internship",
+            "project",
+            "paper",
+            "competition",
+            "interview_question",
+            "experience",
+            "research",
+            "job_description",
+            "portfolio",
+            "other"
+          ]
+        },
+        "relative_path": {
+          "type": "string",
+          "pattern": "^materials/files/[a-z][a-z0-9-]{0,63}\\.(md|txt|json|yaml|yml|pdf|docx)$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20971520
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "ai_access": {"type": "boolean"}
+      }
+    }
+  }
+}

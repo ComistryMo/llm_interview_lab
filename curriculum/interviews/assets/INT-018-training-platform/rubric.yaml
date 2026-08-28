@@ -1,0 +1,26 @@
+dimensions:
+  requirements:
+    weight: 0.25
+    anchors:
+      1: Draws components before defining workloads or SLOs.
+      3: Defines major workloads but misses ownership or failure domains.
+      5: Quantifies workload classes, policy boundaries, SLOs and non-goals.
+  architecture:
+    weight: 0.30
+    anchors:
+      1: Couples scheduling, artifacts and execution in one opaque service.
+      3: Separates control/data paths but leaves contracts incomplete.
+      5: Defines versioned job, data, artifact, identity and execution contracts.
+  reliability_observability:
+    weight: 0.25
+    anchors:
+      1: Restarts failed jobs without consistent state or diagnosis.
+      3: Adds checkpoints and metrics but weak lineage or failure ownership.
+      5: Covers consistent resume, retries, lineage, telemetry and incident evidence.
+  tradeoffs:
+    weight: 0.20
+    anchors:
+      1: Claims scalability without capacity or cost reasoning.
+      3: Discusses utilization and fairness but misses operational complexity.
+      5: Compares throughput, fairness, isolation, portability, cost and simplicity.
+fatal_issues: [stores_plaintext_secrets, no_artifact_lineage, no_failure_boundary]

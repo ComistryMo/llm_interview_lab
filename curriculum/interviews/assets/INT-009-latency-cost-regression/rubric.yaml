@@ -1,0 +1,26 @@
+dimensions:
+  incident_control:
+    weight: 0.20
+    anchors:
+      1: Experiments in production without bounding impact.
+      3: Adds a rollback but weakly prioritizes user impact.
+      5: Defines impact, owner, safe mitigation and quality guardrails first.
+  hypothesis_quality:
+    weight: 0.30
+    anchors:
+      1: Blames the most recent change without measurement.
+      3: Lists plausible causes but lacks discriminating tests.
+      5: Maps latency and cost components to hypotheses and decisive evidence.
+  observability_analysis:
+    weight: 0.30
+    anchors:
+      1: Uses only aggregate latency and spend.
+      3: Adds traces and token counts but misses segmentation or retry amplification.
+      5: Uses privacy-safe stage timing, tokens, cache, retries, routing and slices.
+  durable_learning:
+    weight: 0.20
+    anchors:
+      1: Stops when metrics recover.
+      3: Suggests alerts without release prevention.
+      5: Adds regression budgets, canaries, ownership and verified corrective tests.
+fatal_issues: [logs_secrets, ignores_quality, assumes_correlation_is_causation]

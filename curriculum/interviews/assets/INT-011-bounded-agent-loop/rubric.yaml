@@ -1,0 +1,26 @@
+dimensions:
+  state_machine:
+    weight: 0.30
+    anchors:
+      1: Describes an open-ended chat loop.
+      3: Defines steps and max count but incomplete state transitions.
+      5: Defines explicit states, invariants, terminal outcomes and budgets.
+  contract_and_authority:
+    weight: 0.25
+    anchors:
+      1: Executes model text directly.
+      3: Validates a schema but weakly separates authorization.
+      5: Separates proposal, parse, validation, permission, approval and execution.
+  recovery_and_observability:
+    weight: 0.25
+    anchors:
+      1: Retries indefinitely or hides failures.
+      3: Bounds retries but lacks repeated-action or timeout handling.
+      5: Classifies failures, detects loops, records evidence and degrades clearly.
+  evaluation:
+    weight: 0.20
+    anchors:
+      1: Measures only final success anecdotes.
+      3: Adds task success and error rate without trajectory diagnosis.
+      5: Covers outcomes, steps, invalid actions, recovery, cost and safety.
+fatal_issues: [model_output_is_authority, unbounded_loop, executes_unvalidated_tool]

@@ -46,6 +46,10 @@ def _local_remote(tmp_path: Path) -> tuple[Path, str]:
     source = tmp_path / "official-source"
     source.mkdir()
     _git(source, "init")
+    # Match an audited public remote that permits a reachable historical
+    # commit to be fetched by object ID.  Git's local upload-pack default
+    # differs across versions and otherwise rejects this test-only fixture.
+    _git(source, "config", "uploadpack.allowReachableSHA1InWant", "true")
     _git(source, "config", "user.name", "External Course Test")
     _git(source, "config", "user.email", "external-course-test@example.invalid")
     (source / "assignment.txt").write_text("starter\n", encoding="utf-8")

@@ -1,0 +1,26 @@
+dimensions:
+  requirements_and_risk:
+    weight: 0.25
+    anchors:
+      1: Assumes all documents and users are equivalent.
+      3: Covers access and freshness but misses source authority or injection.
+      5: Defines users, SLOs, authority, privacy, threats and abstention.
+  retrieval_generation_design:
+    weight: 0.30
+    anchors:
+      1: Names a vector database without an end-to-end contract.
+      3: Gives a plausible pipeline but weak conflict or citation handling.
+      5: Connects scoped retrieval, ranking, provenance, generation and validation.
+  evaluation_observability:
+    weight: 0.25
+    anchors:
+      1: Evaluates with anecdotal prompts.
+      3: Defines answer metrics but weak retrieval diagnostics.
+      5: Separates retrieval, grounding, answer, latency and permission evidence.
+  tradeoffs_and_recovery:
+    weight: 0.20
+    anchors:
+      1: Has no fallback or recovery path.
+      3: Adds retries and abstention without operational detail.
+      5: Explains cost/quality choices, degradation, ownership and rollback.
+fatal_issues: [permission_leak, trusts_document_instructions, no_abstention]

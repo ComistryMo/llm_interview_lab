@@ -45,6 +45,90 @@
       "minimum": 1,
       "maximum": 80
     },
+    "career_intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_job_titles",
+        "employment_stage",
+        "preferred_locations",
+        "interview_languages",
+        "priorities"
+      ],
+      "properties": {
+        "target_job_titles": {
+          "type": "array",
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "employment_stage": {
+          "enum": ["internship", "new_grad", "experienced", "flexible"]
+        },
+        "preferred_locations": {
+          "type": "array",
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "interview_languages": {
+          "type": "array",
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$"
+          }
+        },
+        "priorities": {
+          "type": "array",
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      }
+    },
+    "role_preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_role", "seniority", "skill_self_assessment", "ai_mode"],
+      "properties": {
+        "primary_role": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "seniority": {
+          "enum": ["intern", "new_grad", "mid", "senior"]
+        },
+        "skill_self_assessment": {
+          "type": "object",
+          "maxProperties": 20,
+          "propertyNames": {"pattern": "^skill\\."},
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          }
+        },
+        "ai_mode": {
+          "enum": ["disabled", "provider", "codex"]
+        }
+      }
+    },
     "preferences": {
       "type": "object",
       "additionalProperties": false,

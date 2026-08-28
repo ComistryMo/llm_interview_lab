@@ -1,0 +1,26 @@
+dimensions:
+  cache_model:
+    weight: 0.30
+    anchors:
+      1: Treats cache utilization as the only relevant quantity.
+      3: Distinguishes blocks and occupancy but weakly explains data movement.
+      5: Defines logical tokens, blocks, tables, fragmentation, locality and copies.
+  diagnostic_evidence:
+    weight: 0.30
+    anchors:
+      1: Profiles one aggregate throughput number.
+      3: Adds kernel and memory metrics but incomplete workload controls.
+      5: Correlates workload slices, allocator events, copies, kernels and queues.
+  isolation_and_mitigation:
+    weight: 0.20
+    anchors:
+      1: Reverts or tunes batch size without learning.
+      3: Uses controlled toggles but changes several cache variables together.
+      5: Runs one-factor replays, protects correctness and selects reversible mitigation.
+  regression_protection:
+    weight: 0.20
+    anchors:
+      1: Adds only the original benchmark.
+      3: Adds length and batch sweeps without allocator invariants.
+      5: Covers cache equivalence, fragmentation, churn, shapes and saturation.
+fatal_issues: [ignores_output_correctness, conflates_occupancy_and_traffic, no_workload_segmentation]

@@ -1,0 +1,492 @@
+schema_version: 1
+blueprints:
+  - id: interview.ai_product_manager.intern
+    role: ai_product_manager
+    seniority: intern
+    duration_minutes: 60
+    rounds:
+      - {type: product_case, duration: 25, weight: 0.40, item_count: 1, skills: [skill.ai_product.problem_framing, skill.ai_product.prd]}
+      - {type: evaluation_case, duration: 20, weight: 0.35, item_count: 1, skills: [skill.ai_product.metrics, skill.evaluation_safety.benchmarks]}
+      - {type: behavioral, duration: 15, weight: 0.25, item_count: 1, skills: [skill.product_communication.stakeholders]}
+  - id: interview.ai_product_manager.new_grad
+    role: ai_product_manager
+    seniority: new_grad
+    duration_minutes: 75
+    rounds:
+      - {type: product_case, duration: 30, weight: 0.40, item_count: 1, skills: [skill.ai_product.problem_framing, skill.ai_product.cost_quality]}
+      - {type: evaluation_case, duration: 25, weight: 0.35, item_count: 1, skills: [skill.ai_product.metrics, skill.evaluation_safety.benchmarks]}
+      - {type: behavioral, duration: 20, weight: 0.25, item_count: 1, skills: [skill.product_communication.stakeholders]}
+  - id: interview.ai_product_manager.mid
+    role: ai_product_manager
+    seniority: mid
+    duration_minutes: 90
+    rounds:
+      - {type: product_case, duration: 30, weight: 0.35, item_count: 1, skills: [skill.ai_product.problem_framing, skill.ai_product.delivery]}
+      - {type: system_design, duration: 25, weight: 0.30, item_count: 1, skills: [skill.ai_product.cost_quality, skill.system_design.tradeoffs]}
+      - {type: evaluation_case, duration: 20, weight: 0.20, item_count: 1, skills: [skill.ai_product.metrics, skill.evaluation_safety.safety_eval]}
+      - {type: behavioral, duration: 15, weight: 0.15, item_count: 1, skills: [skill.product_communication.stakeholders]}
+
+  - id: interview.applied_ai_engineer.intern
+    role: applied_ai_engineer
+    seniority: intern
+    duration_minutes: 60
+    rounds:
+      - {type: coding, duration: 25, weight: 0.40, item_count: 1, skills: [skill.python_engineering.data_contracts]}
+      - {type: system_design, duration: 20, weight: 0.35, item_count: 1, skills: [skill.agent_application.tool_calling, skill.system_design.reliability]}
+      - {type: debugging, duration: 15, weight: 0.25, item_count: 1, skills: [skill.agent_application.reliability]}
+  - id: interview.applied_ai_engineer.new_grad
+    role: applied_ai_engineer
+    seniority: new_grad
+    duration_minutes: 75
+    rounds:
+      - {type: coding, duration: 30, weight: 0.40, item_count: 1, skills: [skill.agent_application.tool_calling]}
+      - {type: system_design, duration: 25, weight: 0.35, item_count: 1, skills: [skill.agent_application.agent_loop, skill.system_design.reliability]}
+      - {type: debugging, duration: 20, weight: 0.25, item_count: 1, skills: [skill.agent_application.reliability]}
+  - id: interview.applied_ai_engineer.mid
+    role: applied_ai_engineer
+    seniority: mid
+    duration_minutes: 90
+    rounds:
+      - {type: coding, duration: 30, weight: 0.30, item_count: 1, skills: [skill.agent_application.tool_calling]}
+      - {type: system_design, duration: 30, weight: 0.30, item_count: 1, skills: [skill.agent_application.agent_loop, skill.system_design.reliability]}
+      - {type: project_deep_dive, duration: 20, weight: 0.25, item_count: 1, skills: [skill.project_deep_dive.ownership]}
+      - {type: debugging, duration: 10, weight: 0.15, item_count: 1, skills: [skill.agent_application.reliability]}
+
+  - id: interview.ai_agent_engineer.intern
+    role: ai_agent_engineer
+    seniority: intern
+    duration_minutes: 60
+    rounds:
+      - {type: coding, duration: 25, weight: 0.40, item_count: 1, skills: [skill.agent_application.tool_calling]}
+      - {type: system_design, duration: 20, weight: 0.35, item_count: 1, skills: [skill.agent_application.agent_loop]}
+      - {type: debugging, duration: 15, weight: 0.25, item_count: 1, skills: [skill.agent_application.reliability]}
+  - id: interview.ai_agent_engineer.new_grad
+    role: ai_agent_engineer
+    seniority: new_grad
+    duration_minutes: 75
+    rounds:
+      - {type: coding, duration: 30, weight: 0.40, item_count: 1, skills: [skill.agent_application.tool_calling]}
+      - {type: system_design, duration: 25, weight: 0.35, item_count: 1, skills: [skill.agent_application.agent_loop, skill.agent_application.state_memory]}
+      - {type: evaluation_case, duration: 20, weight: 0.25, item_count: 1, skills: [skill.agent_application.evaluation]}
+  - id: interview.ai_agent_engineer.mid
+    role: ai_agent_engineer
+    seniority: mid
+    duration_minutes: 90
+    rounds:
+      - {type: coding, duration: 30, weight: 0.30, item_count: 1, skills: [skill.agent_application.tool_calling]}
+      - {type: system_design, duration: 30, weight: 0.35, item_count: 1, skills: [skill.agent_application.agent_loop, skill.agent_application.planning]}
+      - {type: debugging, duration: 15, weight: 0.20, item_count: 1, skills: [skill.agent_application.reliability]}
+      - {type: evaluation_case, duration: 15, weight: 0.15, item_count: 1, skills: [skill.agent_application.evaluation]}
+
+  - id: interview.ai_algorithm_research_engineer.intern
+    role: ai_algorithm_research_engineer
+    seniority: intern
+    duration_minutes: 60
+    rounds:
+      - {type: coding, duration: 30, weight: 0.50, item_count: 1, skills: [skill.deep_learning.tensor_ops, skill.deep_learning.losses]}
+      - {type: oral, duration: 30, weight: 0.50, item_count: 1, skills: [skill.llm_vlm.attention, skill.machine_learning_math.optimization]}
+  - id: interview.ai_algorithm_research_engineer.new_grad
+    role: ai_algorithm_research_engineer
+    seniority: new_grad
+    duration_minutes: 75
+    rounds:
+      - {type: coding, duration: 35, weight: 0.45, item_count: 1, skills: [skill.deep_learning.autograd, skill.llm_vlm.attention]}
+      - {type: oral, duration: 25, weight: 0.35, item_count: 1, skills: [skill.llm_vlm.transformer, skill.machine_learning_math.optimization]}
+      - {type: project_deep_dive, duration: 15, weight: 0.20, item_count: 1, skills: [skill.project_deep_dive.experiments]}
+  - id: interview.ai_algorithm_research_engineer.mid
+    role: ai_algorithm_research_engineer
+    seniority: mid
+    duration_minutes: 90
+    rounds:
+      - {type: coding, duration: 40, weight: 0.40, item_count: 1, skills: [skill.llm_vlm.attention, skill.deep_learning.losses]}
+      - {type: oral, duration: 30, weight: 0.35, item_count: 1, skills: [skill.llm_vlm.transformer, skill.llm_vlm.vlm_architecture]}
+      - {type: project_deep_dive, duration: 20, weight: 0.25, item_count: 1, skills: [skill.project_deep_dive.experiments]}
+
+  - id: interview.post_training_engineer.intern
+    role: post_training_engineer
+    seniority: intern
+    duration_minutes: 60
+    rounds:
+      - {type: coding, duration: 30, weight: 0.50, item_count: 1, skills: [skill.post_training_rl.sft, skill.deep_learning.losses]}
+      - {type: oral, duration: 30, weight: 0.50, item_count: 1, skills: [skill.post_training_rl.preference_data, skill.post_training_rl.policy_optimization]}
+  - id: interview.post_training_engineer.new_grad
+    role: post_training_engineer
+    seniority: new_grad
+    duration_minutes: 75
+    rounds:
+      - {type: coding, duration: 35, weight: 0.45, item_count: 1, skills: [skill.post_training_rl.preference_data, skill.post_training_rl.grpo]}
+      - {type: oral, duration: 25, weight: 0.35, item_count: 1, skills: [skill.post_training_rl.policy_optimization]}
+      - {type: evaluation_case, duration: 15, weight: 0.20, item_count: 1, skills: [skill.post_training_rl.verification]}
+  - id: interview.post_training_engineer.mid
+    role: post_training_engineer
+    seniority: mid
+    duration_minutes: 90
+    rounds:
+      - {type: coding, duration: 35, weight: 0.35, item_count: 1, skills: [skill.post_training_rl.grpo, skill.deep_learning.optimizers]}
+      - {type: oral, duration: 25, weight: 0.30, item_count: 1, skills: [skill.post_training_rl.policy_optimization, skill.post_training_rl.reward_modeling]}
+      - {type: evaluation_case, duration: 15, weight: 0.20, item_count: 1, skills: [skill.post_training_rl.verification]}
+      - {type: project_deep_dive, duration: 15, weight: 0.15, item_count: 1, skills: [skill.project_deep_dive.experiments]}
+
+  - id: interview.ai_infra_engineer.intern
+    role: ai_infra_engineer
+    seniority: intern
+    duration_minutes: 60
+    rounds:
+      - {type: coding, duration: 25, weight: 0.40, item_count: 1, skills: [skill.python_engineering.iterators]}
+      - {type: system_design, duration: 20, weight: 0.35, item_count: 1, skills: [skill.data_mlops.pipelines, skill.system_design.requirements]}
+      - {type: debugging, duration: 15, weight: 0.25, item_count: 1, skills: [skill.training_infra.observability]}
+  - id: interview.ai_infra_engineer.new_grad
+    role: ai_infra_engineer
+    seniority: new_grad
+    duration_minutes: 75
+    rounds:
+      - {type: coding, duration: 30, weight: 0.40, item_count: 1, skills: [skill.programming_algorithms.data_structures]}
+      - {type: system_design, duration: 25, weight: 0.35, item_count: 1, skills: [skill.training_infra.distributed, skill.training_infra.scheduling]}
+      - {type: debugging, duration: 20, weight: 0.25, item_count: 1, skills: [skill.training_infra.checkpointing, skill.training_infra.observability]}
+  - id: interview.ai_infra_engineer.mid
+    role: ai_infra_engineer
+    seniority: mid
+    duration_minutes: 90
+    rounds:
+      - {type: coding, duration: 25, weight: 0.25, item_count: 1, skills: [skill.programming_algorithms.graphs]}
+      - {type: system_design, duration: 35, weight: 0.35, item_count: 1, skills: [skill.training_infra.distributed, skill.training_infra.scheduling]}
+      - {type: debugging, duration: 15, weight: 0.20, item_count: 1, skills: [skill.training_infra.checkpointing, skill.training_infra.observability]}
+      - {type: project_deep_dive, duration: 15, weight: 0.20, item_count: 1, skills: [skill.data_mlops.pipelines, skill.project_deep_dive.ownership]}
+
+  - id: interview.ai_inference_systems_engineer.intern
+    role: ai_inference_systems_engineer
+    seniority: intern
+    duration_minutes: 60
+    rounds:
+      - {type: coding, duration: 30, weight: 0.50, item_count: 1, skills: [skill.inference_systems.kv_cache, skill.llm_vlm.attention]}
+      - {type: system_design, duration: 30, weight: 0.50, item_count: 1, skills: [skill.inference_systems.serving, skill.inference_systems.capacity]}
+  - id: interview.ai_inference_systems_engineer.new_grad
+    role: ai_inference_systems_engineer
+    seniority: new_grad
+    duration_minutes: 75
+    rounds:
+      - {type: coding, duration: 35, weight: 0.45, item_count: 1, skills: [skill.inference_systems.kv_cache, skill.inference_systems.quantization]}
+      - {type: system_design, duration: 25, weight: 0.35, item_count: 1, skills: [skill.inference_systems.serving, skill.inference_systems.capacity]}
+      - {type: debugging, duration: 15, weight: 0.20, item_count: 1, skills: [skill.inference_systems.kernels, skill.inference_systems.kv_cache]}
+  - id: interview.ai_inference_systems_engineer.mid
+    role: ai_inference_systems_engineer
+    seniority: mid
+    duration_minutes: 90
+    rounds:
+      - {type: coding, duration: 35, weight: 0.35, item_count: 1, skills: [skill.inference_systems.kernels, skill.llm_vlm.attention]}
+      - {type: system_design, duration: 35, weight: 0.40, item_count: 1, skills: [skill.inference_systems.serving, skill.inference_systems.capacity]}
+      - {type: debugging, duration: 20, weight: 0.25, item_count: 1, skills: [skill.inference_systems.kernels, skill.inference_systems.kv_cache]}
+
+  - id: interview.ai_evaluation_data_safety_engineer.intern
+    role: ai_evaluation_data_safety_engineer
+    seniority: intern
+    duration_minutes: 60
+    rounds:
+      - {type: evaluation_case, duration: 30, weight: 0.50, item_count: 1, skills: [skill.evaluation_safety.rubrics, skill.evaluation_safety.benchmarks]}
+      - {type: behavioral, duration: 30, weight: 0.50, item_count: 1, skills: [skill.product_communication.stakeholders]}
+  - id: interview.ai_evaluation_data_safety_engineer.new_grad
+    role: ai_evaluation_data_safety_engineer
+    seniority: new_grad
+    duration_minutes: 75
+    rounds:
+      - {type: evaluation_case, duration: 35, weight: 0.50, item_count: 1, skills: [skill.evaluation_safety.benchmarks, skill.evaluation_safety.leakage]}
+      - {type: project_deep_dive, duration: 25, weight: 0.30, item_count: 1, skills: [skill.project_deep_dive.experiments]}
+      - {type: behavioral, duration: 15, weight: 0.20, item_count: 1, skills: [skill.product_communication.stakeholders]}
+  - id: interview.ai_evaluation_data_safety_engineer.mid
+    role: ai_evaluation_data_safety_engineer
+    seniority: mid
+    duration_minutes: 90
+    rounds:
+      - {type: evaluation_case, duration: 40, weight: 0.45, item_count: 1, skills: [skill.evaluation_safety.safety_eval, skill.evaluation_safety.llm_judge]}
+      - {type: project_deep_dive, duration: 30, weight: 0.35, item_count: 1, skills: [skill.project_deep_dive.experiments]}
+      - {type: behavioral, duration: 20, weight: 0.20, item_count: 1, skills: [skill.product_communication.stakeholders]}
+
+items:
+  - id: INT-001
+    title: Frame an AI Support Assistant
+    kind: product_case
+    status: ready
+    roles: [ai_product_manager]
+    seniority: &all_seniority [intern, new_grad, mid]
+    difficulty: 2
+    duration_minutes: 20
+    skills: [skill.ai_product.problem_framing, skill.ai_product.prd]
+    assets: {item_dir: curriculum/interviews/assets/INT-001-ai-support-framing}
+    validation: maintainer_reviewed
+    sources: &original [{type: internal_original, title: Original role-based interview scenario}]
+  - id: INT-002
+    title: Define Launch Metrics for an AI Copilot
+    kind: evaluation_case
+    status: ready
+    roles: [ai_product_manager, ai_evaluation_data_safety_engineer]
+    seniority: *all_seniority
+    difficulty: 3
+    duration_minutes: 20
+    skills: [skill.ai_product.metrics, skill.evaluation_safety.benchmarks]
+    assets: {item_dir: curriculum/interviews/assets/INT-002-copilot-launch-metrics}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-003
+    title: Choose Prompting, RAG, or an Agent
+    kind: product_case
+    status: ready
+    roles: [ai_product_manager, applied_ai_engineer]
+    seniority: *all_seniority
+    difficulty: 3
+    duration_minutes: 20
+    skills: [skill.ai_product.problem_framing, skill.ai_product.cost_quality, skill.agent_application.planning]
+    assets: {item_dir: curriculum/interviews/assets/INT-003-product-architecture-choice}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-004
+    title: Design Failure Fallbacks and Rollout
+    kind: system_design
+    status: ready
+    roles: [ai_product_manager, applied_ai_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 25
+    skills: [skill.ai_product.delivery, skill.ai_product.cost_quality, skill.system_design.reliability]
+    assets: {item_dir: curriculum/interviews/assets/INT-004-safe-ai-rollout}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-005
+    title: Design an Online Experiment with Guardrails
+    kind: evaluation_case
+    status: ready
+    roles: [ai_product_manager, ai_evaluation_data_safety_engineer]
+    seniority: *all_seniority
+    difficulty: 3
+    duration_minutes: 20
+    skills: [skill.ai_product.metrics, skill.ai_product.delivery, skill.machine_learning_math.statistics]
+    assets: {item_dir: curriculum/interviews/assets/INT-005-online-experiment}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-006
+    title: Resolve a Quality versus Deadline Conflict
+    kind: behavioral
+    status: ready
+    roles: [ai_product_manager, applied_ai_engineer, ai_agent_engineer, ai_algorithm_research_engineer, post_training_engineer, ai_infra_engineer, ai_inference_systems_engineer, ai_evaluation_data_safety_engineer]
+    seniority: *all_seniority
+    difficulty: 2
+    duration_minutes: 15
+    skills: [skill.product_communication.stakeholders, skill.behavioral.collaboration]
+    assets: {item_dir: curriculum/interviews/assets/INT-006-quality-deadline-conflict}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-007
+    title: Design a Reliable RAG Answer Path
+    kind: system_design
+    status: ready
+    roles: [applied_ai_engineer]
+    seniority: *all_seniority
+    difficulty: 3
+    duration_minutes: 25
+    skills: [skill.llm_vlm.context_management, skill.agent_application.reliability, skill.system_design.reliability]
+    assets: {item_dir: curriculum/interviews/assets/INT-007-reliable-rag}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-008
+    title: Debug Structured Output Failures
+    kind: debugging
+    status: ready
+    roles: [applied_ai_engineer]
+    seniority: *all_seniority
+    difficulty: 3
+    duration_minutes: 15
+    skills: [skill.python_engineering.data_contracts, skill.agent_application.tool_calling, skill.agent_application.reliability]
+    assets: {item_dir: curriculum/interviews/assets/INT-008-structured-output-debug}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-009
+    title: Diagnose a Latency and Cost Regression
+    kind: debugging
+    status: ready
+    roles: [applied_ai_engineer, ai_inference_systems_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 20
+    skills: [skill.ai_product.cost_quality, skill.inference_systems.capacity, skill.system_design.reliability]
+    assets: {item_dir: curriculum/interviews/assets/INT-009-latency-cost-regression}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-010
+    title: Deep Dive an Applied AI Delivery
+    kind: project_deep_dive
+    status: ready
+    roles: [applied_ai_engineer]
+    seniority: *all_seniority
+    difficulty: 3
+    duration_minutes: 20
+    skills: [skill.project_deep_dive.ownership, skill.product_communication.storytelling, skill.ai_product.delivery]
+    assets: {item_dir: curriculum/interviews/assets/INT-010-applied-ai-deep-dive}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-011
+    title: Design a Bounded Tool-Calling Loop
+    kind: system_design
+    status: ready
+    roles: [ai_agent_engineer]
+    seniority: *all_seniority
+    difficulty: 3
+    duration_minutes: 25
+    skills: [skill.agent_application.agent_loop, skill.agent_application.tool_calling, skill.agent_application.reliability]
+    assets: {item_dir: curriculum/interviews/assets/INT-011-bounded-agent-loop}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-012
+    title: Debug a Repeating Agent Trajectory
+    kind: debugging
+    status: ready
+    roles: [ai_agent_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 20
+    skills: [skill.agent_application.state_memory, skill.agent_application.reliability, skill.agent_application.evaluation]
+    assets: {item_dir: curriculum/interviews/assets/INT-012-agent-loop-debug}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-013
+    title: Evaluate a Long-Horizon Agent
+    kind: evaluation_case
+    status: ready
+    roles: [ai_agent_engineer, ai_evaluation_data_safety_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 20
+    skills: [skill.agent_application.evaluation, skill.evaluation_safety.benchmarks, skill.evaluation_safety.leakage]
+    assets: {item_dir: curriculum/interviews/assets/INT-013-agent-evaluation}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-014
+    title: Explain an Attention Experiment Mechanistically
+    kind: oral
+    status: ready
+    roles: [ai_algorithm_research_engineer]
+    seniority: *all_seniority
+    difficulty: 3
+    duration_minutes: 20
+    skills: [skill.llm_vlm.attention, skill.llm_vlm.transformer, skill.machine_learning_math.linear_algebra, skill.project_deep_dive.experiments]
+    assets: {item_dir: curriculum/interviews/assets/INT-014-attention-mechanism}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-015
+    title: Audit an Ablation Claim
+    kind: project_deep_dive
+    status: ready
+    roles: [ai_algorithm_research_engineer, post_training_engineer, ai_evaluation_data_safety_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 20
+    skills: [skill.project_deep_dive.experiments, skill.data_mlops.experiments, skill.machine_learning_math.statistics]
+    assets: {item_dir: curriculum/interviews/assets/INT-015-ablation-audit}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-016
+    title: Diagnose DPO versus GRPO Objectives
+    kind: oral
+    status: ready
+    roles: [ai_algorithm_research_engineer, post_training_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 20
+    skills: [skill.post_training_rl.preference_data, skill.post_training_rl.policy_optimization, skill.post_training_rl.grpo]
+    assets: {item_dir: curriculum/interviews/assets/INT-016-dpo-grpo-diagnosis}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-017
+    title: Investigate Reward Hacking
+    kind: evaluation_case
+    status: ready
+    roles: [post_training_engineer, ai_evaluation_data_safety_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 20
+    skills: [skill.post_training_rl.verification, skill.post_training_rl.reward_modeling, skill.evaluation_safety.benchmarks]
+    assets: {item_dir: curriculum/interviews/assets/INT-017-reward-hacking}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-018
+    title: Design a Multi-Team Training Platform
+    kind: system_design
+    status: ready
+    roles: [ai_infra_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 30
+    skills: [skill.training_infra.distributed, skill.training_infra.scheduling, skill.system_design.requirements]
+    assets: {item_dir: curriculum/interviews/assets/INT-018-training-platform}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-019
+    title: Recover a Corrupted Training Resume
+    kind: debugging
+    status: ready
+    roles: [ai_infra_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 20
+    skills: [skill.training_infra.checkpointing, skill.training_infra.observability, skill.data_mlops.reproducibility]
+    assets: {item_dir: curriculum/interviews/assets/INT-019-checkpoint-recovery}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-020
+    title: Schedule Heterogeneous Training Jobs
+    kind: system_design
+    status: ready
+    roles: [ai_infra_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 25
+    skills: [skill.training_infra.scheduling, skill.system_design.tradeoffs, skill.system_design.reliability]
+    assets: {item_dir: curriculum/interviews/assets/INT-020-training-scheduler}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-021
+    title: Deep Dive a Platform Migration
+    kind: project_deep_dive
+    status: ready
+    roles: [ai_infra_engineer]
+    seniority: *all_seniority
+    difficulty: 3
+    duration_minutes: 20
+    skills: [skill.data_mlops.pipelines, skill.project_deep_dive.ownership, skill.system_design.tradeoffs]
+    assets: {item_dir: curriculum/interviews/assets/INT-021-platform-migration}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-022
+    title: Size an LLM Serving Fleet
+    kind: system_design
+    status: ready
+    roles: [ai_inference_systems_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 30
+    skills: [skill.inference_systems.serving, skill.inference_systems.capacity, skill.system_design.requirements]
+    assets: {item_dir: curriculum/interviews/assets/INT-022-serving-capacity}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-023
+    title: Debug KV Cache Throughput Collapse
+    kind: debugging
+    status: ready
+    roles: [ai_inference_systems_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 20
+    skills: [skill.inference_systems.kv_cache, skill.inference_systems.kernels, skill.inference_systems.capacity]
+    assets: {item_dir: curriculum/interviews/assets/INT-023-kv-cache-debug}
+    validation: maintainer_reviewed
+    sources: *original
+  - id: INT-024
+    title: Audit Benchmark Leakage and Safety Coverage
+    kind: evaluation_case
+    status: ready
+    roles: [ai_evaluation_data_safety_engineer]
+    seniority: *all_seniority
+    difficulty: 4
+    duration_minutes: 25
+    skills: [skill.evaluation_safety.leakage, skill.evaluation_safety.safety_eval, skill.evaluation_safety.rubrics]
+    assets: {item_dir: curriculum/interviews/assets/INT-024-benchmark-safety-audit}
+    validation: maintainer_reviewed
+    sources: *original

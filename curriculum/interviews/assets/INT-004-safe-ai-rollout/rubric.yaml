@@ -1,0 +1,26 @@
+dimensions:
+  failure_model:
+    weight: 0.25
+    anchors:
+      1: Describes only the happy path.
+      3: Identifies model and service failures but not their user impact.
+      5: Maps quality, privacy, latency and dependency failures to explicit handling.
+  system_controls:
+    weight: 0.30
+    anchors:
+      1: Displays model output without validation or user control.
+      3: Adds basic validation and retry but leaves privilege or fallback vague.
+      5: Uses bounded validation, provenance, least privilege and non-AI fallback.
+  observability:
+    weight: 0.20
+    anchors:
+      1: Relies on aggregate uptime only.
+      3: Defines SLOs and logs but weakly protects sensitive content.
+      5: Defines privacy-aware traces, quality samples, alerts and ownership.
+  rollout_and_response:
+    weight: 0.25
+    anchors:
+      1: Launches broadly without gates or rollback.
+      3: Uses staged rollout but incomplete stop criteria.
+      5: Specifies gates, stop rules, incident actions, communication and recovery.
+fatal_issues: [trusts_model_output, no_degraded_mode, logs_sensitive_content]
