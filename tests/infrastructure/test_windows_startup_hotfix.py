@@ -122,5 +122,6 @@ def test_screenshot_captures_the_qt_quick_scene() -> None:
         REPO_ROOT / "src/llm_interview_lab/desktop/main.py"
     ).read_text(encoding="utf-8")
 
-    assert "window.grabWindow()" in entrypoint
+    assert "shiboken6.wrapInstance(" in entrypoint
+    assert "quick_window.grabWindow()" in entrypoint
     assert "screen.grabWindow(window.winId())" not in entrypoint

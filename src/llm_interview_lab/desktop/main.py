@@ -104,6 +104,8 @@ def main(argv: list[str] | None = None) -> int:
         from PySide6.QtCore import QTimer, QUrl
         from PySide6.QtGui import QGuiApplication
         from PySide6.QtQml import QQmlApplicationEngine
+        from PySide6.QtQuick import QQuickWindow
+        import shiboken6
     except ImportError as error:
         path = record_bootstrap_event("qt", error=error)
         show_startup_error(
@@ -236,7 +238,10 @@ def main(argv: list[str] | None = None) -> int:
                 # Capture the Qt Quick scene itself. Screen.grabWindow() is
                 # unreliable for offscreen standalone builds because there is
                 # no native desktop surface for the window handle.
-                image = window.grabWindow()
+                quick_window = shiboken6.wrapInstance(
+                    shiboken6.getCppPointer(window)[0], QQuickWindow
+                )
+                image = quick_window.grabWindow()
                 if image.isNull() or not image.save(str(destination), "PNG"):
                     raise RuntimeError("the rendered window could not be captured")
             except Exception as error:
