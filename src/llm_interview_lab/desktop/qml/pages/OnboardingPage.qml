@@ -24,18 +24,13 @@ Rectangle {
         return null
     }
     property string inlineError: ""
-    // Task B exposes this optional property from the controller.  Indexing
-    // keeps this page loadable with the current controller during the split
-    // hotfix rollout; an absent property simply produces no backend error.
-    property string backendError: {
-        var value = app["onboardingError"]
-        return value === undefined || value === null ? "" : String(value)
-    }
-    property string displayedError: inlineError !== "" ? inlineError : backendError
+    property bool submitting: false
+    property string displayedError: inlineError !== "" ? inlineError : app.onboardingError
 
     function selectRole(roleId) {
         root.selectedRole = roleId
         root.inlineError = ""
+        app.clearOnboardingError()
     }
 
     ColumnLayout {
@@ -71,7 +66,15 @@ Rectangle {
                     spacing: 16
                     Text { text: "创建学习档案"; color: root.palette.text; font.pixelSize: 22; font.bold: true }
                     Text { text: "刷题记录、答案、面试报告和求职材料都保存在这个本地学习档案中。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
-                    TextField { id: profileName; Layout.fillWidth: true; placeholderText: "档案名称"; text: "default"; maximumLength: 64; focus: true }
+                    TextField {
+                        id: profileName
+                        objectName: "onboardingProfileName"
+                        Layout.fillWidth: true
+                        placeholderText: "档案名称"
+                        text: "default"
+                        maximumLength: 64
+                        focus: true
+                    }
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: 74; radius: 8; color: root.palette.surfaceAlt
                         Text { anchors.fill: parent; anchors.margins: 14; text: "默认保护隐私\nworkspace/profiles/<id>/ 会被 Git 忽略；连接 AI 不是必选项。"; color: root.palette.text; wrapMode: Text.Wrap }
@@ -265,11 +268,12 @@ Rectangle {
             objectName: "onboardingInlineError"
             visible: root.displayedError.length > 0
             Layout.fillWidth: true
-            Layout.preferredHeight: visible ? 46 : 0
+            Layout.preferredHeight: visible ? Math.max(54, onboardingErrorText.implicitHeight + 24) : 0
             radius: 8
             color: Qt.rgba(0.776, 0.239, 0.310, 0.12)
             border.color: root.palette.danger
             Text {
+                id: onboardingErrorText
                 anchors.fill: parent
                 anchors.margins: 12
                 text: root.displayedError
@@ -281,16 +285,29 @@ Rectangle {
 
         RowLayout {
             Layout.fillWidth: true
-            Button { text: "上一步"; enabled: root.step > 0; onClicked: { root.inlineError = ""; root.step-- } }
+            Button {
+                text: "上一步"
+                enabled: root.step > 0 && !root.submitting && !app.onboardingBusy
+                onClicked: {
+                    root.inlineError = ""
+                    app.clearOnboardingError()
+                    root.step--
+                }
+            }
             Item { Layout.fillWidth: true }
             Button {
                 id: continueButton
                 objectName: "onboardingContinueButton"
-                text: root.step === 3 ? "开始训练" : "继续"
+                text: root.step === 3
+                      ? (root.submitting || app.onboardingBusy ? "正在创建…" : "开始训练")
+                      : "继续"
                 highlighted: true
-                enabled: !(root.step === 1 && root.selectedRole.length === 0) && !(root.step === 3 && app.busy)
+                enabled: !root.submitting
+                         && !app.onboardingBusy
+                         && !(root.step === 1 && root.selectedRole.length === 0)
                 onClicked: {
                     root.inlineError = ""
+                    app.clearOnboardingError()
                     if (root.step < 3) {
                         if (root.step === 1 && root.selectedRole.length === 0) {
                             root.inlineError = "请先选择一个目标岗位。"
@@ -318,9 +335,16 @@ Rectangle {
                             }
                         }
                         var levels = ["intern", "new_grad", "mid", "senior"]
-                        app.completeOnboarding(profileName.text, root.selectedRole,
-                                               levels[seniority.currentIndex], selected,
-                                               JSON.stringify(assessment))
+                        var profileId = profileName.text
+                        var roleId = root.selectedRole
+                        var seniorityId = levels[seniority.currentIndex]
+                        var assessmentJson = JSON.stringify(assessment)
+                        root.submitting = true
+                        Qt.callLater(function() {
+                            app.completeOnboarding(profileId, roleId, seniorityId,
+                                                   selected, assessmentJson)
+                            root.submitting = false
+                        })
                     }
                 }
             }

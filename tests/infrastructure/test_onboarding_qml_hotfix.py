@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import shutil
+import subprocess
 
 import pytest
 
@@ -12,13 +14,14 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QT_QUICK_BACKEND", "software")
 pytest.importorskip("PySide6")
 
-from PySide6.QtCore import QCoreApplication, QPoint, QPointF, QUrl, Qt
+from PySide6.QtCore import QCoreApplication, QPoint, QPointF, QSettings, QUrl, Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickItem
 from PySide6.QtTest import QTest
 
 from llm_interview_lab.desktop.controller import AppController
+from llm_interview_lab.workspace import profile_paths
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -46,9 +49,30 @@ def _descendants(item: QQuickItem):
         yield from _descendants(child)
 
 
+def _repository(tmp_path: Path) -> Path:
+    root = tmp_path / "repository"
+    root.mkdir()
+    for name in ("pyproject.toml", ".gitignore"):
+        shutil.copy2(REPO_ROOT / name, root / name)
+    shutil.copytree(REPO_ROOT / "curriculum", root / "curriculum")
+    shutil.copytree(REPO_ROOT / "workspace/schema", root / "workspace/schema")
+    shutil.copytree(REPO_ROOT / "workspace/templates", root / "workspace/templates")
+    (root / "workspace/profiles").mkdir(parents=True)
+    (root / "workspace/profiles/.gitkeep").write_text("", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    return root
+
+
+@pytest.fixture(scope="module")
+def qml_repository(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    return _repository(tmp_path_factory.mktemp("onboarding-qml"))
+
+
 @pytest.fixture
-def onboarding_scene(qapp: QGuiApplication):
-    controller = AppController(REPO_ROOT, demo_page="onboarding")
+def onboarding_scene(qapp: QGuiApplication, qml_repository: Path, tmp_path: Path):
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    controller = AppController(qml_repository, demo_page="onboarding")
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("backend", controller)
     engine.load(QUrl.fromLocalFile(str(QML_PATH)))
@@ -60,7 +84,7 @@ def onboarding_scene(qapp: QGuiApplication):
     page.setProperty("step", 1)
     for _ in range(4):
         QCoreApplication.processEvents()
-    scene = (qapp, window, page)
+    scene = (qapp, window, page, controller)
     yield scene
     window.close()
     engine.deleteLater()
@@ -69,7 +93,7 @@ def onboarding_scene(qapp: QGuiApplication):
 
 
 def _role_cards(scene) -> list[QQuickItem]:
-    _, _, page = scene
+    _, _, page, _ = scene
     grid = page.findChild(QQuickItem, "onboardingRoleGrid")
     assert grid is not None
     cards = [
@@ -98,12 +122,14 @@ def test_onboarding_uses_explicit_grid_geometry_and_no_index_default() -> None:
     assert "GridLayout {" not in source
     assert 'property string selectedRole: ""' in source
     assert "app.roles[3]" not in source
+    assert "app.onboardingBusy" in source
+    assert "Qt.callLater" in source
     assert 'objectName: "onboardingRoleGrid"' in source
     assert 'objectName: "onboardingContinueButton"' in source
 
 
 def test_role_cards_have_positive_non_overlapping_geometry(onboarding_scene) -> None:
-    _, _, page = onboarding_scene
+    _, _, page, _ = onboarding_scene
     grid = page.findChild(QQuickItem, "onboardingRoleGrid")
     cards = _role_cards(onboarding_scene)
     assert grid is not None
@@ -133,7 +159,7 @@ def test_role_cards_have_positive_non_overlapping_geometry(onboarding_scene) -> 
 
 @pytest.mark.parametrize("index", [0, 3, 7])
 def test_clicking_first_fourth_and_eighth_roles_selects_id(onboarding_scene, index: int) -> None:
-    _, window, page = onboarding_scene
+    _, window, page, _ = onboarding_scene
     card = _role_cards(onboarding_scene)[index]
     _click_item(window, card)
     assert page.property("selectedRole") == ROLE_IDS[index]
@@ -151,7 +177,7 @@ def test_clicking_first_fourth_and_eighth_roles_selects_id(onboarding_scene, ind
 
 
 def test_next_is_disabled_until_a_role_is_selected(onboarding_scene) -> None:
-    _, window, page = onboarding_scene
+    _, window, page, _ = onboarding_scene
     page.setProperty("selectedRole", "")
     QCoreApplication.processEvents()
     button = page.findChild(QQuickItem, "onboardingContinueButton")
@@ -159,6 +185,56 @@ def test_next_is_disabled_until_a_role_is_selected(onboarding_scene) -> None:
     assert button.property("enabled") is False
     _click_item(window, button)
     assert page.property("step") == 1
+
+
+def test_submit_state_is_visible_and_blocks_repeat_clicks(onboarding_scene) -> None:
+    _, _, page, _ = onboarding_scene
+    page.setProperty("step", 3)
+    page.setProperty("selectedRole", ROLE_IDS[0])
+    page.setProperty("submitting", True)
+    QCoreApplication.processEvents()
+    button = page.findChild(QQuickItem, "onboardingContinueButton")
+    assert button is not None
+    assert button.property("text") == "正在创建…"
+    assert button.property("enabled") is False
+
+
+def test_inline_error_stays_above_the_primary_action(onboarding_scene) -> None:
+    _, _, page, _ = onboarding_scene
+    page.setProperty("inlineError", "创建学习档案失败，请根据提示检查输入后重试。")
+    QCoreApplication.processEvents()
+    panel = page.findChild(QQuickItem, "onboardingInlineError")
+    button = page.findChild(QQuickItem, "onboardingContinueButton")
+    assert panel is not None and panel.property("visible") is True
+    assert button is not None
+    panel_bottom = panel.mapToItem(page, QPointF(0, panel.height())).y()
+    button_top = button.mapToItem(page, QPointF(0, 0)).y()
+    assert panel_bottom <= button_top
+
+
+def test_no_ai_first_run_reaches_the_first_exercise(onboarding_scene) -> None:
+    _, window, page, controller = onboarding_scene
+    profile_name = page.findChild(QQuickItem, "onboardingProfileName")
+    button = page.findChild(QQuickItem, "onboardingContinueButton")
+    assert profile_name is not None and button is not None
+    profile_name.setProperty("text", "hotfix-user")
+
+    page.setProperty("step", 1)
+    QCoreApplication.processEvents()
+    _click_item(window, _role_cards(onboarding_scene)[4])
+    _click_item(window, button)
+    assert page.property("step") == 2
+    _click_item(window, button)
+    assert page.property("step") == 3
+    _click_item(window, button)
+
+    for _ in range(30):
+        if controller.currentPage == "exercise":
+            break
+        QTest.qWait(100)
+    assert controller.currentPage == "exercise"
+    assert controller.currentTask["problem_id"] == "FND-001"
+    assert profile_paths(controller.repo_root, "hotfix-user").profile_file.is_file()
 
 
 def test_main_toast_is_top_right_and_named() -> None:
