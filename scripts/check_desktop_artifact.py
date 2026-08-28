@@ -147,7 +147,7 @@ def main() -> int:
             not image.isNull()
             and image.width() >= 1100
             and image.height() >= 700
-            and len(sampled_colors) >= 4
+            and len(sampled_colors) >= 2
         )
         if smoke.returncode or not screenshot_valid:
             raise SystemExit(

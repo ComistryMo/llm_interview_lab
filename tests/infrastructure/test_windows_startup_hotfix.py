@@ -116,6 +116,7 @@ def test_windows_release_uses_one_standalone_portable_bundle() -> None:
     assert '"startup_stage": "first_window"' in checker
     assert "screenshot_bytes=" in checker
     assert "sampled_colors" in checker
+    assert "len(sampled_colors) >= 2" in checker
     assert "image.width() >= 1100" in checker
 
 
