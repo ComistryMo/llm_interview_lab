@@ -69,19 +69,34 @@ class ApplicationService:
         skill_self_assessment: Mapping[str, int] | None = None,
         ai_mode: str = "disabled",
     ) -> dict[str, Any]:
-        role = self.roles.resolve_role(role_id) if role_id else None
+        configuration = (
+            self._validate_role_configuration(
+                role_id,
+                seniority=seniority,
+                skill_self_assessment=skill_self_assessment,
+                ai_mode=ai_mode,
+            )
+            if role_id
+            else None
+        )
+        role = configuration[0] if configuration else None
         result = init_profile(
             self.repo_root,
             profile_id,
             role.required_tracks if role else None,
         )
-        if role is not None:
-            self.configure_role(
+        if configuration is not None:
+            role, values = configuration
+            update_role_preferences(
+                self.repo_root,
                 profile_id,
-                role.id,
-                seniority=seniority,
-                skill_self_assessment=skill_self_assessment or {},
-                ai_mode=ai_mode,
+                {
+                    "primary_role": role.id,
+                    "seniority": seniority,
+                    "skill_self_assessment": values,
+                    "ai_mode": ai_mode,
+                },
+                target_roles=role.required_tracks,
             )
         return {
             "profile_id": profile_id,
@@ -98,19 +113,12 @@ class ApplicationService:
         skill_self_assessment: Mapping[str, int] | None = None,
         ai_mode: str = "disabled",
     ) -> dict[str, Any]:
-        role = self.roles.resolve_role(role_id)
-        if seniority not in role.seniority:
-            raise ApplicationError(f"unsupported seniority for {role.id}: {seniority}")
-        if ai_mode not in {"disabled", "provider", "codex"}:
-            raise ApplicationError("AI mode must be disabled, provider, or codex")
-        values = dict(skill_self_assessment or {})
-        unknown = set(values) - set(self.roles.skills)
-        if unknown:
-            raise ApplicationError(
-                "unknown skill self-assessment: " + ", ".join(sorted(unknown))
-            )
-        if any(type(value) is not int or value < 0 or value > 4 for value in values.values()):
-            raise ApplicationError("skill self-assessment levels must be integers from 0 to 4")
+        role, values = self._validate_role_configuration(
+            role_id,
+            seniority=seniority,
+            skill_self_assessment=skill_self_assessment,
+            ai_mode=ai_mode,
+        )
         return update_role_preferences(
             self.repo_root,
             profile_id,
@@ -122,6 +130,35 @@ class ApplicationService:
             },
             target_roles=role.required_tracks,
         )
+
+    def _validate_role_configuration(
+        self,
+        role_id: str,
+        *,
+        seniority: str,
+        skill_self_assessment: Mapping[str, int] | None,
+        ai_mode: str,
+    ):
+        """Validate onboarding inputs before any Profile file is created."""
+
+        role = self.roles.resolve_role(role_id)
+        if seniority not in role.seniority:
+            raise ApplicationError(f"unsupported seniority for {role.id}: {seniority}")
+        if ai_mode not in {"disabled", "provider", "codex"}:
+            raise ApplicationError("AI mode must be disabled, provider, or codex")
+        if skill_self_assessment is not None and not isinstance(
+            skill_self_assessment, Mapping
+        ):
+            raise ApplicationError("skill self-assessment must be an object")
+        values = dict(skill_self_assessment or {})
+        unknown = set(values) - set(self.roles.skills)
+        if unknown:
+            raise ApplicationError(
+                "unknown skill self-assessment: " + ", ".join(sorted(unknown))
+            )
+        if any(type(value) is not int or value < 0 or value > 4 for value in values.values()):
+            raise ApplicationError("skill self-assessment levels must be integers from 0 to 4")
+        return role, values
 
     def role_cards(self) -> list[dict[str, Any]]:
         cards: list[dict[str, Any]] = []

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 from pathlib import Path
 import threading
@@ -26,10 +27,16 @@ from ..ai.context_builder import (
 )
 from ..ai.credentials import CredentialError, KeyringCredentialStore
 from ..ai.providers import create_chat_provider
-from ..application import ApplicationService
+from ..application import ApplicationError, ApplicationService
 from ..lifecycle import ReviewInput
-from ..workspace import ensure_profile_path_is_safe, profile_paths, validate_profile_id
-from .i18n import friendly_error, localize_role, text
+from ..roles import RoleCatalogError
+from ..workspace import (
+    WorkspaceError,
+    ensure_profile_path_is_safe,
+    profile_paths,
+    validate_profile_id,
+)
+from .i18n import friendly_error, localize_role, onboarding_error_text, text
 from .runtime import is_packaged_desktop, migrate_legacy_desktop_data
 
 
@@ -144,6 +151,9 @@ class AppController(QObject):
         self._profile_id = profile_id
         self._page = demo_page or "home"
         self._onboarding = False
+        self._onboarding_busy = False
+        self._onboarding_error = ""
+        self._onboarding_error_code = ""
         self._dashboard: dict[str, Any] = {}
         self._problems: list[dict[str, Any]] = []
         self._current_task: dict[str, Any] = {}
@@ -233,6 +243,18 @@ class AppController(QObject):
     @Property(bool, notify=stateChanged)
     def onboardingRequired(self) -> bool:
         return self._onboarding
+
+    @Property(bool, notify=stateChanged)
+    def onboardingBusy(self) -> bool:
+        return self._onboarding_busy
+
+    @Property(str, notify=stateChanged)
+    def onboardingError(self) -> str:
+        return self._onboarding_error
+
+    @Property(str, notify=stateChanged)
+    def onboardingErrorCode(self) -> str:
+        return self._onboarding_error_code
 
     @Property("QVariantList", notify=stateChanged)
     def roles(self) -> list[dict[str, Any]]:
@@ -329,6 +351,36 @@ class AppController(QObject):
     def _show_error(self, error: BaseException | str) -> None:
         self.toast.emit(friendly_error(error))
 
+    def _onboarding_failure(
+        self, code: str, stage: str, error: BaseException | None = None
+    ) -> bool:
+        self._onboarding_error_code = code
+        self._onboarding_error = onboarding_error_text(code)
+        error_type = type(error).__name__ if error is not None else "InputError"
+        detail = ""
+        if error is not None:
+            detail = " ".join(str(error).split())
+            for private_path in (str(self.repo_root), str(Path.home())):
+                if private_path:
+                    detail = detail.replace(private_path, "<local-path>")
+            detail = detail[:400]
+        logging.getLogger("llm_interview_lab.desktop").error(
+            "onboarding_failed code=%s stage=%s error_type=%s detail=%s",
+            code,
+            stage,
+            error_type,
+            detail,
+        )
+        self.stateChanged.emit()
+        return False
+
+    @Slot()
+    def clearOnboardingError(self) -> None:
+        if self._onboarding_error or self._onboarding_error_code:
+            self._onboarding_error = ""
+            self._onboarding_error_code = ""
+            self.stateChanged.emit()
+
     def _localize_dashboard(self) -> None:
         role = self._dashboard.get("role")
         if isinstance(role, dict) and role.get("primary_role"):
@@ -339,6 +391,21 @@ class AppController(QObject):
         if self._busy != value:
             self._busy = value
             self.busyChanged.emit()
+
+    def _load_profile_state(self) -> None:
+        self._dashboard = self.service.dashboard(self._profile_id)
+        self._localize_dashboard()
+        self._problems = self.service.problem_cards(self._profile_id)
+        current = self.service.current_submission(self._profile_id)
+        if current:
+            self._current_task = self.service.problem_view(current["problem_id"])
+            self._submission = current["text"]
+        self._connections = [
+            {**config.__dict__, "status": "已保存，尚未测试"}
+            for config in list_connections(self.repo_root, self._profile_id)
+        ]
+        self._materials = self.service.material_cards(self._profile_id)
+        self._onboarding = False
 
     def _background(self, operation: Callable[[], Any], complete: Callable[[Any], None]) -> None:
         self._set_busy(True)
@@ -388,24 +455,12 @@ class AppController(QObject):
             self.stateChanged.emit()
             return
         try:
-            self._dashboard = self.service.dashboard(self._profile_id)
-            self._localize_dashboard()
-            self._problems = self.service.problem_cards(self._profile_id)
-            current = self.service.current_submission(self._profile_id)
-            if current:
-                self._current_task = self.service.problem_view(current["problem_id"])
-                self._submission = current["text"]
-            self._connections = [
-                {**config.__dict__, "status": "已保存，尚未测试"}
-                for config in list_connections(self.repo_root, self._profile_id)
-            ]
-            self._materials = self.service.material_cards(self._profile_id)
-            self._onboarding = False
+            self._load_profile_state()
         except Exception as error:
             self._show_error(error)
         self.stateChanged.emit()
 
-    @Slot(str, str, str, str, str)
+    @Slot(str, str, str, str, str, result=bool)
     def completeOnboarding(
         self,
         profile_id: str,
@@ -413,10 +468,27 @@ class AppController(QObject):
         seniority: str,
         ai_mode: str,
         assessment_json: str,
-    ) -> None:
+    ) -> bool:
+        if self._onboarding_busy:
+            return False
+        self._onboarding_busy = True
+        self._onboarding_error = ""
+        self._onboarding_error_code = ""
+        self.stateChanged.emit()
+        stage = "validate"
         try:
+            profile_id = profile_id.strip()
             validate_profile_id(profile_id)
-            assessment = json.loads(assessment_json or "{}")
+            role_id = role_id.strip()
+            if not role_id:
+                return self._onboarding_failure("ROLE_REQUIRED", stage)
+            try:
+                assessment = json.loads(assessment_json or "{}")
+            except json.JSONDecodeError as error:
+                return self._onboarding_failure("ASSESSMENT_INVALID", stage, error)
+            if not isinstance(assessment, dict):
+                return self._onboarding_failure("ASSESSMENT_INVALID", stage)
+            stage = "initialize_profile"
             self.service.initialize_profile(
                 profile_id,
                 role_id=role_id,
@@ -425,14 +497,64 @@ class AppController(QObject):
                 ai_mode=ai_mode,
             )
             self._profile_id = profile_id
-            self._onboarding = False
-            self.refresh()
+            stage = "refresh"
+            self._load_profile_state()
+            self.stateChanged.emit()
             if self._dashboard.get("unlocks"):
-                self.openProblem(self._dashboard["unlocks"][0]["problem_id"])
+                stage = "open_problem"
+                try:
+                    self._open_problem(
+                        self._dashboard["unlocks"][0]["problem_id"]
+                    )
+                except Exception as error:
+                    logging.getLogger("llm_interview_lab.desktop").error(
+                        "onboarding_first_problem_failed error_type=%s",
+                        type(error).__name__,
+                    )
+                    self.navigate("home")
+                    self.toast.emit(
+                        "学习档案已创建，但首题暂时无法打开。请从首页重新尝试。"
+                    )
             else:
                 self.navigate("home")
+            return True
+        except RoleCatalogError as error:
+            return self._onboarding_failure("ROLE_NOT_FOUND", stage, error)
+        except ApplicationError as error:
+            message = str(error)
+            if "unsupported seniority" in message:
+                code = "SENIORITY_UNSUPPORTED"
+            elif "AI mode" in message:
+                code = "AI_MODE_INVALID"
+            elif "self-assessment" in message:
+                code = "ASSESSMENT_INVALID"
+            else:
+                code = "ONBOARDING_UNEXPECTED"
+            return self._onboarding_failure(code, stage, error)
+        except WorkspaceError as error:
+            message = str(error).lower()
+            if "profile id" in message:
+                code = "PROFILE_ID_INVALID"
+            elif any(
+                token in message
+                for token in ("invalid profile", "profile.yaml cannot", "does not match")
+            ):
+                code = "PROFILE_CORRUPTED"
+            elif any(
+                token in message
+                for token in ("template", "schema", "desktop bundle is missing")
+            ):
+                code = "PUBLIC_ASSETS_MISSING"
+            else:
+                code = "WORKSPACE_NOT_WRITABLE"
+            return self._onboarding_failure(code, stage, error)
+        except OSError as error:
+            return self._onboarding_failure("WORKSPACE_NOT_WRITABLE", stage, error)
         except Exception as error:
-            self._show_error(error)
+            return self._onboarding_failure("ONBOARDING_UNEXPECTED", stage, error)
+        finally:
+            self._onboarding_busy = False
+            self.stateChanged.emit()
 
     @Slot(str, str, str, bool)
     def addMaterial(
@@ -459,22 +581,27 @@ class AppController(QObject):
         except Exception as error:
             self._show_error(error)
 
-    @Slot(str)
-    def openProblem(self, problem_id: str) -> None:
-        try:
+    def _open_problem(self, problem_id: str) -> None:
+        current = self.service.current_submission(self._profile_id)
+        if current is None or current["problem_id"] != problem_id:
+            self.service.start_practice(self._profile_id, problem_id)
             current = self.service.current_submission(self._profile_id)
-            if current is None or current["problem_id"] != problem_id:
-                self.service.start_practice(self._profile_id, problem_id)
-                current = self.service.current_submission(self._profile_id)
-            assert current is not None
-            self._current_task = self.service.problem_view(problem_id)
-            self._submission = current["text"]
-            self._test_output = "可以开始：完成本次作答后运行公开测试。"
-            self._page = "exercise"
-            self.stateChanged.emit()
-            self.pageChanged.emit()
+        assert current is not None
+        self._current_task = self.service.problem_view(problem_id)
+        self._submission = current["text"]
+        self._test_output = "可以开始：完成本次作答后运行公开测试。"
+        self._page = "exercise"
+        self.stateChanged.emit()
+        self.pageChanged.emit()
+
+    @Slot(str, result=bool)
+    def openProblem(self, problem_id: str) -> bool:
+        try:
+            self._open_problem(problem_id)
+            return True
         except Exception as error:
             self._show_error(error)
+            return False
 
     @Slot(str)
     def saveSubmission(self, text: str) -> None:

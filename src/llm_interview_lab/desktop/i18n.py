@@ -71,8 +71,26 @@ ROLE_TEXT: dict[str, tuple[str, str, str]] = {
 }
 
 
+ONBOARDING_ERRORS: dict[str, str] = {
+    "PROFILE_ID_INVALID": "档案标识需以小写字母开头，并且只能包含小写字母、数字或连字符。",
+    "ROLE_REQUIRED": "请选择一个目标岗位后继续。",
+    "ROLE_NOT_FOUND": "所选岗位已不可用，请返回岗位页重新选择。",
+    "SENIORITY_UNSUPPORTED": "当前岗位不支持所选求职阶段，请重新选择。",
+    "ASSESSMENT_INVALID": "能力自评数据无效，请返回上一步重新填写或选择跳过。",
+    "AI_MODE_INVALID": "AI 连接选项无效，请重新选择；你也可以使用无需 AI 的本地模式。",
+    "WORKSPACE_NOT_WRITABLE": "无法写入本地学习目录，请检查目录权限后重试。",
+    "PROFILE_CORRUPTED": "现有学习档案无法读取，请先从设置打开数据目录并检查该档案。",
+    "PUBLIC_ASSETS_MISSING": "应用缺少公共课程资源，请重新解压或重新下载桌面应用。",
+    "ONBOARDING_UNEXPECTED": "创建学习档案失败。详细原因已写入本地日志。",
+}
+
+
 def text(key: str, fallback: str = "") -> str:
     return TEXT.get(key, fallback or key)
+
+
+def onboarding_error_text(code: str) -> str:
+    return ONBOARDING_ERRORS.get(code, ONBOARDING_ERRORS["ONBOARDING_UNEXPECTED"])
 
 
 def localize_role(card: dict[str, Any]) -> dict[str, Any]:
