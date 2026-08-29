@@ -1,20 +1,20 @@
 {
   "version": "0.4.0a3",
-  "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+  "source_commit": "30874a946eededec1f1b07a3474279ae076fc056",
   "language": "zh-CN",
   "synthetic": true,
-  "generated_at": "2026-08-29T12:50:21+00:00",
+  "generated_at": "2026-08-29T17:48:25+00:00",
   "screenshots": [
     {
       "path": "docs/images/desktop-onboarding.png",
       "page": "onboarding",
       "state": "role-selected",
       "size": "1280x800",
-      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "source_commit": "30874a946eededec1f1b07a3474279ae076fc056",
       "platform": "win32",
       "theme": "light",
       "font_scale": 1.0,
-      "sha256": "29503deba01ae64ddc1b96e58e4206f2493f6bd6b2e393a6a5cf8e2035846b06",
+      "sha256": "81aa14d206127addbb51a93e90b086787dd9d377f9c053d8b394c8ed07bd8c5e",
       "synthetic": true
     },
     {
@@ -22,11 +22,11 @@
       "page": "home",
       "state": "current-practice",
       "size": "1280x800",
-      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "source_commit": "30874a946eededec1f1b07a3474279ae076fc056",
       "platform": "win32",
       "theme": "light",
       "font_scale": 1.0,
-      "sha256": "32d107cb4a3f600d0041a01a775109f920e510b043340ca73720d8abd7d67634",
+      "sha256": "fc948d3ed1e0cf35bf6977b612cae8c50f8b676d7e7b2078e7d5f3ad3f691344",
       "synthetic": true
     },
     {
@@ -34,11 +34,11 @@
       "page": "learn",
       "state": "recommended-filter",
       "size": "1280x800",
-      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "source_commit": "30874a946eededec1f1b07a3474279ae076fc056",
       "platform": "win32",
       "theme": "light",
       "font_scale": 1.0,
-      "sha256": "b8de652c8bada79137e3e6d6f50c47e331e176b24fac59aed88e0a364b32fad0",
+      "sha256": "4217591016ec8cc0a1a35171caf35b3b6b17a038031b92d321a2395009a17470",
       "synthetic": true
     },
     {
@@ -46,7 +46,7 @@
       "page": "exercise",
       "state": "latest-submission",
       "size": "1280x800",
-      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "source_commit": "30874a946eededec1f1b07a3474279ae076fc056",
       "platform": "win32",
       "theme": "light",
       "font_scale": 1.0,
@@ -58,11 +58,11 @@
       "page": "interview",
       "state": "active-question",
       "size": "1280x800",
-      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "source_commit": "30874a946eededec1f1b07a3474279ae076fc056",
       "platform": "win32",
       "theme": "light",
       "font_scale": 1.0,
-      "sha256": "10820eb7a32e17c642c98d0bd44cfb511886d726e5f7b31e80b50facfe9bdf07",
+      "sha256": "ac57fa2b709f6a389616a934e3c6c5c683a6140bd845afb99dcf7a1ad29c6198",
       "synthetic": true
     },
     {
@@ -70,11 +70,11 @@
       "page": "connections",
       "state": "no-ai-default",
       "size": "1280x800",
-      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "source_commit": "30874a946eededec1f1b07a3474279ae076fc056",
       "platform": "win32",
       "theme": "light",
       "font_scale": 1.0,
-      "sha256": "065f8ef1f74130f6b7d65b73a1948b3d15329e5c42cf5bb741b5d5011a2bf1b2",
+      "sha256": "7ada369eb43ba58d307db527fcedbdfad246af1832896fc0a0a3b6e8f2280aea",
       "synthetic": true
     },
     {
@@ -82,11 +82,11 @@
       "page": "onboarding",
       "state": "role-selected",
       "size": "1080x680",
-      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "source_commit": "30874a946eededec1f1b07a3474279ae076fc056",
       "platform": "win32",
       "theme": "light",
       "font_scale": 1.0,
-      "sha256": "88e3c7e70adee1e19e9b32a323f12a7e759460a8256e2fbf8be418b572f6d049",
+      "sha256": "3190eed4b9f2e33a7e97afab06034eeca491c7f364683ecd3206eb9e5a53a73b",
       "synthetic": true
     },
     {
@@ -94,11 +94,11 @@
       "page": "onboarding",
       "state": "role-selected",
       "size": "1280x800",
-      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "source_commit": "30874a946eededec1f1b07a3474279ae076fc056",
       "platform": "win32",
       "theme": "light",
       "font_scale": 1.0,
-      "sha256": "29503deba01ae64ddc1b96e58e4206f2493f6bd6b2e393a6a5cf8e2035846b06",
+      "sha256": "81aa14d206127addbb51a93e90b086787dd9d377f9c053d8b394c8ed07bd8c5e",
       "synthetic": true
     },
     {
@@ -106,11 +106,11 @@
       "page": "onboarding",
       "state": "role-selected",
       "size": "1440x900",
-      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "source_commit": "30874a946eededec1f1b07a3474279ae076fc056",
       "platform": "win32",
       "theme": "light",
       "font_scale": 1.0,
-      "sha256": "43c5d9b52f4373a6cff90447ab7e6f5af0706282322bc1eb1447eee85b52558a",
+      "sha256": "dff29411ae6ca7dcbc3daf01008f71d766b6be336d48cfc496f6448a98217973",
       "synthetic": true
     }
   ]
