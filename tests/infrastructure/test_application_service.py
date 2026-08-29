@@ -362,3 +362,23 @@ def test_interview_configuration_and_canonical_result_preference(tmp_path: Path)
     service.start_interview("learner-one", active["interview_id"])
     preferred = service.preferred_interview("learner-one")
     assert preferred == {"kind": "active", "interview_id": active["interview_id"]}
+
+
+def test_problem_environment_is_visible_before_home_or_exercise_navigation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    service = ApplicationService(root)
+    service.initialize_profile("environment-user")
+    monkeypatch.setattr(service, "_problem_environment_available", lambda problem: False)
+
+    view = service.problem_view("LOSS-014")
+    assert view["environment_available"] is False
+    assert view["environment"] == "需要 PyTorch 练习环境"
+
+    dashboard = service.dashboard("environment-user")
+    assert dashboard["unlocks"]
+    assert dashboard["unlocks"][0]["environment_available"] is False
+    service.start_practice("environment-user", dashboard["unlocks"][0]["problem_id"])
+    current = service.dashboard("environment-user")["current"]
+    assert current["environment_available"] is False

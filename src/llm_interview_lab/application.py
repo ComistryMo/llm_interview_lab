@@ -254,6 +254,13 @@ class ApplicationService:
         framework = interface.get("framework", "") if isinstance(interface, Mapping) else ""
         return str(framework).lower() != "pytorch" or importlib.util.find_spec("torch") is not None
 
+    def _problem_environment(self, problem: Problem) -> dict[str, Any]:
+        available = self._problem_environment_available(problem)
+        return {
+            "environment_available": available,
+            "environment": "当前可运行" if available else "需要 PyTorch 练习环境",
+        }
+
     def practice_actions(
         self, profile_id: str, problem_id: str, *, now: datetime | None = None
     ) -> dict[str, Any]:
@@ -440,6 +447,7 @@ class ApplicationService:
                     "problem_id": current.problem_id,
                     "title": self.catalog.get(current.problem_id).title,
                     "status": state.problem_status(current.problem_id),
+                    **self._problem_environment(self.catalog.get(current.problem_id)),
                 }
                 if current
                 else None
@@ -452,7 +460,11 @@ class ApplicationService:
             "due_review": due_review[:3],
             "due_retention": due_retention[:3],
             "unlocks": [
-                {"problem_id": problem.id, "title": problem.title}
+                {
+                    "problem_id": problem.id,
+                    "title": problem.title,
+                    **self._problem_environment(problem),
+                }
                 for problem in available[:3]
             ],
             "mastered_count": len(state.mastered),
@@ -472,6 +484,7 @@ class ApplicationService:
             "prerequisites": list(problem.prerequisites),
             "difficulty": problem.raw["difficulty"],
             "task": task,
+            **self._problem_environment(problem),
         }
 
     def problem_cards(self, profile_id: str) -> list[dict[str, Any]]:
@@ -487,19 +500,15 @@ class ApplicationService:
                     continue
                 for problem_id in quest.problem_ids:
                     recommended_order.setdefault(problem_id, len(recommended_order))
-        torch_available = importlib.util.find_spec("torch") is not None
         cards: list[dict[str, Any]] = []
         for problem_id in self.catalog.order:
             problem = self.catalog.problems[problem_id]
             if not tracks.intersection(problem.raw["tracks"]):
                 continue
-            interface = problem.raw.get("interface")
-            framework = interface.get("framework", "") if isinstance(interface, Mapping) else ""
             skills = problem.raw.get("skills", [])
             if not isinstance(skills, list):
                 skills = []
-            requires_torch = str(framework).lower() == "pytorch"
-            environment_available = not requires_torch or torch_available
+            environment = self._problem_environment(problem)
             cards.append(
                 {
                     "problem_id": problem.id,
@@ -512,12 +521,7 @@ class ApplicationService:
                     "keywords": [problem.id, problem.title, *skills],
                     "recommendable": bool(problem.recommendable),
                     "recommended_rank": recommended_order.get(problem.id, -1),
-                    "environment": (
-                        "当前可运行"
-                        if environment_available
-                        else "需要 PyTorch 练习环境"
-                    ),
-                    "environment_available": environment_available,
+                    **environment,
                     "locked": not set(problem.prerequisites).issubset(state.mastered),
                     "prerequisites": list(problem.prerequisites),
                     "retention": bool(

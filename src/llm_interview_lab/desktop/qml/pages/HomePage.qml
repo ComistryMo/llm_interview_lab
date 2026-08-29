@@ -7,6 +7,9 @@ Flickable {
     id: root
     required property var app
     required property var palette
+    property var trainingTarget: app.dashboard.current
+                                 || ((app.dashboard.unlocks || []).length > 0 ? app.dashboard.unlocks[0] : null)
+    property bool trainingTargetRunnable: !!trainingTarget && trainingTarget.environment_available !== false
     function statusText(value) {
         return ({not_started: "未开始", in_progress: "进行中", implemented: "已实现",
                  reviewed: "已审查", retained_d2: "已完成 D+2", retained_d7: "已完成 D+7",
@@ -61,8 +64,15 @@ Flickable {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Text { text: app.dashboard.current ? "当前训练" : "下一题"; color: root.palette.accent; font.pixelSize: 11; font.bold: true; font.letterSpacing: 1.1 }
-                    Text { text: app.dashboard.current ? app.dashboard.current.problem_id + "  " + app.dashboard.current.title : (app.dashboard.unlocks && app.dashboard.unlocks.length ? app.dashboard.unlocks[0].problem_id + "  " + app.dashboard.unlocks[0].title : "暂无可用任务"); color: root.palette.text; font.pixelSize: 23; font.bold: true }
-                    Text { text: app.dashboard.current ? "状态：" + root.statusText(app.dashboard.current.status) : "一道经过验证的题目已经可以开始。"; color: root.palette.muted }
+                    Text { text: root.trainingTarget ? root.trainingTarget.problem_id + "  " + root.trainingTarget.title : "暂无可用任务"; color: root.palette.text; font.pixelSize: 23; font.bold: true }
+                    Text {
+                        text: root.trainingTarget && root.trainingTarget.environment_available === false
+                              ? (root.trainingTarget.environment || "当前环境不能运行这道题。")
+                              : app.dashboard.current
+                                ? "状态：" + root.statusText(app.dashboard.current.status)
+                                : "一道经过验证的题目已经可以开始。"
+                        color: root.trainingTargetRunnable ? root.palette.muted : root.palette.warning
+                    }
                     Item { Layout.fillHeight: true }
                     Text {
                         Layout.fillWidth: true
@@ -79,8 +89,15 @@ Flickable {
                         highlighted: true
                         Layout.preferredWidth: 160
                         Layout.preferredHeight: 44
-                        enabled: app.dashboard.current || (app.dashboard.unlocks && app.dashboard.unlocks.length)
-                        onClicked: app.openProblem(app.dashboard.current ? app.dashboard.current.problem_id : app.dashboard.unlocks[0].problem_id)
+                        enabled: root.trainingTargetRunnable
+                        onClicked: app.openProblem(root.trainingTarget.problem_id)
+                    }
+                    Button {
+                        visible: !!root.trainingTarget && !root.trainingTargetRunnable
+                        text: "查看当前可运行题目"
+                        Layout.preferredWidth: 160
+                        Layout.preferredHeight: 42
+                        onClicked: app.navigate("learn")
                     }
                     Button {
                         text: "开始模拟面试"
