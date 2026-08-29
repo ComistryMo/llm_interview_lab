@@ -97,7 +97,7 @@ git ls-files workspace/profiles
 
 ## Alpha.1 桌面数据迁移
 
-Windows Alpha.1 使用 `%LOCALAPPDATA%\LLMInterviewLab`。Alpha.2 检测到真实旧 Profile 且新位置为空时会提示，而不是静默移动：
+Windows Alpha.1 使用 `%LOCALAPPDATA%\LLMInterviewLab`。Alpha.3 检测到真实旧 Profile 且新位置为空时会提示，而不是静默移动：
 
 1. 用户点击“安全复制”；
 2. 拒绝符号链接；

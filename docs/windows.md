@@ -20,7 +20,7 @@ Get-FileHash .\LLMInterviewLab-Windows-x64-portable.zip -Algorithm SHA256
 
 ## 数据目录
 
-Alpha.2 打包应用使用 Qt `QStandardPaths.AppDataLocation` 对应的当前用户 App Data 位置。设置页显示实际路径并可直接打开。真实学习档案不会写入 EXE 或安装目录。
+Alpha.3 打包应用使用 Qt `QStandardPaths.AppDataLocation` 对应的当前用户 App Data 位置。设置页显示实际路径并可直接打开。真实学习档案不会写入 EXE 或安装目录。
 
 Alpha.1 旧目录 `%LOCALAPPDATA%\LLMInterviewLab` 只在用户确认后迁移。迁移先复制并验证 SHA-256，同时保留旧目录和新目录下的本地备份；不会静默覆盖已有 Profile。
 

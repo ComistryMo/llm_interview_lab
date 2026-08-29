@@ -4,6 +4,14 @@
 
 ## [未发布]
 
+## [0.4.0-alpha.3] - 2026-08-29
+
+### 修复
+
+- 修复桌面端首次启动、岗位选择、最新答案测试与错误提示的可靠性；
+- 练习页在窄窗口下改用真实的题面与 AI 教练入口，移除无法发送的假聊天控件；
+- 启动诊断日志补充最小运行环境信息，并同步 Alpha.3 版本元数据。
+
 ## [0.4.0-alpha.2] - 2026-08-28
 
 ### 新增
@@ -76,7 +84,8 @@
 
 - Stage 00 训练原型、Python 环境检查、限定 pytest 入口、隐私交接导出和初始开源治理。
 
-[未发布]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.2...HEAD
+[未发布]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.3...HEAD
+[0.4.0-alpha.3]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.2...v0.4.0-alpha.3
 [0.4.0-alpha.2]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.1...v0.4.0-alpha.2
 [0.4.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.3.0-alpha.1...v0.4.0-alpha.1
 [0.3.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.2.0-alpha.2...v0.3.0-alpha.1
