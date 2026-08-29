@@ -786,18 +786,20 @@ def role_interview_answer_text(
     record = session.get("answers", {}).get(question_id)
     if not isinstance(record, Mapping):
         raise RoleInterviewError("interview answer evidence is missing")
-    path = ensure_profile_path_is_safe(
-        repo_root,
-        profile_id,
-        _session_root(repo_root, profile_id, interview_id)
-        / "answers"
-        / f"{question_id}.md",
-        must_exist=True,
-    )
-    expected_relative = path.relative_to(profile_paths(repo_root, profile_id).root).as_posix()
-    if record.get("relative_path") != expected_relative:
-        raise RoleInterviewError("interview answer path is invalid")
     try:
+        path = ensure_profile_path_is_safe(
+            repo_root,
+            profile_id,
+            _session_root(repo_root, profile_id, interview_id)
+            / "answers"
+            / f"{question_id}.md",
+            must_exist=True,
+        )
+        expected_relative = path.relative_to(
+            profile_paths(repo_root, profile_id).root
+        ).as_posix()
+        if record.get("relative_path") != expected_relative:
+            raise RoleInterviewError("interview answer path is invalid")
         content = path.read_bytes()
         text = content.decode("utf-8").strip()
     except (OSError, UnicodeError, WorkspaceError) as error:
