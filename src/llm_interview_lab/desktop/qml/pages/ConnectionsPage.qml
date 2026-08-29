@@ -52,7 +52,9 @@ Flickable {
 
         LabCard {
             Layout.fillWidth: true
-            Layout.preferredHeight: root.advanced ? 390 : 315
+            // Let LabCard's implicit height follow the visible form rows.  A
+            // fixed height used to let the privacy note spill into the next
+            // section after the primary action was moved to the header.
             cardColor: root.palette.surface; borderColor: root.palette.border
             Text { text: "连接普通 LLM API"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
             // Keep the primary action adjacent to the form heading so it remains
