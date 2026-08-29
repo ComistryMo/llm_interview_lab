@@ -340,6 +340,7 @@ def test_interview_configuration_and_canonical_result_preference(tmp_path: Path)
     assert preferred["kind"] == "result"
     assert preferred["completion_status"] == "incomplete"
     assert preferred["overall_score"] > 0
+    assert preferred["unscored"] == []
     assert preferred["assessment_evidence"] == [
         {
             "question_id": first["question_id"],

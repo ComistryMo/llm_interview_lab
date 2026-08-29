@@ -214,7 +214,7 @@ skills:
     description: Explain policy ratios, clipping, advantages and KL control.
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [PT-002, PT-009, PT-010, PT-011, PT-012]
+    related_problems: [PT-009, PT-010, PT-011, PT-012]
   - id: skill.post_training_rl.grpo
     title: Grouped Policy Optimization
     domain: post_training_rl
@@ -358,7 +358,7 @@ skills:
     description: Build versioned, observable and replayable data flows.
     levels: *levels
     evidence: [coding, design, project]
-    related_problems: [FND-005, FND-006, CAP-FND-001, CAP-TRN-001]
+    related_problems: [FND-005, FND-006, CAP-FND-001]
   - id: skill.data_mlops.experiments
     title: Experiment Tracking
     domain: data_mlops

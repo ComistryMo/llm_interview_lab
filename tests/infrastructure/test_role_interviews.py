@@ -351,7 +351,6 @@ def test_interview_coding_skills_use_only_ontology_reverse_index(
     [
         ("FND-004", {"skill.python_engineering.data_contracts", "skill.data_mlops.data_quality"}),
         ("TNS-011", {"skill.deep_learning.tensor_ops"}),
-        ("PT-002", {"skill.post_training_rl.policy_optimization"}),
         (
             "CAP-LOSS-001",
             {
@@ -364,7 +363,6 @@ def test_interview_coding_skills_use_only_ontology_reverse_index(
         (
             "CAP-TRN-001",
             {
-                "skill.data_mlops.pipelines",
                 "skill.data_mlops.reproducibility",
                 "skill.deep_learning.tensor_ops",
                 "skill.deep_learning.autograd",
@@ -385,6 +383,60 @@ def test_skill_ontology_reverse_index_covers_authored_problems(
         skill.id for skill in roles.skills.values() if problem_id in skill.related_problems
     }
     assert skill_ids.issubset(actual)
+
+
+def test_skill_ontology_does_not_overstate_logprob_or_toy_trainer_evidence(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    _, roles = _catalogs(root)
+    assert "PT-002" not in roles.skills[
+        "skill.post_training_rl.policy_optimization"
+    ].related_problems
+    assert "CAP-TRN-001" not in roles.skills[
+        "skill.data_mlops.pipelines"
+    ].related_problems
+
+
+def test_every_role_has_a_truthful_default_new_grad_interview(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    unavailable = {}
+    for role_id in roles.roles:
+        value = interview_preflight(
+            root,
+            catalog,
+            roles,
+            role_id=role_id,
+            seniority="new_grad",
+            difficulty="medium",
+            torch_available=True,
+        )
+        if not value["available"]:
+            unavailable[role_id] = value["missing_rounds"]
+    assert unavailable == {}
+
+
+def test_every_ready_interview_item_is_reachable_from_a_blueprint(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    reachable: set[str] = set()
+    for role_id, role in roles.roles.items():
+        for seniority in role.seniority:
+            for difficulty in ("easy", "medium", "hard"):
+                value = interview_preflight(
+                    root,
+                    catalog,
+                    roles,
+                    role_id=role_id,
+                    seniority=seniority,
+                    difficulty=difficulty,
+                    torch_available=True,
+                )
+                for round_value in value.get("rounds", []):
+                    reachable.update(round_value["candidate_ids"])
+    ready_items = {item.id for item in roles.items.values() if item.status == "ready"}
+    assert ready_items.issubset(reachable)
 
 
 def test_timer_incomplete_finish_and_profile_isolation(tmp_path: Path) -> None:
@@ -412,6 +464,10 @@ def test_timer_incomplete_finish_and_profile_isolation(tmp_path: Path) -> None:
     )
     assert finished["result"]["completion_status"] == "incomplete"
     assert finished["result"]["overall_score"] == 0
+    assert finished["result"]["unanswered"] == [
+        question["question_id"] for question in finished["questions"]
+    ]
+    assert finished["result"]["unscored"] == []
     with pytest.raises(RoleInterviewError, match="does not exist"):
         load_role_interview(root, "learner-two", one["interview_id"])
 

@@ -33,7 +33,7 @@ blueprints:
     rounds:
       - {type: coding, duration: 25, weight: 0.40, item_count: 1, skills: [skill.python_engineering.data_contracts]}
       - {type: system_design, duration: 20, weight: 0.35, item_count: 1, skills: [skill.agent_application.tool_calling, skill.system_design.reliability]}
-      - {type: debugging, duration: 15, weight: 0.25, item_count: 1, skills: [skill.agent_application.reliability]}
+      - {type: debugging, duration: 15, weight: 0.25, item_count: 1, skills: [skill.agent_application.reliability, skill.system_design.reliability]}
   - id: interview.applied_ai_engineer.new_grad
     role: applied_ai_engineer
     seniority: new_grad
@@ -41,7 +41,7 @@ blueprints:
     rounds:
       - {type: coding, duration: 30, weight: 0.40, item_count: 1, skills: [skill.agent_application.tool_calling]}
       - {type: system_design, duration: 25, weight: 0.35, item_count: 1, skills: [skill.agent_application.agent_loop, skill.system_design.reliability]}
-      - {type: debugging, duration: 20, weight: 0.25, item_count: 1, skills: [skill.agent_application.reliability]}
+      - {type: debugging, duration: 20, weight: 0.25, item_count: 1, skills: [skill.agent_application.reliability, skill.system_design.reliability]}
   - id: interview.applied_ai_engineer.mid
     role: applied_ai_engineer
     seniority: mid
@@ -50,7 +50,7 @@ blueprints:
       - {type: coding, duration: 30, weight: 0.30, item_count: 1, skills: [skill.agent_application.tool_calling]}
       - {type: system_design, duration: 30, weight: 0.30, item_count: 1, skills: [skill.agent_application.agent_loop, skill.system_design.reliability]}
       - {type: project_deep_dive, duration: 20, weight: 0.25, item_count: 1, skills: [skill.project_deep_dive.ownership]}
-      - {type: debugging, duration: 10, weight: 0.15, item_count: 1, skills: [skill.agent_application.reliability]}
+      - {type: debugging, duration: 10, weight: 0.15, item_count: 1, skills: [skill.agent_application.reliability, skill.system_design.reliability]}
 
   - id: interview.ai_agent_engineer.intern
     role: ai_agent_engineer
@@ -140,7 +140,7 @@ blueprints:
     seniority: new_grad
     duration_minutes: 75
     rounds:
-      - {type: coding, duration: 30, weight: 0.40, item_count: 1, skills: [skill.programming_algorithms.data_structures]}
+      - {type: coding, duration: 30, weight: 0.40, item_count: 1, skills: [skill.data_mlops.pipelines]}
       - {type: system_design, duration: 25, weight: 0.35, item_count: 1, skills: [skill.training_infra.distributed, skill.training_infra.scheduling]}
       - {type: debugging, duration: 20, weight: 0.25, item_count: 1, skills: [skill.training_infra.checkpointing, skill.training_infra.observability]}
   - id: interview.ai_infra_engineer.mid
@@ -148,7 +148,7 @@ blueprints:
     seniority: mid
     duration_minutes: 90
     rounds:
-      - {type: coding, duration: 25, weight: 0.25, item_count: 1, skills: [skill.programming_algorithms.graphs]}
+      - {type: coding, duration: 25, weight: 0.25, item_count: 1, skills: [skill.deep_learning.optimizers]}
       - {type: system_design, duration: 35, weight: 0.35, item_count: 1, skills: [skill.training_infra.distributed, skill.training_infra.scheduling]}
       - {type: debugging, duration: 15, weight: 0.20, item_count: 1, skills: [skill.training_infra.checkpointing, skill.training_infra.observability]}
       - {type: project_deep_dive, duration: 15, weight: 0.20, item_count: 1, skills: [skill.data_mlops.pipelines, skill.project_deep_dive.ownership]}

@@ -1186,20 +1186,41 @@ class AppController(QObject):
             if answer_record:
                 answer_path = answer_record.get("relative_path") or answer_record.get("answer_relpath")
                 answer_text = ""
+                answer_error = ""
                 if answer_path:
                     try:
-                        answer_text = profile_paths(self.repo_root, self._profile_id).root.joinpath(
+                        answer_bytes = profile_paths(self.repo_root, self._profile_id).root.joinpath(
                             *answer_path.split("/")
-                        ).read_text(encoding="utf-8")
-                    except (OSError, UnicodeError):
-                        answer_text = ""
+                        ).read_bytes()
+                        expected_sha = answer_record.get("sha256")
+                        if expected_sha and hashlib.sha256(answer_bytes).hexdigest() != expected_sha:
+                            raise ValueError("answer fingerprint mismatch")
+                        answer_text = answer_bytes.decode("utf-8")
+                    except (OSError, UnicodeError, ValueError) as error:
+                        answer_error = "已锁定的回答文件缺失或校验失败。请保留本地数据并打开日志目录排查。"
+                        logging.getLogger("llm_interview_lab.desktop").error(
+                            "interview_answer_unavailable interview_id=%s question_id=%s error_type=%s",
+                            interview_id,
+                            question_id,
+                            type(error).__name__,
+                        )
                 self._interview["answer_locked"] = True
                 self._interview["answer_text"] = answer_text.strip()
+                self._interview["answer_corrupted"] = bool(answer_error)
+                self._interview["answer_error"] = answer_error
                 self._interview["assessment_recorded"] = question_id in session.get("assessments", {})
-                self._interview["phase"] = "followup" if self._interview.get("pending_followup") else "assessment"
+                self._interview["phase"] = (
+                    "error"
+                    if answer_error
+                    else "followup"
+                    if self._interview.get("pending_followup")
+                    else "assessment"
+                )
             else:
                 self._interview["answer_locked"] = False
                 self._interview["answer_text"] = ""
+                self._interview["answer_corrupted"] = False
+                self._interview["answer_error"] = ""
                 self._interview["assessment_recorded"] = False
                 self._interview["phase"] = "answering"
         if question and question.get("kind") == "coding":
@@ -1386,6 +1407,8 @@ class AppController(QObject):
         if not question:
             return
         try:
+            if self._interview.get("answer_corrupted"):
+                raise RuntimeError("locked interview answer is unavailable; scoring is blocked")
             interview_id = self._interview["interview_id"]
             expected = set(question["rubric"]["dimensions"])
             if (
@@ -1422,15 +1445,21 @@ class AppController(QObject):
         if self._profile_id == "demo":
             self.toast.emit("演示 AI 评分需要证据；不会改变刷题掌握状态。")
             return
+        profile_id = self._profile_id
         interview_id = self._interview["interview_id"]
         question_id = question["question_id"]
+        locked_answer = str(self._interview.get("answer_text") or "").strip()
+        session = self.service.interview_session(profile_id, interview_id)
+        if question_id not in session.get("answers", {}) or not locked_answer:
+            self._show_error("请先提交并锁定当前回答，再请求 AI 评估。")
+            return
         dimensions = set(question["rubric"]["dimensions"])
         fatal_issues = set(question["rubric"]["fatal_issues"])
 
         def operation() -> dict[str, Any]:
             config = next(
                 item
-                for item in list_connections(self.repo_root, self._profile_id)
+                for item in list_connections(self.repo_root, profile_id)
                 if item.connection_id == connection_id
             )
             key = (
@@ -1440,9 +1469,9 @@ class AppController(QObject):
             )
             preview = build_role_interview_context_preview(
                 self.repo_root,
-                self._profile_id,
+                profile_id,
                 interview_id,
-                candidate_answer=answer,
+                candidate_answer=locked_answer,
                 include_materials=include_materials,
             )
             provider = create_chat_provider(config, api_key=key)
@@ -1472,12 +1501,15 @@ class AppController(QObject):
 
         def complete(result: dict[str, Any]) -> None:
             try:
-                self.service.answer_interview(
-                    self._profile_id, interview_id, question_id, answer
-                )
                 if result["follow_up"]:
+                    if (
+                        self._profile_id != profile_id
+                        or self._interview.get("interview_id") != interview_id
+                    ):
+                        return
                     self._pending_ai_assessment = {
                         **result,
+                        "profile_id": profile_id,
                         "interview_id": interview_id,
                         "question_id": question_id,
                     }
@@ -1485,7 +1517,7 @@ class AppController(QObject):
                     self.stateChanged.emit()
                     return
                 self.service.score_interview(
-                    self._profile_id,
+                    profile_id,
                     interview_id,
                     question_id,
                     result["scores"],
@@ -1494,7 +1526,11 @@ class AppController(QObject):
                     confidence=result["confidence"],
                     fatal_issues=result["fatal_issues"],
                 )
-                self._load_interview(interview_id)
+                if (
+                    self._profile_id == profile_id
+                    and self._interview.get("interview_id") == interview_id
+                ):
+                    self._load_interview(interview_id)
             except Exception as error:
                 self._show_error(error)
 
@@ -1506,15 +1542,20 @@ class AppController(QObject):
         if pending is None:
             return
         try:
+            profile_id = pending.get("profile_id", self._profile_id)
+            if profile_id != self._profile_id:
+                self._pending_ai_assessment = None
+                self._show_error("学习档案已切换，请回到原面试后重新请求 AI 评估。")
+                return
             self.service.record_interview_followup(
-                self._profile_id,
+                profile_id,
                 pending["interview_id"],
                 parent_question_id=pending["question_id"],
                 prompt=pending["follow_up"],
                 answer=answer,
             )
             self.service.score_interview(
-                self._profile_id,
+                profile_id,
                 pending["interview_id"],
                 pending["question_id"],
                 pending["scores"],
@@ -1541,8 +1582,7 @@ class AppController(QObject):
                 summary="本地结构化模拟面试已完成。",
                 confirm_incomplete=True,
             )
-            self._interview = session
-            self.stateChanged.emit()
+            self._load_interview(session["interview_id"])
         except Exception as error:
             self._show_error(error)
 

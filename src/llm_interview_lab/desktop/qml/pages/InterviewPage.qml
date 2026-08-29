@@ -287,6 +287,14 @@ Item {
                     width: parent.width; spacing: 16
                     Text { width: parent.width; text: activeQuestion ? activeQuestion.prompt : "选择岗位、求职阶段与难度。系统会冻结一份公共面试蓝图，每次只展示一个问题，并将客观代码证据与 Rubric 主观判断分开。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
                     TextArea { id: answer; objectName: "interviewAnswerEditor"; width: parent.width; height: 180; visible: !!activeQuestion && activeQuestion.kind !== "coding"; text: root.answerLocked ? (app.interview.answer_text || "") : root.answerDraft; readOnly: root.answerLocked; onTextChanged: if (!root.answerLocked) root.answerDraft = text; placeholderText: root.answerLocked ? "回答已锁定" : "输入你的回答……"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.answerLocked ? root.palette.accent : root.palette.border } }
+                    LabCard {
+                        objectName: "interviewAnswerCorruption"
+                        visible: !!app.interview.answer_corrupted
+                        width: parent.width
+                        cardColor: root.palette.surfaceAlt
+                        borderColor: root.palette.danger
+                        Text { width: parent.width; text: app.interview.answer_error || "已锁定的回答当前不可读取，评分已暂停。"; color: root.palette.danger; wrapMode: Text.Wrap; font.bold: true }
+                    }
                     RowLayout {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                         width: parent.width
@@ -294,7 +302,7 @@ Item {
                         Button { objectName: "lockInterviewAnswer"; visible: !root.answerLocked; text: "提交并锁定回答"; highlighted: true; enabled: answer.text.trim().length > 0 && !app.busy; onClicked: app.lockInterviewAnswer(answer.text) }
                     }
                     Column {
-                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted
                         width: parent.width
                         spacing: 6
                         Text { text: "候选人自评 Rubric（每个维度 1–5 分）"; color: root.palette.muted; font.bold: true }
@@ -314,10 +322,10 @@ Item {
                             }
                         }
                     }
-                    TextArea { id: evidence; width: parent.width; height: 86; visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked; placeholderText: "支持本次评分的回答证据（必填）"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.palette.border } }
+                    TextArea { id: evidence; width: parent.width; height: 86; visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted; placeholderText: "支持本次评分的回答证据（必填）"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.palette.border } }
                     ComboBox {
                         id: providerConnection
-                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && app.interview.ai_mode === "provider"
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted && app.interview.ai_mode === "provider"
                         width: parent.width
                         model: app.connections
                         textRole: "display_name"
@@ -325,7 +333,7 @@ Item {
                     }
                     CheckBox {
                         id: includeInterviewMaterials
-                        visible: !!activeQuestion && root.answerLocked
+                        visible: !!activeQuestion && root.answerLocked && !app.interview.answer_corrupted
                                  && activeQuestion.kind !== "coding"
                                  && app.interview.ai_mode !== "disabled"
                                  && (app.interview.material_refs || []).length > 0
@@ -333,7 +341,7 @@ Item {
                         text: "在本次 AI 请求中包含已授权材料"
                     }
                     Flow {
-                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted
                         width: parent.width
                         spacing: 8
                         Button {

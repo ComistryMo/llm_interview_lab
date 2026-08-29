@@ -94,6 +94,8 @@ def test_controller_first_launch_role_material_practice_and_interview(
     )
     controller.finishInterview()
     assert controller.interview["status"] == "incomplete"
+    assert controller.interview["result"]["completion_status"] == "incomplete"
+    assert controller.interview["result"]["assessment_evidence"][0]["source"] == "self"
     status = subprocess.run(
         [
             "git",
@@ -232,6 +234,48 @@ def test_ai_interview_scorecard_requires_exact_rubric_and_evidence() -> None:
         )
 
 
+def test_provider_assessment_scores_the_locked_answer_once(
+    tmp_path: Path, qapp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="provider-user")
+    controller.completeOnboarding(
+        "provider-user", "ai_product_manager", "new_grad", "provider", "{}"
+    )
+    controller.createConfiguredInterview(
+        "ai_product_manager", "new_grad", "medium", "provider"
+    )
+    question = controller.interview["question"]
+    answer = "I state assumptions, success metrics, trade-offs, and rollback evidence."
+    controller.lockInterviewAnswer(answer)
+    scores = {name: 4 for name in question["rubric"]["dimensions"]}
+
+    def synchronous_background(operation, complete, failed=None):
+        del operation, failed
+        complete(
+            {
+                "scores": scores,
+                "evidence": "The locked answer names assumptions, metrics, trade-offs, and rollback.",
+                "confidence": "high",
+                "fatal_issues": [],
+                "follow_up": "",
+            }
+        )
+
+    monkeypatch.setattr(controller, "_background", synchronous_background)
+    controller.assessInterviewWithProvider(answer, "unused-connection", False)
+
+    session = controller.service.interview_session(
+        "provider-user", controller.interview["interview_id"]
+    )
+    assert list(session["answers"]) == [question["question_id"]]
+    assert session["assessments"][question["question_id"]]["source"] == "ai"
+    controller.shutdown()
+
+
 def test_controller_loads_and_saves_a_timed_coding_round(tmp_path: Path, qapp) -> None:
     del qapp
     QSettings.setDefaultFormat(QSettings.IniFormat)
@@ -252,6 +296,40 @@ def test_controller_loads_and_saves_a_timed_coding_round(tmp_path: Path, qapp) -
     )
     assert stored["text"].endswith("# timed local change\n")
     controller.shutdown()
+
+
+def test_locked_interview_answer_corruption_is_visible_and_blocks_scoring(
+    tmp_path: Path, qapp
+) -> None:
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="corrupt-answer-user")
+    controller.completeOnboarding(
+        "corrupt-answer-user", "ai_product_manager", "new_grad", "disabled", "{}"
+    )
+    controller.createConfiguredInterview(
+        "ai_product_manager", "new_grad", "medium", "disabled"
+    )
+    question = controller.interview["question"]
+    controller.lockInterviewAnswer(
+        "I define assumptions, measurable evidence, and a reversible rollout."
+    )
+    session = controller.service.interview_session(
+        "corrupt-answer-user", controller.interview["interview_id"]
+    )
+    record = session["answers"][question["question_id"]]
+    profile_paths(root, "corrupt-answer-user").root.joinpath(
+        *record["relative_path"].split("/")
+    ).unlink()
+    controller.shutdown()
+
+    restored = AppController(root, profile_id="corrupt-answer-user")
+    assert restored.interview["answer_locked"] is True
+    assert restored.interview["answer_corrupted"] is True
+    assert "校验失败" in restored.interview["answer_error"]
+    restored.shutdown()
 
 
 def test_standalone_runtime_seeds_public_assets_without_touching_profiles(

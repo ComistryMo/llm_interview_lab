@@ -924,7 +924,11 @@ def finish_role_interview(
     unanswered = [
         q["question_id"] for q in session["questions"] if not _has_response(session, q)
     ]
-    unscored = [q["question_id"] for q in session["questions"] if q["question_id"] not in session["assessments"]]
+    unscored = [
+        q["question_id"]
+        for q in session["questions"]
+        if _has_response(session, q) and q["question_id"] not in session["assessments"]
+    ]
     expired = _remaining_seconds(session, now) == 0
     if (unanswered or unscored) and not (confirm_incomplete or expired):
         raise RoleInterviewError("interview evidence is incomplete; use explicit incomplete confirmation")
