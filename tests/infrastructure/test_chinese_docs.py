@@ -137,7 +137,7 @@ def test_gui_and_provider_user_terms_are_present() -> None:
     for label in ("首页", "刷题", "模拟面试", "AI 教练", "进度", "设置"):
         assert label in main
     onboarding = _read("src/llm_interview_lab/desktop/qml/pages/OnboardingPage.qml")
-    for label in ("创建学习档案", "选择目标岗位", "能力自评", "暂不连接 AI"):
+    for label in ("创建学习档案", "选择目标岗位", "首次使用默认 No-AI"):
         assert label in onboarding
     connections = _read(
         "src/llm_interview_lab/desktop/qml/pages/ConnectionsPage.qml"

@@ -1616,7 +1616,7 @@ class AppController(QObject):
         except Exception as error:
             self._show_error(error)
 
-    @Slot(str, str, str, str, str, str)
+    @Slot(str, str, str, str, str, str, result=bool)
     def saveConnection(
         self,
         connection_id: str,
@@ -1625,7 +1625,7 @@ class AppController(QObject):
         display_name: str,
         base_url: str,
         api_key: str,
-    ) -> None:
+    ) -> bool:
         try:
             save_connection(
                 self.repo_root,
@@ -1639,8 +1639,10 @@ class AppController(QObject):
             )
             self.refresh()
             self.toast.emit("连接已保存；API Key 仅存入系统密钥环。")
+            return True
         except (ConnectionConfigError, CredentialError) as error:
             self._show_error(error)
+            return False
 
     @Slot(str)
     def deleteConnection(self, connection_id: str) -> None:

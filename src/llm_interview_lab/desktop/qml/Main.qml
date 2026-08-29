@@ -126,8 +126,25 @@ ApplicationWindow {
                     }
                     ColumnLayout {
                         spacing: 0
-                        Text { text: "LLM Interview Lab"; color: window.colors.text; font.bold: true; font.pixelSize: 15 }
-                        Text { text: "本地 AI 面试训练工作台"; color: window.colors.muted; font.pixelSize: 11 }
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        Text {
+                            text: "LLM Interview Lab"
+                            color: window.colors.text
+                            font.bold: true
+                            font.pixelSize: 15
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                        }
+                        Text {
+                            text: "本地 AI 面试训练工作台"
+                            color: window.colors.muted
+                            font.pixelSize: 11
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                        }
                     }
                 }
 
@@ -278,8 +295,11 @@ ApplicationWindow {
         id: toastPopup
         objectName: "globalToast"
         x: window.width - width - 30
-        // Keep transient feedback away from the bottom onboarding CTA.
-        y: 82
+        // Keep transient feedback away from the onboarding CTA and from the
+        // persistent Codex approval banner when one is visible.
+        y: codexApprovalBanner.visible
+           ? codexApprovalBanner.y + codexApprovalBanner.height + 10
+           : 82
         width: Math.min(440, message.implicitWidth + 40)
         height: 52
         modal: false

@@ -11,8 +11,9 @@ Rectangle {
     color: root.palette.background
 
     // The default path has only two user decisions: a display name and a
-    // target role. Assessment, seniority and AI connection remain editable
-    // from the corresponding pages after the profile is created.
+    // target role. The default path deliberately starts with a fresh
+    // self-assessment and No-AI; interview seniority and AI connections can be
+    // chosen later without changing the Practice history.
     property int step: 0
     property int stepCount: 2
     property string selectedRole: ""
@@ -124,7 +125,7 @@ Rectangle {
                     font.bold: true
                 }
                 Text {
-                    text: "只需填写名称并选择岗位，其他设置可以稍后调整。"
+                    text: "只需填写名称并选择岗位；首次使用默认 No-AI，其他选项可以稍后调整。"
                     color: root.palette.muted
                     font.pixelSize: 14
                     elide: Text.ElideRight
@@ -199,7 +200,7 @@ Rectangle {
                         Text {
                             anchors.fill: parent
                             anchors.margins: 14
-                            text: "默认保护隐私\nworkspace/profiles/<id>/ 会被 Git 忽略；连接 AI 不是必选项。"
+                            text: "默认保护隐私\nworkspace/profiles/<id>/ 会被 Git 忽略；连接 AI 不是必选项，首次使用按校招、No-AI 开始。"
                             color: root.palette.text
                             wrapMode: Text.WordWrap
                         }

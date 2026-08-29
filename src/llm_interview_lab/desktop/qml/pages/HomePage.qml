@@ -54,7 +54,7 @@ Flickable {
 
         LabCard {
             Layout.fillWidth: true
-            Layout.preferredHeight: 174
+            Layout.preferredHeight: 198
             cardColor: root.palette.surface
             borderColor: root.palette.border
             RowLayout {
@@ -64,7 +64,14 @@ Flickable {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Text { text: app.dashboard.current ? "当前训练" : "下一题"; color: root.palette.accent; font.pixelSize: 11; font.bold: true; font.letterSpacing: 1.1 }
-                    Text { text: root.trainingTarget ? root.trainingTarget.problem_id + "  " + root.trainingTarget.title : "暂无可用任务"; color: root.palette.text; font.pixelSize: 23; font.bold: true }
+                    Text {
+                        text: root.trainingTarget ? root.trainingTarget.title : "暂无可用任务"
+                        color: root.palette.text
+                        font.pixelSize: 24
+                        font.bold: true
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                    }
                     Text {
                         text: root.trainingTarget && root.trainingTarget.environment_available === false
                               ? (root.trainingTarget.environment || "当前环境不能运行这道题。")
@@ -72,6 +79,24 @@ Flickable {
                                 ? "状态：" + root.statusText(app.dashboard.current.status)
                                 : "一道经过验证的题目已经可以开始。"
                         color: root.trainingTargetRunnable ? root.palette.muted : root.palette.warning
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        StatusPill {
+                            text: app.dashboard.role ? (app.dashboard.role.title || app.dashboard.role.primary_role.replace(/_/g, " ")) : "首次启动请选择"
+                            tone: root.palette.muted
+                        }
+                        StatusPill {
+                            text: "已掌握" + (app.dashboard.mastered_count || 0)
+                            tone: root.palette.success
+                        }
+                        StatusPill {
+                            text: "到期" + (app.dashboard.due_retention ? app.dashboard.due_retention.length : 0)
+                            tone: (app.dashboard.due_retention || []).length > 0 ? root.palette.warning : root.palette.muted
+                        }
                     }
                     Item { Layout.fillHeight: true }
                     Text {
@@ -86,13 +111,15 @@ Flickable {
                 ColumnLayout {
                     Button {
                         id: continueTrainingButton
+                        objectName: "homePrimaryAction"
                         text: app.dashboard.current ? "继续训练" : "开始训练"
                         highlighted: true
-                        Layout.preferredWidth: 160
-                        Layout.preferredHeight: 44
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 184
+                        Layout.preferredHeight: 46
                         enabled: root.trainingTargetRunnable
                         background: Rectangle {
-                            radius: 8
+                            radius: 10
                             color: continueTrainingButton.enabled ? root.palette.accent : root.palette.border
                         }
                         contentItem: Text {
@@ -107,25 +134,28 @@ Flickable {
                     Button {
                         visible: !!root.trainingTarget && !root.trainingTargetRunnable
                         text: "查看当前可运行题目"
-                        Layout.preferredWidth: 160
-                        Layout.preferredHeight: 42
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 38
+                        flat: true
                         onClicked: app.navigate("learn")
                     }
                     Button {
                         id: startInterviewButton
+                        objectName: "homeInterviewSecondaryAction"
                         text: "开始模拟面试"
-                        Layout.preferredWidth: 160
-                        Layout.preferredHeight: 42
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 38
+                        flat: true
                         background: Rectangle {
-                            radius: 8
+                            radius: 10
                             color: "transparent"
                             border.width: 1
-                            border.color: root.palette.accent
+                            border.color: root.palette.border
                         }
                         contentItem: Text {
                             text: startInterviewButton.text
-                            color: root.palette.accent
-                            font.bold: true
+                            color: root.palette.muted
+                            font.bold: false
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }

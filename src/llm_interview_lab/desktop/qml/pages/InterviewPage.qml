@@ -301,9 +301,18 @@ Item {
             }
             Rectangle { width: parent.width; height: 1; color: root.palette.border }
             ScrollView {
-                width: parent.width; Layout.fillHeight: true; clip: true
+                id: questionScroll
+                width: parent.width
+                Layout.fillHeight: true
+                clip: true
+                // Keep the question column tied to the panel viewport.  Without
+                // an explicit content width, Qt sizes the Flickable content to
+                // the TextArea's implicit width, leaving the editor as a narrow
+                // strip and making the phase controls collide on small screens.
+                contentWidth: availableWidth
                 Column {
-                    width: parent.width; spacing: 16
+                    width: questionScroll.availableWidth
+                    spacing: 16
                     Text { width: parent.width; text: activeQuestion ? activeQuestion.prompt : "选择岗位、求职阶段与难度。系统会冻结一份公共面试蓝图，每次只展示一个问题，并将客观代码证据与 Rubric 主观判断分开。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
                     TextArea { id: answer; objectName: "interviewAnswerEditor"; width: parent.width; height: 180; visible: !!activeQuestion && activeQuestion.kind !== "coding"; text: root.answerLocked ? (app.interview.answer_text || "") : root.answerDraft; readOnly: root.answerLocked; onTextChanged: if (!root.answerLocked) root.answerDraft = text; placeholderText: root.answerLocked ? "回答已锁定" : "输入你的回答……"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.answerLocked ? root.palette.accent : root.palette.border } }
                     LabCard {
@@ -317,8 +326,22 @@ Item {
                     RowLayout {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                         width: parent.width
+                        StatusPill {
+                            objectName: "interviewPhasePill"
+                            text: root.answerLocked
+                                  ? (app.interview.pending_followup ? "阶段 C · 追问" : "阶段 B · 评估")
+                                  : "阶段 A · 回答"
+                            tone: root.answerLocked ? root.palette.accent : root.palette.muted
+                        }
                         Text { text: root.answerLocked ? "阶段 B：回答已锁定，下面进入评估" : "阶段 A：先完成回答；锁定后才会显示评分维度"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
                         Button { objectName: "lockInterviewAnswer"; visible: !root.answerLocked; text: "提交并锁定回答"; highlighted: true; enabled: answer.text.trim().length > 0 && !app.busy; onClicked: app.lockInterviewAnswer(answer.text) }
+                    }
+                    Text {
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding"
+                                 && !root.answerLocked && answer.text.trim().length === 0
+                        text: "先写下回答，提交按钮才会启用。"
+                        color: root.palette.muted
+                        font.pixelSize: 11
                     }
                     Column {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted
@@ -531,7 +554,12 @@ Item {
                 width: parent.width
                 Text { text: activeQuestion ? "问题 " + activeQuestion.question_id : ""; color: root.palette.muted }
                 Item { Layout.fillWidth: true }
-                Button { text: "结束并留档"; enabled: !!app.interview.interview_id && !app.busy; onClicked: finishDialog.open() }
+                Button {
+                    objectName: "finishInterviewButton"
+                    text: "结束并标记未完成"
+                    enabled: !!app.interview.interview_id && !app.busy
+                    onClicked: finishDialog.open()
+                }
             }
         }
     }

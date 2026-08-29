@@ -15,7 +15,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PySide6")
 
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QCoreApplication, QSettings
 
 from llm_interview_lab.desktop.controller import AppController, _decode_ai_assessment
 from llm_interview_lab.desktop.runtime import prepare_desktop_repository
@@ -55,6 +55,14 @@ def _repository(tmp_path: Path) -> Path:
     return root
 
 
+def _wait_for(predicate, *, attempts: int = 20, interval_ms: int = 50) -> bool:
+    for _ in range(attempts):
+        if predicate():
+            return True
+        QTest.qWait(interval_ms)
+    return predicate()
+
+
 def test_controller_first_launch_role_material_practice_and_interview(
     tmp_path: Path, qapp
 ) -> None:
@@ -80,12 +88,13 @@ def test_controller_first_launch_role_material_practice_and_interview(
     source = tmp_path / "career-intent.md"
     source.write_text("Synthetic intent: applied AI roles.\n", encoding="utf-8")
     controller.addMaterial(str(source), "career_intent", "Synthetic intent", True)
-    assert len(controller.materials) == 1
+    assert _wait_for(lambda: len(controller.materials) == 1)
     assert controller.materials[0]["ai_access"] is True
 
     controller.createConfiguredInterview(
         "ai_product_manager", "new_grad", "medium", "disabled"
     )
+    assert _wait_for(lambda: controller.interview.get("question") is not None)
     assert controller.interview["status"] == "active"
     question = controller.interview["question"]
     assert question["kind"] != "coding"
@@ -116,7 +125,7 @@ def test_controller_first_launch_role_material_practice_and_interview(
     controller.shutdown()
 
 
-def test_demo_controller_exposes_every_page_and_restores_settings(
+def test_demo_controller_exposes_every_page_and_keeps_demo_settings_deterministic(
     tmp_path: Path, qapp
 ) -> None:
     del qapp
@@ -144,9 +153,13 @@ def test_demo_controller_exposes_every_page_and_restores_settings(
     assert "PASS" in first.testOutput
     first.shutdown()
 
+    # Demo/screenshot controllers intentionally do not inherit persisted user
+    # preferences; otherwise release evidence would vary with the maintainer's
+    # local settings.  Normal controllers still restore them (covered by the
+    # dedicated settings tests).
     restored = AppController(REPO_ROOT, demo_page="home")
-    assert restored.theme == "dark"
-    assert restored.fontScale == pytest.approx(1.25)
+    assert restored.theme == "light"
+    assert restored.fontScale == pytest.approx(1.0)
     restored.testConnection("ollama-local")
     restored.shutdown()
 
@@ -250,6 +263,7 @@ def test_provider_assessment_scores_the_locked_answer_once(
     controller.createConfiguredInterview(
         "ai_product_manager", "new_grad", "medium", "provider"
     )
+    assert _wait_for(lambda: controller.interview.get("question") is not None)
     question = controller.interview["question"]
     answer = "I state assumptions, success metrics, trade-offs, and rollback evidence."
     controller.lockInterviewAnswer(answer)
@@ -292,6 +306,7 @@ def test_delayed_provider_assessment_cannot_rewrite_frozen_evidence(
     controller.createConfiguredInterview(
         "ai_product_manager", "new_grad", "medium", "provider"
     )
+    assert _wait_for(lambda: controller.interview.get("question") is not None)
     question = controller.interview["question"]
     answer = "I define assumptions, evidence, risks, and a reversible rollout."
     controller.lockInterviewAnswer(answer)
@@ -344,6 +359,7 @@ def test_controller_loads_and_saves_a_timed_coding_round(tmp_path: Path, qapp) -
     controller.createConfiguredInterview(
         "applied_ai_engineer", "new_grad", "medium", "disabled"
     )
+    assert _wait_for(lambda: controller.interview.get("question") is not None)
     assert controller.interview["question"]["kind"] == "coding"
     original = controller.interview["coding_text"]
     controller.saveInterviewCoding(original + "\n# timed local change\n")
@@ -368,6 +384,7 @@ def test_locked_interview_answer_corruption_is_visible_and_blocks_scoring(
     controller.createConfiguredInterview(
         "ai_product_manager", "new_grad", "medium", "disabled"
     )
+    assert _wait_for(lambda: controller.interview.get("question") is not None)
     question = controller.interview["question"]
     controller.lockInterviewAnswer(
         "I define assumptions, measurable evidence, and a reversible rollout."
@@ -402,6 +419,7 @@ def test_tampered_interview_answer_path_cannot_escape_the_profile(
     controller.createConfiguredInterview(
         "ai_product_manager", "new_grad", "medium", "disabled"
     )
+    assert _wait_for(lambda: controller.interview.get("question") is not None)
     question = controller.interview["question"]
     controller.lockInterviewAnswer("Canonical locked answer.")
     interview_id = controller.interview["interview_id"]
@@ -490,11 +508,22 @@ def test_desktop_release_configuration_is_portable_and_separate_from_core_ci() -
         encoding="utf-8"
     )
     assert '"LLM_LAB_DESKTOP_DATA_ROOT"' in checker
+    main_qml = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/Main.qml"
+    ).read_text(encoding="utf-8")
     connections_qml = (
         REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/ConnectionsPage.qml"
     ).read_text(encoding="utf-8")
-    assert "pendingApproval.diff" in connections_qml
-    assert "仅批准本次" in connections_qml
+    # Approval is shell-owned so it remains visible while navigating away from
+    # Connections; the page must not keep a second, stale approval model.
+    assert 'property var pendingCodexApproval: ({})' in main_qml
+    assert 'objectName: "codexApprovalDetails"' in main_qml
+    assert 'window.resolveApproval("accept")' in main_qml
+    assert "pendingApproval" not in connections_qml
+    assert 'objectName: "saveAndTestConnection"' in connections_qml
+    assert 'text: "保存并测试"' in connections_qml
+    assert "if (saved)" in connections_qml
+    assert "app.testConnection(connectionId.text)" in connections_qml
     assert "desktop-macos-arm64:" in workflow
     assert "runs-on: macos-15" in workflow
     assert "LLMInterviewLab-macOS-arm64.app.zip" in workflow
@@ -543,6 +572,46 @@ def test_home_and_practice_expose_truthful_next_actions() -> None:
     assert 'font.family: "Cascadia Mono, Consolas, monospace"' not in exercise
 
 
+def test_home_and_learn_prioritize_primary_actions_and_secondary_metadata() -> None:
+    main = (REPO_ROOT / "src/llm_interview_lab/desktop/qml/Main.qml").read_text(
+        encoding="utf-8"
+    )
+    home = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/HomePage.qml"
+    ).read_text(encoding="utf-8")
+    learn = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/LearnPage.qml"
+    ).read_text(encoding="utf-8")
+
+    # The compact sidebar must ellipsize its brand copy instead of painting it
+    # over the content pane at 1080px wide.
+    assert 'Layout.minimumWidth: 0' in main
+    assert 'maximumLineCount: 1' in main
+    assert 'elide: Text.ElideRight' in main
+
+    assert 'objectName: "homePrimaryAction"' in home
+    assert 'objectName: "homeInterviewSecondaryAction"' in home
+    assert home.index('objectName: "homePrimaryAction"') < home.index(
+        'objectName: "homeInterviewSecondaryAction"'
+    )
+    assert "Layout.preferredHeight: 198" in home
+    assert "text: root.trainingTarget ? root.trainingTarget.title" in home
+    assert 'StatusPill {' in home
+
+    assert 'objectName: "learnProblemList"' in learn
+    assert 'objectName: "learnOpenProblemButton"' in learn
+    assert "font.pixelSize: 17" in learn
+    assert "maximumLineCount: 2" in learn
+    assert "text: modelData.skills && modelData.skills.length ? modelData.skills.slice(0, 3).join(\" · \") : \" \"" in learn
+    assert 'text: modelData.problem_id || ""' in learn
+    assert learn.index('text: modelData.title; color: root.palette.text; font.bold: true; font.pixelSize: 17') < learn.index(
+        'text: modelData.problem_id || ""'
+    )
+    assert learn.index('text: modelData.problem_id || ""') < learn.index(
+        'objectName: "learnOpenProblemButton"'
+    )
+
+
 def test_interview_setup_uses_profile_role_availability_and_real_report() -> None:
     interview = (
         REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/InterviewPage.qml"
@@ -578,6 +647,13 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert "root.interviewResult.source" not in interview
     assert "root.interviewResult.evidence" not in interview
     assert "root.interviewResult.confidence" not in interview
+    # The interview editor must fill the question panel viewport; otherwise
+    # ScrollView sizes its content to the TextArea implicit width and the
+    # phase row collides with the submit action.
+    assert 'id: questionScroll' in interview
+    assert 'contentWidth: availableWidth' in interview
+    assert 'width: questionScroll.availableWidth' in interview
+    assert 'objectName: "interviewPhasePill"' in interview
     assert "不会改变刷题训练的掌握状态" in interview
     assert 'font.family: "Cascadia Mono, Consolas, monospace"' not in interview
 

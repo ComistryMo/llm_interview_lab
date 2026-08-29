@@ -20,7 +20,7 @@ Flickable {
         RowLayout {
             Layout.fillWidth: true; spacing: 14
             LabCard {
-                Layout.fillWidth: true; Layout.preferredHeight: 190
+                Layout.fillWidth: true; Layout.preferredHeight: 142
                 cardColor: root.palette.surface; borderColor: root.palette.border
                 RowLayout {
                     width: parent.width
@@ -28,11 +28,11 @@ Flickable {
                     Item { Layout.fillWidth: true }
                     StatusPill { text: "始终可用"; tone: root.palette.success }
                 }
-                Text { width: parent.width; text: "默认模式。课程、Grader、审查、复测和手动面试都在本机运行。"; color: root.palette.muted; wrapMode: Text.Wrap }
-                Text { width: parent.width; text: "AI 当前不可用时，你仍然可以继续本地训练和手动模拟面试。"; color: root.palette.text; wrapMode: Text.Wrap; font.bold: true }
+                Text { width: parent.width; text: "默认模式：课程、测试、审查、复测和手动面试都在本机运行。"; color: root.palette.muted; wrapMode: Text.Wrap }
+                Text { width: parent.width; text: "AI 不可用时仍可继续训练。"; color: root.palette.text; wrapMode: Text.Wrap; font.bold: true }
             }
             LabCard {
-                Layout.fillWidth: true; Layout.preferredHeight: 190
+                Layout.fillWidth: true; Layout.preferredHeight: 166
                 cardColor: root.palette.surface; borderColor: root.palette.border
                 RowLayout {
                     width: parent.width
@@ -80,14 +80,18 @@ Flickable {
                 width: parent.width
                 Text { text: "Key 不会写入学习档案、事件或日志。"; color: root.palette.muted; font.pixelSize: 12; Layout.fillWidth: true }
                 Button {
-                    text: "保存连接"; highlighted: true
+                    objectName: "saveAndTestConnection"
+                    text: "保存并测试"; highlighted: true
                     enabled: model.text.length > 0
                     onClicked: {
                         var isOllama = provider.currentText === "ollama"
-                        app.saveConnection(connectionId.text, provider.currentText, model.text,
-                                           displayName.text, isOllama ? secretOrEndpoint.text : endpoint.text,
-                                           isOllama ? "" : secretOrEndpoint.text)
-                        if (!isOllama) secretOrEndpoint.text = ""
+                        var saved = app.saveConnection(connectionId.text, provider.currentText, model.text,
+                                                       displayName.text, isOllama ? secretOrEndpoint.text : endpoint.text,
+                                                       isOllama ? "" : secretOrEndpoint.text)
+                        if (saved) {
+                            app.testConnection(connectionId.text)
+                            if (!isOllama) secretOrEndpoint.text = ""
+                        }
                     }
                 }
             }

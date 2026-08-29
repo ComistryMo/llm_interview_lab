@@ -126,20 +126,22 @@ Item {
                 required property var modelData
                 required property int index
                 width: list.width
-                height: 104
+                height: 112
                 cardColor: root.palette.surface
                 borderColor: root.palette.border
                 RowLayout {
                     width: parent.width; height: parent.height; spacing: 16
                     Rectangle {
-                        width: 38; height: 38; radius: 19
+                        width: 28; height: 28; radius: 14
+                        Layout.alignment: Qt.AlignTop
                         color: modelData.status === "mastered" ? Qt.rgba(0.09,0.52,0.36,0.15) : root.palette.surfaceAlt
-                        Text { anchors.centerIn: parent; text: modelData.status === "mastered" ? "✓" : (index + 1); color: modelData.status === "mastered" ? root.palette.success : root.palette.muted; font.bold: true }
+                        Text { anchors.centerIn: parent; text: modelData.status === "mastered" ? "✓" : (index + 1); color: modelData.status === "mastered" ? root.palette.success : root.palette.muted; font.pixelSize: 11; font.bold: true }
                     }
                     ColumnLayout {
                         Layout.fillWidth: true; spacing: 4
-                        Text { text: modelData.title; color: root.palette.text; font.bold: true; font.pixelSize: 16; elide: Text.ElideRight; Layout.fillWidth: true }
-                        Text { text: (modelData.problem_id || "") + (modelData.skills && modelData.skills.length ? "  ·  " + modelData.skills.slice(0, 3).join(" · ") : ""); color: root.palette.muted; font.pixelSize: 12; elide: Text.ElideRight; Layout.fillWidth: true }
+                        Text { text: modelData.title; color: root.palette.text; font.bold: true; font.pixelSize: 17; wrapMode: Text.Wrap; maximumLineCount: 2; Layout.fillWidth: true }
+                        Text { text: modelData.skills && modelData.skills.length ? modelData.skills.slice(0, 3).join(" · ") : " "; color: root.palette.muted; font.pixelSize: 12; elide: Text.ElideRight; Layout.fillWidth: true }
+                        Text { text: modelData.problem_id || ""; color: root.palette.muted; font.pixelSize: 11; elide: Text.ElideRight; Layout.fillWidth: true }
                         RowLayout {
                             StatusPill { text: root.statusText(modelData.status); tone: modelData.status === "mastered" ? root.palette.success : root.palette.accent }
                             StatusPill { text: root.validationText(modelData.validation); tone: ["oracle", "field", "stable"].indexOf(modelData.validation) >= 0 ? root.palette.success : root.palette.warning }
@@ -147,10 +149,12 @@ Item {
                         }
                     }
                     Button {
+                        objectName: "learnOpenProblemButton"
                         text: modelData.locked ? "未解锁" : (modelData.status === "in_progress" ? "继续" : "开始")
                         enabled: !modelData.locked
                                  && modelData.asset_status !== "planned"
                                  && modelData.environment_available !== false
+                        Layout.alignment: Qt.AlignTop
                         onClicked: app.openProblem(modelData.problem_id)
                     }
                 }

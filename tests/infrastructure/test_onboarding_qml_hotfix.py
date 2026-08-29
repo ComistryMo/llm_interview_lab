@@ -127,7 +127,8 @@ def test_onboarding_uses_explicit_grid_geometry_and_no_index_default() -> None:
     assert 'objectName: "onboardingRoleGrid"' in source
     assert 'objectName: "onboardingContinueButton"' in source
     assert "policy: ScrollBar.AlwaysOn" in source
-    assert "Layout.preferredWidth: root.step === 3 ? 144 : 112" in source
+    assert "property int stepCount: 2" in source
+    assert "Layout.preferredWidth: root.step >= 1 ? 144 : 112" in source
 
 
 def test_role_cards_have_positive_non_overlapping_geometry(onboarding_scene) -> None:
@@ -162,7 +163,18 @@ def test_role_cards_have_positive_non_overlapping_geometry(onboarding_scene) -> 
 @pytest.mark.parametrize("index", [0, 3, 7])
 def test_clicking_first_fourth_and_eighth_roles_selects_id(onboarding_scene, index: int) -> None:
     _, window, page, _ = onboarding_scene
+    grid = page.findChild(QQuickItem, "onboardingRoleGrid")
+    assert grid is not None
     card = _role_cards(onboarding_scene)[index]
+    # The eighth card is below the initial viewport.  Scroll the real GridView
+    # before clicking so this test verifies hit testing, not an off-screen item.
+    if card.y() + card.height() > grid.property("contentY") + grid.height():
+        grid.setProperty(
+            "contentY",
+            max(0.0, card.y() - grid.height() + card.height() + 4),
+        )
+        QCoreApplication.processEvents()
+        card = _role_cards(onboarding_scene)[index]
     _click_item(window, card)
     assert page.property("selectedRole") == ROLE_IDS[index]
     label = page.findChild(QQuickItem, "onboardingSelectedRoleLabel")
@@ -196,7 +208,7 @@ def test_next_is_disabled_until_a_role_is_selected(onboarding_scene) -> None:
 
 def test_submit_state_is_visible_and_blocks_repeat_clicks(onboarding_scene) -> None:
     _, _, page, _ = onboarding_scene
-    page.setProperty("step", 3)
+    page.setProperty("step", 1)
     page.setProperty("selectedRole", ROLE_IDS[0])
     page.setProperty("submitting", True)
     QCoreApplication.processEvents()
@@ -226,13 +238,11 @@ def test_no_ai_first_run_reaches_the_first_exercise(onboarding_scene) -> None:
     assert profile_name is not None and button is not None
     profile_name.setProperty("text", "hotfix-user")
 
-    page.setProperty("step", 1)
+    page.setProperty("step", 0)
     QCoreApplication.processEvents()
+    _click_item(window, button)
+    assert page.property("step") == 1
     _click_item(window, _role_cards(onboarding_scene)[4])
-    _click_item(window, button)
-    assert page.property("step") == 2
-    _click_item(window, button)
-    assert page.property("step") == 3
     _click_item(window, button)
 
     for _ in range(30):
@@ -249,7 +259,9 @@ def test_main_toast_is_top_right_and_named() -> None:
         encoding="utf-8"
     )
     assert 'objectName: "globalToast"' in source
-    assert "y: 82" in source
+    assert "codexApprovalBanner.visible" in source
+    assert "codexApprovalBanner.y + codexApprovalBanner.height + 10" in source
+    assert ": 82" in source
 
 
 def test_fresh_exercise_qml_keeps_unreviewed_practice_actionable(
