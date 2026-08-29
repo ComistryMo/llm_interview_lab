@@ -55,6 +55,35 @@ Flickable {
             Layout.preferredHeight: root.advanced ? 390 : 315
             cardColor: root.palette.surface; borderColor: root.palette.border
             Text { text: "连接普通 LLM API"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
+            // Keep the primary action adjacent to the form heading so it remains
+            // discoverable in the initial viewport on compact desktop windows.
+            RowLayout {
+                width: parent.width
+                spacing: 12
+                Button {
+                    objectName: "saveAndTestConnection"
+                    text: "保存并测试"
+                    highlighted: true
+                    enabled: model.text.length > 0
+                    onClicked: {
+                        var isOllama = provider.currentText === "ollama"
+                        var saved = app.saveConnection(connectionId.text, provider.currentText, model.text,
+                                                       displayName.text, isOllama ? secretOrEndpoint.text : endpoint.text,
+                                                       isOllama ? "" : secretOrEndpoint.text)
+                        if (saved) {
+                            app.testConnection(connectionId.text)
+                            if (!isOllama) secretOrEndpoint.text = ""
+                        }
+                    }
+                }
+                Text {
+                    text: "先保存配置，再测试连接"
+                    color: root.palette.muted
+                    font.pixelSize: 12
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
+                }
+            }
             GridLayout {
                 width: parent.width; columns: 2; columnSpacing: 12; rowSpacing: 10
                 Text { text: "服务"; color: root.palette.muted }
@@ -76,24 +105,12 @@ Flickable {
                 TextField { id: displayName; Layout.fillWidth: true; text: provider.currentText === "ollama" ? "本地 Ollama" : provider.currentText; placeholderText: "显示名称" }
                 TextField { id: endpoint; Layout.columnSpan: 2; Layout.fillWidth: true; placeholderText: "自定义 Endpoint（OpenAI-compatible 可选）" }
             }
-            RowLayout {
+            Text {
+                text: "Key 不会写入学习档案、事件或日志。"
+                color: root.palette.muted
+                font.pixelSize: 12
                 width: parent.width
-                Text { text: "Key 不会写入学习档案、事件或日志。"; color: root.palette.muted; font.pixelSize: 12; Layout.fillWidth: true }
-                Button {
-                    objectName: "saveAndTestConnection"
-                    text: "保存并测试"; highlighted: true
-                    enabled: model.text.length > 0
-                    onClicked: {
-                        var isOllama = provider.currentText === "ollama"
-                        var saved = app.saveConnection(connectionId.text, provider.currentText, model.text,
-                                                       displayName.text, isOllama ? secretOrEndpoint.text : endpoint.text,
-                                                       isOllama ? "" : secretOrEndpoint.text)
-                        if (saved) {
-                            app.testConnection(connectionId.text)
-                            if (!isOllama) secretOrEndpoint.text = ""
-                        }
-                    }
-                }
+                wrapMode: Text.Wrap
             }
         }
 
