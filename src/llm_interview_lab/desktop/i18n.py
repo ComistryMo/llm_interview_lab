@@ -118,6 +118,14 @@ def friendly_error(error: BaseException | str) -> str:
         return "这道题还没有开始作答，请先点击“开始”后再运行测试。"
     if "submission could not be saved" in message:
         return "答案保存失败，请检查本地学习档案权限后重试。"
+    if "缺少满足岗位、难度与技能要求" in message or "no eligible fixed item" in message:
+        return "当前岗位、阶段和难度没有完整的固定面试题组合，请更换难度或岗位后重试。"
+    if "retention is not due until" in message:
+        return "间隔复测尚未到期，请按页面显示的到期时间再开始。"
+    if "retention assets unavailable" in message:
+        return "这道题尚无经过验证的复测资产，当前不能进入间隔复测。"
+    if "d+2 retention must pass" in message:
+        return "请先通过 D+2 间隔复测，再开始 D+7。"
     if "keyring" in message or "credential" in message:
         return TEXT["error.keyring"]
     if "codex" in message and ("not found" in message or "executable" in message):

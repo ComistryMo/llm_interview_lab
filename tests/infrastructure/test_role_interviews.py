@@ -20,6 +20,7 @@ from llm_interview_lab.role_interviews import (
     create_role_interview,
     current_role_question,
     finish_role_interview,
+    interview_preflight,
     load_role_interview,
     record_role_answer,
     record_role_assessment,
@@ -222,6 +223,130 @@ def test_role_blueprint_selects_validated_coding_problem_and_creates_local_start
     )
     assert submission.is_file()
     assert "NotImplementedError" in submission.read_text(encoding="utf-8") or "TODO" in submission.read_text(encoding="utf-8")
+
+
+def test_interview_preflight_is_strict_and_writes_nothing_when_unavailable(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+
+    available = interview_preflight(
+        root,
+        catalog,
+        roles,
+        role_id="applied_ai_engineer",
+        seniority="new_grad",
+        difficulty="medium",
+    )
+    assert available["available"] is True
+    session = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="applied_ai_engineer",
+        seniority="new_grad",
+        difficulty="medium",
+        now=T0,
+    )
+    coding = session["questions"][0]
+    assert coding["skills"] == ["skill.agent_application.tool_calling"]
+    blueprint = roles.blueprints[session["blueprint_id"]]
+    for question in session["questions"]:
+        round_skills = set(blueprint.rounds[question["round_index"]].skills)
+        assert question["skills"]
+        assert set(question["skills"]).issubset(round_skills)
+        if question["source"]["kind"] == "fixed_item":
+            assert set(question["skills"]).issubset(
+                roles.items[question["source"]["id"]].skills
+            )
+
+    interviews_root = profile_paths(root, "learner-one").interviews_root
+    before = sorted(path.name for path in interviews_root.iterdir())
+    unavailable = interview_preflight(
+        root,
+        catalog,
+        roles,
+        role_id="applied_ai_engineer",
+        seniority="new_grad",
+        difficulty="hard",
+    )
+    assert unavailable["available"] is False
+    assert any(item["type"] == "debugging" for item in unavailable["missing_rounds"])
+    with pytest.raises(RoleInterviewError, match="缺少满足岗位"):
+        create_role_interview(
+            root,
+            "learner-one",
+            catalog,
+            roles,
+            role_id="applied_ai_engineer",
+            seniority="new_grad",
+            difficulty="hard",
+            now=T0,
+        )
+    assert sorted(path.name for path in interviews_root.iterdir()) == before
+
+
+def test_interview_preflight_reports_missing_torch_without_relaxing_skills(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    result = interview_preflight(
+        root,
+        catalog,
+        roles,
+        role_id="ai_algorithm_research_engineer",
+        seniority="intern",
+        difficulty="medium",
+        torch_available=False,
+    )
+    assert result["available"] is False
+    assert result["missing_environment"] == ["pytorch"]
+    coding = next(item for item in result["missing_rounds"] if item["type"] == "coding")
+    assert coding["reason"] == "missing_environment"
+
+
+@pytest.mark.parametrize(
+    ("problem_id", "skill_ids"),
+    [
+        ("FND-004", {"skill.python_engineering.data_contracts", "skill.data_mlops.data_quality"}),
+        ("TNS-011", {"skill.deep_learning.tensor_ops"}),
+        ("PT-002", {"skill.post_training_rl.policy_optimization"}),
+        (
+            "CAP-LOSS-001",
+            {
+                "skill.deep_learning.tensor_ops",
+                "skill.deep_learning.autograd",
+                "skill.deep_learning.neural_layers",
+                "skill.deep_learning.losses",
+            },
+        ),
+        (
+            "CAP-TRN-001",
+            {
+                "skill.data_mlops.pipelines",
+                "skill.data_mlops.reproducibility",
+                "skill.deep_learning.tensor_ops",
+                "skill.deep_learning.autograd",
+                "skill.deep_learning.neural_layers",
+                "skill.deep_learning.losses",
+                "skill.deep_learning.optimizers",
+            },
+        ),
+        ("AGT-006", {"skill.agent_application.tool_calling"}),
+    ],
+)
+def test_skill_ontology_reverse_index_covers_authored_problems(
+    tmp_path: Path, problem_id: str, skill_ids: set[str]
+) -> None:
+    root = _repository(tmp_path)
+    _, roles = _catalogs(root)
+    actual = {
+        skill.id for skill in roles.skills.values() if problem_id in skill.related_problems
+    }
+    assert skill_ids.issubset(actual)
 
 
 def test_timer_incomplete_finish_and_profile_isolation(tmp_path: Path) -> None:

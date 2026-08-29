@@ -222,6 +222,13 @@ class AppController(QObject):
             "problem_id": "LOSS-014",
             "title": "Cross Entropy",
             "task": "Implement numerically stable cross entropy for batched logits.\n\nInput shape: logits [B, C], targets [B].",
+            "actions": {
+                "review": {"state": "blocked", "actionable": False, "blocked_reason": "先完成实现。"},
+                "retention": {
+                    "d2": {"state": "future", "actionable": False, "blocked_reason": "尚未到期。"},
+                    "d7": {"state": "blocked", "actionable": False, "blocked_reason": "先通过 D+2。"},
+                },
+            },
         }
         self._submission = "def cross_entropy(logits, targets):\n    # Your implementation\n    raise NotImplementedError\n"
         self._submission_saved_revision = hashlib.sha256(self._submission.encode()).hexdigest()
@@ -293,6 +300,12 @@ class AppController(QObject):
     @Property("QVariantList", notify=stateChanged)
     def roles(self) -> list[dict[str, Any]]:
         return [localize_role(card) for card in self.service.role_cards()]
+
+    @Slot(str, str, str, result="QVariantMap")
+    def interviewConfiguration(
+        self, role_id: str, seniority: str, difficulty: str
+    ) -> dict[str, Any]:
+        return self.service.interview_configuration(role_id, seniority, difficulty)
 
     @Property("QVariantMap", notify=stateChanged)
     def dashboard(self) -> dict[str, Any]:
@@ -481,6 +494,9 @@ class AppController(QObject):
         current = self.service.current_submission(self._profile_id)
         if current:
             self._current_task = self.service.problem_view(current["problem_id"])
+            self._current_task["actions"] = self.service.practice_actions(
+                self._profile_id, current["problem_id"]
+            )
             self._submission = current["text"]
             self._submission_saved_revision = current["sha256"]
             last_test = current.get("last_public_test") or {}
@@ -504,9 +520,9 @@ class AppController(QObject):
         self._materials = self.service.material_cards(self._profile_id)
         self._interview = {}
         try:
-            resumable = self.service.resumable_interview(self._profile_id)
-            if resumable is not None:
-                self._load_interview(resumable["interview_id"])
+            preferred = self.service.preferred_interview(self._profile_id)
+            if preferred is not None:
+                self._load_interview(preferred["interview_id"])
         except Exception as error:
             logging.getLogger("llm_interview_lab.desktop").warning(
                 "interview_resume_unavailable error_type=%s",
@@ -764,6 +780,9 @@ class AppController(QObject):
             current = self.service.current_submission(self._profile_id)
         assert current is not None
         self._current_task = self.service.problem_view(problem_id)
+        self._current_task["actions"] = self.service.practice_actions(
+            self._profile_id, problem_id
+        )
         self._submission = current["text"]
         self._submission_saved_revision = current["sha256"]
         last_test = current.get("last_public_test") or {}
@@ -872,7 +891,8 @@ class AppController(QObject):
             self._show_error("当前题目或作答轮次已变化，请重新打开这道题后再运行测试。")
             return
         operation_id = uuid4().hex
-        identity = (problem_id, current["attempt_id"], self._profile_id)
+        profile_id = self._profile_id
+        identity = (problem_id, current["attempt_id"], profile_id)
         self._test_operation_id = operation_id
         self._test_identity = identity
         self._test_state = "正在测试"
@@ -883,7 +903,7 @@ class AppController(QObject):
             if self._test_operation_id != operation_id:
                 return
             try:
-                current_now = self.service.current_submission(self._profile_id)
+                current_now = self.service.current_submission(profile_id)
             except Exception:
                 current_now = None
             changed = (
@@ -915,7 +935,7 @@ class AppController(QObject):
 
         self._background(
             lambda: self.service.run_practice_tests_for_submission(
-                self._profile_id,
+                profile_id,
                 problem_id,
                 text,
                 attempt_id=identity[1],
@@ -988,21 +1008,45 @@ class AppController(QObject):
         if not self._current_task or self._profile_id == "demo":
             self.toast.emit("请先完成该题的实现与审查。")
             return
+        self.startRetentionFor(self._current_task["problem_id"], stage)
+
+    @Slot(str, str, result=bool)
+    def startRetentionFor(self, problem_id: str, stage: str) -> bool:
+        """Start or resume a due retention attempt independent of the open page."""
+
+        if self._profile_id == "demo":
+            self.toast.emit("演示模式不会创建真实复测尝试。")
+            return False
         try:
-            problem_id = self._current_task["problem_id"]
             result = self.service.start_retention(self._profile_id, problem_id, stage)
             current = self.service.current_submission(self._profile_id)
-            if current is None:
+            if current is None or current["problem_id"] != problem_id:
                 raise RuntimeError("retention attempt was not created")
+            self._current_task = self.service.problem_view(problem_id)
+            self._current_task["actions"] = self.service.practice_actions(
+                self._profile_id, problem_id
+            )
             self._submission = current["text"]
+            self._submission_saved_revision = current["sha256"]
+            self._tested_revision = ""
+            self._test_state = "未测试"
+            self._test_identity = (
+                problem_id,
+                current["attempt_id"],
+                self._profile_id,
+            )
             self._test_output = (
                 f"{stage.upper()} 复测尝试 {result['attempt_id']} 独立创建；"
                 "系统没有复制上一次答案。"
             )
+            self._page = "exercise"
             self.stateChanged.emit()
+            self.pageChanged.emit()
             self.toast.emit(f"已开始经过验证的 {stage.upper()} 间隔复测。")
+            return True
         except Exception as error:
             self._show_error(error)
+            return False
 
     @Slot(str, str, str)
     def createInterview(self, role_id: str, seniority: str, difficulty: str) -> None:
@@ -1080,14 +1124,17 @@ class AppController(QObject):
 
     def _load_interview(self, interview_id: str) -> None:
         session = self.service.interview_session(self._profile_id, interview_id)
-        try:
-            current = self.service.current_interview(self._profile_id, interview_id)
-        except Exception as error:
-            # An expired active session still needs a truthful, recoverable UI.
-            if session.get("status") == "active" and "expired" in str(error).lower():
-                current = {"question": None, "remaining_seconds": 0}
-            else:
-                raise
+        if session.get("status") in {"completed", "incomplete"}:
+            current = {"question": None, "remaining_seconds": 0}
+        else:
+            try:
+                current = self.service.current_interview(self._profile_id, interview_id)
+            except Exception as error:
+                # An expired active session still needs a truthful, recoverable UI.
+                if session.get("status") == "active" and "expired" in str(error).lower():
+                    current = {"question": None, "remaining_seconds": 0}
+                else:
+                    raise
         questions = session["questions"]
         answered = {
             question["question_id"]
@@ -1127,6 +1174,9 @@ class AppController(QObject):
             "unscored_questions": len(answered - assessed),
             "coding_incomplete": coding_incomplete,
             "resume_available": session["status"] == "active",
+            "result": self.service.interview_result_view(
+                self._profile_id, interview_id
+            ),
             **current,
         }
         question = current.get("question")
@@ -1243,15 +1293,22 @@ class AppController(QObject):
             self._test_output = "4 passed in 0.16s\n\n代码证据：PASS"
             self.stateChanged.emit()
             return
+        profile_id = self._profile_id
+        interview_id = self._interview["interview_id"]
         try:
             self.service.save_interview_coding_submission(
-                self._profile_id, self._interview["interview_id"], text
+                profile_id, interview_id, text
             )
         except Exception as error:
             self._show_error(error)
             return
 
         def complete(result) -> None:
+            if (
+                self._profile_id != profile_id
+                or self._interview.get("interview_id") != interview_id
+            ):
+                return
             self._test_output = (
                 (result.output + "\n\n" if result.output else "")
                 + f"代码证据：{result.status.upper()}"
@@ -1260,7 +1317,7 @@ class AppController(QObject):
 
         self._background(
             lambda: self.service.test_interview_coding(
-                self._profile_id, self._interview["interview_id"]
+                profile_id, interview_id
             ),
             complete,
         )

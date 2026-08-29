@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -22,7 +23,7 @@ from jsonschema import Draft202012Validator
 from .catalog import Catalog, Problem, compute_problem_fingerprint
 from .grader import GraderResult, run_public_tests
 from .materials import MaterialError, get_material
-from .roles import InterviewItem, RoleCatalog
+from .roles import InterviewItem, RoleCatalog, RoleCatalogError
 from .workspace import (
     WorkspaceError,
     ensure_profile_is_ignored,
@@ -167,24 +168,189 @@ def _stable_choice(values: tuple[Any, ...], identity: str) -> Any:
     return values[index]
 
 
+def _effective_problem_skills(
+    problem: Problem, role_catalog: RoleCatalog
+) -> frozenset[str]:
+    """Resolve coding skills from the ontology's single reverse index."""
+
+    related = {
+        skill.id
+        for skill in role_catalog.skills.values()
+        if problem.id in skill.related_problems
+    }
+    return frozenset((*problem.canonical_skills, *related))
+
+
+def _requires_torch(problem: Problem) -> bool:
+    interface = problem.raw.get("interface", {})
+    return isinstance(interface, Mapping) and str(interface.get("framework", "")).lower() == "pytorch"
+
+
 def _coding_candidates(
-    catalog: Catalog, track_ids: tuple[str, ...], difficulty: str
-) -> tuple[Problem, ...]:
+    catalog: Catalog,
+    role_catalog: RoleCatalog,
+    track_ids: tuple[str, ...],
+    difficulty: str,
+    required_skills: tuple[str, ...],
+    *,
+    torch_available: bool,
+) -> tuple[tuple[Problem, tuple[str, ...]], ...]:
     band = DIFFICULTY_BANDS[difficulty]
     tracks = set(track_ids)
+    wanted = set(required_skills)
+    candidates: list[tuple[Problem, tuple[str, ...]]] = []
+    for problem in catalog.problems.values():
+        effective_skills = _effective_problem_skills(problem, role_catalog)
+        matched_skills = tuple(sorted(wanted.intersection(effective_skills)))
+        if (
+            problem.recommendable
+            and not problem.id.startswith("CAP-")
+            and tracks.intersection(problem.raw["tracks"])
+            and problem.raw["difficulty"]["coding"] in band
+            and matched_skills
+            and (torch_available or not _requires_torch(problem))
+        ):
+            candidates.append((problem, matched_skills))
     return tuple(
-        sorted(
-            (
-                problem
-                for problem in catalog.problems.values()
-                if problem.recommendable
-                and not problem.id.startswith("CAP-")
-                and tracks.intersection(problem.raw["tracks"])
-                and problem.raw["difficulty"]["coding"] in band
-            ),
-            key=lambda problem: problem.id,
-        )
+        sorted(candidates, key=lambda candidate: candidate[0].id)
     )
+
+
+def _item_candidates(
+    role_catalog: RoleCatalog,
+    *,
+    role_id: str,
+    seniority: str,
+    round_type: str,
+    difficulty: str,
+    required_skills: tuple[str, ...],
+) -> tuple[tuple[InterviewItem, tuple[str, ...]], ...]:
+    band = DIFFICULTY_BANDS[difficulty]
+    wanted = set(required_skills)
+    candidates: list[tuple[InterviewItem, tuple[str, ...]]] = []
+    for item in role_catalog.items.values():
+        matched_skills = tuple(sorted(wanted.intersection(item.skills)))
+        if (
+            item.status == "ready"
+            and role_id in item.roles
+            and seniority in item.seniority
+            and item.kind == round_type
+            and item.difficulty in band
+            and matched_skills
+        ):
+            candidates.append((item, matched_skills))
+    return tuple(sorted(candidates, key=lambda candidate: candidate[0].id))
+
+
+def interview_preflight(
+    repo_root: Path,
+    catalog: Catalog,
+    role_catalog: RoleCatalog,
+    *,
+    role_id: str,
+    seniority: str,
+    difficulty: str,
+    torch_available: bool | None = None,
+) -> dict[str, Any]:
+    """Return deterministic availability without writing a Profile or session."""
+
+    if difficulty not in DIFFICULTY_BANDS:
+        return {
+            "available": False,
+            "user_message": "面试难度无效，请选择 easy、medium 或 hard。",
+            "missing_rounds": [],
+            "missing_environment": [],
+            "error_code": "DIFFICULTY_INVALID",
+        }
+    try:
+        role = role_catalog.resolve_role(role_id)
+        blueprint = role_catalog.blueprint_for(role.id, seniority)
+    except RoleCatalogError:
+        return {
+            "available": False,
+            "user_message": "当前岗位或求职阶段没有可用的固定面试蓝图。",
+            "missing_rounds": [],
+            "missing_environment": [],
+            "error_code": "BLUEPRINT_UNAVAILABLE",
+        }
+
+    has_torch = (
+        importlib.util.find_spec("torch") is not None
+        if torch_available is None
+        else bool(torch_available)
+    )
+    missing_rounds: list[dict[str, Any]] = []
+    missing_environment: set[str] = set()
+    round_views: list[dict[str, Any]] = []
+    for round_index, round_value in enumerate(blueprint.rounds):
+        if round_value.type == "coding":
+            candidates = _coding_candidates(
+                catalog,
+                role_catalog,
+                role.required_tracks,
+                difficulty,
+                round_value.skills,
+                torch_available=has_torch,
+            )
+            if not has_torch:
+                with_torch = _coding_candidates(
+                    catalog,
+                    role_catalog,
+                    role.required_tracks,
+                    difficulty,
+                    round_value.skills,
+                    torch_available=True,
+                )
+                if with_torch and not candidates:
+                    missing_environment.add("pytorch")
+            candidate_ids = [problem.id for problem, _ in candidates]
+        else:
+            candidates = _item_candidates(
+                role_catalog,
+                role_id=role.id,
+                seniority=seniority,
+                round_type=round_value.type,
+                difficulty=difficulty,
+                required_skills=round_value.skills,
+            )
+            candidate_ids = [item.id for item, _ in candidates]
+        round_view = {
+            "round_index": round_index,
+            "type": round_value.type,
+            "required_items": round_value.item_count,
+            "candidate_ids": candidate_ids,
+            "skills": list(round_value.skills),
+        }
+        round_views.append(round_view)
+        if len(candidate_ids) < round_value.item_count:
+            missing_rounds.append(
+                {
+                    **round_view,
+                    "available_items": len(candidate_ids),
+                    "reason": (
+                        "missing_environment"
+                        if round_value.type == "coding" and "pytorch" in missing_environment
+                        else "no_strict_candidate"
+                    ),
+                }
+            )
+    available = not missing_rounds
+    return {
+        "available": available,
+        "role_id": role.id,
+        "seniority": seniority,
+        "difficulty": difficulty,
+        "blueprint_id": blueprint.id,
+        "user_message": (
+            "当前配置可用。"
+            if available
+            else "当前配置缺少满足岗位、难度与技能要求的固定面试题。"
+        ),
+        "missing_rounds": missing_rounds,
+        "missing_environment": sorted(missing_environment),
+        "rounds": round_views,
+        "error_code": "" if available else "INTERVIEW_UNAVAILABLE",
+    }
 
 
 def _item_question(
@@ -194,6 +360,7 @@ def _item_question(
     round_index: int,
     round_weight: float,
     timebox_minutes: int,
+    skills: tuple[str, ...],
 ) -> dict[str, Any]:
     task = item.task_path.read_bytes()
     loaded_rubric = yaml.safe_load(item.rubric_path.read_text(encoding="utf-8"))
@@ -214,7 +381,7 @@ def _item_question(
         "title": item.title,
         "timebox_minutes": timebox_minutes,
         "round_weight": round_weight,
-        "skills": list(item.skills),
+        "skills": list(skills),
         "source": {
             "kind": "fixed_item",
             "id": item.id,
@@ -244,7 +411,7 @@ def _coding_question(
         "title": f"{problem.id} {problem.title}",
         "timebox_minutes": timebox_minutes,
         "round_weight": round_weight,
-        "skills": list(skills or problem.canonical_skills),
+        "skills": list(skills),
         "source": {
             "kind": "catalog_problem",
             "id": problem.id,
@@ -296,6 +463,18 @@ def create_role_interview(
         raise RoleInterviewError("seed must be a non-negative integer")
     role = role_catalog.resolve_role(role_id)
     blueprint = role_catalog.blueprint_for(role.id, seniority)
+    torch_available = importlib.util.find_spec("torch") is not None
+    availability = interview_preflight(
+        repo_root,
+        catalog,
+        role_catalog,
+        role_id=role.id,
+        seniority=seniority,
+        difficulty=difficulty,
+        torch_available=torch_available,
+    )
+    if not availability["available"]:
+        raise RoleInterviewError(availability["user_message"])
 
     selected_materials = tuple(dict.fromkeys(material_ids))
     if selected_materials and not consent_materials:
@@ -321,7 +500,6 @@ def create_role_interview(
     questions: list[dict[str, Any]] = []
     used_items: set[str] = set()
     used_problems: set[str] = set()
-    coding_pool = _coding_candidates(catalog, role.required_tracks, difficulty)
     number = 1
     for round_index, round_value in enumerate(blueprint.rounds):
         each_timebox = max(1, round_value.duration // round_value.item_count)
@@ -332,8 +510,20 @@ def create_role_interview(
                 f"{round_index}|{item_index}"
             )
             if round_value.type == "coding":
-                available = tuple(p for p in coding_pool if p.id not in used_problems)
-                problem = _stable_choice(available or coding_pool, identity)
+                coding_pool = _coding_candidates(
+                    catalog,
+                    role_catalog,
+                    role.required_tracks,
+                    difficulty,
+                    round_value.skills,
+                    torch_available=torch_available,
+                )
+                available = tuple(
+                    candidate
+                    for candidate in coding_pool
+                    if candidate[0].id not in used_problems
+                )
+                problem, matched_skills = _stable_choice(available, identity)
                 used_problems.add(problem.id)
                 question = _coding_question(
                     repo_root,
@@ -342,26 +532,22 @@ def create_role_interview(
                     round_index=round_index,
                     round_weight=round_value.weight,
                     timebox_minutes=each_timebox,
-                    skills=round_value.skills,
+                    skills=matched_skills,
                 )
             else:
                 pool = tuple(
-                    item
-                    for item in role_catalog.eligible_items(
-                        role.id, seniority, round_value.type, round_value.skills
+                    candidate
+                    for candidate in _item_candidates(
+                        role_catalog,
+                        role_id=role.id,
+                        seniority=seniority,
+                        round_type=round_value.type,
+                        difficulty=difficulty,
+                        required_skills=round_value.skills,
                     )
-                    if item.id not in used_items
-                    and item.difficulty in DIFFICULTY_BANDS[difficulty]
+                    if candidate[0].id not in used_items
                 )
-                if not pool:
-                    pool = tuple(
-                        item
-                        for item in role_catalog.eligible_items(
-                            role.id, seniority, round_value.type, round_value.skills
-                        )
-                        if item.id not in used_items
-                    )
-                item = _stable_choice(pool, identity)
+                item, matched_skills = _stable_choice(pool, identity)
                 used_items.add(item.id)
                 question = _item_question(
                     item,
@@ -369,6 +555,7 @@ def create_role_interview(
                     round_index=round_index,
                     round_weight=round_value.weight,
                     timebox_minutes=each_timebox,
+                    skills=matched_skills,
                 )
             questions.append(question)
             number += 1

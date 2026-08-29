@@ -8,6 +8,7 @@ values suitable for a terminal or a Qt model.
 from __future__ import annotations
 
 from dataclasses import asdict, replace
+from datetime import datetime
 import importlib.util
 import os
 from pathlib import Path
@@ -23,6 +24,7 @@ from .role_interviews import (
     create_role_interview,
     current_role_question,
     finish_role_interview,
+    interview_preflight,
     list_role_interviews,
     load_role_interview,
     record_role_answer,
@@ -239,7 +241,96 @@ class ApplicationService:
         events = read_events(paths.events_file, event_schema_path(self.repo_root))
         return paths, profile, reduce_events(events)
 
-    def dashboard(self, profile_id: str) -> dict[str, Any]:
+    @staticmethod
+    def _current_time(now: datetime | None = None) -> datetime:
+        value = now or datetime.now().astimezone()
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ApplicationError("application clock must include a timezone")
+        return value
+
+    @staticmethod
+    def _problem_environment_available(problem: Problem) -> bool:
+        interface = problem.raw.get("interface", {})
+        framework = interface.get("framework", "") if isinstance(interface, Mapping) else ""
+        return str(framework).lower() != "pytorch" or importlib.util.find_spec("torch") is not None
+
+    def practice_actions(
+        self, profile_id: str, problem_id: str, *, now: datetime | None = None
+    ) -> dict[str, Any]:
+        """Derive truthful review and retention actions from canonical events."""
+
+        _, _, state = self._state(profile_id)
+        problem = self.catalog.get(problem_id)
+        current_time = self._current_time(now)
+        reviewed = state.problem_reviewed(problem_id)
+        review_state = (
+            "complete"
+            if reviewed
+            else "review_available"
+            if state.problem_implemented(problem_id)
+            else "blocked"
+        )
+        actions: dict[str, Any] = {
+            "review": {
+                "state": review_state,
+                "actionable": review_state == "review_available",
+                "blocked_reason": (
+                    "" if review_state != "blocked" else "先通过公开测试并提交当前实现。"
+                ),
+            },
+            "retention": {},
+        }
+        for stage in ("d2", "d7"):
+            completed = (
+                problem_id in state.retained_d2
+                if stage == "d2"
+                else problem_id in state.retained_d7
+            )
+            value: dict[str, Any] = {
+                "stage": stage,
+                "state": "blocked",
+                "due_at": "",
+                "actionable": False,
+                "blocked_reason": "",
+            }
+            if completed:
+                value["state"] = "complete"
+            elif not reviewed:
+                value["blocked_reason"] = "先完成契约审查与口述答辩。"
+            elif stage == "d7" and problem_id not in state.retained_d2:
+                value["blocked_reason"] = "先通过 D+2 间隔复测。"
+            elif problem.retention_variant(self.repo_root, stage) is None:
+                value["state"] = "missing_asset"
+                value["blocked_reason"] = f"{stage.upper()} 尚无经过验证的复测资产。"
+            elif not self._problem_environment_available(problem):
+                value["state"] = "missing_environment"
+                value["blocked_reason"] = "当前环境缺少 PyTorch 练习依赖。"
+            else:
+                due_at = retention_due_at(state, problem_id, stage)
+                value["due_at"] = due_at.isoformat()
+                existing = next(
+                    (
+                        attempt
+                        for attempt in reversed(state.attempts_for(problem_id))
+                        if attempt.retention_stage == stage
+                    ),
+                    None,
+                )
+                if existing is not None:
+                    value["state"] = "in_progress"
+                    value["actionable"] = True
+                elif current_time < due_at:
+                    value["state"] = "future"
+                    value["blocked_reason"] = f"将在 {due_at.isoformat(timespec='seconds')} 到期。"
+                else:
+                    value["state"] = "due"
+                    value["actionable"] = True
+            actions["retention"][stage] = value
+        return actions
+
+    def dashboard(
+        self, profile_id: str, *, now: datetime | None = None
+    ) -> dict[str, Any]:
         _, profile, state = self._state(profile_id)
         current = state.current_attempt()
         if current is not None and state.problem_status(current.problem_id) == "mastered":
@@ -266,16 +357,26 @@ class ApplicationService:
             for attempt in state.attempts.values()
             if attempt.implemented and not attempt.reviewed
         ]
-        due_retention: list[dict[str, str]] = []
+        due_retention: list[dict[str, Any]] = []
         for problem_id in sorted(state.reviewed_at):
-            if problem_id not in state.retained_d2:
+            actions = self.practice_actions(profile_id, problem_id, now=now)
+            for stage in ("d2", "d7"):
+                action = actions["retention"][stage]
+                if action["state"] not in {"due", "in_progress"}:
+                    continue
+                problem = self.catalog.get(problem_id)
                 due_retention.append(
-                    {"problem_id": problem_id, "stage": "d2", "due_at": retention_due_at(state, problem_id, "d2").isoformat()}
+                    {
+                        "problem_id": problem_id,
+                        "title": problem.title,
+                        "stage": stage,
+                        "due_at": action["due_at"],
+                        "actionable": action["actionable"],
+                        "blocked_reason": action["blocked_reason"],
+                    }
                 )
-            elif problem_id not in state.retained_d7:
-                due_retention.append(
-                    {"problem_id": problem_id, "stage": "d7", "due_at": retention_due_at(state, problem_id, "d7").isoformat()}
-                )
+                break
+        due_retention.sort(key=lambda value: (value["due_at"], value["problem_id"]))
         role_readiness: list[dict[str, Any]] = []
         if role_preferences:
             role = self.roles.roles.get(role_preferences.get("primary_role"))
@@ -452,10 +553,21 @@ class ApplicationService:
         return asdict(start_problem(self.repo_root, profile_id, problem))
 
     def start_retention(
-        self, profile_id: str, problem_id: str, stage: str
+        self,
+        profile_id: str,
+        problem_id: str,
+        stage: str,
+        *,
+        now: datetime | None = None,
     ) -> dict[str, Any]:
         return asdict(
-            start_retention(self.repo_root, profile_id, self.catalog.get(problem_id), stage)
+            start_retention(
+                self.repo_root,
+                profile_id,
+                self.catalog.get(problem_id),
+                stage,
+                now=now,
+            )
         )
 
     def run_practice_tests(self, profile_id: str, problem_id: str) -> GraderResult:
@@ -658,6 +770,20 @@ class ApplicationService:
             seed=seed,
         )
 
+    def interview_configuration(
+        self, role_id: str, seniority: str, difficulty: str
+    ) -> dict[str, Any]:
+        """Describe whether every blueprint round has a strict local candidate."""
+
+        return interview_preflight(
+            self.repo_root,
+            self.catalog,
+            self.roles,
+            role_id=role_id,
+            seniority=seniority,
+            difficulty=difficulty,
+        )
+
     def start_interview(self, profile_id: str, interview_id: str) -> dict[str, Any]:
         return start_role_interview(
             self.repo_root, profile_id, interview_id, self.catalog
@@ -815,3 +941,49 @@ class ApplicationService:
             if session["status"] == "active"
         ]
         return active[-1] if active else None
+
+    def interview_result_view(
+        self, profile_id: str, interview_id: str
+    ) -> dict[str, Any] | None:
+        """Regenerate a presentation view from canonical ``session.result``."""
+
+        session = load_role_interview(self.repo_root, profile_id, interview_id)
+        result = session.get("result")
+        if not isinstance(result, Mapping):
+            return None
+        return {
+            "interview_id": interview_id,
+            "status": session["status"],
+            "role_id": session["role_id"],
+            "seniority": session["seniority"],
+            "difficulty": session["difficulty"],
+            "completion_status": result["completion_status"],
+            "overall_score": result["overall_score"],
+            "question_scores": dict(result["question_scores"]),
+            "skill_scores": dict(result["skill_scores"]),
+            "critical_gaps": list(result["critical_gaps"]),
+            "unanswered": list(result["unanswered"]),
+            "unscored": list(result["unscored"]),
+            "summary": result["summary"],
+            "finished_at": result["finished_at"],
+        }
+
+    def recent_interview_result(self, profile_id: str) -> dict[str, Any] | None:
+        """Return the newest completed/incomplete result after active recovery."""
+
+        sessions = list_role_interviews(self.repo_root, profile_id)
+        for session in reversed(sessions):
+            if session["status"] in {"completed", "incomplete"} and session["result"] is not None:
+                return self.interview_result_view(profile_id, session["interview_id"])
+        return None
+
+    def preferred_interview(self, profile_id: str) -> dict[str, Any] | None:
+        """Prefer active recovery, otherwise expose the newest canonical result."""
+
+        active = self.resumable_interview(profile_id)
+        if active is not None:
+            return {"kind": "active", "interview_id": active["interview_id"]}
+        result = self.recent_interview_result(profile_id)
+        if result is not None:
+            return {"kind": "result", **result}
+        return None
