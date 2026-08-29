@@ -174,6 +174,11 @@ def test_clicking_first_fourth_and_eighth_roles_selects_id(onboarding_scene, ind
     )
     assert label is not None and ROLE_IDS[index] not in str(label.property("text"))
     assert marker is not None and marker.property("visible") is True
+    button = page.findChild(QQuickItem, "onboardingContinueButton")
+    assert button is not None
+    assert button.property("enabled") is True
+    assert button.width() >= 112
+    assert button.height() >= 40
 
 
 def test_next_is_disabled_until_a_role_is_selected(onboarding_scene) -> None:

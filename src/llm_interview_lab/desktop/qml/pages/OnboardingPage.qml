@@ -330,6 +330,8 @@ Rectangle {
             Button {
                 id: continueButton
                 objectName: "onboardingContinueButton"
+                Layout.preferredWidth: root.step === 3 ? 144 : 112
+                Layout.preferredHeight: 44
                 text: root.step === 3
                       ? (root.submitting || app.onboardingBusy ? "正在创建…" : "开始训练")
                       : "继续"
@@ -338,6 +340,21 @@ Rectangle {
                          && !app.onboardingBusy
                          && !(root.step === 0 && !root.profileNameValid)
                          && !(root.step === 1 && root.selectedRole.length === 0)
+                background: Rectangle {
+                    radius: 8
+                    color: continueButton.enabled
+                           ? root.palette.accent
+                           : root.palette.border
+                    border.width: continueButton.activeFocus ? 2 : 0
+                    border.color: root.palette.text
+                }
+                contentItem: Text {
+                    text: continueButton.text
+                    color: continueButton.enabled ? "white" : root.palette.muted
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
                 onClicked: {
                     root.inlineError = ""
                     app.clearOnboardingError()
