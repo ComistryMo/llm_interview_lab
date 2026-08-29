@@ -243,3 +243,31 @@ def test_main_toast_is_top_right_and_named() -> None:
     )
     assert 'objectName: "globalToast"' in source
     assert "y: 82" in source
+
+
+def test_fresh_exercise_qml_keeps_unreviewed_practice_actionable(
+    qapp: QGuiApplication,
+) -> None:
+    controller = AppController(REPO_ROOT, demo_page="exercise")
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("backend", controller)
+    engine.load(QUrl.fromLocalFile(str(QML_PATH)))
+    assert engine.rootObjects()
+    window = engine.rootObjects()[0]
+    window.show()
+    for _ in range(4):
+        QCoreApplication.processEvents()
+    button = window.findChild(QQuickItem, "practicePrimaryAction")
+    assert button is not None
+    assert button.property("visible") is True
+    assert button.property("text") == "运行公开测试"
+
+    controller.runTests()
+    for _ in range(4):
+        QCoreApplication.processEvents()
+    assert button.property("visible") is True
+    assert button.property("text") == "提交实现"
+    window.close()
+    engine.deleteLater()
+    controller.shutdown()
+    QCoreApplication.processEvents()
