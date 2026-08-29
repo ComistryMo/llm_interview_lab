@@ -278,7 +278,12 @@ Item {
                     Text { Layout.fillWidth: true; text: activeQuestion ? (activeQuestion.kind === "coding" ? "代码题" : (activeQuestion.kind === "system_design" ? "系统设计" : "结构化问答")) : "模拟面试室"; color: root.palette.accent; font.pixelSize: 11; font.bold: true; font.letterSpacing: 1 }
                     Text { Layout.fillWidth: true; text: activeQuestion ? activeQuestion.title : "按岗位蓝图开始一场面试"; color: root.palette.text; font.pixelSize: 22; font.bold: true; wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight }
                 }
-                StatusPill { text: root.timerText(app.interview.remaining_seconds); tone: root.palette.warning }
+                StatusPill {
+                    text: app.interview.status === "active"
+                          ? root.timerText(app.interview.remaining_seconds)
+                          : root.statusText(app.interview.status)
+                    tone: app.interview.status === "active" ? root.palette.warning : root.palette.muted
+                }
             }
             Rectangle { width: parent.width; height: 1; color: root.palette.border }
             ScrollView {
@@ -347,23 +352,27 @@ Item {
                         Button {
                             text: "记录自评"
                             enabled: root.rubricComplete() && evidence.text.trim().length > 0
+                                     && !app.busy && !app.interview.assessment_recorded
                             onClicked: app.answerInterviewDetailed(answer.text, JSON.stringify(root.rubricScores), evidence.text)
                         }
                         Button {
                             visible: app.interview.ai_mode === "provider"
                             enabled: providerConnection.currentIndex >= 0 && !app.busy
+                                     && !app.interview.assessment_recorded
                             text: "预览 AI 评分上下文"
                             highlighted: true
                             onClicked: root.previewAI("provider", providerConnection.currentValue)
                         }
                         Button {
                             visible: app.interview.ai_mode === "codex"
+                            enabled: !app.busy && !app.interview.assessment_recorded
                             text: "连接 Codex 面试官"
                             highlighted: true
                             onClicked: app.connectCodex("interviewer")
                         }
                         Button {
                             visible: app.interview.ai_mode === "codex" && (app.aiStatus.indexOf("已连接") >= 0 || app.aiStatus.indexOf("就绪") >= 0)
+                            enabled: !app.busy && !app.interview.assessment_recorded
                             text: "预览 Codex 评分上下文"
                             onClicked: root.previewAI("codex", "")
                         }
@@ -508,7 +517,7 @@ Item {
                 width: parent.width
                 Text { text: activeQuestion ? "问题 " + activeQuestion.question_id : ""; color: root.palette.muted }
                 Item { Layout.fillWidth: true }
-                Button { text: "结束并留档"; enabled: !!app.interview.interview_id; onClicked: finishDialog.open() }
+                Button { text: "结束并留档"; enabled: !!app.interview.interview_id && !app.busy; onClicked: finishDialog.open() }
             }
         }
     }

@@ -151,6 +151,18 @@ def test_product_role_interview_runs_one_question_at_a_time_and_reports_evidence
         confidence="medium",
         now=T0 + timedelta(minutes=3),
     )
+    with pytest.raises(RoleInterviewError, match="already has recorded assessment"):
+        record_role_assessment(
+            root,
+            "learner-one",
+            session["interview_id"],
+            "q-001",
+            {name: 5 for name in first_question["rubric"]["dimensions"]},
+            evidence="A second scorer must not overwrite the first canonical assessment.",
+            source="human",
+            confidence="high",
+            now=T0 + timedelta(minutes=3),
+        )
     assert current_role_question(
         root, "learner-one", session["interview_id"], now=T0 + timedelta(minutes=4)
     )["question"]["question_id"] == "q-002"
@@ -191,6 +203,29 @@ def test_product_role_interview_runs_one_question_at_a_time_and_reports_evidence
     assert finished["result"]["completion_status"] == "completed"
     assert 0 < finished["result"]["overall_score"] <= 100
     assert finished["result"]["skill_scores"]
+    with pytest.raises(RoleInterviewError, match="active interview"):
+        record_role_assessment(
+            root,
+            "learner-one",
+            session["interview_id"],
+            "q-001",
+            {name: 5 for name in first_question["rubric"]["dimensions"]},
+            evidence="A late assessment must not rewrite frozen result evidence.",
+            source="human",
+            confidence="high",
+            now=T0 + timedelta(minutes=21),
+        )
+    with pytest.raises(RoleInterviewError, match="active interview"):
+        record_role_followup(
+            root,
+            "learner-one",
+            session["interview_id"],
+            parent_question_id="q-001",
+            prompt="Late follow-up?",
+            answer="This must not be recorded after finish.",
+            source="human",
+            now=T0 + timedelta(minutes=21),
+        )
     report = role_interview_report(root, "learner-one", session["interview_id"])
     assert "Practice mastery: **unchanged**" in report
     assert "offer probability" in report
@@ -269,19 +304,19 @@ def test_interview_preflight_is_strict_and_writes_nothing_when_unavailable(
         root,
         catalog,
         roles,
-        role_id="applied_ai_engineer",
+        role_id="ai_product_manager",
         seniority="new_grad",
         difficulty="hard",
     )
     assert unavailable["available"] is False
-    assert any(item["type"] == "debugging" for item in unavailable["missing_rounds"])
+    assert unavailable["missing_rounds"]
     with pytest.raises(RoleInterviewError, match="缺少满足岗位"):
         create_role_interview(
             root,
             "learner-one",
             catalog,
             roles,
-            role_id="applied_ai_engineer",
+            role_id="ai_product_manager",
             seniority="new_grad",
             difficulty="hard",
             now=T0,

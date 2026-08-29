@@ -839,6 +839,11 @@ def record_role_followup(
     if not prompt.strip() or not answer.strip() or len(prompt) > 4000 or len(answer) > 20_000:
         raise RoleInterviewError("follow-up prompt or answer is empty or too long")
     session = load_role_interview(repo_root, profile_id, interview_id)
+    if session["status"] != "active":
+        raise RoleInterviewError("follow-up may only be recorded for an active interview")
+    current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
+    if current is None or current["question_id"] != parent_question_id:
+        raise RoleInterviewError("follow-up must belong to the current question")
     if parent_question_id not in session["answers"]:
         raise RoleInterviewError("follow-up requires an answered primary question")
     session["followups"].append(
@@ -869,6 +874,10 @@ def record_role_assessment(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
+    if session["status"] != "active":
+        raise RoleInterviewError("assessment may only be recorded for an active interview")
+    if question_id in session["assessments"]:
+        raise RoleInterviewError("the current question already has recorded assessment evidence")
     if source not in ASSESSOR_SOURCES or confidence not in CONFIDENCE_LEVELS:
         raise RoleInterviewError("assessment source or confidence is invalid")
     question = next(
@@ -877,6 +886,9 @@ def record_role_assessment(
     )
     if question is None or not _has_response(session, question):
         raise RoleInterviewError("assessment requires completed question evidence")
+    current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
+    if current is None or current["question_id"] != question_id:
+        raise RoleInterviewError("only the current question may be assessed")
     expected = set(question["rubric"]["dimensions"])
     if set(scores) != expected or any(type(value) is not int or value < 1 or value > 5 for value in scores.values()):
         raise RoleInterviewError("assessment must score every rubric dimension from 1 to 5")

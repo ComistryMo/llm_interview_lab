@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 from pathlib import Path
 import shutil
@@ -276,6 +278,60 @@ def test_provider_assessment_scores_the_locked_answer_once(
     controller.shutdown()
 
 
+def test_delayed_provider_assessment_cannot_rewrite_frozen_evidence(
+    tmp_path: Path, qapp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="delayed-provider-user")
+    controller.completeOnboarding(
+        "delayed-provider-user", "ai_product_manager", "new_grad", "provider", "{}"
+    )
+    controller.createConfiguredInterview(
+        "ai_product_manager", "new_grad", "medium", "provider"
+    )
+    question = controller.interview["question"]
+    answer = "I define assumptions, evidence, risks, and a reversible rollout."
+    controller.lockInterviewAnswer(answer)
+    callbacks: dict[str, object] = {}
+
+    def delayed_background(operation, complete, failed=None):
+        del operation, failed
+        callbacks["complete"] = complete
+
+    monkeypatch.setattr(controller, "_background", delayed_background)
+    controller.assessInterviewWithProvider(answer, "unused-connection", False)
+    self_scores = {name: 3 for name in question["rubric"]["dimensions"]}
+    controller.answerInterviewDetailed(
+        answer,
+        json.dumps(self_scores),
+        "The answer explicitly states assumptions, evidence, risks, and rollback.",
+    )
+    controller.finishInterview()
+    frozen = controller.service.interview_session(
+        "delayed-provider-user", controller.interview["interview_id"]
+    )
+    callback = callbacks["complete"]
+    assert callable(callback)
+    callback(
+        {
+            "scores": {name: 5 for name in question["rubric"]["dimensions"]},
+            "evidence": "Late AI evidence must not replace frozen self evidence.",
+            "confidence": "high",
+            "fatal_issues": [],
+            "follow_up": "",
+        }
+    )
+    restored = controller.service.interview_session(
+        "delayed-provider-user", controller.interview["interview_id"]
+    )
+    assert restored["assessments"] == frozen["assessments"]
+    assert restored["result"] == frozen["result"]
+    controller.shutdown()
+
+
 def test_controller_loads_and_saves_a_timed_coding_round(tmp_path: Path, qapp) -> None:
     del qapp
     QSettings.setDefaultFormat(QSettings.IniFormat)
@@ -329,6 +385,46 @@ def test_locked_interview_answer_corruption_is_visible_and_blocks_scoring(
     assert restored.interview["answer_locked"] is True
     assert restored.interview["answer_corrupted"] is True
     assert "校验失败" in restored.interview["answer_error"]
+    restored.shutdown()
+
+
+def test_tampered_interview_answer_path_cannot_escape_the_profile(
+    tmp_path: Path, qapp
+) -> None:
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="path-guard-user")
+    controller.completeOnboarding(
+        "path-guard-user", "ai_product_manager", "new_grad", "disabled", "{}"
+    )
+    controller.createConfiguredInterview(
+        "ai_product_manager", "new_grad", "medium", "disabled"
+    )
+    question = controller.interview["question"]
+    controller.lockInterviewAnswer("Canonical locked answer.")
+    interview_id = controller.interview["interview_id"]
+    controller.shutdown()
+
+    secret = root / "outside-secret.txt"
+    secret.write_text("must never appear in the interview UI", encoding="utf-8")
+    session_path = (
+        profile_paths(root, "path-guard-user").interviews_root
+        / interview_id
+        / "session.json"
+    )
+    session = json.loads(session_path.read_text(encoding="utf-8"))
+    session["answers"][question["question_id"]] = {
+        "relative_path": "../../../outside-secret.txt",
+        "sha256": hashlib.sha256(secret.read_bytes()).hexdigest(),
+        "recorded_at": session["answers"][question["question_id"]]["recorded_at"],
+    }
+    session_path.write_text(json.dumps(session), encoding="utf-8")
+
+    restored = AppController(root, profile_id="path-guard-user")
+    assert restored.interview["answer_corrupted"] is True
+    assert "must never appear" not in restored.interview["answer_text"]
     restored.shutdown()
 
 

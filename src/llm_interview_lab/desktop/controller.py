@@ -1189,14 +1189,24 @@ class AppController(QObject):
                 answer_error = ""
                 if answer_path:
                     try:
-                        answer_bytes = profile_paths(self.repo_root, self._profile_id).root.joinpath(
-                            *answer_path.split("/")
-                        ).read_bytes()
+                        paths = profile_paths(self.repo_root, self._profile_id)
+                        expected_path = ensure_profile_path_is_safe(
+                            self.repo_root,
+                            self._profile_id,
+                            paths.interviews_root
+                            / interview_id
+                            / "answers"
+                            / f"{question_id}.md",
+                            must_exist=True,
+                        )
+                        if answer_path != expected_path.relative_to(paths.root).as_posix():
+                            raise ValueError("answer path does not match the frozen question")
+                        answer_bytes = expected_path.read_bytes()
                         expected_sha = answer_record.get("sha256")
                         if expected_sha and hashlib.sha256(answer_bytes).hexdigest() != expected_sha:
                             raise ValueError("answer fingerprint mismatch")
                         answer_text = answer_bytes.decode("utf-8")
-                    except (OSError, UnicodeError, ValueError) as error:
+                    except (OSError, UnicodeError, ValueError, WorkspaceError) as error:
                         answer_error = "已锁定的回答文件缺失或校验失败。请保留本地数据并打开日志目录排查。"
                         logging.getLogger("llm_interview_lab.desktop").error(
                             "interview_answer_unavailable interview_id=%s question_id=%s error_type=%s",
@@ -1453,6 +1463,9 @@ class AppController(QObject):
         if question_id not in session.get("answers", {}) or not locked_answer:
             self._show_error("请先提交并锁定当前回答，再请求 AI 评估。")
             return
+        if session.get("status") != "active" or question_id in session.get("assessments", {}):
+            self._show_error("当前问题已经评分或面试已经结束，不能重复请求 AI 评估。")
+            return
         dimensions = set(question["rubric"]["dimensions"])
         fatal_issues = set(question["rubric"]["fatal_issues"])
 
@@ -1501,12 +1514,19 @@ class AppController(QObject):
 
         def complete(result: dict[str, Any]) -> None:
             try:
+                if (
+                    self._profile_id != profile_id
+                    or self._interview.get("interview_id") != interview_id
+                    or (self._interview.get("question") or {}).get("question_id")
+                    != question_id
+                ):
+                    return
+                latest = self.service.interview_session(profile_id, interview_id)
+                if latest.get("status") != "active" or question_id in latest.get(
+                    "assessments", {}
+                ):
+                    return
                 if result["follow_up"]:
-                    if (
-                        self._profile_id != profile_id
-                        or self._interview.get("interview_id") != interview_id
-                    ):
-                        return
                     self._pending_ai_assessment = {
                         **result,
                         "profile_id": profile_id,
@@ -1543,9 +1563,14 @@ class AppController(QObject):
             return
         try:
             profile_id = pending.get("profile_id", self._profile_id)
-            if profile_id != self._profile_id:
+            if (
+                profile_id != self._profile_id
+                or self._interview.get("interview_id") != pending["interview_id"]
+                or (self._interview.get("question") or {}).get("question_id")
+                != pending["question_id"]
+            ):
                 self._pending_ai_assessment = None
-                self._show_error("学习档案已切换，请回到原面试后重新请求 AI 评估。")
+                self._show_error("当前面试问题已经切换，请重新请求 AI 评估。")
                 return
             self.service.record_interview_followup(
                 profile_id,
