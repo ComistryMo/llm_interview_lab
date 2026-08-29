@@ -8,14 +8,7 @@ Flickable {
     required property var app
     required property var palette
     contentWidth: width; contentHeight: content.implicitHeight + 60; clip: true
-    property var pendingApproval: ({})
     property bool advanced: false
-
-    function approvalFiles() {
-        var value = root.pendingApproval.files
-        if (!value) return ""
-        return typeof value.join === "function" ? value.join(", ") : String(value)
-    }
 
     ColumnLayout {
         id: content
@@ -121,33 +114,5 @@ Flickable {
                 }
             }
         }
-
-        LabCard {
-            visible: !!root.pendingApproval.request_id
-            Layout.fillWidth: true; Layout.preferredHeight: root.pendingApproval.diff ? 400 : 275
-            cardColor: root.palette.surface; borderColor: root.palette.warning
-            Text { text: "Codex 请求操作审批"; color: root.palette.warning; font.pixelSize: 18; font.bold: true }
-            Text {
-                width: parent.width
-                text: "操作：" + (root.pendingApproval.action || "") + "\n范围：" + (root.pendingApproval.scope || "") + "\n文件：" + root.approvalFiles() + "\n命令：" + (root.pendingApproval.command || "") + "\n原因：" + (root.pendingApproval.reason || "") + "\n风险：" + (root.pendingApproval.risk || "")
-                color: root.palette.text; wrapMode: Text.Wrap
-            }
-            ScrollView {
-                visible: !!root.pendingApproval.diff; width: parent.width; Layout.fillHeight: true; clip: true
-                TextArea {
-                    text: root.pendingApproval.diff || ""; readOnly: true; selectByMouse: true
-                    wrapMode: TextEdit.NoWrap; font.family: "Cascadia Mono, Consolas, monospace"
-                    color: root.palette.text
-                    background: Rectangle { color: root.palette.surfaceAlt; radius: 6; border.color: root.palette.border }
-                    Accessible.name: "Codex 提议的 Diff"
-                }
-            }
-            RowLayout {
-                Button { text: "拒绝"; onClicked: { app.resolveCodexApproval(root.pendingApproval.request_id, "decline"); root.pendingApproval = ({}) } }
-                Button { text: "仅批准本次"; highlighted: true; onClicked: { app.resolveCodexApproval(root.pendingApproval.request_id, "accept"); root.pendingApproval = ({}) } }
-            }
-        }
     }
-
-    Connections { target: app; function onCodexApproval(value) { root.pendingApproval = value } }
 }

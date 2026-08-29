@@ -31,6 +31,42 @@ ApplicationWindow {
         "warning": dark ? "#f2bd75" : "#8a4b08",
         "danger": dark ? "#ff8b9a" : "#b4233a"
     })
+    // A Codex request is owned by the shell, not by an individual page.  The
+    // map is intentionally kept here so navigation cannot hide a pending
+    // safety decision.
+    property var pendingCodexApproval: ({})
+    property bool approvalActionInFlight: false
+
+    function approvalFiles(value) {
+        var files = value && value.files
+        if (!files)
+            return ""
+        return typeof files.join === "function" ? files.join(", ") : String(files)
+    }
+
+    function showApprovalDetails() {
+        if (pendingCodexApproval && pendingCodexApproval.request_id)
+            approvalDialog.open()
+    }
+
+    function resolveApproval(decision) {
+        if (approvalActionInFlight || !pendingCodexApproval
+                || !pendingCodexApproval.request_id)
+            return
+        var requestId = String(pendingCodexApproval.request_id)
+        approvalActionInFlight = true
+        try {
+            backend.resolveCodexApproval(requestId, decision)
+            // Resolve exactly the request the user saw.  Closing the details
+            // dialog by itself never reaches this function and is not approval.
+            pendingCodexApproval = ({})
+            approvalDialog.close()
+        } catch (error) {
+            message.text = "审批未发送，请重试；请求仍保持待处理。"
+            toastPopup.open()
+        }
+        approvalActionInFlight = false
+    }
     font.pixelSize: Math.round(14 * backend.fontScale)
     color: colors.background
 
@@ -163,6 +199,55 @@ ApplicationWindow {
                 }
             }
 
+            // Safety prompts stay visible while the user moves between pages.
+            // In the normal state this item has zero layout cost; when a
+            // request arrives it reserves space above page content instead of
+            // covering a page CTA.
+            Rectangle {
+                id: codexApprovalBanner
+                objectName: "codexApprovalBanner"
+                Layout.fillWidth: true
+                Layout.preferredHeight: visible ? 82 : 0
+                Layout.minimumHeight: 0
+                visible: !!(window.pendingCodexApproval
+                            && window.pendingCodexApproval.request_id)
+                z: 30
+                color: window.dark ? "#3b2f1a" : "#fff7df"
+                border.color: window.colors.warning
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 22
+                    anchors.rightMargin: 22
+                    spacing: 14
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+                        Text {
+                            text: "Codex 请求等待审批"
+                            color: window.colors.warning
+                            font.bold: true
+                            font.pixelSize: 15
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: (window.pendingCodexApproval
+                                   && window.pendingCodexApproval.action || "操作")
+                                  + " · " + (window.pendingCodexApproval
+                                              && window.pendingCodexApproval.scope
+                                              || "当前仓库")
+                            color: window.colors.text
+                            elide: Text.ElideRight
+                        }
+                    }
+                    Button {
+                        objectName: "codexApprovalViewButton"
+                        text: "查看并审批"
+                        enabled: !window.approvalActionInFlight
+                        onClicked: window.showApprovalDetails()
+                    }
+                }
+            }
+
             StackLayout {
                 id: pages
                 Layout.fillWidth: true
@@ -213,6 +298,119 @@ ApplicationWindow {
     Connections {
         target: backend
         function onToast(text) { message.text = text; toastPopup.open(); toastTimer.restart() }
+    }
+    Connections {
+        target: backend
+        function onCodexApproval(value) {
+            if (!value || !value.request_id)
+                return
+            window.pendingCodexApproval = value
+            window.approvalActionInFlight = false
+        }
+    }
+
+    Dialog {
+        id: approvalDialog
+        objectName: "codexApprovalDetails"
+        title: "检查 Codex 操作"
+        modal: true
+        closePolicy: Popup.NoAutoClose
+        standardButtons: Dialog.NoButton
+        anchors.centerIn: parent
+        width: Math.min(window.width - 48, 720)
+        height: Math.min(window.height - 64, 600)
+
+        contentItem: ColumnLayout {
+            spacing: 12
+            Flickable {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                contentWidth: width
+                contentHeight: approvalDetailsColumn.implicitHeight
+                ScrollBar.vertical: ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                }
+                ColumnLayout {
+                    id: approvalDetailsColumn
+                    width: parent.width
+                    spacing: 9
+                    Text {
+                        Layout.fillWidth: true
+                        text: "请求 ID：" + (window.pendingCodexApproval
+                                               && window.pendingCodexApproval.request_id || "")
+                        color: window.colors.muted
+                        font.pixelSize: 12
+                        elide: Text.ElideMiddle
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: "操作：" + (window.pendingCodexApproval
+                                           && window.pendingCodexApproval.action || "")
+                              + "\n范围：" + (window.pendingCodexApproval
+                                              && window.pendingCodexApproval.scope || "")
+                              + "\n文件：" + window.approvalFiles(window.pendingCodexApproval)
+                              + "\n命令：" + (window.pendingCodexApproval
+                                             && window.pendingCodexApproval.command || "")
+                              + "\n原因：" + (window.pendingCodexApproval
+                                             && window.pendingCodexApproval.reason || "")
+                              + "\n风险：" + (window.pendingCodexApproval
+                                             && window.pendingCodexApproval.risk || "")
+                        color: window.colors.text
+                        wrapMode: Text.WordWrap
+                    }
+                    Text {
+                        visible: !!(window.pendingCodexApproval
+                                    && window.pendingCodexApproval.diff)
+                        text: "Diff"
+                        color: window.colors.muted
+                        font.bold: true
+                    }
+                    TextArea {
+                        visible: !!(window.pendingCodexApproval
+                                    && window.pendingCodexApproval.diff)
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 230
+                        text: (window.pendingCodexApproval
+                               && window.pendingCodexApproval.diff || "")
+                        readOnly: true
+                        selectByMouse: true
+                        wrapMode: TextEdit.NoWrap
+                        font.family: "Cascadia Mono, Consolas, monospace"
+                        color: window.colors.text
+                        background: Rectangle {
+                            color: window.colors.surfaceAlt
+                            radius: 6
+                            border.color: window.colors.border
+                        }
+                        Accessible.name: "Codex 提议的 Diff"
+                    }
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Button {
+                    objectName: "codexApprovalClose"
+                    text: "稍后处理"
+                    enabled: !window.approvalActionInFlight
+                    onClicked: approvalDialog.close()
+                }
+                Item { Layout.fillWidth: true }
+                Button {
+                    objectName: "codexApprovalDecline"
+                    text: "拒绝"
+                    enabled: !window.approvalActionInFlight
+                    onClicked: window.resolveApproval("decline")
+                }
+                Button {
+                    objectName: "codexApprovalApprove"
+                    text: window.approvalActionInFlight ? "处理中…" : "仅批准本次"
+                    highlighted: true
+                    enabled: !window.approvalActionInFlight
+                    onClicked: window.resolveApproval("accept")
+                }
+            }
+        }
     }
 
     Dialog {
