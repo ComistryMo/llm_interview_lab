@@ -16,6 +16,11 @@ Rectangle {
     // chosen later without changing the Practice history.
     property int step: 0
     property int stepCount: 2
+    // Keep the role picker readable on the smallest supported window.  The
+    // content area is narrower than the top-level window because the shell
+    // owns margins and the progress/header rows; using the window width here
+    // gives us one predictable breakpoint for Chinese copy.
+    property bool compactRoleLayout: width < 1180
     property string selectedRole: ""
     property bool rolesAvailable: (app.roles || []).length > 0
     property var selectedRoleCard: {
@@ -55,7 +60,14 @@ Rectangle {
         var cards = app.roles || []
         for (var index = 0; index < cards.length; ++index) {
             if (cards[index].id === root.selectedRole) {
-                roleGrid.positionViewAtIndex(index, GridView.Contain)
+                // A click already leaves the selected card in view.  Only
+                // move the viewport when a restored/keyboard-selected card
+                // is genuinely outside the visible range; this avoids the
+                // jarring jump that used to hide the first cards.
+                var item = roleGrid.itemAtIndex(index)
+                if (!item || item.y < roleGrid.contentY
+                        || item.y + item.height > roleGrid.contentY + roleGrid.height)
+                    roleGrid.positionViewAtIndex(index, GridView.Contain)
                 return
             }
         }
@@ -107,7 +119,7 @@ Rectangle {
     ColumnLayout {
         anchors.centerIn: parent
         width: Math.min(parent.width - 80, 900)
-        height: Math.min(parent.height - 60, 690)
+        height: Math.min(parent.height - 36, 690)
         spacing: 14
 
         RowLayout {
@@ -231,11 +243,12 @@ Rectangle {
                         Layout.fillHeight: true
                         clip: true
                         model: app.roles || []
-                        property int columnCount: width >= 760 ? 2 : 1
+                        property int columnCount: !root.compactRoleLayout && width >= 760 ? 2 : 1
+                        property int roleCardHeight: root.compactRoleLayout ? 92 : 96
                         cellWidth: Math.max(1, columnCount === 2
                                              ? Math.floor((width - 12) / 2)
                                              : width)
-                        cellHeight: 108
+                        cellHeight: roleCardHeight + 12
                         boundsBehavior: Flickable.StopAtBounds
                         interactive: contentHeight > height
                         keyNavigationWraps: false
@@ -259,7 +272,7 @@ Rectangle {
                             width: Math.max(1, roleGrid.columnCount === 2
                                                ? roleGrid.cellWidth - 12
                                                : roleGrid.cellWidth)
-                            height: 96
+                            height: roleGrid.roleCardHeight
                             radius: 10
                             color: root.selectedRole === modelData.id
                                    ? Qt.rgba(0.145, 0.388, 0.922, 0.12)
@@ -278,17 +291,17 @@ Rectangle {
 
                             ColumnLayout {
                                 anchors.fill: parent
-                                anchors.margins: 10
+                                anchors.margins: root.compactRoleLayout ? 9 : 10
                                 spacing: 3
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Layout.preferredHeight: 20
+                                    Layout.preferredHeight: root.compactRoleLayout ? 19 : 20
                                     Text {
                                         objectName: "onboardingRoleTitle-" + modelData.id
                                         text: modelData.title || "未命名岗位"
                                         color: root.palette.text
                                         font.bold: true
-                                        font.pixelSize: 15
+                                        font.pixelSize: root.compactRoleLayout ? 14 : 15
                                         Layout.fillWidth: true
                                         elide: Text.ElideRight
                                     }
@@ -308,7 +321,7 @@ Rectangle {
                                     color: root.palette.muted
                                     font.pixelSize: 12
                                     Layout.fillWidth: true
-                                    Layout.preferredHeight: 30
+                                    Layout.preferredHeight: root.compactRoleLayout ? 27 : 30
                                     maximumLineCount: 2
                                     wrapMode: Text.WordWrap
                                     elide: Text.ElideRight
