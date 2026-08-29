@@ -1,0 +1,117 @@
+{
+  "version": "0.4.0a3",
+  "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+  "language": "zh-CN",
+  "synthetic": true,
+  "generated_at": "2026-08-29T12:50:21+00:00",
+  "screenshots": [
+    {
+      "path": "docs/images/desktop-onboarding.png",
+      "page": "onboarding",
+      "state": "role-selected",
+      "size": "1280x800",
+      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "platform": "win32",
+      "theme": "light",
+      "font_scale": 1.0,
+      "sha256": "29503deba01ae64ddc1b96e58e4206f2493f6bd6b2e393a6a5cf8e2035846b06",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/desktop-home.png",
+      "page": "home",
+      "state": "current-practice",
+      "size": "1280x800",
+      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "platform": "win32",
+      "theme": "light",
+      "font_scale": 1.0,
+      "sha256": "32d107cb4a3f600d0041a01a775109f920e510b043340ca73720d8abd7d67634",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/desktop-learn.png",
+      "page": "learn",
+      "state": "recommended-filter",
+      "size": "1280x800",
+      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "platform": "win32",
+      "theme": "light",
+      "font_scale": 1.0,
+      "sha256": "b8de652c8bada79137e3e6d6f50c47e331e176b24fac59aed88e0a364b32fad0",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/desktop-exercise.png",
+      "page": "exercise",
+      "state": "latest-submission",
+      "size": "1280x800",
+      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "platform": "win32",
+      "theme": "light",
+      "font_scale": 1.0,
+      "sha256": "1594b9cfea3a190112de551390c630164d042ec6a61330fbe539363a5fd768a9",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/desktop-interview.png",
+      "page": "interview",
+      "state": "active-question",
+      "size": "1280x800",
+      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "platform": "win32",
+      "theme": "light",
+      "font_scale": 1.0,
+      "sha256": "10820eb7a32e17c642c98d0bd44cfb511886d726e5f7b31e80b50facfe9bdf07",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/desktop-connections.png",
+      "page": "connections",
+      "state": "no-ai-default",
+      "size": "1280x800",
+      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "platform": "win32",
+      "theme": "light",
+      "font_scale": 1.0,
+      "sha256": "065f8ef1f74130f6b7d65b73a1948b3d15329e5c42cf5bb741b5d5011a2bf1b2",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/onboarding-hotfix-1080x680.png",
+      "page": "onboarding",
+      "state": "role-selected",
+      "size": "1080x680",
+      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "platform": "win32",
+      "theme": "light",
+      "font_scale": 1.0,
+      "sha256": "88e3c7e70adee1e19e9b32a323f12a7e759460a8256e2fbf8be418b572f6d049",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/onboarding-hotfix-1280x800.png",
+      "page": "onboarding",
+      "state": "role-selected",
+      "size": "1280x800",
+      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "platform": "win32",
+      "theme": "light",
+      "font_scale": 1.0,
+      "sha256": "29503deba01ae64ddc1b96e58e4206f2493f6bd6b2e393a6a5cf8e2035846b06",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/onboarding-hotfix-1440x900.png",
+      "page": "onboarding",
+      "state": "role-selected",
+      "size": "1440x900",
+      "source_commit": "da20b3a07237e98f68c6bfa904a13da57710fae6",
+      "platform": "win32",
+      "theme": "light",
+      "font_scale": 1.0,
+      "sha256": "43c5d9b52f4373a6cff90447ab7e6f5af0706282322bc1eb1447eee85b52558a",
+      "synthetic": true
+    }
+  ]
+}

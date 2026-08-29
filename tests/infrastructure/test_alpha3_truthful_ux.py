@@ -11,6 +11,7 @@ import subprocess
 import pytest
 
 from llm_interview_lab.application import ApplicationService
+from llm_interview_lab import __version__
 from llm_interview_lab.desktop import runtime
 from llm_interview_lab.desktop.controller import AppController
 from llm_interview_lab.grader import GraderResult
@@ -227,6 +228,38 @@ def test_desktop_entry_accepts_explicit_window_size_and_role_step() -> None:
     assert "--onboarding-role" in source
     assert "window.resize(*args.window_size)" in source
     assert 'onboarding.setProperty("selectedRole", args.onboarding_role)' in source
+
+
+def test_screenshot_manifest_is_current_synthetic_chinese_evidence() -> None:
+    manifest = json.loads(
+        (REPO_ROOT / "docs/images/screenshot-manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["version"] == __version__
+    assert manifest["language"] == "zh-CN"
+    assert manifest["synthetic"] is True
+    assert len(manifest["source_commit"]) == 40
+    paths = {entry["path"] for entry in manifest["screenshots"]}
+    expected = {
+        "docs/images/desktop-onboarding.png",
+        "docs/images/desktop-home.png",
+        "docs/images/desktop-learn.png",
+        "docs/images/desktop-exercise.png",
+        "docs/images/desktop-interview.png",
+        "docs/images/desktop-connections.png",
+        "docs/images/onboarding-hotfix-1080x680.png",
+        "docs/images/onboarding-hotfix-1280x800.png",
+        "docs/images/onboarding-hotfix-1440x900.png",
+    }
+    assert paths == expected
+    for entry in manifest["screenshots"]:
+        path = REPO_ROOT / entry["path"]
+        assert path.is_file()
+        assert entry["source_commit"] == manifest["source_commit"]
+        assert entry["synthetic"] is True
+        assert entry["theme"] == "light"
+        assert entry["font_scale"] == 1.0
+        assert len(entry["sha256"]) == 64
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == entry["sha256"]
 
 
 def test_practice_and_interview_surfaces_do_not_expose_fake_actions() -> None:
