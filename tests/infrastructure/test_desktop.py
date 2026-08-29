@@ -323,3 +323,86 @@ def test_desktop_release_configuration_is_portable_and_separate_from_core_ci() -
     assert "icon = dist/icons/LLMInterviewLab.icns" in mac_spec
     assert "--macos-app-icon" not in mac_spec
     assert "--macos-create-app-bundle" not in mac_spec
+
+
+def test_home_and_practice_expose_truthful_next_actions() -> None:
+    home = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/HomePage.qml"
+    ).read_text(encoding="utf-8")
+    exercise = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/ExercisePage.qml"
+    ).read_text(encoding="utf-8")
+
+    assert 'in_progress: "答案仍在编辑；下一步运行公开测试并修复失败。"' in home
+    assert "app.startRetentionFor(modelData.problem_id, modelData.stage)" in home
+    assert 'objectName: "dueRetentionList"' in home
+    assert "modelData.blocked_reason" in home
+
+    assert 'objectName: "practicePrimaryAction"' in exercise
+    assert 'return "review"' in exercise
+    assert 'return "retention"' in exercise
+    assert "app.runTestsForCurrentSubmission(editor.text)" in exercise
+    assert "app.startRetentionFor(app.currentTask.problem_id, root.actions.retention_stage)" in exercise
+    assert "retention_blocked_reason" in exercise
+    assert 'app.navigate("coach")' in exercise
+    assert "startRetentionStage(\"d2\")" not in exercise
+    assert "startRetentionStage(\"d7\")" not in exercise
+    assert 'id: helpLevel' not in exercise
+    assert 'font.family: "Cascadia Mono, Consolas, monospace"' not in exercise
+
+
+def test_interview_setup_uses_profile_role_availability_and_real_report() -> None:
+    interview = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/InterviewPage.qml"
+    ).read_text(encoding="utf-8")
+
+    assert "app.dashboard.role.primary_role" in interview
+    assert "app.interviewConfiguration(roleId, seniority.currentValue, difficulty.currentValue)" in interview
+    assert 'objectName: "interviewConfigurationMessage"' in interview
+    assert "root.configuration.available !== false" in interview
+    assert "root.configuration.missing_rounds" in interview
+    assert "root.configuration.missing_environment" in interview
+    assert 'role.currentValue || "applied_ai_engineer"' not in interview
+
+    assert 'objectName: "interviewResultCard"' in interview
+    for evidence_field in (
+        "root.interviewResult.source",
+        "result.evidence",
+        "root.interviewResult.confidence",
+        "result.unscored",
+    ):
+        assert evidence_field in interview
+    assert "不会改变刷题训练的掌握状态" in interview
+    assert 'font.family: "Cascadia Mono, Consolas, monospace"' not in interview
+
+
+@pytest.mark.parametrize("page", ["home", "exercise", "interview"])
+def test_truthful_desktop_pages_render_at_1080x680(
+    page: str, tmp_path: Path
+) -> None:
+    screenshot = tmp_path / f"{page}.png"
+    environment = {**os.environ, "QT_QPA_PLATFORM": "offscreen"}
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "llm_interview_lab.desktop.main",
+            "--screenshot",
+            str(screenshot),
+            "--screenshot-page",
+            page,
+            "--window-size",
+            "1080x680",
+        ],
+        cwd=REPO_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert screenshot.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    assert "TypeError" not in completed.stderr
+    assert "ReferenceError" not in completed.stderr
+    assert "Unable to assign" not in completed.stderr

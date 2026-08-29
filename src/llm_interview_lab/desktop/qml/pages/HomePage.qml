@@ -15,6 +15,28 @@ Flickable {
     function seniorityText(value) {
         return ({intern: "实习", new_grad: "校招", mid: "有经验", senior: "高级"})[value] || value || "未设置"
     }
+    function currentNextStep(status) {
+        return ({
+            not_started: "尚未开始；打开题目后先完成一次独立实现。",
+            in_progress: "答案仍在编辑；下一步运行公开测试并修复失败。",
+            implemented: "实现已验证；下一步完成契约审查与口述答辩。",
+            reviewed: "审查已完成；等待到期的间隔复测。",
+            retained_d2: "D+2 已完成；等待 D+7 迁移复测。",
+            retained_d7: "D+7 已完成；掌握状态仍由固定规则计算。",
+            mastered: "该节点已掌握；可以继续下一项已解锁任务。"
+        })[status] || "继续当前任务，完成页面显示的下一项证据。"
+    }
+    function currentNextStepTone(status) {
+        return ["implemented", "reviewed", "retained_d2", "retained_d7", "mastered"].indexOf(status) >= 0
+               ? root.palette.success : root.palette.muted
+    }
+    function retentionActionable(item) {
+        return !!item && item.actionable !== false && !(item.blocked_reason || "")
+    }
+    function retentionLabel(item) {
+        var stage = (item.stage || "").toUpperCase()
+        return (item.title || item.problem_id || "间隔复测") + (stage ? " · " + stage : "")
+    }
     contentWidth: width
     contentHeight: content.implicitHeight + 56
     clip: true
@@ -42,7 +64,14 @@ Flickable {
                     Text { text: app.dashboard.current ? app.dashboard.current.problem_id + "  " + app.dashboard.current.title : (app.dashboard.unlocks && app.dashboard.unlocks.length ? app.dashboard.unlocks[0].problem_id + "  " + app.dashboard.unlocks[0].title : "暂无可用任务"); color: root.palette.text; font.pixelSize: 23; font.bold: true }
                     Text { text: app.dashboard.current ? "状态：" + root.statusText(app.dashboard.current.status) : "一道经过验证的题目已经可以开始。"; color: root.palette.muted }
                     Item { Layout.fillHeight: true }
-                    Text { text: "实现已验证；下一步完成解释与边界复盘。"; color: root.palette.success; font.pixelSize: 12; font.bold: true; wrapMode: Text.Wrap }
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.currentNextStep(app.dashboard.current ? app.dashboard.current.status : "not_started")
+                        color: root.currentNextStepTone(app.dashboard.current ? app.dashboard.current.status : "not_started")
+                        font.pixelSize: 12
+                        font.bold: true
+                        wrapMode: Text.Wrap
+                    }
                 }
                 ColumnLayout {
                     Button {
@@ -107,6 +136,73 @@ Flickable {
                 Text { text: "到期复测"; color: root.palette.muted; font.pixelSize: 12 }
                 Text { text: app.dashboard.due_retention ? app.dashboard.due_retention.length : 0; color: root.palette.text; font.pixelSize: 32; font.bold: true }
                 Text { text: "D+2 / D+7 闭卷复写"; color: root.palette.muted }
+            }
+        }
+
+        ColumnLayout {
+            objectName: "dueRetentionList"
+            Layout.fillWidth: true
+            visible: (app.dashboard.due_retention || []).length > 0
+            spacing: 8
+
+            RowLayout {
+                Layout.fillWidth: true
+                Text { text: "今天到期"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
+                Item { Layout.fillWidth: true }
+                Text {
+                    text: (app.dashboard.due_retention || []).length + " 项间隔复测"
+                    color: root.palette.muted
+                    font.pixelSize: 12
+                }
+            }
+
+            Repeater {
+                model: app.dashboard.due_retention || []
+                delegate: Rectangle {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 54
+                    radius: 8
+                    color: root.palette.surface
+                    border.color: root.palette.border
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 12
+                        spacing: 12
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            Text {
+                                Layout.fillWidth: true
+                                text: root.retentionLabel(modelData)
+                                color: root.palette.text
+                                font.bold: true
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: modelData.blocked_reason || (modelData.due_at ? "到期：" + modelData.due_at : "现在可以开始闭卷复测")
+                                color: modelData.blocked_reason ? root.palette.warning : root.palette.muted
+                                font.pixelSize: 11
+                                elide: Text.ElideRight
+                            }
+                        }
+                        StatusPill {
+                            visible: !root.retentionActionable(modelData)
+                            text: "暂不可开始"
+                            tone: root.palette.warning
+                        }
+                        Button {
+                            objectName: "startDueRetention"
+                            visible: root.retentionActionable(modelData)
+                            text: "开始 " + (modelData.stage || "复测").toUpperCase()
+                            highlighted: true
+                            onClicked: app.startRetentionFor(modelData.problem_id, modelData.stage)
+                        }
+                    }
+                }
             }
         }
 

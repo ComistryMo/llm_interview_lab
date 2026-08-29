@@ -3,11 +3,14 @@ import QtQuick
 Rectangle {
     property string text: "就绪"
     property color tone: "#2563eb"
+    Accessible.name: text
+    Accessible.role: Accessible.StaticText
     implicitWidth: label.implicitWidth + 18
     implicitHeight: 26
     radius: 13
     color: Qt.rgba(tone.r, tone.g, tone.b, 0.13)
     border.color: Qt.rgba(tone.r, tone.g, tone.b, 0.35)
+    border.width: 1
 
     Text {
         id: label

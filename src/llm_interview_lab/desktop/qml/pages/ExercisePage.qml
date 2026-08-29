@@ -11,6 +11,70 @@ Item {
     property bool focusMode: false
     property bool wideLayout: width >= 1260
     property bool mediumLayout: width >= 1050
+    property var actions: (app.currentTask && app.currentTask.actions) || ({})
+    property string codeFontFamily: Qt.platform.os === "windows" ? "Cascadia Mono"
+                                    : Qt.platform.os === "osx" ? "Menlo" : "monospace"
+
+    function canSubmitCurrent() {
+        return app.testState === "测试通过"
+               && !app.submissionDirty
+               && (app.testedRevision || "").length > 0
+    }
+
+    function primaryActionKind() {
+        if (app.currentTask && app.currentTask.environment_available === false)
+            return "blocked"
+        if (root.actions.review_available === true)
+            return "review"
+        if (root.actions.retention_stage) {
+            if (root.actions.retention_due === true && !(root.actions.retention_blocked_reason || ""))
+                return "retention"
+            return "blocked"
+        }
+        if (root.canSubmitCurrent())
+            return "submit"
+        return "test"
+    }
+
+    function primaryActionLabel() {
+        var kind = root.primaryActionKind()
+        if (kind === "review")
+            return "开始契约审查"
+        if (kind === "retention")
+            return "开始 " + (root.actions.retention_stage || "复测").toUpperCase()
+        if (kind === "submit")
+            return "提交实现"
+        return "运行公开测试"
+    }
+
+    function actionExplanation() {
+        if (app.currentTask && app.currentTask.environment_available === false)
+            return app.currentTask.environment || "当前运行环境不满足这道题的要求。"
+        if (root.actions.retention_stage && root.primaryActionKind() === "blocked") {
+            if (root.actions.retention_blocked_reason)
+                return root.actions.retention_blocked_reason
+            if (root.actions.retention_due_at)
+                return "复测尚未到期，预计可开始时间：" + root.actions.retention_due_at
+            return "这道题尚无可用的间隔复测资产，当前不能达到已掌握。"
+        }
+        if (root.primaryActionKind() === "review")
+            return "公开测试和提交已完成；现在补充实现解释、复杂度与边界证据。"
+        if (root.primaryActionKind() === "submit")
+            return "当前保存版本已通过公开测试，可以提交实现证据。"
+        return "运行测试前会先保存编辑器中的最新代码。"
+    }
+
+    function runPrimaryAction() {
+        var kind = root.primaryActionKind()
+        if (kind === "review")
+            reviewDialog.open()
+        else if (kind === "retention")
+            app.startRetentionFor(app.currentTask.problem_id, root.actions.retention_stage)
+        else if (kind === "submit")
+            app.submitCurrent()
+        else if (kind === "test")
+            app.runTestsForCurrentSubmission(editor.text)
+    }
 
     SplitView {
         anchors.fill: parent
@@ -34,12 +98,13 @@ Item {
                     Rectangle { width: parent.width; height: 1; color: root.palette.border }
                     Text { width: parent.width; text: app.currentTask.task || "请先从刷题训练中打开已解锁的题目。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
                     Rectangle { width: parent.width; height: 1; color: root.palette.border }
-                Text { text: "掌握流程"; color: root.palette.text; font.bold: true }
-                Button { width: detailsColumn.width; text: "契约审查 + 口述答辩"; onClicked: reviewDialog.open() }
-                    Row {
-                        width: detailsColumn.width; spacing: 8
-                        Button { width: (parent.width - 8) / 2; text: "D+2"; onClicked: app.startRetentionStage("d2") }
-                        Button { width: (parent.width - 8) / 2; text: "D+7"; onClicked: app.startRetentionStage("d7") }
+                    Text { text: "掌握流程"; color: root.palette.text; font.bold: true }
+                    Text {
+                        width: detailsColumn.width
+                        text: root.actionExplanation()
+                        color: root.primaryActionKind() === "blocked" ? root.palette.warning : root.palette.muted
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 12
                     }
                 }
             }
@@ -56,11 +121,13 @@ Item {
                     Text { text: "submission.py"; color: root.palette.text; font.bold: true }
                     Item { Layout.fillWidth: true }
                     Button { visible: !root.wideLayout && !root.focusMode; text: "题面"; onClicked: detailsDrawer.open() }
-                    Button { visible: !root.wideLayout && !root.focusMode; text: "AI 教练"; onClicked: coachDrawer.open() }
+                    Button {
+                        visible: !root.focusMode && (!root.wideLayout || !root.coachOpen)
+                        text: "AI 教练"
+                        onClicked: root.wideLayout ? root.coachOpen = true : coachDrawer.open()
+                    }
                     Button { text: root.focusMode ? "退出专注" : "专注编码"; onClicked: root.focusMode = !root.focusMode }
                     Button { text: "保存"; flat: true; onClicked: app.saveSubmission(editor.text) }
-                    Button { text: "运行测试"; highlighted: true; enabled: !app.busy; onClicked: app.runTestsForCurrentSubmission(editor.text) }
-                    Button { text: "提交"; enabled: !app.busy; onClicked: app.submitCurrent() }
                 }
                 TextArea {
                     id: editor
@@ -68,7 +135,7 @@ Item {
                     text: app.submissionText
                     color: root.palette.text
                     selectionColor: root.palette.accent
-                    font.family: "Cascadia Mono, Consolas, monospace"
+                    font.family: root.codeFontFamily
                     font.pixelSize: 14
                     wrapMode: TextEdit.NoWrap
                     tabStopDistance: 32
@@ -102,10 +169,57 @@ Item {
                     color: root.palette.surface; border.color: root.palette.border
                     ScrollView {
                         anchors.fill: parent; anchors.margins: 12; clip: true
-                        Text { width: parent.width; text: app.testOutput || "公开测试输出会显示在这里。"; color: root.palette.text; font.family: "Cascadia Mono, Consolas, monospace"; font.pixelSize: 12; wrapMode: Text.Wrap }
+                        Text { width: parent.width; text: app.testOutput || "公开测试输出会显示在这里。"; color: root.palette.text; font.family: root.codeFontFamily; font.pixelSize: 12; wrapMode: Text.Wrap }
                     }
                 }
-                    Text { text: "公开测试通过只是实现证据，不等于已掌握。"; color: root.palette.warning; font.pixelSize: 12; font.bold: true }
+                Rectangle {
+                    objectName: "practiceNextAction"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 70
+                    radius: 9
+                    color: root.palette.surface
+                    border.color: root.primaryActionKind() === "blocked" ? root.palette.warning : root.palette.border
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 12
+                        spacing: 12
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            Text {
+                                text: root.primaryActionKind() === "blocked" ? "下一阶段暂不可用" : "下一步"
+                                color: root.primaryActionKind() === "blocked" ? root.palette.warning : root.palette.accent
+                                font.pixelSize: 11
+                                font.bold: true
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: root.actionExplanation()
+                                color: root.palette.text
+                                font.pixelSize: 12
+                                wrapMode: Text.Wrap
+                                maximumLineCount: 2
+                                elide: Text.ElideRight
+                            }
+                        }
+                        Button {
+                            objectName: "practicePrimaryAction"
+                            visible: root.primaryActionKind() !== "blocked"
+                            text: root.primaryActionLabel()
+                            highlighted: true
+                            enabled: !app.busy
+                            onClicked: root.runPrimaryAction()
+                        }
+                        StatusPill {
+                            visible: root.primaryActionKind() === "blocked"
+                            text: "已说明原因"
+                            tone: root.palette.warning
+                        }
+                    }
+                }
+                Text { text: "实现、审查与间隔复测会分别留证；一次测试通过不会直接授予已掌握。"; color: root.palette.muted; font.pixelSize: 12; wrapMode: Text.Wrap }
             }
         }
 
@@ -124,21 +238,13 @@ Item {
                     Button { text: "×"; flat: true; onClicked: root.coachOpen = false }
                 }
                 Text { text: "遵守 H0–H5 帮助边界；AI 教练不能静默修改当前答案。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; font.pixelSize: 12 }
-                ComboBox {
-                    id: helpLevel
+                Text {
                     Layout.fillWidth: true
-                    model: [
-                        {id: "H1", label: "H1 · 文档 / 语法"},
-                        {id: "H2", label: "H2 · 概念方向"},
-                        {id: "H3", label: "H3 · 结构步骤"}
-                    ]
-                    textRole: "label"
-                    valueRole: "id"
+                    text: "需要提示或只读审查时，在 AI 教练页面打开当前任务。该页面提供真实的发送、停止与上下文预览。"
+                    color: root.palette.text
+                    wrapMode: Text.Wrap
                 }
-                Rectangle {
-                    Layout.fillWidth: true; Layout.fillHeight: true; color: root.palette.surfaceAlt; radius: 8
-                    ScrollView { anchors.fill: parent; anchors.margins: 10; Text { width: parent.width; color: root.palette.text; wrapMode: Text.Wrap; text: "请在 AI 教练页面发送问题。当前页面不会静默修改答案。" } }
-                }
+                Item { Layout.fillHeight: true }
                 Button { text: "在 AI 教练中打开当前任务"; Layout.fillWidth: true; onClicked: app.navigate("coach") }
             }
         }

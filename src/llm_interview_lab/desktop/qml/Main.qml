@@ -26,10 +26,10 @@ ApplicationWindow {
         "border": dark ? "#303b4d" : "#d9e0ea",
         "text": dark ? "#edf2f7" : "#18212f",
         "muted": dark ? "#a3aec0" : "#5f6b7c",
-        "accent": "#2563eb",
-        "success": "#16845b",
-        "warning": "#b56616",
-        "danger": "#c63d4f"
+        "accent": dark ? "#83a7ff" : "#1d4ed8",
+        "success": dark ? "#66d6aa" : "#087a55",
+        "warning": dark ? "#f2bd75" : "#8a4b08",
+        "danger": dark ? "#ff8b9a" : "#b4233a"
     })
     font.pixelSize: Math.round(14 * backend.fontScale)
     color: colors.background
@@ -71,7 +71,7 @@ ApplicationWindow {
         spacing: 0
 
         Rectangle {
-            Layout.preferredWidth: 216
+            Layout.preferredWidth: window.width < 1160 ? 190 : 216
             Layout.fillHeight: true
             color: window.colors.surface
             border.color: window.colors.border
