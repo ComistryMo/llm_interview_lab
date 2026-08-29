@@ -552,8 +552,11 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert "root.configuration.missing_rounds" in interview
     assert "root.configuration.missing_environment" in interview
     assert "root.missingRoundLabel(rounds[i])" in interview
-    assert 'item.round || item.type || "未命名环节"' in interview
-    assert 'item.skills.join("、")' in interview
+    assert "root.roundTypeText(item.round || item.type || \"\")" in interview
+    assert "no_strict_candidate" in interview
+    assert 'item.skills.join("、")' not in interview
+    assert "root.assessmentSourceText(modelData.source)" in interview
+    assert "root.confidenceText(modelData.confidence)" in interview
     assert 'rounds.join("、")' not in interview
     assert 'role.currentValue || "applied_ai_engineer"' not in interview
 
