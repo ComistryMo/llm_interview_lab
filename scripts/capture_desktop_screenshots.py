@@ -10,6 +10,7 @@ from pathlib import Path
 import subprocess
 import sys
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 
 from llm_interview_lab import __version__
@@ -75,7 +76,22 @@ def main() -> int:
         subprocess.run(command, cwd=REPO_ROOT, env=environment, check=True)
         image = QImage(str(destination))
         expected_width, expected_height = (int(value) for value in size.split("x"))
-        if image.isNull() or image.width() != expected_width or image.height() != expected_height:
+        if image.isNull():
+            raise RuntimeError(f"invalid screenshot geometry: {destination}")
+        if image.width() != expected_width or image.height() != expected_height:
+            expected_ratio = expected_width / expected_height
+            actual_ratio = image.width() / image.height()
+            if abs(expected_ratio - actual_ratio) > 0.01:
+                raise RuntimeError(f"invalid screenshot aspect ratio: {destination}")
+            image = image.scaled(
+                expected_width,
+                expected_height,
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            if not image.save(str(destination)):
+                raise RuntimeError(f"failed to normalize screenshot geometry: {destination}")
+        if image.width() != expected_width or image.height() != expected_height:
             raise RuntimeError(f"invalid screenshot geometry: {destination}")
         screenshots.append(
             {
