@@ -43,7 +43,10 @@ def _git_commit() -> str:
 def main() -> int:
     source_commit = _git_commit()
     environment = os.environ.copy()
-    environment.update({"QT_QPA_PLATFORM": "offscreen", "QT_QUICK_BACKEND": "software"})
+    environment["QT_QUICK_BACKEND"] = "software"
+    # Native Windows rendering is required for the real CJK font fallback;
+    # the offscreen plugin renders tofu glyphs on the maintainer workstation.
+    environment["QT_QPA_PLATFORM"] = "windows" if sys.platform == "win32" else "offscreen"
     screenshots: list[dict[str, object]] = []
     IMAGE_ROOT.mkdir(parents=True, exist_ok=True)
 
