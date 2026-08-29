@@ -120,14 +120,28 @@ Item {
 
     function missingRoundLabel(item) {
         if (typeof item === "string")
-            return item
-        var label = item.round || item.type || "未命名环节"
-        var details = []
-        if ((item.skills || []).length > 0)
-            details.push("技能：" + item.skills.join("、"))
-        if (item.reason)
-            details.push(item.reason)
-        return details.length > 0 ? label + "（" + details.join("；") + "）" : label
+            return root.roundTypeText(item)
+        var label = root.roundTypeText(item.round || item.type || "")
+        var reason = ({missing_environment: "当前环境缺少所需依赖",
+                       no_strict_candidate: "当前难度没有严格匹配的固定题"})[item.reason]
+                     || "当前没有可用的固定题"
+        return label + "（" + reason + "）"
+    }
+
+    function roundTypeText(value) {
+        return ({coding: "代码实现", debugging: "调试分析", product_case: "产品案例",
+                 system_design: "系统设计", evaluation_case: "评测案例",
+                 project_deep_dive: "项目深挖", behavioral: "行为面试",
+                 oral: "口述问答"})[value] || "面试环节"
+    }
+
+    function assessmentSourceText(value) {
+        return ({self: "自评", human: "人工", ai: "AI", peer: "同伴", mentor: "导师"})[value]
+               || "未标注"
+    }
+
+    function confidenceText(value) {
+        return ({low: "低", medium: "中", high: "高"})[value] || "未标注"
     }
 
     function missingEnvironmentLabel(item) {
@@ -396,7 +410,7 @@ Item {
                         Text {
                             width: parent.width
                             text: "分数：" + root.resultScoreText(root.interviewResult)
-                                  + "\n完成状态：" + (root.interviewResult.completion_status || "未标注")
+                                  + "\n完成状态：" + root.statusText(root.interviewResult.completion_status)
                             color: root.palette.text
                             wrapMode: Text.Wrap
                             lineHeight: 1.4
@@ -431,8 +445,8 @@ Item {
                                     }
                                     Text {
                                         width: parent.width
-                                        text: "来源：" + (modelData.source || "未标注")
-                                              + " · 置信度：" + (modelData.confidence || "未标注")
+                                        text: "来源：" + root.assessmentSourceText(modelData.source)
+                                              + " · 置信度：" + root.confidenceText(modelData.confidence)
                                         color: root.palette.muted
                                         font.pixelSize: 11
                                         wrapMode: Text.Wrap

@@ -110,14 +110,27 @@ def _demo_dashboard() -> dict[str, Any]:
             "seniority": "new_grad",
             "ai_mode": "disabled",
         },
-        "current": {"problem_id": "LOSS-014", "title": "Cross Entropy", "status": "in_progress"},
+        "current": {
+            "problem_id": "LOSS-014",
+            "title": "Cross Entropy",
+            "status": "in_progress",
+            "environment": "当前可运行",
+            "environment_available": True,
+        },
         "recommended_quests": [
             {"id": "tensor_stable_loss", "title": "Tensor & Stable Loss"},
             {"id": "optimizer_training", "title": "Optimizer & Training Loop"},
         ],
         "due_review": ["TNS-011"],
         "due_retention": [{"problem_id": "LOSS-007", "stage": "d7", "due_at": "2026-08-28"}],
-        "unlocks": [{"problem_id": "OPT-001", "title": "SGD"}],
+        "unlocks": [
+            {
+                "problem_id": "OPT-001",
+                "title": "SGD",
+                "environment": "当前可运行",
+                "environment_available": True,
+            }
+        ],
         "mastered_count": 14,
         "role_readiness": [
             {"id": "python_engineering", "label": "Python Engineering", "self_reported": 0.75, "verified": 0.62},
@@ -186,6 +199,11 @@ class AppController(QObject):
         self._settings = QSettings("ComistryMo", "LLMInterviewLab")
         self._theme = str(self._settings.value("theme", "system"))
         self._font_scale = float(self._settings.value("fontScale", 1.0))
+        if demo_page:
+            # Release screenshots and offscreen smoke evidence must not inherit
+            # a maintainer's persisted theme or accessibility settings.
+            self._theme = "light"
+            self._font_scale = 1.0
         self._codex_executable = str(self._settings.value("codexExecutable", ""))
         self._codex_available = False
         self._codex_probe_running = False
@@ -214,13 +232,15 @@ class AppController(QObject):
         self._dashboard = _demo_dashboard()
         self._problems = [
             {"problem_id": "TNS-011", "title": "Last Valid Token", "status": "mastered", "asset_status": "ready", "validation": "oracle", "locked": False, "retention": True, "skills": ["Tensor indexing"], "environment": "当前可运行", "environment_available": True, "recommendable": True, "recommended_rank": 0},
-            {"problem_id": "LOSS-014", "title": "Cross Entropy", "status": "in_progress", "asset_status": "ready", "validation": "oracle", "locked": False, "retention": True, "skills": ["Loss", "数值稳定"], "environment": "需要 PyTorch 练习环境", "environment_available": False, "recommendable": True, "recommended_rank": 1},
+            {"problem_id": "LOSS-014", "title": "Cross Entropy", "status": "in_progress", "asset_status": "ready", "validation": "oracle", "locked": False, "retention": True, "skills": ["Loss", "数值稳定"], "environment": "当前可运行", "environment_available": True, "recommendable": True, "recommended_rank": 1},
             {"problem_id": "ATT-002", "title": "Scaled Dot-Product Attention", "status": "not_started", "asset_status": "ready", "validation": "oracle", "locked": True, "retention": False, "skills": ["Attention"], "environment": "需要 PyTorch 练习环境", "environment_available": False, "recommendable": True, "recommended_rank": 2},
         ]
         self._current_task = {
             "problem_id": "LOSS-014",
             "title": "Cross Entropy",
             "task": "Implement numerically stable cross entropy for batched logits.\n\nInput shape: logits [B, C], targets [B].",
+            "environment": "当前可运行",
+            "environment_available": True,
             "actions": {
                 "review": {"state": "blocked", "actionable": False, "blocked_reason": "先完成实现。"},
                 "retention": {
