@@ -440,16 +440,6 @@ problems:
     prerequisites: ["PT-003","OPT-012"]
     problem_type: integration
     description: "Train and evaluate an autoregressive model with masked supervision."
-  - id: PT-005
-    title: "Preference Pair Validator"
-    status: planned
-    domain: post_training
-    tracks: ["post_training"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["FND-002","FND-005"]
-    problem_type: implementation
-    description: "Validate chosen/rejected pairs and prevent identical or leaked responses."
   - id: PT-007
     title: "Reward Model Pairwise Loss"
     status: planned
@@ -580,4 +570,3 @@ problems:
     prerequisites: ["LOSS-015","PT-003"]
     problem_type: integration
     description: "Combine a parallel classification head with language modeling loss."
-
