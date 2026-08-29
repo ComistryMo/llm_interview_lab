@@ -258,7 +258,7 @@ class AppController(QObject):
             "interview_id": "role-interview-demo",
             "status": "active",
             "role_id": "applied_ai_engineer",
-            "role_title": "Applied AI Engineer",
+            "role_title": "应用型 AI 工程师",
             "seniority": "new_grad",
             "ai_mode": "provider",
             "material_refs": [],
@@ -268,8 +268,8 @@ class AppController(QObject):
             "question": {
                 "question_id": "q-002",
                 "kind": "system_design",
-                "title": "Design a Reliable Tool-Calling Assistant",
-                "prompt": "Design validation, execution, retry, timeout, observability and fallback for a production tool-calling assistant.",
+                "title": "设计可靠的工具调用助手",
+                "prompt": "请设计一个生产级工具调用助手：说明参数校验、工具执行、重试与超时、可观测性，以及工具失败时的降级和人工接管方案。",
                 "rubric": {"dimensions": {"failure_handling": {}, "tradeoffs": {}, "evaluation": {}}},
             },
         }
@@ -1927,9 +1927,14 @@ class AppController(QObject):
         if self._codex_loop is None or self._codex_backend is None or not self._codex_thread_id:
             self.toast.emit("请先连接 Codex；也可以继续使用无需 AI 的本地功能。")
             return
-        asyncio.run_coroutine_threadsafe(
+        future = asyncio.run_coroutine_threadsafe(
             self._codex_backend.start_turn(self._codex_thread_id, message),
             self._codex_loop,
+        )
+        future.add_done_callback(
+            lambda value: self._show_error(value.exception())
+            if value.exception()
+            else None
         )
 
     @Slot(str, str, str, bool, bool)

@@ -17,6 +17,7 @@ Item {
     property var interviewResult: app.interview.result || ({})
     property string answerDraft: ""
     property string activeQuestionId: activeQuestion ? activeQuestion.question_id : ""
+    property bool showSessionDetails: false
     property var configuration: ({"available": true, "user_message": "", "missing_rounds": [], "missing_environment": []})
     property string codeFontFamily: Qt.platform.os === "windows" ? "Cascadia Mono"
                                     : Qt.platform.os === "osx" ? "Menlo" : "monospace"
@@ -275,7 +276,31 @@ Item {
                     }
                     Rectangle { width: parent.width; height: 1; color: root.palette.border }
                     Text { text: "本场事实"; color: root.palette.text; font.bold: true }
-                    Text { width: parent.width; text: app.interview.interview_id ? "ID  " + app.interview.interview_id + "\n状态  " + root.statusText(app.interview.status) + "\n岗位  " + (app.interview.role_title || app.interview.role_id) + "\n阶段  " + root.seniorityText(app.interview.seniority) : "暂无进行中的面试"; color: root.palette.muted; wrapMode: Text.Wrap; lineHeight: 1.5 }
+                    Text {
+                        width: parent.width
+                        text: app.interview.interview_id
+                              ? "状态  " + root.statusText(app.interview.status)
+                                + "\n岗位  " + (app.interview.role_title || app.interview.role_id)
+                                + "\n阶段  " + root.seniorityText(app.interview.seniority)
+                              : "暂无进行中的面试"
+                        color: root.palette.muted
+                        wrapMode: Text.Wrap
+                        lineHeight: 1.5
+                    }
+                    ToolButton {
+                        visible: !!app.interview.interview_id
+                        text: root.showSessionDetails ? "收起技术详情" : "查看技术详情"
+                        onClicked: root.showSessionDetails = !root.showSessionDetails
+                    }
+                    Text {
+                        visible: root.showSessionDetails && !!app.interview.interview_id
+                        width: parent.width
+                        text: "会话 ID：" + app.interview.interview_id
+                              + (root.activeQuestionId ? "\n当前问题 ID：" + root.activeQuestionId : "")
+                        color: root.palette.muted
+                        font.pixelSize: 10
+                        wrapMode: Text.WrapAnywhere
+                    }
                     Text { width: parent.width; text: "模拟面试分数不会改变刷题训练的掌握状态。"; color: root.palette.warning; wrapMode: Text.Wrap; font.pixelSize: 12; font.bold: true }
                 }
             }
@@ -552,7 +577,11 @@ Item {
             }
             RowLayout {
                 width: parent.width
-                Text { text: activeQuestion ? "问题 " + activeQuestion.question_id : ""; color: root.palette.muted }
+                Text {
+                    text: activeQuestion ? "一次只完成一个主问题" : ""
+                    color: root.palette.muted
+                    font.pixelSize: 12
+                }
                 Item { Layout.fillWidth: true }
                 Button {
                     objectName: "finishInterviewButton"
