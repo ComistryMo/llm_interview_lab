@@ -56,14 +56,14 @@ Item {
         var review = root.reviewAction()
         if (review.actionable === true)
             return "review"
-        if (review.state && review.state !== "complete")
-            return "blocked"
-        var retention = root.nextRetentionAction()
-        if (retention) {
-            if ((retention.state === "due" || retention.state === "in_progress")
-                    && retention.actionable === true)
-                return "retention"
-            return "blocked"
+        if (review.state === "complete") {
+            var retention = root.nextRetentionAction()
+            if (retention) {
+                if ((retention.state === "due" || retention.state === "in_progress")
+                        && retention.actionable === true)
+                    return "retention"
+                return "blocked"
+            }
         }
         if (root.canSubmitCurrent())
             return "submit"
@@ -85,10 +85,8 @@ Item {
         if (app.currentTask && app.currentTask.environment_available === false)
             return app.currentTask.environment || "当前运行环境不满足这道题的要求。"
         var review = root.reviewAction()
-        if (review.state && review.state !== "complete" && root.primaryActionKind() === "blocked")
-            return review.blocked_reason || "请先完成实现提交，再进入契约审查。"
         var retention = root.nextRetentionAction()
-        if (retention && root.primaryActionKind() === "blocked")
+        if (review.state === "complete" && retention && root.primaryActionKind() === "blocked")
             return root.retentionBlockedText(retention)
         if (root.primaryActionKind() === "review")
             return "公开测试和提交已完成；现在补充实现解释、复杂度与边界证据。"

@@ -341,6 +341,8 @@ def test_home_and_practice_expose_truthful_next_actions() -> None:
     assert 'objectName: "practicePrimaryAction"' in exercise
     assert "root.actions.review || ({})" in exercise
     assert "root.actions.retention || ({})" in exercise
+    assert 'if (review.state === "complete")' in exercise
+    assert 'review.state && review.state !== "complete"' not in exercise
     assert 'item.state !== "complete"' in exercise
     assert 'retention.state === "due" || retention.state === "in_progress"' in exercise
     assert 'return "review"' in exercise
