@@ -51,6 +51,7 @@ Flickable {
                 RowLayout {
                     Button { text: "教练模式"; enabled: app.codexAvailable; onClicked: app.connectCodex("coach") }
                     Button { text: "仓库代理模式"; enabled: app.codexAvailable; onClicked: app.connectCodex("repository_agent") }
+                    Button { text: "重新检测"; flat: true; onClicked: app.refreshCodexAvailability() }
                     Button { text: "查找设置"; visible: !app.codexAvailable; onClicked: app.navigate("settings") }
                 }
             }

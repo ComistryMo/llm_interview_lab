@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime
 from pathlib import Path
 
 from .base import ContextPart, ContextPreview
@@ -113,13 +114,14 @@ def build_role_interview_context_preview(
     *,
     candidate_answer: str | None = None,
     include_materials: bool = True,
+    now: datetime | None = None,
 ) -> ContextPreview:
     """Build one current-question interview context from frozen, consented facts."""
 
     session = load_role_interview(repo_root, profile_id, interview_id)
     if session["ai_mode"] == "disabled":
         raise ContextBuilderError("this interview was created without AI access")
-    current = current_role_question(repo_root, profile_id, interview_id)
+    current = current_role_question(repo_root, profile_id, interview_id, now=now)
     question = current["question"]
     if question is None:
         raise ContextBuilderError("the interview has no unanswered question")

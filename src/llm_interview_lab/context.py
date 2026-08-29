@@ -561,6 +561,8 @@ def _build_role_interview_context(
     catalog: Catalog,
     profile_id: str,
     interview_id: str,
+    *,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Build a current-question-only view for one role-aware interview."""
 
@@ -594,7 +596,9 @@ def _build_role_interview_context(
         )
     elif session["status"] == "active":
         try:
-            stage = current_role_question(repo_root, profile_id, interview_id)
+            stage = current_role_question(
+                repo_root, profile_id, interview_id, now=now
+            )
         except RoleInterviewError as error:
             if "expired" not in str(error):
                 raise ContextError(str(error)) from error
@@ -739,13 +743,15 @@ def build_interview_context(
     catalog: Catalog,
     profile_id: str,
     interview_id: str,
+    *,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Build a stage-gated context for one explicitly named interview."""
 
     repo_root = repo_root.resolve()
     if interview_id.startswith(ROLE_INTERVIEW_ID_PREFIX):
         return _build_role_interview_context(
-            repo_root, catalog, profile_id, interview_id
+            repo_root, catalog, profile_id, interview_id, now=now
         )
     session = load_session(repo_root, profile_id, interview_id, catalog)
     read_allowlist: list[dict[str, str]] = []
@@ -770,7 +776,9 @@ def build_interview_context(
             f"llm-lab interview start {interview_id} --profile {profile_id}"
         )
     elif session["status"] == "active":
-        stage = current_question(repo_root, profile_id, interview_id, catalog)
+        stage = current_question(
+            repo_root, profile_id, interview_id, catalog, now=now
+        )
         question = stage["question"]
         current = {
             "status": stage["status"],

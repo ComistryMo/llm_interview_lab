@@ -437,6 +437,31 @@ def load_role_interview(
     return session
 
 
+def list_role_interviews(
+    repo_root: Path, profile_id: str
+) -> tuple[dict[str, Any], ...]:
+    """List only the explicitly selected Profile's role-interview sessions."""
+
+    paths = profile_paths(repo_root, profile_id)
+    root = ensure_profile_path_is_safe(
+        repo_root, profile_id, paths.interviews_root
+    )
+    if not root.exists():
+        return ()
+    sessions: list[dict[str, Any]] = []
+    for entry in sorted(root.iterdir(), key=lambda item: item.name):
+        name = entry.name
+        if not (
+            name.startswith(ROLE_INTERVIEW_ID_PREFIX)
+            and len(name)
+            == len(ROLE_INTERVIEW_ID_PREFIX) + ROLE_INTERVIEW_ID_WIDTH
+            and name[-ROLE_INTERVIEW_ID_WIDTH:].isdigit()
+        ):
+            continue
+        sessions.append(load_role_interview(repo_root, profile_id, name))
+    return tuple(sessions)
+
+
 def _save(repo_root: Path, profile_id: str, session: dict[str, Any]) -> None:
     root = _session_root(repo_root, profile_id, session["interview_id"])
     _write_session(repo_root, root / "session.json", session)

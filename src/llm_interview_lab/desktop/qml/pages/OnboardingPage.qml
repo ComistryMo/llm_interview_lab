@@ -25,6 +25,7 @@ Rectangle {
     }
     property string inlineError: ""
     property bool submitting: false
+    property bool profileNameValid: profileName.text.trim().length > 0
     property string displayedError: inlineError !== "" ? inlineError : app.onboardingError
 
     function selectRole(roleId) {
@@ -70,10 +71,20 @@ Rectangle {
                         id: profileName
                         objectName: "onboardingProfileName"
                         Layout.fillWidth: true
-                        placeholderText: "档案名称"
-                        text: "default"
-                        maximumLength: 64
+                        placeholderText: "例如：我的秋招准备"
+                        text: ""
+                        maximumLength: 120
+                        onTextChanged: {
+                            if (root.inlineError.length > 0)
+                                root.inlineError = ""
+                        }
                         focus: true
+                    }
+                    Text {
+                        visible: profileName.text.length > 0 && !root.profileNameValid
+                        text: "请输入至少一个可见字符。"
+                        color: root.palette.danger
+                        font.pixelSize: 12
                     }
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: 74; radius: 8; color: root.palette.surfaceAlt
@@ -117,8 +128,13 @@ Rectangle {
                                    : root.palette.surfaceAlt
                             border.color: root.selectedRole === modelData.id
                                           ? root.palette.accent
-                                          : root.palette.border
-                            border.width: root.selectedRole === modelData.id ? 2 : 1
+                                          : roleCard.activeFocus
+                                            ? root.palette.accent
+                                            : root.palette.border
+                            border.width: root.selectedRole === modelData.id || roleCard.activeFocus ? 2 : 1
+                            activeFocusOnTab: true
+                            Accessible.name: modelData.title
+                            Accessible.role: Accessible.ListItem
 
                             ColumnLayout {
                                 anchors.fill: parent
@@ -172,7 +188,16 @@ Rectangle {
                                 objectName: "onboardingRoleHitArea-" + modelData.id
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
+                                onPressed: roleCard.forceActiveFocus()
                                 onClicked: root.selectRole(modelData.id)
+                            }
+                            Keys.onReturnPressed: {
+                                root.selectRole(modelData.id)
+                                event.accepted = true
+                            }
+                            Keys.onSpacePressed: {
+                                root.selectRole(modelData.id)
+                                event.accepted = true
                             }
                         }
                     }
@@ -203,6 +228,13 @@ Rectangle {
                         color: root.selectedRoleCard ? root.palette.accent : root.palette.muted
                         font.bold: root.selectedRoleCard !== null
                         elide: Text.ElideRight
+                    }
+                    Text {
+                        visible: roleGrid.contentHeight > roleGrid.height
+                        text: "岗位列表可滚动查看"
+                        color: root.palette.muted
+                        font.pixelSize: 11
+                        Layout.fillWidth: true
                     }
                 }
 
@@ -304,6 +336,7 @@ Rectangle {
                 highlighted: true
                 enabled: !root.submitting
                          && !app.onboardingBusy
+                         && !(root.step === 0 && !root.profileNameValid)
                          && !(root.step === 1 && root.selectedRole.length === 0)
                 onClicked: {
                     root.inlineError = ""
@@ -315,6 +348,11 @@ Rectangle {
                         }
                         root.step++
                     } else {
+                        if (!root.profileNameValid) {
+                            root.inlineError = "请先输入一个档案名称。"
+                            root.step = 0
+                            return
+                        }
                         if (root.selectedRole.length === 0) {
                             root.step = 1
                             root.inlineError = "请先选择一个目标岗位。"
@@ -341,8 +379,8 @@ Rectangle {
                         var assessmentJson = JSON.stringify(assessment)
                         root.submitting = true
                         Qt.callLater(function() {
-                            app.completeOnboarding(profileId, roleId, seniorityId,
-                                                   selected, assessmentJson)
+                            app.completeOnboardingWithDisplayName(profileId, roleId, seniorityId,
+                                                                  selected, assessmentJson)
                             root.submitting = false
                         })
                     }

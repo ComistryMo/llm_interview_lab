@@ -12,7 +12,11 @@ Item {
     property var aiPreview: ({"parts": [], "estimated_tokens": 0})
     property string pendingAIAction: ""
     property string pendingConnection: ""
-    onActiveQuestionChanged: rubricScores = ({})
+    property bool answerLocked: !!app.interview.answer_locked
+    property string phase: app.interview.phase || (answerLocked ? "assessment" : "answering")
+    property string answerDraft: ""
+    property string activeQuestionId: activeQuestion ? activeQuestion.question_id : ""
+    onActiveQuestionIdChanged: { rubricScores = ({}); answerDraft = "" }
 
     function statusText(value) {
         return ({active: "进行中", ready: "待开始", completed: "已完成", incomplete: "未完成", timed_out: "已超时"})[value] || value || "未知"
@@ -20,6 +24,16 @@ Item {
 
     function seniorityText(value) {
         return ({intern: "实习", new_grad: "校招", mid: "有经验", senior: "高级"})[value] || value || "未设置"
+    }
+
+    function timerText(seconds) {
+        if (seconds === undefined || seconds === null)
+            return "未开始"
+        if (seconds <= 0)
+            return "已到时"
+        var minutes = Math.floor(seconds / 60)
+        var rest = seconds % 60
+        return (minutes < 10 ? "0" : "") + minutes + ":" + (rest < 10 ? "0" : "") + rest
     }
 
     function previewAI(action, connectionId) {
@@ -31,6 +45,26 @@ Item {
         root.pendingAIAction = action
         root.pendingConnection = connectionId || ""
         contextDialog.open()
+    }
+
+    function rubricComplete() {
+        if (!activeQuestion || !activeQuestion.rubric)
+            return false
+        var dimensions = Object.keys(activeQuestion.rubric.dimensions || {})
+        if (dimensions.length === 0)
+            return false
+        for (var i = 0; i < dimensions.length; ++i) {
+            if (root.rubricScores[dimensions[i]] === undefined)
+                return false
+        }
+        return true
+    }
+
+    Timer {
+        interval: 1000
+        repeat: true
+        running: app.interview.status === "active"
+        onTriggered: app.refreshInterviewClock()
     }
 
     RowLayout {
@@ -112,7 +146,7 @@ Item {
                     Text { text: activeQuestion ? activeQuestion.title : "按岗位蓝图开始一场面试"; color: root.palette.text; font.pixelSize: 22; font.bold: true }
                 }
                 Item { Layout.fillWidth: true }
-                StatusPill { text: app.interview.remaining_seconds ? "剩余 " + Math.floor(app.interview.remaining_seconds / 60) + " 分钟" : "尚未开始"; tone: root.palette.warning }
+                StatusPill { text: root.timerText(app.interview.remaining_seconds); tone: root.palette.warning }
             }
             Rectangle { width: parent.width; height: 1; color: root.palette.border }
             ScrollView {
@@ -120,12 +154,18 @@ Item {
                 Column {
                     width: parent.width; spacing: 16
                     Text { width: parent.width; text: activeQuestion ? activeQuestion.prompt : "选择岗位、求职阶段与难度。系统会冻结一份公共面试蓝图，每次只展示一个问题，并将客观代码证据与 Rubric 主观判断分开。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
-                    TextArea { id: answer; width: parent.width; height: 180; visible: !!activeQuestion && activeQuestion.kind !== "coding"; placeholderText: "输入你的回答……"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.palette.border } }
-                    Column {
+                    TextArea { id: answer; objectName: "interviewAnswerEditor"; width: parent.width; height: 180; visible: !!activeQuestion && activeQuestion.kind !== "coding"; text: root.answerLocked ? (app.interview.answer_text || "") : root.answerDraft; readOnly: root.answerLocked; onTextChanged: if (!root.answerLocked) root.answerDraft = text; placeholderText: root.answerLocked ? "回答已锁定" : "输入你的回答……"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.answerLocked ? root.palette.accent : root.palette.border } }
+                    RowLayout {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                         width: parent.width
+                        Text { text: root.answerLocked ? "阶段 B：回答已锁定，下面进入评估" : "阶段 A：先完成回答；锁定后才会显示评分维度"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                        Button { objectName: "lockInterviewAnswer"; visible: !root.answerLocked; text: "提交并锁定回答"; highlighted: true; enabled: answer.text.trim().length > 0 && !app.busy; onClicked: app.lockInterviewAnswer(answer.text) }
+                    }
+                    Column {
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked
+                        width: parent.width
                         spacing: 6
-                        Text { text: "人工 Rubric（每个维度 1–5 分）"; color: root.palette.muted; font.bold: true }
+                        Text { text: "候选人自评 Rubric（每个维度 1–5 分）"; color: root.palette.muted; font.bold: true }
                         Repeater {
                             model: activeQuestion ? Object.keys(activeQuestion.rubric.dimensions) : []
                             delegate: RowLayout {
@@ -134,19 +174,18 @@ Item {
                                 Text { text: modelData.replace(/_/g, " "); color: root.palette.text; Layout.preferredWidth: 190 }
                                 Slider {
                                     id: dimensionScore
-                                    from: 1; to: 5; stepSize: 1; value: 3
+                                    from: 1; to: 5; stepSize: 1; value: 1
                                     Layout.fillWidth: true
-                                    onValueChanged: root.rubricScores[modelData] = Math.round(value)
-                                    Component.onCompleted: root.rubricScores[modelData] = 3
+                                    onValueChanged: if (pressed) root.rubricScores[modelData] = Math.round(value)
                                 }
-                                Text { text: Math.round(dimensionScore.value) + " / 5"; color: root.palette.text; font.bold: true; Layout.preferredWidth: 42 }
+                                Text { text: root.rubricScores[modelData] === undefined ? "未评分" : Math.round(dimensionScore.value) + " / 5"; color: root.palette.text; font.bold: true; Layout.preferredWidth: 54 }
                             }
                         }
                     }
-                    TextArea { id: evidence; width: parent.width; height: 86; visible: !!activeQuestion && activeQuestion.kind !== "coding"; placeholderText: "支持本次评分的回答证据（必填）"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.palette.border } }
+                    TextArea { id: evidence; width: parent.width; height: 86; visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked; placeholderText: "支持本次评分的回答证据（必填）"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.palette.border } }
                     ComboBox {
                         id: providerConnection
-                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && app.interview.ai_mode === "provider"
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && app.interview.ai_mode === "provider"
                         width: parent.width
                         model: app.connections
                         textRole: "display_name"
@@ -154,7 +193,7 @@ Item {
                     }
                     CheckBox {
                         id: includeInterviewMaterials
-                        visible: !!activeQuestion
+                        visible: !!activeQuestion && root.answerLocked
                                  && activeQuestion.kind !== "coding"
                                  && app.interview.ai_mode !== "disabled"
                                  && (app.interview.material_refs || []).length > 0
@@ -162,10 +201,11 @@ Item {
                         text: "在本次 AI 请求中包含已授权材料"
                     }
                     RowLayout {
-                        visible: !!activeQuestion && activeQuestion.kind !== "coding"
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked
                         width: parent.width
                         Button {
-                            text: "记录人工评分"
+                            text: "记录自评"
+                            enabled: root.rubricComplete() && evidence.text.trim().length > 0
                             onClicked: app.answerInterviewDetailed(answer.text, JSON.stringify(root.rubricScores), evidence.text)
                         }
                         Button {
@@ -235,7 +275,7 @@ Item {
                 width: parent.width
                 Text { text: activeQuestion ? "问题 " + activeQuestion.question_id : ""; color: root.palette.muted }
                 Item { Layout.fillWidth: true }
-                Button { text: "结束并留档"; enabled: !!app.interview.interview_id; onClicked: app.finishInterview() }
+                Button { text: "结束并留档"; enabled: !!app.interview.interview_id; onClicked: finishDialog.open() }
             }
         }
     }
@@ -308,6 +348,29 @@ Item {
                 color: root.palette.muted
                 font.pixelSize: 12
             }
+        }
+    }
+
+    Dialog {
+        id: finishDialog
+        objectName: "interviewFinishDialog"
+        modal: true
+        anchors.centerIn: parent
+        title: "结束本场面试？"
+        width: Math.min(440, root.width - 48)
+        height: 250
+        standardButtons: Dialog.Cancel | Dialog.Ok
+        onAccepted: app.finishInterview()
+        contentItem: Text {
+            width: 360
+            text: "已完成：" + (app.interview.completed_questions || 0)
+                  + " / " + (app.interview.total_questions || 0)
+                  + "\n未回答：" + (app.interview.unanswered_questions || 0)
+                  + "\n已回答但未评分：" + (app.interview.unscored_questions || 0)
+                  + "\n代码环节未完成：" + (app.interview.coding_incomplete || 0)
+                  + "\n\n结束后，本场会按现有证据标记为未完成并留档。"
+            color: root.palette.text
+            wrapMode: Text.Wrap
         }
     }
 }

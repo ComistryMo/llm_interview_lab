@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import stat
 import subprocess
+import unicodedata
 from typing import Any, Mapping, TYPE_CHECKING
 
 from jsonschema import Draft202012Validator
@@ -78,6 +79,67 @@ def validate_profile_id(profile_id: str) -> str:
     if PROFILE_ID_RE.fullmatch(profile_id) is None:
         raise WorkspaceError("profile ID must start with a lowercase letter and contain only lowercase letters, digits, or hyphens")
     return profile_id
+
+
+def profile_id_from_display_name(display_name: str) -> str:
+    """Create a stable, filesystem-safe id without exposing profile contents.
+
+    Names are user-facing and may contain Unicode or spaces.  The id is only a
+    storage key, so non-ASCII-only names use a short deterministic digest rather
+    than silently dropping every character.
+    """
+
+    if not isinstance(display_name, str) or not display_name.strip():
+        raise WorkspaceError("display name must not be empty")
+    normalized = unicodedata.normalize("NFKD", display_name.strip())
+    ascii_name = normalized.encode("ascii", "ignore").decode("ascii").lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_name).strip("-")
+    if not slug or not slug[0].isalpha():
+        digest = hashlib.sha256(display_name.strip().encode("utf-8")).hexdigest()[:8]
+        slug = f"profile-{digest}"
+    slug = slug[:64].rstrip("-")
+    return validate_profile_id(slug)
+
+
+def profile_id_for_display_name(repo_root: Path, display_name: str) -> str:
+    """Return an unused id, or reuse an existing matching display name.
+
+    This checks only deterministic candidate paths; it does not enumerate other
+    users' profiles or read their submissions/materials.
+    """
+
+    base = profile_id_from_display_name(display_name)
+    candidate = base
+    for suffix in range(0, 1000):
+        candidate_root = repo_root / "workspace/profiles" / candidate
+        path = candidate_root / "profile.yaml"
+        # A directory is occupied even when its metadata is missing or
+        # damaged.  Reusing it would make onboarding overwrite/attach to an
+        # unrelated local Profile, so only a genuinely absent candidate is
+        # available for a new display name.
+        # Never follow a symlink/reparse point while deciding whether a name
+        # is available. A dangling link does not satisfy ``Path.exists()``,
+        # but it still occupies the lexical profile name.
+        candidate_occupied = _is_obvious_link(candidate_root) or candidate_root.exists()
+        if not candidate_occupied:
+            return candidate
+        if _is_obvious_link(candidate_root):
+            tail = f"-{suffix + 2}"
+            candidate = (base[: 64 - len(tail)] + tail).rstrip("-")
+            continue
+        existing = None
+        try:
+            if path.is_file():
+                existing = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, yaml.YAMLError):
+            existing = None
+        if isinstance(existing, dict) and existing.get(
+            "display_name", candidate
+        ) == display_name.strip():
+            return candidate
+        tail = f"-{suffix + 2}"
+        candidate = (base[: 64 - len(tail)] + tail).rstrip("-")
+    raise WorkspaceError("could not allocate a unique profile id")
 
 
 def profile_paths(repo_root: Path, profile_id: str) -> ProfilePaths:
@@ -262,7 +324,13 @@ def _ensure_profile_subdirectories(repo_root: Path, paths: ProfilePaths) -> None
         )
 
 
-def init_profile(repo_root: Path, profile_id: str, track_ids: tuple[str, ...] | None = None) -> InitResult:
+def init_profile(
+    repo_root: Path,
+    profile_id: str,
+    track_ids: tuple[str, ...] | None = None,
+    *,
+    display_name: str | None = None,
+) -> InitResult:
     paths = profile_paths(repo_root, profile_id)
     ensure_profile_is_ignored(repo_root, profile_id)
     ensure_profile_path_is_safe(repo_root, profile_id, paths.root)
@@ -280,6 +348,10 @@ def init_profile(repo_root: Path, profile_id: str, track_ids: tuple[str, ...] | 
     if not isinstance(template, dict):
         raise WorkspaceError("default profile template must be an object")
     template["profile_id"] = profile_id
+    if display_name is not None:
+        if not isinstance(display_name, str) or not display_name.strip():
+            raise WorkspaceError("display name must not be empty")
+        template["display_name"] = display_name.strip()
     template["synthetic"] = False
     if track_ids:
         template["target_roles"] = list(dict.fromkeys(track_ids))
@@ -324,10 +396,17 @@ def ensure_profile_path_is_safe(
     repository = repo_root.resolve()
     profiles_root = repository / "workspace/profiles"
     profile_root = profiles_root / validate_profile_id(profile_id)
-    target = (candidate or profile_root).absolute()
+    # ``Path.absolute()`` may retain a Windows 8.3 alias while ``repo_root``
+    # came from ``resolve()``.  Normalize both sides before comparing; retain
+    # the lexical path separately so link/reparse checks still inspect the
+    # caller-provided components.
+    lexical_target = (candidate or profile_root).absolute()
+    target = lexical_target.resolve(strict=False)
+    normalized_profiles_root = profiles_root.resolve(strict=False)
+    normalized_profile_root = profile_root.resolve(strict=False)
     try:
-        profile_root.absolute().relative_to(profiles_root.absolute())
-        target.relative_to(profile_root.absolute())
+        normalized_profile_root.relative_to(normalized_profiles_root)
+        target.relative_to(normalized_profile_root)
     except ValueError as error:
         raise WorkspaceError("Profile path is outside workspace/profiles") from error
 
@@ -335,13 +414,26 @@ def ensure_profile_path_is_safe(
         raise WorkspaceError("workspace/profiles must be a regular, unlinked directory")
 
     current = profiles_root
-    relative = target.relative_to(profiles_root)
+    relative = target.relative_to(normalized_profiles_root)
     for part in relative.parts:
         current = current / part
         if _is_obvious_link(current):
             raise WorkspaceError("Profile path must not use a symlink or reparse point")
         if current.exists() and current != target and not current.is_dir():
             raise WorkspaceError("Profile path contains a non-directory component")
+
+    # Check the original lexical path as well.  This catches a link before
+    # ``resolve`` can hide it, while the normalized path above handles short
+    # Windows aliases consistently.
+    lexical_current = lexical_target
+    while True:
+        if _is_obvious_link(lexical_current):
+            raise WorkspaceError("Profile path must not use a symlink or reparse point")
+        if lexical_current == lexical_current.parent:
+            break
+        if lexical_current.name.lower() == validate_profile_id(profile_id).lower():
+            break
+        lexical_current = lexical_current.parent
 
     if must_exist and not target.exists():
         raise WorkspaceError("required Profile path is missing")

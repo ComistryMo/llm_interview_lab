@@ -7,7 +7,8 @@ values suitable for a terminal or a Qt model.
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
+import importlib.util
 import os
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -22,6 +23,7 @@ from .role_interviews import (
     create_role_interview,
     current_role_question,
     finish_role_interview,
+    list_role_interviews,
     load_role_interview,
     record_role_answer,
     record_role_assessment,
@@ -37,6 +39,7 @@ from .workspace import (
     find_repository_root,
     init_profile,
     load_profile,
+    profile_id_for_display_name,
     profile_paths,
     ensure_profile_path_is_safe,
     retention_due_at,
@@ -64,6 +67,7 @@ class ApplicationService:
         self,
         profile_id: str = "default",
         *,
+        display_name: str | None = None,
         role_id: str | None = None,
         seniority: str = "new_grad",
         skill_self_assessment: Mapping[str, int] | None = None,
@@ -84,6 +88,7 @@ class ApplicationService:
             self.repo_root,
             profile_id,
             role.required_tracks if role else None,
+            display_name=display_name,
         )
         if configuration is not None:
             role, values = configuration
@@ -100,9 +105,33 @@ class ApplicationService:
             )
         return {
             "profile_id": profile_id,
+            "display_name": load_profile(result.paths, self.repo_root).get(
+                "display_name", profile_id
+            ),
             "created": result.created,
             "profile": load_profile(result.paths, self.repo_root),
         }
+
+    def initialize_profile_for_display_name(
+        self,
+        display_name: str,
+        *,
+        role_id: str | None = None,
+        seniority: str = "new_grad",
+        skill_self_assessment: Mapping[str, int] | None = None,
+        ai_mode: str = "disabled",
+    ) -> dict[str, Any]:
+        """Initialize a user-facing name while keeping a safe internal id."""
+
+        profile_id = profile_id_for_display_name(self.repo_root, display_name)
+        return self.initialize_profile(
+            profile_id,
+            display_name=display_name,
+            role_id=role_id,
+            seniority=seniority,
+            skill_self_assessment=skill_self_assessment,
+            ai_mode=ai_mode,
+        )
 
     def configure_role(
         self,
@@ -335,11 +364,29 @@ class ApplicationService:
     def problem_cards(self, profile_id: str) -> list[dict[str, Any]]:
         _, profile, state = self._state(profile_id)
         tracks = set(profile["target_roles"])
+        role_preferences = profile.get("role_preferences", {})
+        role = self.roles.roles.get(role_preferences.get("primary_role"))
+        recommended_order: dict[str, int] = {}
+        if role is not None:
+            for quest_id in role.recommended_quests:
+                quest = self.catalog.quests.get(quest_id)
+                if quest is None:
+                    continue
+                for problem_id in quest.problem_ids:
+                    recommended_order.setdefault(problem_id, len(recommended_order))
+        torch_available = importlib.util.find_spec("torch") is not None
         cards: list[dict[str, Any]] = []
         for problem_id in self.catalog.order:
             problem = self.catalog.problems[problem_id]
             if not tracks.intersection(problem.raw["tracks"]):
                 continue
+            interface = problem.raw.get("interface")
+            framework = interface.get("framework", "") if isinstance(interface, Mapping) else ""
+            skills = problem.raw.get("skills", [])
+            if not isinstance(skills, list):
+                skills = []
+            requires_torch = str(framework).lower() == "pytorch"
+            environment_available = not requires_torch or torch_available
             cards.append(
                 {
                     "problem_id": problem.id,
@@ -348,6 +395,16 @@ class ApplicationService:
                     "asset_status": problem.status,
                     "validation": problem.validation_level if problem.ready else "planned",
                     "difficulty": problem.raw["difficulty"],
+                    "skills": list(skills),
+                    "keywords": [problem.id, problem.title, *skills],
+                    "recommendable": bool(problem.recommendable),
+                    "recommended_rank": recommended_order.get(problem.id, -1),
+                    "environment": (
+                        "当前可运行"
+                        if environment_available
+                        else "需要 PyTorch 练习环境"
+                    ),
+                    "environment_available": environment_available,
                     "locked": not set(problem.prerequisites).issubset(state.mastered),
                     "prerequisites": list(problem.prerequisites),
                     "retention": bool(
@@ -374,6 +431,7 @@ class ApplicationService:
             "path": str(inspected.path),
             "sha256": inspected.sha256,
             "text": inspected.path.read_text(encoding="utf-8"),
+            "last_public_test": attempt.last_public_test,
         }
 
     def start_practice(
@@ -401,11 +459,98 @@ class ApplicationService:
         )
 
     def run_practice_tests(self, profile_id: str, problem_id: str) -> GraderResult:
+        return self._run_practice_tests(
+            profile_id,
+            problem_id,
+            expected_attempt_id=None,
+            expected_sha256=None,
+            operation_id=None,
+        )
+
+    def save_practice_submission(
+        self,
+        profile_id: str,
+        problem_id: str,
+        text: str,
+        *,
+        attempt_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Atomically persist the exact editor contents for one attempt."""
+
+        if not isinstance(text, str):
+            raise ApplicationError("submission must be text")
+        paths, _, state = self._state(profile_id)
+        attempt = state.latest_attempt(problem_id)
+        if attempt is None or attempt.submission_relpath is None:
+            raise ApplicationError("problem has not been started")
+        if attempt_id is not None and attempt.attempt_id != attempt_id:
+            raise ApplicationError("attempt changed; reload the current task")
+        submission = self.repo_root.joinpath(*attempt.submission_relpath.split("/"))
+        temporary: Path | None = None
+        try:
+            submission = ensure_profile_path_is_safe(
+                self.repo_root, profile_id, submission, must_exist=True
+            )
+            temporary = submission.with_name(f".{submission.name}.{uuid4().hex}.tmp")
+            ensure_profile_path_is_safe(self.repo_root, profile_id, temporary)
+            with temporary.open("x", encoding="utf-8", newline="\n") as stream:
+                stream.write(text)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, submission)
+        except OSError as error:
+            raise ApplicationError("submission could not be saved") from error
+        finally:
+            if temporary is not None:
+                try:
+                    temporary.unlink()
+                except FileNotFoundError:
+                    pass
+        inspected = inspect_submission(submission, paths.submissions_root)
+        return {
+            "problem_id": problem_id,
+            "attempt_id": attempt.attempt_id,
+            "path": str(inspected.path),
+            "sha256": inspected.sha256,
+            "text": text,
+        }
+
+    def run_practice_tests_for_submission(
+        self,
+        profile_id: str,
+        problem_id: str,
+        text: str,
+        *,
+        attempt_id: str | None = None,
+        operation_id: str | None = None,
+    ) -> GraderResult:
+        saved = self.save_practice_submission(
+            profile_id, problem_id, text, attempt_id=attempt_id
+        )
+        return self._run_practice_tests(
+            profile_id,
+            problem_id,
+            expected_attempt_id=saved["attempt_id"],
+            expected_sha256=saved["sha256"],
+            operation_id=operation_id,
+        )
+
+    def _run_practice_tests(
+        self,
+        profile_id: str,
+        problem_id: str,
+        *,
+        expected_attempt_id: str | None,
+        expected_sha256: str | None,
+        operation_id: str | None,
+    ) -> GraderResult:
         problem = self.catalog.get(problem_id)
         paths, _, state = self._state(profile_id)
         attempt = state.latest_attempt(problem_id)
         if attempt is None or attempt.submission_relpath is None:
             raise ApplicationError("problem has not been started")
+        if expected_attempt_id is not None and attempt.attempt_id != expected_attempt_id:
+            raise ApplicationError("attempt changed while preparing tests")
         test_path, symbol = problem.public_tests, problem.symbol
         if attempt.retention_stage:
             variant = problem.retention_variant(self.repo_root, attempt.retention_stage)
@@ -423,6 +568,10 @@ class ApplicationService:
             time_limit_ms=problem.time_limit_ms,
             output_limit_kb=problem.output_limit_kb,
         )
+        # Do not silently associate a result with newer editor contents.
+        current_sha = inspect_submission(submission, paths.submissions_root).sha256
+        if expected_sha256 is not None and current_sha != expected_sha256:
+            result = replace(result, stale=True)
         append_event(
             paths.events_file,
             event_schema_path(self.repo_root),
@@ -437,6 +586,7 @@ class ApplicationService:
                 "passed": result.passed,
                 "failed": result.failed,
                 "duration_ms": result.duration_ms,
+                **({"operation_id": operation_id} if operation_id else {}),
             },
         )
         return result
@@ -655,3 +805,13 @@ class ApplicationService:
 
     def interview_session(self, profile_id: str, interview_id: str) -> dict[str, Any]:
         return load_role_interview(self.repo_root, profile_id, interview_id)
+
+    def resumable_interview(self, profile_id: str) -> dict[str, Any] | None:
+        """Return the newest active role interview for one selected Profile."""
+
+        active = [
+            session
+            for session in list_role_interviews(self.repo_root, profile_id)
+            if session["status"] == "active"
+        ]
+        return active[-1] if active else None

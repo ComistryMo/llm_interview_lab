@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -33,7 +34,9 @@ from ..roles import RoleCatalogError
 from ..workspace import (
     WorkspaceError,
     ensure_profile_path_is_safe,
+    profile_id_for_display_name,
     profile_paths,
+    load_profile,
     validate_profile_id,
 )
 from .i18n import friendly_error, localize_role, onboarding_error_text, text
@@ -149,15 +152,29 @@ class AppController(QObject):
         self.repo_root = repo_root.resolve()
         self.service = service or ApplicationService(self.repo_root)
         self._profile_id = profile_id
+        self._profile_display_name = profile_id
         self._page = demo_page or "home"
         self._onboarding = False
         self._onboarding_busy = False
         self._onboarding_error = ""
         self._onboarding_error_code = ""
+        self._onboarding_result: dict[str, Any] = {
+            "success": False,
+            "error_code": "",
+            "user_message": "",
+            "technical_message": "",
+            "recommended_action": "",
+            "operation_id": "",
+        }
         self._dashboard: dict[str, Any] = {}
         self._problems: list[dict[str, Any]] = []
         self._current_task: dict[str, Any] = {}
         self._submission = ""
+        self._submission_saved_revision = ""
+        self._tested_revision = ""
+        self._test_state = "未测试"
+        self._test_operation_id = ""
+        self._test_identity: tuple[str, str, str] | None = None
         self._test_output = ""
         self._interview: dict[str, Any] = {}
         self._connections: list[dict[str, Any]] = []
@@ -171,6 +188,8 @@ class AppController(QObject):
         self._theme = str(self._settings.value("theme", "system"))
         self._font_scale = float(self._settings.value("fontScale", 1.0))
         self._codex_executable = str(self._settings.value("codexExecutable", ""))
+        self._codex_available = False
+        self._codex_probe_running = False
         self._legacy_data_root = legacy_data_root.resolve() if legacy_data_root else None
         self._legacy_migration_dismissed = False
         self._log_root = (log_root or (self.repo_root / "logs")).resolve()
@@ -185,15 +204,19 @@ class AppController(QObject):
             self._load_demo(demo_page)
         else:
             self.refresh()
+            # Finder/Explorer startup must not synchronously scan PATH or
+            # launch a subprocess from a QML property getter.
+            QTimer.singleShot(0, self.refreshCodexAvailability)
 
     def _load_demo(self, page: str) -> None:
         self._profile_id = "demo"
+        self._profile_display_name = "演示学习档案"
         self._onboarding = page == "onboarding"
         self._dashboard = _demo_dashboard()
         self._problems = [
-            {"problem_id": "TNS-011", "title": "Last Valid Token", "status": "mastered", "validation": "oracle", "locked": False, "retention": True},
-            {"problem_id": "LOSS-014", "title": "Cross Entropy", "status": "in_progress", "validation": "oracle", "locked": False, "retention": True},
-            {"problem_id": "ATT-002", "title": "Scaled Dot-Product Attention", "status": "not_started", "validation": "oracle", "locked": True, "retention": False},
+            {"problem_id": "TNS-011", "title": "Last Valid Token", "status": "mastered", "asset_status": "ready", "validation": "oracle", "locked": False, "retention": True, "skills": ["Tensor indexing"], "environment": "当前可运行", "environment_available": True, "recommendable": True, "recommended_rank": 0},
+            {"problem_id": "LOSS-014", "title": "Cross Entropy", "status": "in_progress", "asset_status": "ready", "validation": "oracle", "locked": False, "retention": True, "skills": ["Loss", "数值稳定"], "environment": "需要 PyTorch 练习环境", "environment_available": False, "recommendable": True, "recommended_rank": 1},
+            {"problem_id": "ATT-002", "title": "Scaled Dot-Product Attention", "status": "not_started", "asset_status": "ready", "validation": "oracle", "locked": True, "retention": False, "skills": ["Attention"], "environment": "需要 PyTorch 练习环境", "environment_available": False, "recommendable": True, "recommended_rank": 2},
         ]
         self._current_task = {
             "problem_id": "LOSS-014",
@@ -201,6 +224,9 @@ class AppController(QObject):
             "task": "Implement numerically stable cross entropy for batched logits.\n\nInput shape: logits [B, C], targets [B].",
         }
         self._submission = "def cross_entropy(logits, targets):\n    # Your implementation\n    raise NotImplementedError\n"
+        self._submission_saved_revision = hashlib.sha256(self._submission.encode()).hexdigest()
+        self._tested_revision = ""
+        self._test_state = "未测试"
         self._test_output = "尚未运行公开测试。"
         self._interview = {
             "interview_id": "role-interview-demo",
@@ -240,6 +266,10 @@ class AppController(QObject):
     def profileId(self) -> str:
         return self._profile_id
 
+    @Property(str, notify=stateChanged)
+    def profileDisplayName(self) -> str:
+        return self._profile_display_name
+
     @Property(bool, notify=stateChanged)
     def onboardingRequired(self) -> bool:
         return self._onboarding
@@ -255,6 +285,10 @@ class AppController(QObject):
     @Property(str, notify=stateChanged)
     def onboardingErrorCode(self) -> str:
         return self._onboarding_error_code
+
+    @Property("QVariantMap", notify=stateChanged)
+    def onboardingResult(self) -> dict[str, Any]:
+        return self._onboarding_result
 
     @Property("QVariantList", notify=stateChanged)
     def roles(self) -> list[dict[str, Any]]:
@@ -275,6 +309,28 @@ class AppController(QObject):
     @Property(str, notify=stateChanged)
     def submissionText(self) -> str:
         return self._submission
+
+    @Property(str, notify=stateChanged)
+    def submissionRevision(self) -> str:
+        return hashlib.sha256(self._submission.encode("utf-8")).hexdigest()
+
+    @Property(str, notify=stateChanged)
+    def testedRevision(self) -> str:
+        return self._tested_revision
+
+    @Property(str, notify=stateChanged)
+    def testState(self) -> str:
+        return self._test_state
+
+    @Property(str, notify=stateChanged)
+    def testOperationId(self) -> str:
+        return self._test_operation_id
+
+    @Property(bool, notify=stateChanged)
+    def submissionDirty(self) -> bool:
+        return bool(self._submission_saved_revision) and (
+            self.submissionRevision != self._submission_saved_revision
+        )
 
     @Property(str, notify=stateChanged)
     def testOutput(self) -> str:
@@ -322,7 +378,7 @@ class AppController(QObject):
 
     @Property(bool, notify=aiStateChanged)
     def codexAvailable(self) -> bool:
-        return discover_codex_executable(self._codex_executable or None) is not None
+        return self._codex_available
 
     @Property(str, notify=stateChanged)
     def dataDirectory(self) -> str:
@@ -371,6 +427,15 @@ class AppController(QObject):
             error_type,
             detail,
         )
+        self._onboarding_result = {
+            "success": False,
+            "error_code": code,
+            "user_message": self._onboarding_error,
+            "technical_message": detail,
+            "recommended_action": "请按提示修正后重试；如仍失败，请打开本地日志。",
+            "operation_id": self._onboarding_result.get("operation_id") or uuid4().hex,
+            "stage": stage,
+        }
         self.stateChanged.emit()
         return False
 
@@ -379,6 +444,14 @@ class AppController(QObject):
         if self._onboarding_error or self._onboarding_error_code:
             self._onboarding_error = ""
             self._onboarding_error_code = ""
+            self._onboarding_result = {
+                "success": False,
+                "error_code": "",
+                "user_message": "",
+                "technical_message": "",
+                "recommended_action": "",
+                "operation_id": "",
+            }
             self.stateChanged.emit()
 
     def _localize_dashboard(self) -> None:
@@ -393,21 +466,60 @@ class AppController(QObject):
             self.busyChanged.emit()
 
     def _load_profile_state(self) -> None:
+        paths = profile_paths(self.repo_root, self._profile_id)
+        profile = load_profile(paths, self.repo_root)
+        self._profile_display_name = profile.get("display_name", self._profile_id)
         self._dashboard = self.service.dashboard(self._profile_id)
         self._localize_dashboard()
         self._problems = self.service.problem_cards(self._profile_id)
+        self._submission = ""
+        self._submission_saved_revision = ""
+        self._tested_revision = ""
+        self._test_state = "未测试"
+        self._test_operation_id = ""
+        self._test_identity = None
         current = self.service.current_submission(self._profile_id)
         if current:
             self._current_task = self.service.problem_view(current["problem_id"])
             self._submission = current["text"]
+            self._submission_saved_revision = current["sha256"]
+            last_test = current.get("last_public_test") or {}
+            if (
+                last_test.get("status") == "passed"
+                and last_test.get("submission_sha256") == current["sha256"]
+            ):
+                self._tested_revision = current["sha256"]
+                self._test_state = "测试通过"
+            else:
+                self._tested_revision = ""
+                self._test_state = "未测试"
+            self._test_operation_id = ""
+            self._test_identity = (
+                current["problem_id"], current["attempt_id"], self._profile_id
+            )
         self._connections = [
             {**config.__dict__, "status": "已保存，尚未测试"}
             for config in list_connections(self.repo_root, self._profile_id)
         ]
         self._materials = self.service.material_cards(self._profile_id)
+        self._interview = {}
+        try:
+            resumable = self.service.resumable_interview(self._profile_id)
+            if resumable is not None:
+                self._load_interview(resumable["interview_id"])
+        except Exception as error:
+            logging.getLogger("llm_interview_lab.desktop").warning(
+                "interview_resume_unavailable error_type=%s",
+                type(error).__name__,
+            )
         self._onboarding = False
 
-    def _background(self, operation: Callable[[], Any], complete: Callable[[Any], None]) -> None:
+    def _background(
+        self,
+        operation: Callable[[], Any],
+        complete: Callable[[Any], None],
+        failed: Callable[[str], None] | None = None,
+    ) -> None:
         self._set_busy(True)
         worker = Worker(operation)
         self._workers.add(worker)
@@ -417,13 +529,18 @@ class AppController(QObject):
             self._set_busy(False)
             complete(value)
 
-        def failed(message: str) -> None:
+        failed_handler = failed
+
+        def on_failed(message: str) -> None:
             self._workers.discard(worker)
             self._set_busy(False)
-            self._show_error(message)
+            if failed_handler is not None:
+                failed_handler(message)
+            else:
+                self._show_error(message)
 
         worker.signals.completed.connect(done)
-        worker.signals.failed.connect(failed)
+        worker.signals.failed.connect(on_failed)
         self._thread_pool.start(worker)
 
     @Slot(str)
@@ -469,11 +586,60 @@ class AppController(QObject):
         ai_mode: str,
         assessment_json: str,
     ) -> bool:
+        """Backward-compatible onboarding entry using an existing safe id."""
+
+        return self._complete_onboarding(
+            profile_id, role_id, seniority, ai_mode, assessment_json
+        )
+
+    @Slot(str, str, str, str, str, result=bool)
+    def completeOnboardingWithDisplayName(
+        self,
+        display_name: str,
+        role_id: str,
+        seniority: str,
+        ai_mode: str,
+        assessment_json: str,
+    ) -> bool:
+        """Onboarding entry for human names; storage ids stay slug-safe."""
+
+        try:
+            profile_id = profile_id_for_display_name(self.repo_root, display_name)
+        except Exception as error:
+            return self._onboarding_failure("PROFILE_ID_INVALID", "validate", error)
+        return self._complete_onboarding(
+            profile_id,
+            role_id,
+            seniority,
+            ai_mode,
+            assessment_json,
+            display_name=display_name.strip(),
+        )
+
+    def _complete_onboarding(
+        self,
+        profile_id: str,
+        role_id: str,
+        seniority: str,
+        ai_mode: str,
+        assessment_json: str,
+        *,
+        display_name: str | None = None,
+    ) -> bool:
         if self._onboarding_busy:
             return False
         self._onboarding_busy = True
         self._onboarding_error = ""
         self._onboarding_error_code = ""
+        operation_id = uuid4().hex
+        self._onboarding_result = {
+            "success": False,
+            "error_code": "",
+            "user_message": "",
+            "technical_message": "",
+            "recommended_action": "",
+            "operation_id": operation_id,
+        }
         self.stateChanged.emit()
         stage = "validate"
         try:
@@ -491,6 +657,7 @@ class AppController(QObject):
             stage = "initialize_profile"
             self.service.initialize_profile(
                 profile_id,
+                display_name=display_name,
                 role_id=role_id,
                 seniority=seniority,
                 skill_self_assessment=assessment,
@@ -517,6 +684,15 @@ class AppController(QObject):
                     )
             else:
                 self.navigate("home")
+            self._onboarding_result = {
+                "success": True,
+                "error_code": "",
+                "user_message": "学习档案已准备好。",
+                "technical_message": "",
+                "recommended_action": "继续当前训练。",
+                "operation_id": operation_id,
+                "profile_id": self._profile_id,
+            }
             return True
         except RoleCatalogError as error:
             return self._onboarding_failure("ROLE_NOT_FOUND", stage, error)
@@ -589,6 +765,19 @@ class AppController(QObject):
         assert current is not None
         self._current_task = self.service.problem_view(problem_id)
         self._submission = current["text"]
+        self._submission_saved_revision = current["sha256"]
+        last_test = current.get("last_public_test") or {}
+        if (
+            last_test.get("status") == "passed"
+            and last_test.get("submission_sha256") == current["sha256"]
+        ):
+            self._tested_revision = current["sha256"]
+            self._test_state = "测试通过"
+        else:
+            self._tested_revision = ""
+            self._test_state = "未测试"
+        self._test_operation_id = ""
+        self._test_identity = (problem_id, current["attempt_id"], self._profile_id)
         self._test_output = "可以开始：完成本次作答后运行公开测试。"
         self._page = "exercise"
         self.stateChanged.emit()
@@ -603,51 +792,137 @@ class AppController(QObject):
             self._show_error(error)
             return False
 
-    @Slot(str)
-    def saveSubmission(self, text: str) -> None:
+    @Slot(str, result=bool)
+    def saveSubmission(self, text: str) -> bool:
         if self._profile_id == "demo":
             self._submission = text
+            self._submission_saved_revision = self.submissionRevision
+            self._test_state = "已保存"
             self.stateChanged.emit()
-            return
+            return True
         try:
-            current = self.service.current_submission(self._profile_id)
-            if current is None:
-                raise RuntimeError("no active submission")
-            path = ensure_profile_path_is_safe(
-                self.repo_root, self._profile_id, Path(current["path"]), must_exist=True
+            current_before = self.service.current_submission(self._profile_id)
+            if (
+                current_before is None
+                or current_before["problem_id"] != self._current_task["problem_id"]
+            ):
+                self._show_error("当前题目或作答轮次已变化，请重新打开这道题后再保存。")
+                return False
+            current = self.service.save_practice_submission(
+                self._profile_id,
+                self._current_task["problem_id"],
+                text,
+                attempt_id=current_before["attempt_id"],
             )
-            temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
-            ensure_profile_path_is_safe(self.repo_root, self._profile_id, temporary)
-            with temporary.open("x", encoding="utf-8", newline="\n") as stream:
-                stream.write(text)
-                stream.flush()
-                os.fsync(stream.fileno())
-            os.replace(temporary, path)
             self._submission = text
+            self._submission_saved_revision = current["sha256"]
+            if self._tested_revision != current["sha256"]:
+                self._test_state = "结果已过期" if self._tested_revision else "已保存"
+            self.stateChanged.emit()
             self.toast.emit("已保存到本机。")
+            return True
         except Exception as error:
             self._show_error(error)
+            self._test_state = "保存失败"
+            self.stateChanged.emit()
+            return False
+
+    @Slot(str)
+    def updateSubmissionDraft(self, value: str) -> None:
+        """Keep the editor's latest text visible to every test entry point."""
+
+        if value == self._submission:
+            return
+        self._submission = value
+        if self._tested_revision and self.submissionRevision != self._tested_revision:
+            self._test_state = "结果已过期"
+        self.stateChanged.emit()
 
     @Slot()
     def runTests(self) -> None:
+        self.runTestsForCurrentSubmission(self._submission)
+
+    @Slot(str)
+    def runTestsForCurrentSubmission(self, text: str) -> None:
+        if self._busy:
+            self.toast.emit("测试正在进行，请稍候。")
+            return
         if not self._current_task:
             return
         if self._profile_id == "demo":
+            self._submission = text
+            self._submission_saved_revision = self.submissionRevision
+            self._tested_revision = self.submissionRevision
+            self._test_state = "测试通过"
             self._test_output = "5 passed in 0.18s\n\n公开测试：PASS · 掌握状态：尚未达到"
             self.stateChanged.emit()
             return
         problem_id = self._current_task["problem_id"]
+        try:
+            current = self.service.current_submission(self._profile_id)
+        except Exception as error:
+            self._test_state = "测试失败"
+            self._show_error(error)
+            self.stateChanged.emit()
+            return
+        if current is None:
+            self._show_error("当前题目没有可用的作答目录，请重新开始题目。")
+            return
+        if current["problem_id"] != problem_id:
+            self._show_error("当前题目或作答轮次已变化，请重新打开这道题后再运行测试。")
+            return
+        operation_id = uuid4().hex
+        identity = (problem_id, current["attempt_id"], self._profile_id)
+        self._test_operation_id = operation_id
+        self._test_identity = identity
+        self._test_state = "正在测试"
+        self._submission = text
+        self.stateChanged.emit()
 
         def complete(result) -> None:
+            if self._test_operation_id != operation_id:
+                return
+            try:
+                current_now = self.service.current_submission(self._profile_id)
+            except Exception:
+                current_now = None
+            changed = (
+                current_now is None
+                or current_now["problem_id"] != problem_id
+                or current_now["attempt_id"] != identity[1]
+                or self.submissionRevision != result.submission_sha256
+                or result.stale
+            )
+            self._tested_revision = result.submission_sha256
+            if not changed:
+                self._submission_saved_revision = result.submission_sha256
+            self._test_state = "结果已过期" if changed else (
+                "测试通过" if result.status == "passed" else "测试失败"
+            )
             self._test_output = (
                 (result.output + "\n\n" if result.output else "")
-                + f"公开测试：{result.status.upper()} · 掌握状态：尚未达到"
+                + f"公开测试：{result.status.upper()} · 测试版本：{result.tested_revision}"
             )
             self.stateChanged.emit()
 
+        def failed(message: str) -> None:
+            if self._test_operation_id != operation_id:
+                return
+            self._test_state = "测试失败"
+            self._test_output = f"测试未运行：{message}"
+            self.stateChanged.emit()
+            self._show_error(message)
+
         self._background(
-            lambda: self.service.run_practice_tests(self._profile_id, problem_id),
+            lambda: self.service.run_practice_tests_for_submission(
+                self._profile_id,
+                problem_id,
+                text,
+                attempt_id=identity[1],
+                operation_id=operation_id,
+            ),
             complete,
+            failed,
         )
 
     @Slot()
@@ -656,6 +931,15 @@ class AppController(QObject):
             self.toast.emit("演示模式不会记录提交。")
             return
         try:
+            if (
+                not self._tested_revision
+                or self.submissionDirty
+                or self.submissionRevision != self._tested_revision
+            ):
+                self._test_state = "结果已过期"
+                self.stateChanged.emit()
+                self._show_error("当前答案已修改，请先保存并重新运行测试后再提交。")
+                return
             result = self.service.submit_practice(
                 self._profile_id, self._current_task["problem_id"]
             )
@@ -795,8 +1079,33 @@ class AppController(QObject):
             self._show_error(error)
 
     def _load_interview(self, interview_id: str) -> None:
-        current = self.service.current_interview(self._profile_id, interview_id)
         session = self.service.interview_session(self._profile_id, interview_id)
+        try:
+            current = self.service.current_interview(self._profile_id, interview_id)
+        except Exception as error:
+            # An expired active session still needs a truthful, recoverable UI.
+            if session.get("status") == "active" and "expired" in str(error).lower():
+                current = {"question": None, "remaining_seconds": 0}
+            else:
+                raise
+        questions = session["questions"]
+        answered = {
+            question["question_id"]
+            for question in questions
+            if (
+                question["question_id"] in session["coding_evidence"]
+                if question["kind"] == "coding"
+                else question["question_id"] in session["answers"]
+            )
+        }
+        assessed = set(session["assessments"])
+        completed = answered.intersection(assessed)
+        coding_incomplete = sum(
+            1
+            for question in questions
+            if question["kind"] == "coding"
+            and question["question_id"] not in completed
+        )
         self._interview = {
             "interview_id": interview_id,
             "status": session["status"],
@@ -812,15 +1121,106 @@ class AppController(QObject):
             "seniority": session["seniority"],
             "ai_mode": session["ai_mode"],
             "material_refs": session["material_refs"],
+            "total_questions": len(questions),
+            "completed_questions": len(completed),
+            "unanswered_questions": len(questions) - len(answered),
+            "unscored_questions": len(answered - assessed),
+            "coding_incomplete": coding_incomplete,
+            "resume_available": session["status"] == "active",
             **current,
         }
         question = current.get("question")
+        if question:
+            question_id = question["question_id"]
+            answer_record = session.get("answers", {}).get(question_id)
+            if answer_record:
+                answer_path = answer_record.get("relative_path") or answer_record.get("answer_relpath")
+                answer_text = ""
+                if answer_path:
+                    try:
+                        answer_text = profile_paths(self.repo_root, self._profile_id).root.joinpath(
+                            *answer_path.split("/")
+                        ).read_text(encoding="utf-8")
+                    except (OSError, UnicodeError):
+                        answer_text = ""
+                self._interview["answer_locked"] = True
+                self._interview["answer_text"] = answer_text.strip()
+                self._interview["assessment_recorded"] = question_id in session.get("assessments", {})
+                self._interview["phase"] = "followup" if self._interview.get("pending_followup") else "assessment"
+            else:
+                self._interview["answer_locked"] = False
+                self._interview["answer_text"] = ""
+                self._interview["assessment_recorded"] = False
+                self._interview["phase"] = "answering"
         if question and question.get("kind") == "coding":
             coding = self.service.current_interview_coding_submission(
                 self._profile_id, interview_id
             )
             self._interview["coding_text"] = coding["text"]
+            self._interview["phase"] = "assessment" if question["question_id"] in session.get("coding_evidence", {}) else "answering"
         self.stateChanged.emit()
+
+    @Slot()
+    def refreshInterviewClock(self) -> None:
+        """Refresh the local session clock without replacing an answer draft."""
+
+        interview_id = self._interview.get("interview_id")
+        if not interview_id or self._interview.get("status") != "active":
+            return
+        try:
+            current = self.service.current_interview(self._profile_id, interview_id)
+        except Exception as error:
+            if "expired" in str(error).lower():
+                self._interview["remaining_seconds"] = 0
+                self.stateChanged.emit()
+                return
+            logging.getLogger("llm_interview_lab.desktop").warning(
+                "interview_clock_refresh_failed error_type=%s",
+                type(error).__name__,
+            )
+            return
+        current_question = self._interview.get("question") or {}
+        next_question = current.get("question") or {}
+        if current_question.get("question_id") != next_question.get("question_id"):
+            self._load_interview(interview_id)
+            return
+        self._interview["remaining_seconds"] = current["remaining_seconds"]
+        self.stateChanged.emit()
+
+    @Slot()
+    def resumeInterview(self) -> None:
+        interview_id = self._interview.get("interview_id")
+        if not interview_id or self._interview.get("status") != "active":
+            return
+        try:
+            self._load_interview(interview_id)
+            self.navigate("interview")
+        except Exception as error:
+            self._show_error(error)
+
+    @Slot(str)
+    def lockInterviewAnswer(self, answer: str) -> None:
+        """Commit a text answer before any rubric or AI assessment is shown."""
+
+        question = self._interview.get("question")
+        if not question or question.get("kind") == "coding":
+            return
+        if self._profile_id == "demo":
+            self._interview["answer_locked"] = True
+            self._interview["answer_text"] = answer.strip()
+            self._interview["phase"] = "assessment"
+            self.stateChanged.emit()
+            return
+        try:
+            self.service.answer_interview(
+                self._profile_id,
+                self._interview["interview_id"],
+                question["question_id"],
+                answer,
+            )
+            self._load_interview(self._interview["interview_id"])
+        except Exception as error:
+            self._show_error(error)
 
     @Slot(str)
     def saveInterviewCoding(self, text: str) -> None:
@@ -1486,6 +1886,33 @@ class AppController(QObject):
         self._settings.setValue("fontScale", self._font_scale)
         self.stateChanged.emit()
 
+    @Slot()
+    def refreshCodexAvailability(self) -> None:
+        """Probe Codex off the GUI thread and cache the visible status."""
+
+        if self._codex_probe_running or self._shutdown_done:
+            return
+        self._codex_probe_running = True
+        configured = self._codex_executable or None
+        worker = Worker(lambda: discover_codex_executable(configured))
+        self._workers.add(worker)
+
+        def finish(value: object) -> None:
+            self._workers.discard(worker)
+            self._codex_probe_running = False
+            self._codex_available = value is not None
+            self.aiStateChanged.emit()
+
+        def fail(_: str) -> None:
+            self._workers.discard(worker)
+            self._codex_probe_running = False
+            self._codex_available = False
+            self.aiStateChanged.emit()
+
+        worker.signals.completed.connect(finish)
+        worker.signals.failed.connect(fail)
+        self._thread_pool.start(worker)
+
     @Slot(str)
     def setCodexExecutable(self, value: str) -> None:
         candidate = QUrl(value).toLocalFile() if value.startswith("file:") else value
@@ -1495,6 +1922,7 @@ class AppController(QObject):
             self.toast.emit(text("error.codex_missing"))
             return
         self._codex_executable = resolved
+        self._codex_available = True
         self._settings.setValue("codexExecutable", self._codex_executable)
         self.aiStateChanged.emit()
         self.stateChanged.emit()
@@ -1503,9 +1931,11 @@ class AppController(QObject):
     @Slot()
     def clearCodexExecutable(self) -> None:
         self._codex_executable = ""
+        self._codex_available = False
         self._settings.remove("codexExecutable")
         self.aiStateChanged.emit()
         self.stateChanged.emit()
+        self.refreshCodexAvailability()
 
     @Slot()
     def openDataDirectory(self) -> None:

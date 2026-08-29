@@ -9,8 +9,8 @@ ApplicationWindow {
     id: window
     width: 1280
     height: 800
-    minimumWidth: 1080
-    minimumHeight: 680
+    minimumWidth: 900
+    minimumHeight: 620
     visible: true
     title: "LLM Interview Lab"
     Material.theme: backend.theme === "dark" ? Material.Dark
@@ -45,13 +45,13 @@ ApplicationWindow {
         Menu {
             title: "训练"
             Action { text: "继续训练"; onTriggered: backend.navigate("home") }
-            Action { text: "运行公开测试"; shortcut: StandardKey.Refresh; enabled: backend.currentPage === "exercise"; onTriggered: backend.runTests() }
+                    Action { text: "运行公开测试"; enabled: backend.currentPage === "exercise" && !backend.busy; onTriggered: backend.runTests() }
         }
     }
 
     Shortcut {
         sequences: ["Ctrl+Return", "Meta+Return"]
-        enabled: backend.currentPage === "exercise"
+        enabled: backend.currentPage === "exercise" && !backend.busy
         onActivated: backend.runTests()
     }
 
@@ -60,7 +60,7 @@ ApplicationWindow {
     // Ctrl/Command+R in every Qt style, so declare the concrete sequences too.
     Shortcut {
         sequences: ["Ctrl+R", "Meta+R"]
-        enabled: backend.currentPage === "exercise"
+        enabled: backend.currentPage === "exercise" && !backend.busy
         onActivated: backend.runTests()
     }
 
@@ -132,7 +132,7 @@ ApplicationWindow {
                 Item { Layout.fillHeight: true }
                 Rectangle { Layout.fillWidth: true; height: 1; color: window.colors.border }
                 Text { text: "学习档案"; color: window.colors.muted; font.pixelSize: 11 }
-                Text { text: backend.profileId; color: window.colors.text; font.weight: Font.DemiBold; elide: Text.ElideRight; Layout.fillWidth: true }
+                Text { text: backend.profileDisplayName || backend.profileId; color: window.colors.text; font.weight: Font.DemiBold; elide: Text.ElideRight; Layout.fillWidth: true }
                 Text { text: "Alpha · 数据默认保存在本机"; color: window.colors.muted; font.pixelSize: 11 }
             }
         }
@@ -224,7 +224,7 @@ ApplicationWindow {
         width: 440
         contentItem: Text {
             width: 400
-            text: "v0.4.0-alpha.2\n\n本地优先、岗位感知、AI 辅助的面试训练工作台。\n无需连接 AI 也可完整使用固定课程与手动模拟面试。"
+            text: "LLM Interview Lab " + Qt.application.version + "\n\n本地优先、岗位感知、AI 辅助的面试训练工作台。\n无需连接 AI 也可完整使用固定课程与手动模拟面试。"
             color: window.colors.text
             wrapMode: Text.Wrap
             lineHeight: 1.35

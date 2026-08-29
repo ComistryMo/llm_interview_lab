@@ -108,6 +108,16 @@ def localize_role(card: dict[str, Any]) -> dict[str, Any]:
 
 def friendly_error(error: BaseException | str) -> str:
     message = str(error).lower()
+    # Keep the next action visible for the practice flow. These messages
+    # must not collapse into the generic offline-training hint.
+    if "当前答案已修改" in message or "current answer has changed" in message:
+        return "当前答案已修改，请先保存并重新运行测试后再提交。"
+    if "attempt changed" in message or "题目或作答轮次已变化" in message:
+        return "当前题目或作答轮次已变化，请重新打开这道题后再运行测试。"
+    if "problem has not been started" in message or "没有可用的作答目录" in message:
+        return "这道题还没有开始作答，请先点击“开始”后再运行测试。"
+    if "submission could not be saved" in message:
+        return "答案保存失败，请检查本地学习档案权限后重试。"
     if "keyring" in message or "credential" in message:
         return TEXT["error.keyring"]
     if "codex" in message and ("not found" in message or "executable" in message):

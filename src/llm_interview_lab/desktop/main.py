@@ -16,6 +16,19 @@ from llm_interview_lab import __version__
 _PROCESS_STARTED = time.perf_counter()
 
 
+def _window_size(value: str) -> tuple[int, int]:
+    """Parse a screenshot/smoke window size without accepting odd geometry."""
+
+    try:
+        width_text, height_text = value.lower().split("x", 1)
+        width, height = int(width_text), int(height_text)
+    except (ValueError, AttributeError) as error:
+        raise argparse.ArgumentTypeError("window size must be WIDTHxHEIGHT") from error
+    if width < 320 or height < 240 or width > 10000 or height > 10000:
+        raise argparse.ArgumentTypeError("window size is outside the supported range")
+    return width, height
+
+
 def _grader_worker(arguments: list[str]) -> int:
     import pytest
 
@@ -38,8 +51,36 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--screenshot-page",
-        choices=("onboarding", "home", "exercise", "interview", "connections"),
+        choices=(
+            "onboarding",
+            "home",
+            "career",
+            "learn",
+            "exercise",
+            "interview",
+            "coach",
+            "progress",
+            "connections",
+            "settings",
+        ),
         default="home",
+    )
+    parser.add_argument(
+        "--onboarding-step",
+        type=int,
+        choices=(0, 1, 2, 3),
+        default=0,
+        help="step to show when --screenshot-page onboarding is selected",
+    )
+    parser.add_argument(
+        "--onboarding-role",
+        help="synthetic role id to select in an onboarding screenshot",
+    )
+    parser.add_argument(
+        "--window-size",
+        type=_window_size,
+        metavar="WIDTHxHEIGHT",
+        help="resize the synthetic window before a screenshot or smoke test",
     )
     return parser
 
@@ -55,6 +96,39 @@ def _startup_error_code(stage: str, error: BaseException) -> str:
     if stage == "qt":
         return "QT_INITIALIZATION_FAILED"
     return "CONTROLLER_INITIALIZATION_FAILED"
+
+
+def _show_loading_screen(app, *, enabled: bool):
+    """Show immediate feedback while repository/QML resources are prepared.
+
+    The screen is intentionally tiny and disposable; the real UI remains the
+    single source of interaction.  Offscreen smoke and screenshot modes skip it.
+    """
+
+    if not enabled:
+        return None
+    try:
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QDialog, QLabel, QVBoxLayout
+
+        dialog = QDialog()
+        dialog.setWindowTitle("LLM Interview Lab")
+        dialog.setWindowFlags(Qt.WindowType.SplashScreen | Qt.WindowType.FramelessWindowHint)
+        dialog.setModal(False)
+        label = QLabel("正在准备本地工作区……\n课程和学习档案即将加载")
+        label.setMinimumWidth(330)
+        label.setMargin(24)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(label)
+        dialog.setLayout(layout)
+        dialog.show()
+        app.processEvents()
+        return dialog
+    except Exception:
+        # A loading hint must never prevent the actual application from
+        # starting; bootstrap errors are still handled by the visible error box.
+        return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -81,12 +155,22 @@ def main(argv: list[str] | None = None) -> int:
 
     if getattr(sys, "frozen", False) or "__compiled__" in globals():
         os.environ.setdefault("LLM_LAB_PACKAGED", "1")
-    packaged = os.environ.get("LLM_LAB_PACKAGED", "").lower() in {"1", "true", "yes"}
-    assets_found = runtime_assets_available() if packaged else True
     record_bootstrap_event(
         "process_started",
-        runtime_assets_found=assets_found,
     )
+    packaged = os.environ.get("LLM_LAB_PACKAGED", "").lower() in {"1", "true", "yes"}
+    try:
+        assets_found = runtime_assets_available() if packaged else True
+    except Exception as error:
+        path = record_bootstrap_event(
+            "runtime_assets", error=error, runtime_assets_found=False
+        )
+        show_startup_error(
+            "RUNTIME_ASSETS_MISSING",
+            "应用运行资源检查失败，请重新解压完整 Portable ZIP 或重新下载。",
+            path,
+        )
+        return 2
     if packaged and not assets_found:
         error = RuntimeError("desktop bundle is missing required runtime assets")
         path = record_bootstrap_event(
@@ -100,9 +184,10 @@ def main(argv: list[str] | None = None) -> int:
             path,
         )
         return 2
+    record_bootstrap_event("runtime_assets", runtime_assets_found=assets_found)
     try:
-        from PySide6.QtCore import QTimer, QUrl
-        from PySide6.QtGui import QGuiApplication
+        from PySide6.QtCore import QTimer, QUrl, QObject
+        from PySide6.QtWidgets import QApplication
         from PySide6.QtQml import QQmlApplicationEngine
         from PySide6.QtQuick import QQuickWindow
         import shiboken6
@@ -117,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
 
     os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Material")
     try:
-        app = QGuiApplication([sys.argv[0]])
+        app = QApplication([sys.argv[0]])
     except Exception as error:
         path = record_bootstrap_event("qt", error=error)
         show_startup_error(
@@ -130,10 +215,17 @@ def main(argv: list[str] | None = None) -> int:
     app.setOrganizationName("ComistryMo")
     app.setOrganizationDomain("comistrymo.github.io")
     app.setApplicationVersion(__version__)
+    loading = _show_loading_screen(
+        app,
+        enabled=not (args.screenshot or args.smoke_test)
+        and os.environ.get("QT_QPA_PLATFORM", "").lower() not in {"offscreen", "minimal"},
+    )
     repository_started = time.perf_counter()
     try:
         repo_root = prepare_desktop_repository()
     except Exception as error:
+        if loading is not None:
+            loading.close()
         path = record_bootstrap_event("repository", error=error)
         code = _startup_error_code("repository", error)
         reason = (
@@ -146,6 +238,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         configure_desktop_logging(repo_root)
     except Exception as error:
+        if loading is not None:
+            loading.close()
         path = record_bootstrap_event("logging", error=error)
         show_startup_error(
             _startup_error_code("logging", error),
@@ -167,6 +261,8 @@ def main(argv: list[str] | None = None) -> int:
             log_root=desktop_log_root(repo_root),
         )
     except Exception as error:
+        if loading is not None:
+            loading.close()
         logging.getLogger("llm_interview_lab.desktop").error(
             "startup_failed error_type=%s", type(error).__name__
         )
@@ -187,6 +283,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         engine.load(QUrl.fromLocalFile(str(qml_path)))
     except Exception as error:
+        if loading is not None:
+            loading.close()
         path = record_bootstrap_event("qml", error=error)
         show_startup_error(
             _startup_error_code("qml", error),
@@ -196,6 +294,8 @@ def main(argv: list[str] | None = None) -> int:
         controller.shutdown()
         return 2
     if not engine.rootObjects():
+        if loading is not None:
+            loading.close()
         error = RuntimeError("QML root object was not created")
         path = record_bootstrap_event("qml", error=error)
         show_startup_error(
@@ -205,7 +305,21 @@ def main(argv: list[str] | None = None) -> int:
         )
         controller.shutdown()
         return 2
+    window = engine.rootObjects()[0]
+    if args.window_size is not None:
+        window.resize(*args.window_size)
+    if args.screenshot and args.screenshot_page == "onboarding":
+        # QML's onboarding object is a child item; select its step only for
+        # synthetic screenshots, without changing normal startup behavior.
+        onboarding = window.findChild(QObject, "onboardingPage")
+        if onboarding is not None:
+            onboarding.setProperty("step", args.onboarding_step)
+            if args.onboarding_role:
+                onboarding.setProperty("selectedRole", args.onboarding_role)
     qml_ready = time.perf_counter()
+    if loading is not None:
+        loading.close()
+        loading.deleteLater()
     app.aboutToQuit.connect(controller.shutdown)
 
     def startup_metrics() -> dict[str, int | str]:

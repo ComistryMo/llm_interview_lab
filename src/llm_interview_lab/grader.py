@@ -33,6 +33,15 @@ class GraderResult:
     duration_ms: int
     output: str
     output_truncated: bool = False
+    # A result can finish after the editor has changed.  The controller marks
+    # that result stale without discarding the immutable grader evidence.
+    stale: bool = False
+
+    @property
+    def tested_revision(self) -> str:
+        """Short, display-safe revision identity for the tested submission."""
+
+        return self.submission_sha256[:12]
 
 
 def _count(summary: str, name: str) -> int:

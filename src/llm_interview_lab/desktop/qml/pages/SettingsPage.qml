@@ -77,7 +77,7 @@ Flickable {
             Text { width: parent.width; text: "本地 Grader 只用于运行你本人信任的代码，不是恶意代码安全沙箱。连接远程 AI 前请核对上下文预览。"; color: root.palette.muted; wrapMode: Text.Wrap }
         }
 
-        Text { text: "LLM Interview Lab v0.4.0-alpha.2 · 中文优先桌面体验"; color: root.palette.muted; font.pixelSize: 12 }
+        Text { text: "LLM Interview Lab v" + Qt.application.version + " · 中文优先桌面体验"; color: root.palette.muted; font.pixelSize: 12 }
     }
 
     FileDialog {

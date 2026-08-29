@@ -42,7 +42,7 @@ Flickable {
                     Text { text: app.dashboard.current ? app.dashboard.current.problem_id + "  " + app.dashboard.current.title : (app.dashboard.unlocks && app.dashboard.unlocks.length ? app.dashboard.unlocks[0].problem_id + "  " + app.dashboard.unlocks[0].title : "暂无可用任务"); color: root.palette.text; font.pixelSize: 23; font.bold: true }
                     Text { text: app.dashboard.current ? "状态：" + root.statusText(app.dashboard.current.status) : "一道经过验证的题目已经可以开始。"; color: root.palette.muted }
                     Item { Layout.fillHeight: true }
-                    Text { text: "公开测试通过 ≠ 已掌握"; color: root.palette.warning; font.pixelSize: 12; font.bold: true }
+                    Text { text: "实现已验证；下一步完成解释与边界复盘。"; color: root.palette.success; font.pixelSize: 12; font.bold: true; wrapMode: Text.Wrap }
                 }
                 ColumnLayout {
                     Button {
@@ -60,6 +60,30 @@ Flickable {
                         onClicked: app.navigate("interview")
                     }
                 }
+            }
+        }
+
+        LabCard {
+            objectName: "resumableInterviewCard"
+            visible: app.interview && app.interview.status === "active"
+            Layout.fillWidth: true
+            Layout.preferredHeight: visible ? 112 : 0
+            cardColor: root.palette.surface
+            borderColor: root.palette.accent
+            RowLayout {
+                width: parent.width; height: parent.height; spacing: 16
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Text { text: "检测到未完成面试"; color: root.palette.text; font.pixelSize: 17; font.bold: true }
+                    Text {
+                        text: (app.interview.role_title || app.interview.role_id || "模拟面试")
+                              + " · 已完成 " + (app.interview.completed_questions || 0)
+                              + " / " + (app.interview.total_questions || 0)
+                        color: root.palette.muted
+                    }
+                }
+                Button { text: "继续"; highlighted: true; onClicked: app.resumeInterview() }
+                Button { text: "放弃本场"; onClicked: abandonInterviewDialog.open() }
             }
         }
 
@@ -103,6 +127,23 @@ Flickable {
                     Text { text: modelData.id; color: root.palette.muted; font.family: "monospace" }
                 }
             }
+        }
+    }
+
+    Dialog {
+        id: abandonInterviewDialog
+        modal: true
+        anchors.centerIn: parent
+        title: "放弃本场面试？"
+        width: Math.min(440, root.width - 48)
+        height: 170
+        standardButtons: Dialog.Cancel | Dialog.Ok
+        onAccepted: app.finishInterview()
+        contentItem: Text {
+            width: 360
+            text: "本场会以“未完成”留档，已锁定的回答和已有评分不会丢失。"
+            color: root.palette.text
+            wrapMode: Text.Wrap
         }
     }
 }

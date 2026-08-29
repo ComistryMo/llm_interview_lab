@@ -313,6 +313,7 @@ def test_role_interview_context_reads_only_explicit_sha_bound_material(
         "learner-one",
         session["interview_id"],
         candidate_answer="I would validate one measurable assumption first.",
+        now=T0 + timedelta(minutes=1),
     )
     assert [part.id for part in preview.parts] == [
         "policy",
@@ -329,6 +330,7 @@ def test_role_interview_context_reads_only_explicit_sha_bound_material(
         session["interview_id"],
         candidate_answer="I would validate one measurable assumption first.",
         include_materials=False,
+        now=T0 + timedelta(minutes=1),
     )
     assert [part.id for part in without_material.parts] == [
         "policy",
@@ -346,6 +348,7 @@ def test_role_interview_context_reads_only_explicit_sha_bound_material(
             "learner-one",
             session["interview_id"],
             candidate_answer="Same answer.",
+            now=T0 + timedelta(minutes=1),
         )
 
 
@@ -365,14 +368,18 @@ def test_role_interviewer_context_never_previews_future_question(
     )
     first, second = session["questions"][:2]
     ready = build_interview_context(
-        root, catalog, "learner-one", session["interview_id"]
+        root, catalog, "learner-one", session["interview_id"], now=T0
     )
     assert first["prompt"] not in serialize_context(ready)
     assert second["prompt"] not in serialize_context(ready)
 
     start_role_interview(root, "learner-one", session["interview_id"], catalog, now=T0)
     active = build_interview_context(
-        root, catalog, "learner-one", session["interview_id"]
+        root,
+        catalog,
+        "learner-one",
+        session["interview_id"],
+        now=T0 + timedelta(minutes=1),
     )
     assert active["current"]["question"]["question_id"] == "q-001"
     assert active["current"]["question"]["prompt"] == first["prompt"]
@@ -387,7 +394,11 @@ def test_role_interviewer_context_never_previews_future_question(
         now=T0 + timedelta(minutes=1),
     )
     awaiting_score = build_interview_context(
-        root, catalog, "learner-one", session["interview_id"]
+        root,
+        catalog,
+        "learner-one",
+        session["interview_id"],
+        now=T0 + timedelta(minutes=3),
     )
     assert awaiting_score["current"]["question"]["question_id"] == "q-001"
     assert awaiting_score["current"]["answer"]["path"].endswith("q-001.md")
@@ -406,6 +417,10 @@ def test_role_interviewer_context_never_previews_future_question(
         now=T0 + timedelta(minutes=2),
     )
     next_question = build_interview_context(
-        root, catalog, "learner-one", session["interview_id"]
+        root,
+        catalog,
+        "learner-one",
+        session["interview_id"],
+        now=T0 + timedelta(minutes=3),
     )
     assert next_question["current"]["question"]["question_id"] == "q-002"

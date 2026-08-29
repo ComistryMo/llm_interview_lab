@@ -11,6 +11,7 @@ import shutil
 import sys
 import tempfile
 from datetime import datetime, timezone
+import platform
 from uuid import uuid4
 
 from llm_interview_lab import __version__
@@ -61,14 +62,31 @@ def record_bootstrap_event(
     """Append a privacy-minimized startup event; logging failure never hides the UI."""
 
     path = bootstrap_log_path()
+    build_commit = (
+        os.environ.get("LLM_LAB_BUILD_COMMIT")
+        or os.environ.get("GITHUB_SHA")
+        or "unknown"
+    )
+    # Keep diagnostics useful without putting a user's checkout or AppData
+    # path in a log that they may attach to an issue.
     payload: dict[str, object] = {
         "version": __version__,
+        "app_version": __version__,
+        "build_commit": build_commit[:40],
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "startup_stage": startup_stage,
+        "executable_path": Path(sys.executable).name,
+        "app_data_path": "<app-data>",
+        "platform": sys.platform,
+        "python_runtime": platform.python_version(),
+        "exception_type": None,
+        "sanitized_exception": "",
     }
     if error is not None:
         payload["exception_type"] = type(error).__name__
-        payload["message"] = _sanitized_bootstrap_message(error)
+        sanitized = _sanitized_bootstrap_message(error)
+        payload["message"] = sanitized
+        payload["sanitized_exception"] = sanitized
     if runtime_assets_found is not None:
         payload["runtime_assets_found"] = runtime_assets_found
     if first_window_ms is not None:
