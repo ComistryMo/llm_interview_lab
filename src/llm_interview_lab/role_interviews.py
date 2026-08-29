@@ -173,12 +173,11 @@ def _effective_problem_skills(
 ) -> frozenset[str]:
     """Resolve coding skills from the ontology's single reverse index."""
 
-    related = {
+    return frozenset(
         skill.id
         for skill in role_catalog.skills.values()
         if problem.id in skill.related_problems
-    }
-    return frozenset((*problem.canonical_skills, *related))
+    )
 
 
 def _requires_torch(problem: Problem) -> bool:

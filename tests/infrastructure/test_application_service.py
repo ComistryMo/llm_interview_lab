@@ -186,19 +186,32 @@ def test_application_service_edits_only_the_active_interview_coding_answer(
 
 
 def test_dashboard_only_exposes_due_verified_retention_with_direct_identity(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = _repository(tmp_path)
     service = ApplicationService(root)
     service.initialize_profile("learner-one", role_id="applied_ai_engineer")
     _mark_reviewed(service, "learner-one", "FND-001", timestamp=T0)
 
+    state_calls = 0
+    original_state = service._state
+
+    def counted_state(profile_id: str):
+        nonlocal state_calls
+        state_calls += 1
+        return original_state(profile_id)
+
+    monkeypatch.setattr(service, "_state", counted_state)
+
     assert service.dashboard(
         "learner-one", now=T0 + timedelta(days=1)
     )["due_retention"] == []
+    assert state_calls == 1
+    state_calls = 0
     due = service.dashboard(
         "learner-one", now=T0 + timedelta(days=2)
     )["due_retention"]
+    assert state_calls == 1
     assert due == [
         {
             "problem_id": "FND-001",
@@ -302,6 +315,23 @@ def test_interview_configuration_and_canonical_result_preference(tmp_path: Path)
         difficulty="medium",
     )
     service.start_interview("learner-one", finished["interview_id"])
+    first = service.current_interview(
+        "learner-one", finished["interview_id"]
+    )["question"]
+    assert first is not None
+    answer = "I separate assumptions from evidence and define a measurable outcome."
+    service.answer_interview(
+        "learner-one", finished["interview_id"], first["question_id"], answer
+    )
+    service.score_interview(
+        "learner-one",
+        finished["interview_id"],
+        first["question_id"],
+        {name: 3 for name in first["rubric"]["dimensions"]},
+        evidence="The answer explicitly separates assumptions from evidence.",
+        source="human",
+        confidence="high",
+    )
     service.finish_interview(
         "learner-one", finished["interview_id"], confirm_incomplete=True
     )
@@ -309,7 +339,17 @@ def test_interview_configuration_and_canonical_result_preference(tmp_path: Path)
     assert preferred is not None
     assert preferred["kind"] == "result"
     assert preferred["completion_status"] == "incomplete"
-    assert preferred["overall_score"] == 0
+    assert preferred["overall_score"] > 0
+    assert preferred["assessment_evidence"] == [
+        {
+            "question_id": first["question_id"],
+            "title": first["title"],
+            "source": "human",
+            "evidence": "The answer explicitly separates assumptions from evidence.",
+            "confidence": "high",
+            "score": preferred["question_scores"][first["question_id"]],
+        }
+    ]
 
     active = service.create_interview(
         "learner-one",

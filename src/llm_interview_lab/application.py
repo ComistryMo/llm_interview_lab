@@ -16,7 +16,7 @@ from typing import Any, Iterable, Mapping
 from uuid import uuid4
 
 from .catalog import Catalog, Problem, load_catalog
-from .events import append_event, read_events, reduce_events
+from .events import WorkspaceState, append_event, read_events, reduce_events
 from .grader import GraderResult, run_public_tests
 from .lifecycle import ReviewInput, ReviewResult, record_review
 from .materials import add_material, list_materials
@@ -261,7 +261,16 @@ class ApplicationService:
 
         _, _, state = self._state(profile_id)
         problem = self.catalog.get(problem_id)
-        current_time = self._current_time(now)
+        return self._practice_actions_from_state(
+            state, problem, self._current_time(now)
+        )
+
+    def _practice_actions_from_state(
+        self, state: WorkspaceState, problem: Problem, current_time: datetime
+    ) -> dict[str, Any]:
+        """Derive actions from an already-reduced Profile state."""
+
+        problem_id = problem.id
         reviewed = state.problem_reviewed(problem_id)
         review_state = (
             "complete"
@@ -358,13 +367,16 @@ class ApplicationService:
             if attempt.implemented and not attempt.reviewed
         ]
         due_retention: list[dict[str, Any]] = []
+        current_time = self._current_time(now)
         for problem_id in sorted(state.reviewed_at):
-            actions = self.practice_actions(profile_id, problem_id, now=now)
+            problem = self.catalog.get(problem_id)
+            actions = self._practice_actions_from_state(
+                state, problem, current_time
+            )
             for stage in ("d2", "d7"):
                 action = actions["retention"][stage]
                 if action["state"] not in {"due", "in_progress"}:
                     continue
-                problem = self.catalog.get(problem_id)
                 due_retention.append(
                     {
                         "problem_id": problem_id,
@@ -951,6 +963,22 @@ class ApplicationService:
         result = session.get("result")
         if not isinstance(result, Mapping):
             return None
+        assessment_evidence = []
+        for question in session["questions"]:
+            question_id = question["question_id"]
+            assessment = session["assessments"].get(question_id)
+            if not isinstance(assessment, Mapping):
+                continue
+            assessment_evidence.append(
+                {
+                    "question_id": question_id,
+                    "title": question["title"],
+                    "source": assessment["source"],
+                    "evidence": assessment["evidence"],
+                    "confidence": assessment["confidence"],
+                    "score": result["question_scores"].get(question_id),
+                }
+            )
         return {
             "interview_id": interview_id,
             "status": session["status"],
@@ -960,6 +988,7 @@ class ApplicationService:
             "completion_status": result["completion_status"],
             "overall_score": result["overall_score"],
             "question_scores": dict(result["question_scores"]),
+            "assessment_evidence": assessment_evidence,
             "skill_scores": dict(result["skill_scores"]),
             "critical_gaps": list(result["critical_gaps"]),
             "unanswered": list(result["unanswered"]),

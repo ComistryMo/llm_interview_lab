@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
@@ -306,6 +307,43 @@ def test_interview_preflight_reports_missing_torch_without_relaxing_skills(
     assert result["missing_environment"] == ["pytorch"]
     coding = next(item for item in result["missing_rounds"] if item["type"] == "coding")
     assert coding["reason"] == "missing_environment"
+
+
+def test_interview_coding_skills_use_only_ontology_reverse_index(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    skill_id = "skill.agent_application.tool_calling"
+    skills = dict(roles.skills)
+    skills[skill_id] = replace(
+        skills[skill_id],
+        related_problems=tuple(
+            problem_id
+            for problem_id in skills[skill_id].related_problems
+            if problem_id != "AGT-006"
+        ),
+    )
+    roles_without_reverse_link = replace(roles, skills=skills)
+    problems = dict(catalog.problems)
+    problem = problems["AGT-006"]
+    problems[problem.id] = replace(
+        problem,
+        raw={**problem.raw, "canonical_skills": [skill_id]},
+    )
+    catalog_with_legacy_hint = replace(catalog, problems=problems)
+
+    result = interview_preflight(
+        root,
+        catalog_with_legacy_hint,
+        roles_without_reverse_link,
+        role_id="applied_ai_engineer",
+        seniority="new_grad",
+        difficulty="medium",
+    )
+    coding = next(item for item in result["missing_rounds"] if item["type"] == "coding")
+    assert coding["candidate_ids"] == []
+    assert result["available"] is False
 
 
 @pytest.mark.parametrize(
