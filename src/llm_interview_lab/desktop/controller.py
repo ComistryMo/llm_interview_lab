@@ -33,7 +33,6 @@ from ..lifecycle import ReviewInput
 from ..roles import RoleCatalogError
 from ..workspace import (
     WorkspaceError,
-    ensure_profile_path_is_safe,
     profile_id_for_display_name,
     profile_paths,
     load_profile,
@@ -111,27 +110,14 @@ def _demo_dashboard() -> dict[str, Any]:
             "seniority": "new_grad",
             "ai_mode": "disabled",
         },
-        "current": {
-            "problem_id": "LOSS-014",
-            "title": "Cross Entropy",
-            "status": "in_progress",
-            "environment": "当前可运行",
-            "environment_available": True,
-        },
+        "current": {"problem_id": "LOSS-014", "title": "Cross Entropy", "status": "in_progress"},
         "recommended_quests": [
             {"id": "tensor_stable_loss", "title": "Tensor & Stable Loss"},
             {"id": "optimizer_training", "title": "Optimizer & Training Loop"},
         ],
         "due_review": ["TNS-011"],
         "due_retention": [{"problem_id": "LOSS-007", "stage": "d7", "due_at": "2026-08-28"}],
-        "unlocks": [
-            {
-                "problem_id": "OPT-001",
-                "title": "SGD",
-                "environment": "当前可运行",
-                "environment_available": True,
-            }
-        ],
+        "unlocks": [{"problem_id": "OPT-001", "title": "SGD"}],
         "mastered_count": 14,
         "role_readiness": [
             {"id": "python_engineering", "label": "Python Engineering", "self_reported": 0.75, "verified": 0.62},
@@ -228,15 +214,13 @@ class AppController(QObject):
         self._dashboard = _demo_dashboard()
         self._problems = [
             {"problem_id": "TNS-011", "title": "Last Valid Token", "status": "mastered", "asset_status": "ready", "validation": "oracle", "locked": False, "retention": True, "skills": ["Tensor indexing"], "environment": "当前可运行", "environment_available": True, "recommendable": True, "recommended_rank": 0},
-            {"problem_id": "LOSS-014", "title": "Cross Entropy", "status": "in_progress", "asset_status": "ready", "validation": "oracle", "locked": False, "retention": True, "skills": ["Loss", "数值稳定"], "environment": "当前可运行", "environment_available": True, "recommendable": True, "recommended_rank": 1},
+            {"problem_id": "LOSS-014", "title": "Cross Entropy", "status": "in_progress", "asset_status": "ready", "validation": "oracle", "locked": False, "retention": True, "skills": ["Loss", "数值稳定"], "environment": "需要 PyTorch 练习环境", "environment_available": False, "recommendable": True, "recommended_rank": 1},
             {"problem_id": "ATT-002", "title": "Scaled Dot-Product Attention", "status": "not_started", "asset_status": "ready", "validation": "oracle", "locked": True, "retention": False, "skills": ["Attention"], "environment": "需要 PyTorch 练习环境", "environment_available": False, "recommendable": True, "recommended_rank": 2},
         ]
         self._current_task = {
             "problem_id": "LOSS-014",
             "title": "Cross Entropy",
             "task": "Implement numerically stable cross entropy for batched logits.\n\nInput shape: logits [B, C], targets [B].",
-            "environment": "当前可运行",
-            "environment_available": True,
             "actions": {
                 "review": {"state": "blocked", "actionable": False, "blocked_reason": "先完成实现。"},
                 "retention": {
@@ -1199,36 +1183,20 @@ class AppController(QObject):
             question_id = question["question_id"]
             answer_record = session.get("answers", {}).get(question_id)
             if answer_record:
-                answer_path = answer_record.get("relative_path") or answer_record.get("answer_relpath")
                 answer_text = ""
                 answer_error = ""
-                if answer_path:
-                    try:
-                        paths = profile_paths(self.repo_root, self._profile_id)
-                        expected_path = ensure_profile_path_is_safe(
-                            self.repo_root,
-                            self._profile_id,
-                            paths.interviews_root
-                            / interview_id
-                            / "answers"
-                            / f"{question_id}.md",
-                            must_exist=True,
-                        )
-                        if answer_path != expected_path.relative_to(paths.root).as_posix():
-                            raise ValueError("answer path does not match the frozen question")
-                        answer_bytes = expected_path.read_bytes()
-                        expected_sha = answer_record.get("sha256")
-                        if expected_sha and hashlib.sha256(answer_bytes).hexdigest() != expected_sha:
-                            raise ValueError("answer fingerprint mismatch")
-                        answer_text = answer_bytes.decode("utf-8")
-                    except (OSError, UnicodeError, ValueError, WorkspaceError) as error:
-                        answer_error = "已锁定的回答文件缺失或校验失败。请保留本地数据并打开日志目录排查。"
-                        logging.getLogger("llm_interview_lab.desktop").error(
-                            "interview_answer_unavailable interview_id=%s question_id=%s error_type=%s",
-                            interview_id,
-                            question_id,
-                            type(error).__name__,
-                        )
+                try:
+                    answer_text = self.service.interview_answer_text(
+                        self._profile_id, interview_id, question_id
+                    )
+                except ApplicationError as error:
+                    answer_error = "已锁定的回答文件缺失或校验失败。请保留本地数据并打开日志目录排查。"
+                    logging.getLogger("llm_interview_lab.desktop").error(
+                        "interview_answer_unavailable interview_id=%s question_id=%s error_type=%s",
+                        interview_id,
+                        question_id,
+                        type(error).__name__,
+                    )
                 self._interview["answer_locked"] = True
                 self._interview["answer_text"] = answer_text.strip()
                 self._interview["answer_corrupted"] = bool(answer_error)

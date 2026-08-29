@@ -427,6 +427,13 @@ def test_tampered_interview_answer_path_cannot_escape_the_profile(
     assert "must never appear" not in restored.interview["answer_text"]
     restored.shutdown()
 
+    session["answers"][question["question_id"]]["relative_path"] = ""
+    session_path.write_text(json.dumps(session), encoding="utf-8")
+    empty_path = AppController(root, profile_id="path-guard-user")
+    assert empty_path.interview["answer_corrupted"] is True
+    assert empty_path.interview["answer_text"] == ""
+    empty_path.shutdown()
+
 
 def test_standalone_runtime_seeds_public_assets_without_touching_profiles(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch

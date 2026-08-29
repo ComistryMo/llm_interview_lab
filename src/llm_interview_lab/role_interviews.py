@@ -774,6 +774,39 @@ def record_role_answer(
     return session
 
 
+def role_interview_answer_text(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    question_id: str,
+) -> str:
+    """Read one locked text answer only from its canonical Profile path."""
+
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    record = session.get("answers", {}).get(question_id)
+    if not isinstance(record, Mapping):
+        raise RoleInterviewError("interview answer evidence is missing")
+    path = ensure_profile_path_is_safe(
+        repo_root,
+        profile_id,
+        _session_root(repo_root, profile_id, interview_id)
+        / "answers"
+        / f"{question_id}.md",
+        must_exist=True,
+    )
+    expected_relative = path.relative_to(profile_paths(repo_root, profile_id).root).as_posix()
+    if record.get("relative_path") != expected_relative:
+        raise RoleInterviewError("interview answer path is invalid")
+    try:
+        content = path.read_bytes()
+        text = content.decode("utf-8").strip()
+    except (OSError, UnicodeError, WorkspaceError) as error:
+        raise RoleInterviewError("interview answer evidence is unavailable") from error
+    if not text or record.get("sha256") != hashlib.sha256(content).hexdigest():
+        raise RoleInterviewError("interview answer evidence failed integrity validation")
+    return text
+
+
 def run_role_coding_test(
     repo_root: Path,
     profile_id: str,
@@ -886,6 +919,10 @@ def record_role_assessment(
     )
     if question is None or not _has_response(session, question):
         raise RoleInterviewError("assessment requires completed question evidence")
+    if question["kind"] != "coding":
+        role_interview_answer_text(
+            repo_root, profile_id, interview_id, question_id
+        )
     current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
     if current is None or current["question_id"] != question_id:
         raise RoleInterviewError("only the current question may be assessed")

@@ -531,6 +531,53 @@ def test_plan_fingerprint_rejects_tampering(tmp_path: Path) -> None:
         load_role_interview(root, "learner-one", session["interview_id"])
 
 
+def test_assessment_rejects_empty_or_noncanonical_answer_evidence(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    session = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="ai_product_manager",
+        seniority="new_grad",
+        now=T0,
+    )
+    start_role_interview(root, "learner-one", session["interview_id"], catalog, now=T0)
+    question = current_role_question(
+        root, "learner-one", session["interview_id"], now=T0
+    )["question"]
+    record_role_answer(
+        root,
+        "learner-one",
+        session["interview_id"],
+        question["question_id"],
+        "A valid answer that will retain its canonical file.",
+        now=T0,
+    )
+    path = (
+        profile_paths(root, "learner-one").interviews_root
+        / session["interview_id"]
+        / "session.json"
+    )
+    value = json.loads(path.read_text(encoding="utf-8"))
+    value["answers"][question["question_id"]]["relative_path"] = ""
+    path.write_text(json.dumps(value), encoding="utf-8")
+
+    with pytest.raises(RoleInterviewError, match="answer path is invalid"):
+        record_role_assessment(
+            root,
+            "learner-one",
+            session["interview_id"],
+            question["question_id"],
+            {name: 3 for name in question["rubric"]["dimensions"]},
+            evidence="This must not be accepted without canonical answer evidence.",
+            source="human",
+            confidence="high",
+            now=T0 + timedelta(minutes=1),
+        )
+
+
 def test_role_interview_context_reads_only_explicit_sha_bound_material(
     tmp_path: Path,
 ) -> None:

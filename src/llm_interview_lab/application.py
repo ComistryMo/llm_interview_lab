@@ -21,6 +21,7 @@ from .grader import GraderResult, run_public_tests
 from .lifecycle import ReviewInput, ReviewResult, record_review
 from .materials import add_material, list_materials
 from .role_interviews import (
+    RoleInterviewError,
     create_role_interview,
     current_role_question,
     finish_role_interview,
@@ -31,6 +32,7 @@ from .role_interviews import (
     record_role_assessment,
     record_role_followup,
     role_interview_report,
+    role_interview_answer_text,
     run_role_coding_test,
     start_role_interview,
 )
@@ -901,6 +903,16 @@ class ApplicationService:
             confidence=confidence,
             fatal_issues=fatal_issues,
         )
+
+    def interview_answer_text(
+        self, profile_id: str, interview_id: str, question_id: str
+    ) -> str:
+        try:
+            return role_interview_answer_text(
+                self.repo_root, profile_id, interview_id, question_id
+            )
+        except RoleInterviewError as error:
+            raise ApplicationError(str(error)) from error
 
     def record_interview_followup(
         self,
