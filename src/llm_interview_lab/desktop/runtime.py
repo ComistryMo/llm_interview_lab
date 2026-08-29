@@ -7,6 +7,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import os
 from pathlib import Path
+import re
 import shutil
 import sys
 import tempfile
@@ -23,6 +24,17 @@ WORKSPACE_PUBLIC_DIRECTORIES = ("schema", "templates")
 PUBLIC_FILES = ("AGENTS.md", ".gitignore")
 STANDALONE_MARKER = ".llm-lab-standalone.json"
 MIGRATION_MARKER = ".llm-lab-desktop-migration.json"
+
+# Error messages can contain paths that are not one of the well-known roots
+# (for example a pytest temporary directory).  Keep bootstrap diagnostics
+# useful while replacing those paths before they reach a local log that a user
+# may attach to an issue.  Quoted paths are handled first by the same pattern;
+# the callback below also preserves sentence punctuation following a path.
+_ABSOLUTE_PATH_RE = re.compile(
+    r"(?:[A-Za-z]:[\\/]|\\\\)[^<>\"'\r\n\s]+"
+    r"|(?<![:\w])/(?:[^<>\"'\r\n\s/]+/)+[^<>\"'\r\n\s]*",
+)
+_PATH_TRAILING_PUNCTUATION = ".,;:!?)]}"
 
 
 def bootstrap_log_path() -> Path:
@@ -49,6 +61,16 @@ def _sanitized_bootstrap_message(error: BaseException) -> str:
     }
     for value in sorted((item for item in private_roots if item), key=len, reverse=True):
         message = message.replace(value, "<local-path>")
+
+    def replace_path(match: re.Match[str]) -> str:
+        value = match.group(0)
+        trailing = ""
+        while value and value[-1] in _PATH_TRAILING_PUNCTUATION:
+            trailing = value[-1] + trailing
+            value = value[:-1]
+        return "<local-path>" + trailing
+
+    message = _ABSOLUTE_PATH_RE.sub(replace_path, message)
     return message[:400]
 
 
