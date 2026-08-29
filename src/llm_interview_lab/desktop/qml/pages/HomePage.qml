@@ -43,6 +43,21 @@ Flickable {
     contentWidth: width
     contentHeight: content.implicitHeight + 56
     clip: true
+    // The home page intentionally keeps its detail sections scrollable.  Make
+    // that affordance visible whenever the dashboard is taller than the view.
+    ScrollBar.vertical: ScrollBar {
+        id: homeVerticalScrollBar
+        width: 6
+        padding: 0
+        policy: ScrollBar.AsNeeded
+        visible: root.contentHeight > root.height
+        contentItem: Rectangle {
+            implicitWidth: 5
+            radius: 3
+            color: root.palette.muted
+            opacity: 0.4
+        }
+    }
 
     ColumnLayout {
         id: content

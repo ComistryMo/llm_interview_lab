@@ -25,6 +25,15 @@ Item {
         var values = [card.problem_id, card.title].concat(card.skills || [], card.keywords || [])
         return values.join(" ").toLowerCase()
     }
+    function emptyMessage() {
+        if (root.query.trim().length > 0)
+            return "没有匹配“" + root.query.trim() + "”的题目。请换一个标题、技能或 Problem ID。"
+        if (root.filterMode === "experimental")
+            return "当前没有已登记的实验性题目。"
+        if (root.filterMode === "available")
+            return "当前没有可直接开始的题目。可能是前置尚未完成，或运行环境暂不可用。"
+        return "当前没有新的推荐题。请先完成进行中的任务或到期复测。"
+    }
     function refreshList() {
         var source = app.problems || []
         var needle = root.query.trim().toLowerCase()
@@ -35,6 +44,7 @@ Item {
             var available = !card.locked
                             && card.asset_status !== "planned"
                             && card.environment_available !== false
+                            && card.status !== "mastered"
             var matches = !needle || searchable(card).indexOf(needle) >= 0
             var include = false
             if (root.filterMode === "recommended")
@@ -101,13 +111,20 @@ Item {
         }
 
         Text {
+            id: resultSummary
+            objectName: "learnResultSummary"
+            text: ({recommended: "推荐", available: "全部可做", experimental: "实验性"}[root.filterMode] || "当前")
+                  + " · " + root.filteredProblems.length + " 道题"
+            color: root.palette.muted
+            font.pixelSize: 12
+            Layout.fillWidth: true
+        }
+        Text {
             visible: list.count === 0
             objectName: "learnEmptyState"
             Layout.fillWidth: true
             Layout.fillHeight: true
-            text: root.filterMode === "experimental"
-                  ? "当前没有已登记的实验性题目。"
-                  : "没有符合条件的题目。请先完成前置题，或清空搜索条件。"
+            text: root.emptyMessage()
             color: root.palette.muted
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
@@ -122,6 +139,20 @@ Item {
             spacing: 10
             clip: true
             model: root.filteredProblems
+            footer: Item {
+                width: list.width
+                height: root.filterMode === "recommended" && list.count > 0 ? 46 : 0
+                Text {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.topMargin: 12
+                    text: "完成当前任务后会按课程前置自动解锁下一题；“全部可做”仅展示当前可直接开始的题目。"
+                    color: root.palette.muted
+                    font.pixelSize: 12
+                    wrapMode: Text.Wrap
+                }
+            }
             delegate: LabCard {
                 required property var modelData
                 required property int index
@@ -149,12 +180,37 @@ Item {
                         }
                     }
                     Button {
+                        id: problemActionButton
                         objectName: "learnOpenProblemButton"
-                        text: modelData.locked ? "未解锁" : (modelData.status === "in_progress" ? "继续" : "开始")
+                        text: modelData.locked ? "未解锁"
+                              : modelData.status === "in_progress" ? "继续"
+                              : modelData.status === "mastered" ? "查看"
+                              : "开始"
                         enabled: !modelData.locked
                                  && modelData.asset_status !== "planned"
                                  && modelData.environment_available !== false
+                        Layout.preferredWidth: 82
+                        Layout.preferredHeight: 40
                         Layout.alignment: Qt.AlignTop
+                        background: Rectangle {
+                            radius: 8
+                            color: !problemActionButton.enabled
+                                   ? root.palette.surfaceAlt
+                                   : modelData.status === "in_progress"
+                                     ? root.palette.accent : "transparent"
+                            border.color: modelData.status === "in_progress"
+                                          ? root.palette.accent : root.palette.border
+                        }
+                        contentItem: Text {
+                            text: problemActionButton.text
+                            color: !problemActionButton.enabled
+                                   ? root.palette.muted
+                                   : modelData.status === "in_progress"
+                                     ? "white" : root.palette.text
+                            font.bold: modelData.status === "in_progress"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
                         onClicked: app.openProblem(modelData.problem_id)
                     }
                 }

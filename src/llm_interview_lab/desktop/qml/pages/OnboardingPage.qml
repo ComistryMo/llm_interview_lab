@@ -374,6 +374,13 @@ Rectangle {
                         }
                     }
                     Text {
+                        visible: roleGrid.contentHeight > roleGrid.height
+                        text: "向下滚动查看更多岗位"
+                        color: root.palette.muted
+                        font.pixelSize: 11
+                        Layout.fillWidth: true
+                    }
+                    Text {
                         id: selectedRoleLabel
                         objectName: "onboardingSelectedRoleLabel"
                         Layout.fillWidth: true
@@ -384,13 +391,6 @@ Rectangle {
                                ? root.palette.accent : root.palette.muted
                         font.bold: root.selectedRoleCard !== null
                         elide: Text.ElideRight
-                    }
-                    Text {
-                        visible: roleGrid.contentHeight > roleGrid.height
-                        text: "岗位列表可滚动查看"
-                        color: root.palette.muted
-                        font.pixelSize: 11
-                        Layout.fillWidth: true
                     }
                 }
             }

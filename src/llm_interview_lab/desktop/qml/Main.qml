@@ -129,13 +129,26 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
                         Text {
-                            text: "LLM Interview Lab"
+                            id: brandTitle
+                            // Keep the compact sidebar legible without hiding the
+                            // full product name from assistive technology.
+                            text: window.width < 1160 ? "LLM Lab" : "LLM Interview Lab"
                             color: window.colors.text
                             font.bold: true
                             font.pixelSize: 15
                             Layout.fillWidth: true
                             elide: Text.ElideRight
                             maximumLineCount: 1
+                            Accessible.name: "LLM Interview Lab"
+                            ToolTip.visible: window.width < 1160 && brandHover.containsMouse
+                            ToolTip.text: "LLM Interview Lab"
+                            ToolTip.delay: 500
+                            MouseArea {
+                                id: brandHover
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                acceptedButtons: Qt.NoButton
+                            }
                         }
                         Text {
                             text: "本地 AI 面试训练工作台"

@@ -9,6 +9,17 @@ Flickable {
     required property var palette
     contentWidth: width; contentHeight: content.implicitHeight + 60; clip: true
     property bool advanced: false
+    ScrollBar.vertical: ScrollBar {
+        width: 6
+        policy: ScrollBar.AlwaysOn
+        visible: root.contentHeight > root.height
+        contentItem: Rectangle {
+            implicitWidth: 5
+            radius: 3
+            color: root.palette.muted
+            opacity: 0.45
+        }
+    }
 
     ColumnLayout {
         id: content
@@ -79,7 +90,7 @@ Flickable {
                     }
                 }
                 Text {
-                    text: "先保存配置，再测试连接"
+                    text: "填写模型并向下补充地址或密钥；保存后会自动测试连接。"
                     color: root.palette.muted
                     font.pixelSize: 12
                     Layout.fillWidth: true
@@ -92,11 +103,29 @@ Flickable {
                 ComboBox { id: provider; Layout.fillWidth: true; model: app.providerOptions }
                 Text { text: "模型"; color: root.palette.muted }
                 TextField { id: model; Layout.fillWidth: true; placeholderText: "例如 gpt-5、claude 或本地模型 ID" }
+                Text {
+                    visible: model.text.trim().length === 0
+                    text: "请输入模型 ID 后才能保存并测试。"
+                    color: root.palette.warning
+                    font.pixelSize: 12
+                    Layout.columnSpan: 2
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                }
                 Text { text: provider.currentText === "ollama" ? "本地地址" : "API Key"; color: root.palette.muted }
                 TextField {
                     id: secretOrEndpoint; Layout.fillWidth: true
                     placeholderText: provider.currentText === "ollama" ? "http://127.0.0.1:11434" : "仅保存到系统密钥环"
                     echoMode: provider.currentText === "ollama" ? TextInput.Normal : TextInput.Password
+                }
+                Text {
+                    visible: provider.currentText === "ollama"
+                    text: "Ollama 使用本机地址，不需要 API Key。"
+                    color: root.palette.muted
+                    font.pixelSize: 12
+                    Layout.columnSpan: 2
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
                 }
             }
             ToolButton { text: root.advanced ? "收起高级设置" : "展开高级设置"; onClicked: root.advanced = !root.advanced }
