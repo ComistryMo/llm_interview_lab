@@ -103,32 +103,67 @@ Item {
         var message = root.configuration.user_message || "当前配置暂时无法开始面试。"
         var rounds = root.configuration.missing_rounds || []
         var environment = root.configuration.missing_environment || []
-        if (rounds.length > 0)
-            message += "\n缺少环节：" + rounds.join("、")
-        if (environment.length > 0)
-            message += "\n环境要求：" + environment.join("、")
+        if (rounds.length > 0) {
+            var roundLabels = []
+            for (var i = 0; i < rounds.length; ++i)
+                roundLabels.push(root.missingRoundLabel(rounds[i]))
+            message += "\n缺少环节：" + roundLabels.join("；")
+        }
+        if (environment.length > 0) {
+            var environmentLabels = []
+            for (var j = 0; j < environment.length; ++j)
+                environmentLabels.push(root.missingEnvironmentLabel(environment[j]))
+            message += "\n环境要求：" + environmentLabels.join("；")
+        }
         return message
+    }
+
+    function missingRoundLabel(item) {
+        if (typeof item === "string")
+            return item
+        var label = item.round || item.type || "未命名环节"
+        var details = []
+        if ((item.skills || []).length > 0)
+            details.push("技能：" + item.skills.join("、"))
+        if (item.reason)
+            details.push(item.reason)
+        return details.length > 0 ? label + "（" + details.join("；") + "）" : label
+    }
+
+    function missingEnvironmentLabel(item) {
+        if (typeof item === "string")
+            return item
+        return item.reason || item.requirement || item.name || item.type || "未满足的运行环境"
     }
 
     function resultScoreText(result) {
         if (!result)
             return "尚未评分"
-        var score = result.score !== undefined && result.score !== null ? result.score : result.overall_score
+        var score = result.overall_score
         return score === undefined || score === null ? "尚未评分" : String(score)
     }
 
-    function resultEvidenceText(result) {
-        if (!result || result.evidence === undefined || result.evidence === null || result.evidence === "")
-            return "本场没有足够证据支持评分。"
-        return Array.isArray(result.evidence) ? result.evidence.join("\n") : String(result.evidence)
+    function resultListText(value, emptyText) {
+        if (value === undefined || value === null || value === false || value === "")
+            return emptyText || ""
+        if (!Array.isArray(value))
+            return String(value)
+        if (value.length === 0)
+            return emptyText || ""
+        var labels = []
+        for (var i = 0; i < value.length; ++i) {
+            var item = value[i]
+            if (typeof item === "string")
+                labels.push(item)
+            else
+                labels.push(item.title || item.question_id || item.skill || item.reason || JSON.stringify(item))
+        }
+        return labels.join("、")
     }
 
     function resultUnscoredText(result) {
-        if (!result || result.unscored === undefined || result.unscored === null || result.unscored === false)
-            return ""
-        if (Array.isArray(result.unscored))
-            return result.unscored.length ? "未评分：" + result.unscored.join("、") : ""
-        return result.unscored === true ? "仍有环节尚未评分。" : "未评分：" + String(result.unscored)
+        var value = result ? root.resultListText(result.unscored, "") : ""
+        return value ? "未评分：" + value : ""
     }
 
     Component.onCompleted: Qt.callLater(root.initializeSetup)
@@ -344,17 +379,70 @@ Item {
                         Text {
                             width: parent.width
                             text: "分数：" + root.resultScoreText(root.interviewResult)
-                                  + "\n来源：" + (root.interviewResult.source || "未标注")
-                                  + "\n置信度：" + (root.interviewResult.confidence || "未标注")
+                                  + "\n完成状态：" + (root.interviewResult.completion_status || "未标注")
                             color: root.palette.text
                             wrapMode: Text.Wrap
                             lineHeight: 1.4
                         }
                         Text {
                             width: parent.width
-                            text: "证据\n" + root.resultEvidenceText(root.interviewResult)
+                            visible: !!root.interviewResult.summary
+                            text: root.interviewResult.summary || ""
                             color: root.palette.text
                             wrapMode: Text.Wrap
+                        }
+                        Text { width: parent.width; text: "评分证据"; color: root.palette.muted; font.bold: true }
+                        Repeater {
+                            model: root.interviewResult.assessment_evidence || []
+                            delegate: Rectangle {
+                                required property var modelData
+                                width: parent.width
+                                height: evidenceColumn.implicitHeight + 16
+                                radius: 8
+                                color: root.palette.surface
+                                border.color: root.palette.border
+                                Column {
+                                    id: evidenceColumn
+                                    x: 10; y: 8; width: parent.width - 20; spacing: 4
+                                    Text {
+                                        width: parent.width
+                                        text: (modelData.title || modelData.question_id || "未命名问题")
+                                              + (modelData.score === undefined || modelData.score === null ? " · 尚未评分" : " · " + modelData.score)
+                                        color: root.palette.text
+                                        font.bold: true
+                                        wrapMode: Text.Wrap
+                                    }
+                                    Text {
+                                        width: parent.width
+                                        text: "来源：" + (modelData.source || "未标注")
+                                              + " · 置信度：" + (modelData.confidence || "未标注")
+                                        color: root.palette.muted
+                                        font.pixelSize: 11
+                                        wrapMode: Text.Wrap
+                                    }
+                                    Text {
+                                        width: parent.width
+                                        text: modelData.evidence || "未记录评分证据。"
+                                        color: root.palette.text
+                                        wrapMode: Text.Wrap
+                                    }
+                                }
+                            }
+                        }
+                        Text {
+                            width: parent.width
+                            visible: (root.interviewResult.assessment_evidence || []).length === 0
+                            text: "本场没有足够证据支持评分。"
+                            color: root.palette.muted
+                            wrapMode: Text.Wrap
+                        }
+                        Text {
+                            width: parent.width
+                            visible: root.resultListText(root.interviewResult.critical_gaps, "").length > 0
+                            text: "关键缺口：" + root.resultListText(root.interviewResult.critical_gaps, "")
+                            color: root.palette.warning
+                            wrapMode: Text.Wrap
+                            font.bold: true
                         }
                         Text {
                             width: parent.width

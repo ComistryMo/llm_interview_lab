@@ -21,13 +21,47 @@ Item {
                && (app.testedRevision || "").length > 0
     }
 
+    function reviewAction() {
+        return root.actions.review || ({})
+    }
+
+    function nextRetentionAction() {
+        var retention = root.actions.retention || ({})
+        var stages = ["d2", "d7"]
+        for (var i = 0; i < stages.length; ++i) {
+            var item = retention[stages[i]] || null
+            if (item && item.state !== "complete")
+                return item
+        }
+        return null
+    }
+
+    function retentionBlockedText(item) {
+        if (!item)
+            return ""
+        if (item.blocked_reason)
+            return item.blocked_reason
+        if (item.state === "future")
+            return item.due_at ? "复测尚未到期，预计可开始时间：" + item.due_at : "复测尚未到期。"
+        if (item.state === "missing_asset")
+            return "这道题缺少经过验证的复测资产，当前不能达到已掌握。"
+        if (item.state === "missing_environment")
+            return "当前运行环境不满足本次复测要求。"
+        return "当前复测阶段暂不可开始。"
+    }
+
     function primaryActionKind() {
         if (app.currentTask && app.currentTask.environment_available === false)
             return "blocked"
-        if (root.actions.review_available === true)
+        var review = root.reviewAction()
+        if (review.actionable === true)
             return "review"
-        if (root.actions.retention_stage) {
-            if (root.actions.retention_due === true && !(root.actions.retention_blocked_reason || ""))
+        if (review.state && review.state !== "complete")
+            return "blocked"
+        var retention = root.nextRetentionAction()
+        if (retention) {
+            if ((retention.state === "due" || retention.state === "in_progress")
+                    && retention.actionable === true)
                 return "retention"
             return "blocked"
         }
@@ -41,7 +75,7 @@ Item {
         if (kind === "review")
             return "开始契约审查"
         if (kind === "retention")
-            return "开始 " + (root.actions.retention_stage || "复测").toUpperCase()
+            return "开始 " + (root.nextRetentionAction().stage || "复测").toUpperCase()
         if (kind === "submit")
             return "提交实现"
         return "运行公开测试"
@@ -50,13 +84,12 @@ Item {
     function actionExplanation() {
         if (app.currentTask && app.currentTask.environment_available === false)
             return app.currentTask.environment || "当前运行环境不满足这道题的要求。"
-        if (root.actions.retention_stage && root.primaryActionKind() === "blocked") {
-            if (root.actions.retention_blocked_reason)
-                return root.actions.retention_blocked_reason
-            if (root.actions.retention_due_at)
-                return "复测尚未到期，预计可开始时间：" + root.actions.retention_due_at
-            return "这道题尚无可用的间隔复测资产，当前不能达到已掌握。"
-        }
+        var review = root.reviewAction()
+        if (review.state && review.state !== "complete" && root.primaryActionKind() === "blocked")
+            return review.blocked_reason || "请先完成实现提交，再进入契约审查。"
+        var retention = root.nextRetentionAction()
+        if (retention && root.primaryActionKind() === "blocked")
+            return root.retentionBlockedText(retention)
         if (root.primaryActionKind() === "review")
             return "公开测试和提交已完成；现在补充实现解释、复杂度与边界证据。"
         if (root.primaryActionKind() === "submit")
@@ -69,7 +102,7 @@ Item {
         if (kind === "review")
             reviewDialog.open()
         else if (kind === "retention")
-            app.startRetentionFor(app.currentTask.problem_id, root.actions.retention_stage)
+            app.startRetentionFor(app.currentTask.problem_id, root.nextRetentionAction().stage)
         else if (kind === "submit")
             app.submitCurrent()
         else if (kind === "test")

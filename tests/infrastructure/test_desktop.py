@@ -339,11 +339,17 @@ def test_home_and_practice_expose_truthful_next_actions() -> None:
     assert "modelData.blocked_reason" in home
 
     assert 'objectName: "practicePrimaryAction"' in exercise
+    assert "root.actions.review || ({})" in exercise
+    assert "root.actions.retention || ({})" in exercise
+    assert 'item.state !== "complete"' in exercise
+    assert 'retention.state === "due" || retention.state === "in_progress"' in exercise
     assert 'return "review"' in exercise
     assert 'return "retention"' in exercise
     assert "app.runTestsForCurrentSubmission(editor.text)" in exercise
-    assert "app.startRetentionFor(app.currentTask.problem_id, root.actions.retention_stage)" in exercise
-    assert "retention_blocked_reason" in exercise
+    assert "app.startRetentionFor(app.currentTask.problem_id, root.nextRetentionAction().stage)" in exercise
+    assert "root.retentionBlockedText(retention)" in exercise
+    assert "root.actions.retention_stage" not in exercise
+    assert "root.actions.retention_due" not in exercise
     assert 'app.navigate("coach")' in exercise
     assert "startRetentionStage(\"d2\")" not in exercise
     assert "startRetentionStage(\"d7\")" not in exercise
@@ -362,16 +368,27 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert "root.configuration.available !== false" in interview
     assert "root.configuration.missing_rounds" in interview
     assert "root.configuration.missing_environment" in interview
+    assert "root.missingRoundLabel(rounds[i])" in interview
+    assert 'item.round || item.type || "未命名环节"' in interview
+    assert 'item.skills.join("、")' in interview
+    assert 'rounds.join("、")' not in interview
     assert 'role.currentValue || "applied_ai_engineer"' not in interview
 
     assert 'objectName: "interviewResultCard"' in interview
     for evidence_field in (
-        "root.interviewResult.source",
-        "result.evidence",
-        "root.interviewResult.confidence",
+        "result.overall_score",
+        "root.interviewResult.completion_status",
+        "root.interviewResult.assessment_evidence",
+        "modelData.source",
+        "modelData.evidence",
+        "modelData.confidence",
+        "root.interviewResult.critical_gaps",
         "result.unscored",
     ):
         assert evidence_field in interview
+    assert "root.interviewResult.source" not in interview
+    assert "root.interviewResult.evidence" not in interview
+    assert "root.interviewResult.confidence" not in interview
     assert "不会改变刷题训练的掌握状态" in interview
     assert 'font.family: "Cascadia Mono, Consolas, monospace"' not in interview
 
