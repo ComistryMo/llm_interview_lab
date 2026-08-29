@@ -219,6 +219,16 @@ def test_bootstrap_event_contains_runtime_fields_without_absolute_paths(
     assert "<local-path>" in event["sanitized_exception"]
 
 
+def test_bootstrap_sanitizer_redacts_unknown_paths_with_spaces() -> None:
+    error = RuntimeError(
+        r"failed at C:\Users\Example User\Desktop\profile data\submission.py"
+    )
+    sanitized = runtime._sanitized_bootstrap_message(error)
+    assert "<local-path>" in sanitized
+    assert "Example User" not in sanitized
+    assert "profile data" not in sanitized
+
+
 def test_desktop_entry_accepts_explicit_window_size_and_role_step() -> None:
     source = (REPO_ROOT / "src/llm_interview_lab/desktop/main.py").read_text(
         encoding="utf-8"
