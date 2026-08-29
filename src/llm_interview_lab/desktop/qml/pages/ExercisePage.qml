@@ -236,11 +236,25 @@ Item {
                             }
                         }
                         Button {
+                            id: practicePrimaryButton
                             objectName: "practicePrimaryAction"
                             visible: root.primaryActionKind() !== "blocked"
                             text: root.primaryActionLabel()
                             highlighted: true
+                            Layout.preferredWidth: 156
+                            Layout.preferredHeight: 42
                             enabled: !app.busy
+                            background: Rectangle {
+                                radius: 8
+                                color: practicePrimaryButton.enabled ? root.palette.accent : root.palette.border
+                            }
+                            contentItem: Text {
+                                text: practicePrimaryButton.text
+                                color: practicePrimaryButton.enabled ? "white" : root.palette.muted
+                                font.bold: true
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
                             onClicked: root.runPrimaryAction()
                         }
                         StatusPill {

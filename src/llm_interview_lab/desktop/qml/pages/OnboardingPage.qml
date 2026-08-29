@@ -33,6 +33,16 @@ Rectangle {
         root.inlineError = ""
         app.clearOnboardingError()
     }
+    onSelectedRoleChanged: {
+        if (!root.selectedRole)
+            return
+        for (var i = 0; i < app.roles.length; ++i) {
+            if (app.roles[i].id === root.selectedRole) {
+                roleGrid.positionViewAtIndex(i, GridView.Contain)
+                break
+            }
+        }
+    }
 
     ColumnLayout {
         anchors.centerIn: parent
@@ -113,7 +123,15 @@ Rectangle {
                         cellHeight: 108
                         boundsBehavior: Flickable.StopAtBounds
                         interactive: contentHeight > height
-                        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                        ScrollBar.vertical: ScrollBar {
+                            policy: ScrollBar.AlwaysOn
+                            contentItem: Rectangle {
+                                implicitWidth: 7
+                                radius: 4
+                                color: root.palette.muted
+                                opacity: 0.55
+                            }
+                        }
 
                         delegate: Rectangle {
                             id: roleCard

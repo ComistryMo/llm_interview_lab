@@ -105,8 +105,8 @@ def _demo_dashboard() -> dict[str, Any]:
     return {
         "profile_id": "demo",
         "role": {
-            "primary_role": "ai_algorithm_research_engineer",
-            "title": "AI Algorithm / Research Engineer",
+            "primary_role": "applied_ai_engineer",
+            "title": "Applied AI Engineer",
             "seniority": "new_grad",
             "ai_mode": "disabled",
         },
@@ -263,6 +263,8 @@ class AppController(QObject):
             "ai_mode": "provider",
             "material_refs": [],
             "remaining_seconds": 3120,
+            "completed_questions": 3,
+            "total_questions": 6,
             "question": {
                 "question_id": "q-002",
                 "kind": "system_design",

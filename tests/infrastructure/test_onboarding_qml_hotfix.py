@@ -126,6 +126,8 @@ def test_onboarding_uses_explicit_grid_geometry_and_no_index_default() -> None:
     assert "Qt.callLater" in source
     assert 'objectName: "onboardingRoleGrid"' in source
     assert 'objectName: "onboardingContinueButton"' in source
+    assert "policy: ScrollBar.AlwaysOn" in source
+    assert "Layout.preferredWidth: root.step === 3 ? 144 : 112" in source
 
 
 def test_role_cards_have_positive_non_overlapping_geometry(onboarding_scene) -> None:

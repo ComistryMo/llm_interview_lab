@@ -518,8 +518,11 @@ def test_home_and_practice_expose_truthful_next_actions() -> None:
     assert "app.startRetentionFor(modelData.problem_id, modelData.stage)" in home
     assert 'objectName: "dueRetentionList"' in home
     assert "modelData.blocked_reason" in home
+    assert "id: continueTrainingButton" in home
+    assert 'text: "继续面试"' in home
 
     assert 'objectName: "practicePrimaryAction"' in exercise
+    assert "id: practicePrimaryButton" in exercise
     assert "root.actions.review || ({})" in exercise
     assert "root.actions.retention || ({})" in exercise
     assert 'if (review.state === "complete")' in exercise

@@ -85,11 +85,23 @@ Flickable {
                 }
                 ColumnLayout {
                     Button {
+                        id: continueTrainingButton
                         text: app.dashboard.current ? "继续训练" : "开始训练"
                         highlighted: true
                         Layout.preferredWidth: 160
                         Layout.preferredHeight: 44
                         enabled: root.trainingTargetRunnable
+                        background: Rectangle {
+                            radius: 8
+                            color: continueTrainingButton.enabled ? root.palette.accent : root.palette.border
+                        }
+                        contentItem: Text {
+                            text: continueTrainingButton.text
+                            color: continueTrainingButton.enabled ? "white" : root.palette.muted
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
                         onClicked: app.openProblem(root.trainingTarget.problem_id)
                     }
                     Button {
@@ -100,9 +112,23 @@ Flickable {
                         onClicked: app.navigate("learn")
                     }
                     Button {
+                        id: startInterviewButton
                         text: "开始模拟面试"
                         Layout.preferredWidth: 160
                         Layout.preferredHeight: 42
+                        background: Rectangle {
+                            radius: 8
+                            color: "transparent"
+                            border.width: 1
+                            border.color: root.palette.accent
+                        }
+                        contentItem: Text {
+                            text: startInterviewButton.text
+                            color: root.palette.accent
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
                         onClicked: app.navigate("interview")
                     }
                 }
@@ -128,7 +154,22 @@ Flickable {
                         color: root.palette.muted
                     }
                 }
-                Button { text: "继续"; highlighted: true; onClicked: app.resumeInterview() }
+                Button {
+                    id: resumeInterviewButton
+                    text: "继续面试"
+                    highlighted: true
+                    Layout.preferredWidth: 112
+                    Layout.preferredHeight: 40
+                    background: Rectangle { radius: 8; color: root.palette.accent }
+                    contentItem: Text {
+                        text: resumeInterviewButton.text
+                        color: "white"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: app.resumeInterview()
+                }
                 Button { text: "放弃本场"; onClicked: abandonInterviewDialog.open() }
             }
         }
