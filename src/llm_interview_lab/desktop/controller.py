@@ -133,10 +133,10 @@ def _demo_dashboard() -> dict[str, Any]:
         ],
         "mastered_count": 14,
         "role_readiness": [
-            {"id": "python_engineering", "label": "Python Engineering", "self_reported": 0.75, "verified": 0.62},
-            {"id": "deep_learning", "label": "Deep Learning", "self_reported": 0.65, "verified": 0.48},
+            {"id": "python_engineering", "label": "Python 工程", "self_reported": 0.75, "verified": 0.62},
+            {"id": "deep_learning", "label": "深度学习", "self_reported": 0.65, "verified": 0.48},
             {"id": "llm_vlm", "label": "LLM / VLM", "self_reported": 0.55, "verified": 0.36},
-            {"id": "system_design", "label": "System Design", "self_reported": 0.45, "verified": 0.18},
+            {"id": "system_design", "label": "系统设计", "self_reported": 0.45, "verified": 0.18},
         ],
     }
 

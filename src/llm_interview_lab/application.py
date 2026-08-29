@@ -53,6 +53,26 @@ from .workspace import (
 )
 
 
+_DOMAIN_LABELS_ZH = {
+    "programming_algorithms": "编程与算法",
+    "python_engineering": "Python 工程",
+    "machine_learning_math": "机器学习数学",
+    "deep_learning": "深度学习",
+    "llm_vlm": "LLM / VLM",
+    "post_training_rl": "后训练与强化学习",
+    "agent_application": "Agent 应用",
+    "ai_product": "AI 产品",
+    "evaluation_safety": "评测与安全",
+    "data_mlops": "数据与 MLOps",
+    "training_infra": "训练基础设施",
+    "inference_systems": "推理系统",
+    "system_design": "系统设计",
+    "product_communication": "产品沟通",
+    "project_deep_dive": "项目深挖",
+    "behavioral": "行为面试",
+}
+
+
 class ApplicationError(RuntimeError):
     """Raised when a user-facing application operation cannot proceed."""
 
@@ -428,7 +448,9 @@ class ApplicationService:
                 role_readiness = [
                     {
                         "id": domain,
-                        "label": domain.replace("_", " ").title(),
+                        "label": _DOMAIN_LABELS_ZH.get(
+                            domain, domain.replace("_", " ").title()
+                        ),
                         "self_reported": round(value["self"] / value["weight"], 3),
                         "verified": round(value["verified"] / value["weight"], 3),
                     }

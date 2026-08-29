@@ -11,6 +11,34 @@ Flickable {
     contentWidth: width
     contentHeight: content.implicitHeight + 56
     clip: true
+    ScrollBar.vertical: ScrollBar {
+        width: 6
+        policy: ScrollBar.AlwaysOn
+        visible: root.contentHeight > root.height
+        contentItem: Rectangle {
+            implicitWidth: 5
+            radius: 3
+            color: root.palette.muted
+            opacity: 0.45
+        }
+    }
+
+    function materialKindText(value) {
+        return ({resume: "简历", career_intent: "求职意向", internship: "实习经历",
+                 project: "项目经历", paper: "论文材料", competition: "比赛经历",
+                 interview_question: "真实面试问题", job_description: "岗位 JD",
+                 portfolio: "作品集", experience: "经历", research: "研究材料",
+                 other: "其他"})[value] || value || "其他"
+    }
+
+    function materialSizeText(value) {
+        var bytes = Number(value || 0)
+        if (bytes < 1024)
+            return bytes + " B"
+        if (bytes < 1024 * 1024)
+            return Math.round(bytes / 1024) + " KB"
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB"
+    }
 
     ColumnLayout {
         id: content
@@ -29,7 +57,6 @@ Flickable {
 
         LabCard {
             Layout.fillWidth: true
-            Layout.preferredHeight: 238
             cardColor: root.palette.surface
             borderColor: root.palette.border
             Text { text: "添加一个明确文件"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
@@ -109,7 +136,6 @@ Flickable {
             delegate: LabCard {
                 required property var modelData
                 Layout.fillWidth: true
-                Layout.preferredHeight: 136
                 cardColor: root.palette.surface
                 borderColor: root.palette.border
                 RowLayout {
@@ -117,22 +143,31 @@ Flickable {
                     ColumnLayout {
                         Layout.fillWidth: true
                         Text { text: modelData.title; color: root.palette.text; font.bold: true; font.pixelSize: 16 }
-                        Text { text: modelData.id + " · " + modelData.kind; color: root.palette.accent }
+                        Text { text: root.materialKindText(modelData.kind) + " · " + root.materialSizeText(modelData.size_bytes); color: root.palette.accent }
                     }
                     StatusPill {
                         text: modelData.ai_access ? "可在逐场授权后供 AI 使用" : "仅保存在本机"
                         tone: modelData.ai_access ? root.palette.warning : root.palette.muted
                     }
                 }
-                Text {
+                RowLayout {
                     width: parent.width
-                    text: "SHA-256  " + modelData.sha256
-                    color: root.palette.muted
-                    font.family: "Cascadia Mono"
-                    font.pixelSize: 11
-                    wrapMode: Text.WrapAnywhere
+                    Text { text: "文件已保存在本机；不会自动预览或上传。"; color: root.palette.muted; font.pixelSize: 12; Layout.fillWidth: true; wrapMode: Text.Wrap }
+                    ToolButton {
+                        id: detailsButton
+                        text: details.visible ? "收起详情" : "查看文件详情"
+                        onClicked: details.visible = !details.visible
+                    }
                 }
-                Text { text: "内容不会被自动预览或上传。"; color: root.palette.muted; font.pixelSize: 12 }
+                ColumnLayout {
+                    id: details
+                    visible: false
+                    width: parent.width
+                    spacing: 3
+                    Text { text: "材料 ID：" + modelData.id; color: root.palette.muted; font.pixelSize: 11; elide: Text.ElideRight; Layout.fillWidth: true }
+                    Text { text: "相对路径：" + modelData.relative_path; color: root.palette.muted; font.pixelSize: 11; elide: Text.ElideMiddle; Layout.fillWidth: true }
+                    Text { text: "SHA-256：" + modelData.sha256; color: root.palette.muted; font.family: "Cascadia Mono"; font.pixelSize: 10; wrapMode: Text.WrapAnywhere; Layout.fillWidth: true }
+                }
             }
         }
     }
