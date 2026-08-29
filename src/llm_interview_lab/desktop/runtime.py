@@ -28,11 +28,11 @@ MIGRATION_MARKER = ".llm-lab-desktop-migration.json"
 # Error messages can contain paths that are not one of the well-known roots
 # (for example a pytest temporary directory).  Keep bootstrap diagnostics
 # useful while replacing those paths before they reach a local log that a user
-# may attach to an issue.  Quoted paths are handled first by the same pattern;
-# the callback below also preserves sentence punctuation following a path.
+# may attach to an issue.  The span intentionally accepts spaces (valid in
+# both Windows and POSIX filenames) and stops at common sentence delimiters.
 _ABSOLUTE_PATH_RE = re.compile(
-    r"(?:[A-Za-z]:[\\/]|\\\\)[^<>\"'\r\n\s]+"
-    r"|(?<![:\w])/(?:[^<>\"'\r\n\s/]+/)+[^<>\"'\r\n\s]*",
+    r"(?<![\w])(?:[A-Za-z]:[\\/]|\\\\)[^<>\"'()\[\]{},;!?\r\n]+"
+    r"|(?<![:\w/])/(?:[^<>\"'()\[\]{},;!?\r\n]+)",
 )
 _PATH_TRAILING_PUNCTUATION = ".,;:!?)]}"
 
@@ -64,7 +64,8 @@ def _sanitized_bootstrap_message(error: BaseException) -> str:
 
     def replace_path(match: re.Match[str]) -> str:
         value = match.group(0)
-        trailing = ""
+        trailing = value[len(value.rstrip()) :]
+        value = value.rstrip()
         while value and value[-1] in _PATH_TRAILING_PUNCTUATION:
             trailing = value[-1] + trailing
             value = value[:-1]
