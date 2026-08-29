@@ -7,7 +7,10 @@ Item {
     id: root
     required property var app
     required property var palette
-    property bool coachOpen: true
+    // Keep the editor as the primary workspace.  The Coach drawer remains
+    // available on demand, but opening it by default steals useful width from
+    // a long coding session on wide monitors.
+    property bool coachOpen: false
     property bool focusMode: false
     property bool wideLayout: width >= 1260
     property bool mediumLayout: width >= 1050
