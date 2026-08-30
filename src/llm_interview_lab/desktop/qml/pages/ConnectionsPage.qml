@@ -9,6 +9,54 @@ Flickable {
     required property var palette
     contentWidth: width; contentHeight: content.implicitHeight + 60; clip: true
     property bool advanced: false
+    // Editing stays local to this form. The key itself is never read back
+    // from the keyring; an empty key field means "keep existing".
+    property string editingConnectionId: ""
+    property string formError: ""
+
+    function beginEditConnection(item) {
+        if (!item)
+            return
+        root.editingConnectionId = String(item.connection_id || "")
+        root.formError = ""
+        if (typeof app.clearConnectionError === "function")
+            app.clearConnectionError()
+        root.advanced = true
+        var providers = app.providerOptions || []
+        var providerIndex = 0
+        for (var i = 0; i < providers.length; ++i) {
+            if (String(providers[i]) === String(item.provider_id || "")) {
+                providerIndex = i
+                break
+            }
+        }
+        provider.currentIndex = providerIndex
+        // Keep the stable storage id tied to the record being edited.  The
+        // id is not silently regenerated or changed when a user edits the
+        // display fields.
+        connectionId.text = root.editingConnectionId
+        model.text = String(item.model || "")
+        displayName.text = String(item.display_name || "")
+        endpoint.text = String(item.base_url || "")
+        // Remote credentials are write-only. Keep this blank so saveConnection
+        // preserves the existing key_reference.
+        secretOrEndpoint.text = item.provider_id === "ollama"
+                                ? String(item.base_url || "") : ""
+    }
+
+    function cancelEditConnection() {
+        root.editingConnectionId = ""
+        root.formError = ""
+        if (typeof app.clearConnectionError === "function")
+            app.clearConnectionError()
+        root.advanced = false
+        provider.currentIndex = 0
+        model.text = ""
+        secretOrEndpoint.text = ""
+        endpoint.text = ""
+        connectionId.text = provider.currentText + "-main"
+        displayName.text = provider.currentText
+    }
     ScrollBar.vertical: ScrollBar {
         width: 6
         policy: ScrollBar.AlwaysOn
@@ -92,9 +140,31 @@ Flickable {
             // fixed height used to let the privacy note spill into the next
             // section after the primary action was moved to the header.
             cardColor: root.palette.surface; borderColor: root.palette.border
-            Text { text: "连接普通 LLM API"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
+            Text {
+                text: root.editingConnectionId.length > 0 ? "编辑 AI 连接" : "连接普通 LLM API"
+                color: root.palette.text
+                font.pixelSize: 18
+                font.bold: true
+            }
             // Keep the primary action adjacent to the form heading so it remains
             // discoverable in the initial viewport on compact desktop windows.
+            RowLayout {
+                visible: root.editingConnectionId.length > 0
+                width: parent.width
+                spacing: 8
+                StatusPill { text: "正在编辑"; tone: root.palette.accent }
+                Text {
+                    text: root.editingConnectionId
+                    color: root.palette.muted
+                    elide: Text.ElideMiddle
+                    Layout.fillWidth: true
+                }
+                Button {
+                    text: "取消编辑"
+                    flat: true
+                    onClicked: root.cancelEditConnection()
+                }
+            }
             RowLayout {
                 width: parent.width
                 spacing: 12
@@ -109,8 +179,12 @@ Flickable {
                                                        displayName.text, isOllama ? secretOrEndpoint.text : endpoint.text,
                                                        isOllama ? "" : secretOrEndpoint.text)
                         if (saved) {
+                            root.formError = ""
                             app.testConnection(connectionId.text)
                             if (!isOllama) secretOrEndpoint.text = ""
+                            root.editingConnectionId = ""
+                        } else {
+                            root.formError = "保存失败。请检查连接 ID、模型和地址；远程服务的 API Key 必须可由系统密钥环保存。"
                         }
                     }
                 }
@@ -125,7 +199,12 @@ Flickable {
             GridLayout {
                 width: parent.width; columns: 2; columnSpacing: 12; rowSpacing: 10
                 Text { text: "服务"; color: root.palette.muted }
-                ComboBox { id: provider; Layout.fillWidth: true; model: app.providerOptions }
+                ComboBox {
+                    id: provider
+                    Layout.fillWidth: true
+                    model: app.providerOptions
+                    enabled: root.editingConnectionId.length === 0
+                }
                 Text { text: "模型"; color: root.palette.muted }
                 TextField { id: model; Layout.fillWidth: true; placeholderText: "例如 gpt-5、claude 或本地模型 ID" }
                 Text {
@@ -154,10 +233,26 @@ Flickable {
                 }
             }
             ToolButton { text: root.advanced ? "收起高级设置" : "展开高级设置"; onClicked: root.advanced = !root.advanced }
+            Text {
+                objectName: "connectionFormError"
+                visible: root.formError.length > 0 || (app.connectionError || "").length > 0
+                text: app.connectionError || root.formError
+                color: root.palette.danger
+                font.pixelSize: 12
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
             GridLayout {
                 visible: root.advanced
                 width: parent.width; columns: 2; columnSpacing: 12; rowSpacing: 10
-                TextField { id: connectionId; Layout.fillWidth: true; text: provider.currentText + "-main"; placeholderText: "连接 ID" }
+                TextField {
+                    id: connectionId
+                    Layout.fillWidth: true
+                    text: provider.currentText + "-main"
+                    readOnly: root.editingConnectionId.length > 0
+                    placeholderText: root.editingConnectionId.length > 0
+                                     ? "编辑时保持连接 ID 不变" : "连接 ID"
+                }
                 TextField { id: displayName; Layout.fillWidth: true; text: provider.currentText === "ollama" ? "本地 Ollama" : provider.currentText; placeholderText: "显示名称" }
                 TextField { id: endpoint; Layout.columnSpan: 2; Layout.fillWidth: true; placeholderText: "自定义 Endpoint（OpenAI-compatible 可选）" }
             }
@@ -186,6 +281,12 @@ Flickable {
                         Text { text: modelData.provider_id + " · " + modelData.model; color: root.palette.muted }
                     }
                     StatusPill { text: modelData.status || "已保存，尚未测试"; tone: (modelData.status || "").indexOf("已连接") >= 0 ? root.palette.success : root.palette.muted }
+                    Button {
+                        objectName: "editConnection"
+                        text: "编辑"
+                        flat: true
+                        onClicked: root.beginEditConnection(modelData)
+                    }
                     Button { text: "测试连接"; flat: true; onClicked: app.testConnection(modelData.connection_id) }
                     Button { text: "删除"; flat: true; onClicked: app.deleteConnection(modelData.connection_id) }
                 }

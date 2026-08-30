@@ -190,6 +190,7 @@ class AppController(QObject):
         self._test_output = ""
         self._interview: dict[str, Any] = {}
         self._connections: list[dict[str, Any]] = []
+        self._connection_error = ""
         self._materials: list[dict[str, Any]] = []
         self._pending_ai_assessment: dict[str, Any] | None = None
         self._busy = False
@@ -380,6 +381,12 @@ class AppController(QObject):
     def connections(self) -> list[dict[str, Any]]:
         return self._connections
 
+    @Property(str, notify=stateChanged)
+    def connectionError(self) -> str:
+        """Last actionable connection error for the Connections page."""
+
+        return self._connection_error
+
     @Property("QVariantList", constant=True)
     def providerOptions(self) -> list[str]:
         """Expose only adapters shipped by the current distribution."""
@@ -540,6 +547,7 @@ class AppController(QObject):
             {**config.__dict__, "status": "已保存，尚未测试"}
             for config in list_connections(self.repo_root, self._profile_id)
         ]
+        self._connection_error = ""
         self._materials = self.service.material_cards(self._profile_id)
         self._interview = {}
         try:
@@ -607,6 +615,7 @@ class AppController(QObject):
             self._dashboard = {}
             self._problems = []
             self._connections = []
+            self._connection_error = ""
             self._materials = []
             self.stateChanged.emit()
             return
@@ -1638,6 +1647,7 @@ class AppController(QObject):
         base_url: str,
         api_key: str,
     ) -> bool:
+        self._connection_error = ""
         try:
             save_connection(
                 self.repo_root,
@@ -1653,13 +1663,22 @@ class AppController(QObject):
             self.toast.emit("连接已保存；API Key 仅存入系统密钥环。")
             return True
         except (ConnectionConfigError, CredentialError) as error:
+            self._connection_error = friendly_error(error)
+            self.stateChanged.emit()
             self._show_error(error)
             return False
+
+    @Slot()
+    def clearConnectionError(self) -> None:
+        if self._connection_error:
+            self._connection_error = ""
+            self.stateChanged.emit()
 
     @Slot(str)
     def deleteConnection(self, connection_id: str) -> None:
         try:
             delete_connection(self.repo_root, self._profile_id, connection_id)
+            self._connection_error = ""
             self.refresh()
         except Exception as error:
             self._show_error(error)
@@ -1669,6 +1688,9 @@ class AppController(QObject):
         if self._profile_id == "demo":
             self.toast.emit("虚构演示连接检查完成。")
             return
+
+        self._connection_error = ""
+        self.stateChanged.emit()
 
         def operation():
             config = next(
@@ -1689,10 +1711,16 @@ class AppController(QObject):
             for item in self._connections:
                 if item["connection_id"] == connection_id:
                     item["status"] = "已连接" if result.ok else "连接失败"
+            self._connection_error = "" if result.ok else friendly_error(result.message)
             self.stateChanged.emit()
             self.toast.emit("连接成功。" if result.ok else friendly_error(result.message))
 
-        self._background(operation, complete)
+        def failed(message: str) -> None:
+            self._connection_error = friendly_error(message)
+            self.stateChanged.emit()
+            self._show_error(message)
+
+        self._background(operation, complete, failed)
 
     def _practice_context_preview(
         self,

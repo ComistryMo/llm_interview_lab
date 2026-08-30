@@ -108,6 +108,18 @@ def localize_role(card: dict[str, Any]) -> dict[str, Any]:
 
 def friendly_error(error: BaseException | str) -> str:
     message = str(error).lower()
+    if "connection id must" in message:
+        return "连接 ID 只能使用小写字母、数字和连字符，并且要以字母开头。请展开高级设置后修改。"
+    if "provider is not supported" in message:
+        return "当前桌面版本不支持这个 AI 服务，请从服务下拉框中重新选择。"
+    if "model and display name must" in message:
+        return "模型和显示名称不能为空；请检查对应字段后重试。"
+    if "endpoint must be an http" in message:
+        return "地址必须是不含账号密码的 HTTP(S) 地址，请检查 Endpoint。"
+    if "custom endpoints are available" in message:
+        return "自定义地址只适用于 OpenAI-compatible 或 Ollama，请更换服务类型或清空地址。"
+    if "remote providers require" in message:
+        return "远程 AI 服务需要 API Key；请填写新 Key，或确认系统密钥环可用。"
     # Keep the next action visible for the practice flow. These messages
     # must not collapse into the generic offline-training hint.
     if "当前答案已修改" in message or "current answer has changed" in message:
