@@ -76,7 +76,7 @@ Item {
     function primaryActionLabel() {
         var kind = root.primaryActionKind()
         if (kind === "review")
-            return "开始契约审查"
+            return "开始自助复盘"
         if (kind === "retention")
             return "开始 " + (root.nextRetentionAction().stage || "复测").toUpperCase()
         if (kind === "submit")
@@ -92,7 +92,7 @@ Item {
         if (review.state === "complete" && retention && root.primaryActionKind() === "blocked")
             return root.retentionBlockedText(retention)
         if (root.primaryActionKind() === "review")
-            return "公开测试和提交已完成；现在补充实现解释、复杂度与边界证据。"
+            return "公开测试和提交已完成；现在开始自助复盘，补充实现解释、复杂度与边界证据。"
         if (root.primaryActionKind() === "submit")
             return "当前保存版本已通过公开测试，可以提交实现证据。"
         return "运行测试前会先保存编辑器中的最新代码。"
@@ -369,7 +369,7 @@ Item {
 
     Dialog {
         id: reviewDialog
-        title: "契约审查与口述答辩"
+        title: "自助复盘（非正式评审）"
         modal: true
         anchors.centerIn: parent
         width: Math.min(620, parent.width - 48)
@@ -383,13 +383,13 @@ Item {
         )
         ColumnLayout {
             width: parent.width; spacing: 10
-                Text { text: "审查只记录证据，不能跳过 D+2 / D+7，也不能直接授予“已掌握”。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                Text { text: "这里记录你的自我复盘（source=self），用于准备后续正式审查；不会代替导师或 AI 评审，也不会直接授予“已掌握”。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
                 TextArea { id: explanation; Layout.fillWidth: true; Layout.preferredHeight: 80; placeholderText: "解释实现思路与不变式"; wrapMode: Text.Wrap }
                 TextField { id: complexity; Layout.fillWidth: true; placeholderText: "时间与空间复杂度" }
                 TextArea { id: boundaries; Layout.fillWidth: true; Layout.preferredHeight: 70; placeholderText: "边界情况、异常和输入不变性"; wrapMode: Text.Wrap }
             RowLayout {
-                    CheckBox { id: contractPassed; text: "契约审查通过" }
-                    CheckBox { id: oralPassed; text: "口述答辩通过" }
+                    CheckBox { id: contractPassed; text: "我已完成契约自检" }
+                    CheckBox { id: oralPassed; text: "我已完成口述自答" }
             }
         }
     }
