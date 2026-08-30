@@ -26,8 +26,8 @@
 2. **高价值桌面 UI**：由唯一 QML 实施者改 Shell、Home/Learn/Exercise/Interview/Coach/Connections/Settings；保持 backend API 兼容，补空/错误/disabled/focus 状态和窄窗口布局。
 3. **Coach 本地会话**：在当前 Profile 下新增 `coach/sessions.json`（必要时 schema），Controller 提供 `coachSessions`、`activeCoachSession`、`coachMessages`、`coachStreaming`、`coachError` 与 create/select/delete/send/stop/retry；上下文只用现有 preview builder，异步结果带 profile/session/operation/message/provider 身份并丢弃过期结果。
 4. **Interview/连接整合**：不改变核心评分事实源；明确回答锁定、评估证据来源、暂停/恢复/结束和 No-AI/offline 提示；Codex 探测不阻塞启动，审批/文件 Diff 仍显式。
-5. **验证与截图**：先跑受影响的定向测试（session persistence、provider stream/stop/retry/error、interview phase、profile isolation、context privacy、screenshot contract），使用 demo/synthetic 数据生成八页 × 四尺寸 × Light/Dark 截图和 manifest；最后只在用户授权后运行一次 `python -m pytest -q`。
-6. **独立 Review 与收尾**：实现者之外的 Review Agent 检查代码/视觉/产品，只修 P0 与明确影响用户的 P1；将本计划移动到 `plans/completed/codex-claude-ui-polish.md`，确认分支、commit、工作树。
+5. **验证与截图（已完成）**：先跑受影响的定向测试（session persistence、provider stream/stop/retry/error、interview phase、profile isolation、context privacy、screenshot contract），使用 demo/synthetic 数据生成八页 × 四尺寸 × Light/Dark 截图和 manifest；最后只在用户授权后运行一次 `python -m pytest -q`。
+6. **独立 Review 与收尾（已完成）**：实现者之外的 Review Agent 检查代码/视觉/产品，只修 P0 与明确影响用户的 P1；将本计划移动到 `plans/completed/codex-claude-ui-polish.md`，确认分支、commit、工作树。
 
 ## 每阶段测试命令
 
@@ -57,8 +57,15 @@
 - [x] 视觉/UX/Coach 评审与 QML 改动。
 - [x] Coach session 薄接口及定向测试。
 - [x] Interview/Connections 整合；截图矩阵待生成。
-- [ ] 独立 Review、截图归档与最终回归（全量测试仍待用户授权）。
+- [x] 独立 Review、截图归档与最终回归（全量测试仍待用户授权）。
 
 ## 最终复盘
 
 完成时记录实际修改范围、Before/After 视觉证据、UX 流程、Coach 状态机、Interview 改进、定向测试、截图路径/manifest、独立 Review 结论、未完成事项、分支/commit/工作树；未验证内容明确标记，不以推测替代证据。
+
+## 收口证据（2026-08-30）
+
+- 定向测试：`test_role_interviews.py` 24 passed；Coach/desktop/onboarding 36 passed，最终 `test_desktop.py` 24 passed；AI connections/context/public workflows 53 passed；Mock Interview CLI/security/interview 82 passed；暂停/上下文/Coach/桌面组合 61 passed；`test_alpha3_truthful_ux.py` 13 passed；Codex terminal metadata 补测 4 passed。使用项目 Python 3.12 虚拟环境；系统 Python 2.7/3.9 与 PySide6 不可用，因此没有声称系统环境可运行 Qt。
+- 静态检查：`python -m compileall -q src/llm_interview_lab`、`git diff --check` 通过。按用户要求未运行未经授权的全量 `python -m pytest -q`。
+- 截图：`docs/images/screenshot-manifest.json` 的 `source_commit` 为代码提交 `ea4502c362af189ce8b53020f320437295bf9b3b`，`all_screenshots` 为 8 页 × 4 尺寸 × 2 主题的 64 个唯一单元；9 个旧链接保留在 `screenshots`，所有哈希均已校验，`synthetic=true`、`language=zh-CN`。
+- 独立 Review：Review Agent 复核了核心边界、QML 响应式布局、Coach/Interview 状态和截图矩阵；P0/P1 已收口。剩余为 P2：Qt `palette` 属性覆盖/`Sans Serif` 字体别名警告、未在 Windows/macOS 原生窗口重拍、Interview setup 尚未增加更多候选筛选维度；不阻断当前 No-AI/本地流程。
