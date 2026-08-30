@@ -163,18 +163,12 @@ ApplicationWindow {
                     }
                 }
 
-                Repeater {
-                    model: [
-                        {id: "home", label: backend.uiText("nav.home")},
-                        {id: "career", label: backend.uiText("nav.career")},
-                        {id: "learn", label: backend.uiText("nav.learn")},
-                        {id: "interview", label: backend.uiText("nav.interview")},
-                        {id: "coach", label: backend.uiText("nav.coach")},
-                        {id: "progress", label: backend.uiText("nav.progress")},
-                        {id: "connections", label: backend.uiText("nav.connections")},
-                        {id: "settings", label: backend.uiText("nav.settings")}
-                    ]
-                    delegate: Button {
+                // Keep navigation grouped by the user's intent.  The shared
+                // delegate preserves one click/keyboard behavior while the
+                // small section labels make the shell easier to scan.
+                Component {
+                    id: navButtonDelegate
+                    Button {
                         id: navButton
                         required property var modelData
                         Layout.fillWidth: true
@@ -195,6 +189,50 @@ ApplicationWindow {
                             leftPadding: 12
                         }
                     }
+                }
+
+                Text {
+                    text: "主要"
+                    color: window.colors.muted
+                    font.pixelSize: 11
+                    Layout.topMargin: 2
+                }
+                Repeater {
+                    model: [
+                        {id: "home", label: backend.uiText("nav.home")},
+                        {id: "learn", label: backend.uiText("nav.learn")},
+                        {id: "interview", label: backend.uiText("nav.interview")}
+                    ]
+                    delegate: navButtonDelegate
+                }
+
+                Text {
+                    text: "个人"
+                    color: window.colors.muted
+                    font.pixelSize: 11
+                    Layout.topMargin: 8
+                }
+                Repeater {
+                    model: [
+                        {id: "career", label: backend.uiText("nav.career")},
+                        {id: "coach", label: backend.uiText("nav.coach")},
+                        {id: "progress", label: backend.uiText("nav.progress")}
+                    ]
+                    delegate: navButtonDelegate
+                }
+
+                Text {
+                    text: "配置"
+                    color: window.colors.muted
+                    font.pixelSize: 11
+                    Layout.topMargin: 8
+                }
+                Repeater {
+                    model: [
+                        {id: "connections", label: backend.uiText("nav.connections")},
+                        {id: "settings", label: backend.uiText("nav.settings")}
+                    ]
+                    delegate: navButtonDelegate
                 }
 
                 Item { Layout.fillHeight: true }
