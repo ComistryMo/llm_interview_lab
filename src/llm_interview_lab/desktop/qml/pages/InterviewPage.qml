@@ -93,7 +93,11 @@ Item {
             if (values[i].id === roleId)
                 return i
         }
-        return values.length > 0 ? 0 : -1
+        // Never silently substitute the first role when a stored preference
+        // is missing or stale.  An explicit empty selection makes the setup
+        // action explain what needs fixing instead of starting the wrong
+        // interview blueprint.
+        return -1
     }
 
     function seniorityIndex(value) {
@@ -103,7 +107,7 @@ Item {
     function refreshConfiguration() {
         var roleId = role.currentValue || ""
         if (!roleId) {
-            root.configuration = ({"available": false, "user_message": "当前没有可选择的岗位蓝图。"})
+            root.configuration = ({"available": false, "user_message": "请选择一个目标岗位后再开始面试。"})
             return
         }
         if (typeof app.interviewConfiguration === "function")
