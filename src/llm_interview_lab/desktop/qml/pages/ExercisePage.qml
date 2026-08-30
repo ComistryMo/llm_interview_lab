@@ -12,13 +12,25 @@ Item {
     // a long coding session on wide monitors.
     property bool coachOpen: false
     property bool focusMode: false
-    property bool wideLayout: width >= 1260
+    // `width` is the page viewport after the shell/sidebar.  These thresholds
+    // therefore map to a 1440px window for the three-column view and keep the
+    // 900px minimum window on a single, usable editor surface.
+    property bool wideLayout: width >= 1180
     // Only a completed test operation needs the expanded result viewport.
     // Save/retention notices stay compact so the editor and primary action
     // remain visible on a first visit.
     property bool testResultExpanded: ["测试通过", "测试失败", "保存失败", "结果已过期"].indexOf(app.testState) >= 0
-    property bool mediumLayout: width >= 1050
+    property bool mediumLayout: width >= 820
+    property bool compactHeight: height < 600
     property var actions: (app.currentTask && app.currentTask.actions) || ({})
+    property string activeProblemId: app.currentTask && app.currentTask.problem_id
+                                     ? String(app.currentTask.problem_id) : ""
+    // A page can briefly be visible before a problem is selected (for
+    // example after a fresh onboarding or a stale deep link).  Treat that as
+    // a real empty state instead of exposing a test button that silently does
+    // nothing against an absent submission.
+    property bool hasTask: root.activeProblemId.length > 0
+    property bool syncingEditor: false
     property string codeFontFamily: Qt.platform.os === "windows" ? "Cascadia Mono"
                                     : Qt.platform.os === "osx" ? "Menlo" : "monospace"
 
@@ -58,6 +70,8 @@ Item {
     }
 
     function primaryActionKind() {
+        if (!root.hasTask)
+            return "no-task"
         if (app.currentTask && app.currentTask.environment_available === false)
             return "blocked"
         var review = root.reviewAction()
@@ -79,6 +93,8 @@ Item {
 
     function primaryActionLabel() {
         var kind = root.primaryActionKind()
+        if (kind === "no-task")
+            return "返回刷题训练"
         if (kind === "review")
             return "开始自助复盘"
         if (kind === "retention")
@@ -89,6 +105,8 @@ Item {
     }
 
     function actionExplanation() {
+        if (!root.hasTask)
+            return "请先在刷题训练中选择一道可运行题目；选择后，编辑器和公开测试会针对当前题目建立。"
         if (app.currentTask && app.currentTask.environment_available === false)
             return app.currentTask.environment || "当前运行环境不满足这道题的要求。"
         var review = root.reviewAction()
@@ -104,7 +122,9 @@ Item {
 
     function runPrimaryAction() {
         var kind = root.primaryActionKind()
-        if (kind === "review")
+        if (kind === "no-task")
+            app.navigate("learn")
+        else if (kind === "review")
             reviewDialog.open()
         else if (kind === "retention")
             app.startRetentionFor(app.currentTask.problem_id, root.nextRetentionAction().stage)
@@ -114,14 +134,30 @@ Item {
             app.runTestsForCurrentSubmission(editor.text)
     }
 
+    // TextArea bindings are intentionally broken once a learner types.  When
+    // navigation opens another problem, explicitly rehydrate the editor from
+    // the backend snapshot so the previous task's answer can never leak into
+    // the new task.  The guard prevents this synchronization from being
+    // mistaken for a learner edit.
+    function syncEditorFromBackend() {
+        if (!editor)
+            return
+        root.syncingEditor = true
+        editor.text = app.submissionText || ""
+        root.syncingEditor = false
+    }
+
+    onActiveProblemIdChanged: Qt.callLater(root.syncEditorFromBackend)
+    Component.onCompleted: Qt.callLater(root.syncEditorFromBackend)
+
     SplitView {
         anchors.fill: parent
         orientation: Qt.Horizontal
 
         Rectangle {
             visible: root.wideLayout || (root.mediumLayout && !root.focusMode)
-            SplitView.preferredWidth: 330
-            SplitView.minimumWidth: 260
+            SplitView.preferredWidth: root.wideLayout ? 330 : 300
+            SplitView.minimumWidth: 248
             color: root.palette.surface
             border.color: root.palette.border
             ScrollView {
@@ -130,9 +166,9 @@ Item {
                 Column {
                     id: detailsColumn
                     width: detailsScroll.availableWidth; spacing: 12
-                    Text { width: parent.width; text: app.currentTask.problem_id || "暂无当前题目"; color: root.palette.accent; font.bold: true; font.pixelSize: 12 }
+                    Text { width: parent.width; text: root.hasTask ? app.currentTask.problem_id : "尚未选择题目"; color: root.hasTask ? root.palette.accent : root.palette.muted; font.bold: true; font.pixelSize: 12 }
                     Text { width: parent.width; text: app.currentTask.title || "选择一道题开始"; color: root.palette.text; font.pixelSize: 21; font.bold: true; wrapMode: Text.Wrap }
-                    StatusPill { text: app.currentTask.validation || "尚未开始"; tone: root.palette.success }
+                    StatusPill { text: root.hasTask ? (app.currentTask.validation || "尚未开始") : "未选择"; tone: root.hasTask ? root.palette.success : root.palette.muted }
                     Rectangle { width: parent.width; height: 1; color: root.palette.border }
                     Text { width: parent.width; text: app.currentTask.task || "请先从刷题训练中打开已解锁的题目。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
                     Rectangle { width: parent.width; height: 1; color: root.palette.border }
@@ -150,7 +186,7 @@ Item {
 
         Rectangle {
             SplitView.fillWidth: true
-            SplitView.minimumWidth: 420
+                SplitView.minimumWidth: 380
             color: root.palette.background
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 14; spacing: 10
@@ -168,15 +204,23 @@ Item {
                         spacing: 2
                         Text { text: "submission.py"; color: root.palette.text; font.bold: true; Layout.leftMargin: 4 }
                         Item { Layout.fillWidth: true }
-                        Button { visible: !root.wideLayout && !root.focusMode; text: "题面"; flat: true; onClicked: detailsDrawer.open() }
+                        // Keep both reference panes reachable in focus mode.
+                        // On a wide screen they open as drawers; on a compact
+                        // screen the same buttons already use the drawers.
                         Button {
-                            visible: !root.focusMode && (!root.wideLayout || !root.coachOpen)
+                            visible: root.focusMode || !root.wideLayout
+                            text: "题面"
+                            flat: true
+                            onClicked: detailsDrawer.open()
+                        }
+                        Button {
+                            visible: root.focusMode || !root.wideLayout || !root.coachOpen
                             text: "AI 教练"
                             flat: true
-                            onClicked: root.wideLayout ? root.coachOpen = true : coachDrawer.open()
+                            onClicked: root.wideLayout && !root.focusMode ? root.coachOpen = true : coachDrawer.open()
                         }
                         Button { text: root.focusMode ? "退出专注" : "专注编码"; flat: true; onClicked: root.focusMode = !root.focusMode }
-                        Button { text: "保存"; flat: true; onClicked: app.saveSubmission(editor.text) }
+                        Button { text: "保存"; flat: true; enabled: root.hasTask && !app.busy; onClicked: app.saveSubmission(editor.text) }
                     }
                 }
                 Rectangle {
@@ -216,7 +260,8 @@ Item {
                     Layout.fillHeight: true
                     color: root.palette.surface
                     radius: 9
-                    border.color: root.palette.border
+                    border.color: editor.activeFocus ? root.palette.accent : root.palette.border
+                    border.width: editor.activeFocus ? 2 : 1
                     clip: true
 
                     ColumnLayout {
@@ -236,13 +281,15 @@ Item {
                                 Text { text: "Python"; color: root.palette.accent; font.bold: true; font.pixelSize: 11 }
                                 Text { text: "纯文本编辑"; color: root.palette.muted; font.pixelSize: 11 }
                                 Item { Layout.fillWidth: true }
-                                Text { text: "自动保存草稿"; color: root.palette.muted; font.pixelSize: 11 }
+                                Text { text: app.submissionDirty ? "本地草稿 · 尚未保存" : "本地草稿 · 已保存"; color: app.submissionDirty ? root.palette.warning : root.palette.muted; font.pixelSize: 11 }
                             }
                         }
                         TextArea {
                             id: editor
                             Layout.fillWidth: true; Layout.fillHeight: true
                             text: app.submissionText
+                            enabled: root.hasTask
+                            readOnly: !root.hasTask
                             color: root.palette.text
                             selectionColor: root.palette.accent
                             font.family: root.codeFontFamily
@@ -253,7 +300,7 @@ Item {
                             clip: true
                             background: Rectangle { color: "transparent" }
                             Accessible.name: "Submission editor"
-                            onTextChanged: app.updateSubmissionDraft(text)
+                            onTextChanged: if (!root.syncingEditor) app.updateSubmissionDraft(text)
                         }
                     }
                     // A quiet rail makes the editor boundary legible without
@@ -263,6 +310,42 @@ Item {
                         height: Math.max(0, parent.height - 30)
                         color: root.palette.accent
                         opacity: 0.72
+                    }
+                    Rectangle {
+                        objectName: "exerciseNoTaskState"
+                        visible: !root.hasTask
+                        anchors.fill: parent
+                        z: 2
+                        color: root.palette.surface
+                        opacity: 0.97
+                        ColumnLayout {
+                            anchors.centerIn: parent
+                            width: Math.min(parent.width - 48, 360)
+                            spacing: 10
+                            Text {
+                                Layout.fillWidth: true
+                                text: "还没有打开题目"
+                                color: root.palette.text
+                                font.pixelSize: 18
+                                font.bold: true
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: "先从刷题训练选择一道可运行题目，编辑器和公开测试会自动绑定到当前作答。"
+                                color: root.palette.muted
+                                wrapMode: Text.Wrap
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+                            Button {
+                                objectName: "exerciseChooseProblem"
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.preferredHeight: 40
+                                text: "去刷题训练"
+                                highlighted: true
+                                onClicked: app.navigate("learn")
+                            }
+                        }
                     }
                 }
                 RowLayout {
@@ -282,8 +365,10 @@ Item {
                     // Keep the initial workspace focused on the editor.  Once
                     // a real result exists the panel expands; long output is
                     // still constrained by the inner ScrollView.
-                    Layout.preferredHeight: root.testResultExpanded ? 154 : 92
-                    Layout.minimumHeight: 80
+                    Layout.preferredHeight: root.testResultExpanded
+                                          ? (root.compactHeight ? 128 : 154)
+                                          : (root.compactHeight ? 78 : 92)
+                    Layout.minimumHeight: root.compactHeight ? 68 : 80
                     radius: 9
                     color: root.palette.surface
                     border.color: app.testState === "测试通过" ? root.palette.success
@@ -317,7 +402,7 @@ Item {
                 Rectangle {
                     objectName: "practiceNextAction"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 70
+                    Layout.preferredHeight: root.compactHeight ? 62 : 70
                     radius: 9
                     color: root.palette.surface
                     border.color: root.primaryActionKind() === "blocked" ? root.palette.warning : root.palette.border
@@ -418,6 +503,7 @@ Item {
         height: root.height
         modal: true
         contentItem: ScrollView {
+            anchors.fill: parent
             clip: true
             Column {
                 x: 20
@@ -437,6 +523,8 @@ Item {
         height: root.height
         modal: true
         contentItem: ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 16
             spacing: 12
             Text { text: "AI 教练"; color: root.palette.text; font.pixelSize: 20; font.bold: true }
             Text { text: "AI 只提供解释和审查，不会自动修改答案。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }

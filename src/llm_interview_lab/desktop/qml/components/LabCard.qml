@@ -7,7 +7,10 @@ Rectangle {
     // A narrow accent rail gives priority cards a consistent visual anchor
     // without adding another card variant or changing their content API.
     property color accentColor: "transparent"
-    property int padding: 20
+    // Keep surfaces compact enough for a 620px-tall window.  Pages can still
+    // opt into a larger inset for a prominent hero, but the shared default
+    // should not make every section read like a floating dashboard tile.
+    property int padding: 16
     // Prominent cards (for example the current task on Home) get a slightly
     // stronger frame without introducing a second card component or changing
     // the content contract used by existing pages.
@@ -17,7 +20,7 @@ Rectangle {
     // Slightly generous corners and a quiet frame make the surface feel
     // deliberate at both desktop scales without turning every section into a
     // floating, over-rounded tile.
-    radius: prominent ? 16 : 14
+    radius: prominent ? 12 : 10
     border.color: borderColor
     border.width: prominent ? 2 : 1
     implicitHeight: contentColumn.implicitHeight + padding * 2

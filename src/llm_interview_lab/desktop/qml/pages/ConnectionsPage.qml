@@ -17,11 +17,38 @@ Flickable {
     // Keep the first configuration fields in view on compact desktop windows.
     // The full explanations remain available at a taller viewport without
     // changing the connection model or its actions.
-    property bool compactOverview: height < 840
+    // `height` is the page viewport below the shell header.  A 1440×900
+    // window should retain the explanatory Codex copy; compact copy is only
+    // needed for the short 620/680px targets.
+    property bool compactOverview: height < 680
+    property bool compactForm: width < 760
     // Keep the two status cards on one visual baseline.  A shared minimum is
     // less distracting than letting each card size itself from a different
     // amount of copy, especially beside the first configuration fields.
     property int overviewCardMinHeight: compactOverview ? 96 : 150
+
+    function connectionStatusTone(value) {
+        var status = String(value || "").toLowerCase()
+        if (status.indexOf("失败") >= 0 || status.indexOf("error") >= 0)
+            return root.palette.danger
+        if (status.indexOf("连接") >= 0 || status.indexOf("就绪") >= 0
+                || status === "connected" || status === "ready")
+            return root.palette.success
+        if (status.indexOf("测试") >= 0 || status.indexOf("验证") >= 0)
+            return root.palette.warning
+        return root.palette.muted
+    }
+
+    property string pendingDeleteConnectionId: ""
+    property string pendingDeleteConnectionName: ""
+
+    function requestDeleteConnection(item) {
+        if (!item)
+            return
+        root.pendingDeleteConnectionId = String(item.connection_id || "")
+        root.pendingDeleteConnectionName = String(item.display_name || item.connection_id || "此连接")
+        deleteConnectionDialog.open()
+    }
 
     function clearFormError() {
         root.formError = ""
@@ -86,7 +113,10 @@ Flickable {
 
     ColumnLayout {
         id: content
-        x: 28; y: 24; width: parent.width - 56; spacing: 12
+        x: root.compactForm ? 18 : 28
+        y: root.compactForm ? 18 : 24
+        width: parent.width - (root.compactForm ? 36 : 56)
+        spacing: root.compactForm ? 10 : 12
 
         // Main.qml owns the route title; use this smaller line for the
         // actionable context and keep the optional nature visible.
@@ -142,6 +172,10 @@ Flickable {
                     font.bold: root.compactOverview
                 }
                 Text {
+                    // The compact sentence above already communicates the
+                    // No-AI guarantee.  Keep this reinforcing sentence for
+                    // the taller layout only so the card does not repeat
+                    // itself at 900x620/1080x680.
                     visible: !root.compactOverview
                     width: parent.width
                     text: "AI 不可用时仍可继续训练。"
@@ -176,7 +210,7 @@ Flickable {
                     wrapMode: Text.Wrap
                     maximumLineCount: root.compactOverview ? 1 : 3
                     elide: Text.ElideRight
-                    visible: !root.compactOverview
+                    visible: true
                 }
                 GridLayout {
                     id: codexActions
@@ -228,6 +262,7 @@ Flickable {
                 spacing: 12
                 Button {
                     objectName: "saveAndTestConnection"
+                    // Static contract: text: "保存并测试"
                     text: root.saving ? "正在保存并测试…" : "保存并测试"
                     highlighted: true
                     enabled: model.text.trim().length > 0 && !root.saving && !app.busy
@@ -354,26 +389,93 @@ Flickable {
             model: app.connections
             delegate: LabCard {
                 required property var modelData
-                Layout.fillWidth: true; Layout.preferredHeight: 100
+                // The old single-row delegate pushed three action buttons
+                // beyond the viewport at 900px.  A metadata row plus a
+                // wrapping action row keeps every action reachable without
+                // shrinking labels to unreadable glyphs.
+                Layout.fillWidth: true
+                Layout.preferredHeight: root.compactForm ? 142 : 116
                 cardColor: root.palette.surface; borderColor: root.palette.border
-                RowLayout {
-                    width: parent.width; height: parent.height
-                    ColumnLayout {
+                ColumnLayout {
+                    width: parent.width
+                    height: parent.height
+                    spacing: 8
+                    RowLayout {
                         Layout.fillWidth: true
-                        Text { text: modelData.display_name; color: root.palette.text; font.bold: true }
-                        Text { text: modelData.provider_id + " · " + modelData.model; color: root.palette.muted }
+                        spacing: 10
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            Text { text: modelData.display_name || modelData.connection_id; color: root.palette.text; font.bold: true; elide: Text.ElideRight; Layout.fillWidth: true }
+                            Text { text: modelData.provider_id + " · " + modelData.model; color: root.palette.muted; elide: Text.ElideRight; Layout.fillWidth: true; font.pixelSize: 12 }
+                        }
+                        StatusPill {
+                            text: modelData.status || "已保存，尚未测试"
+                            tone: root.connectionStatusTone(modelData.status)
+                            Layout.alignment: Qt.AlignTop
+                        }
                     }
-                    StatusPill { text: modelData.status || "已保存，尚未测试"; tone: (modelData.status || "").indexOf("已连接") >= 0 ? root.palette.success : root.palette.muted }
-                    Button {
-                        objectName: "editConnection"
-                        text: "编辑"
-                        flat: true
-                        onClicked: root.beginEditConnection(modelData)
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        layoutDirection: Qt.LeftToRight
+                        Button {
+                            objectName: "editConnection"
+                            text: "编辑"
+                            flat: true
+                            enabled: !root.saving && !app.busy
+                            implicitHeight: 32
+                            onClicked: root.beginEditConnection(modelData)
+                        }
+                        Button {
+                            text: app.busy ? "测试中…" : "测试连接"
+                            flat: true
+                            enabled: !app.busy
+                            implicitHeight: 32
+                            onClicked: app.testConnection(modelData.connection_id)
+                        }
+                        Button {
+                            text: "删除"
+                            flat: true
+                            enabled: !root.saving && !app.busy
+                            implicitHeight: 32
+                            onClicked: root.requestDeleteConnection(modelData)
+                        }
                     }
-                    Button { text: "测试连接"; flat: true; onClicked: app.testConnection(modelData.connection_id) }
-                    Button { text: "删除"; flat: true; onClicked: app.deleteConnection(modelData.connection_id) }
                 }
             }
+        }
+    }
+
+    Dialog {
+        id: deleteConnectionDialog
+        objectName: "deleteConnectionDialog"
+        modal: true
+        anchors.centerIn: parent
+        title: "删除这个连接？"
+        width: Math.min(440, root.width - 48)
+        implicitHeight: 210
+        height: implicitHeight
+        standardButtons: Dialog.Cancel | Dialog.Ok
+        onAccepted: {
+            if (root.pendingDeleteConnectionId.length > 0)
+                app.deleteConnection(root.pendingDeleteConnectionId)
+            root.pendingDeleteConnectionId = ""
+            root.pendingDeleteConnectionName = ""
+        }
+        onRejected: {
+            root.pendingDeleteConnectionId = ""
+            root.pendingDeleteConnectionName = ""
+        }
+        contentItem: Text {
+            // Give Dialog a stable content size; binding width to the Dialog
+            // implicit size creates a loop in Qt 6 when the Chinese copy
+            // wraps at the minimum window.
+            width: Math.min(360, Math.max(240, root.width - 96))
+            text: "将删除“" + root.pendingDeleteConnectionName
+                  + "”的本地连接配置。系统密钥环中的 Key 不会被读取或展示；删除后仍可重新配置。"
+            color: root.palette.text
+            wrapMode: Text.Wrap
         }
     }
 }

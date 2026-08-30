@@ -32,6 +32,7 @@ PROFILE_SUBDIRECTORIES = (
     "exports",
     "materials",
     "interviews",
+    "coach",
 )
 
 
@@ -47,6 +48,7 @@ class ProfilePaths:
     submissions_root: Path
     materials_root: Path
     interviews_root: Path
+    coach_root: Path
 
 
 @dataclass(frozen=True)
@@ -151,6 +153,7 @@ def profile_paths(repo_root: Path, profile_id: str) -> ProfilePaths:
         root / "submissions",
         root / "materials",
         root / "interviews",
+        root / "coach",
     )
 
 
@@ -296,6 +299,7 @@ def ensure_profile_is_ignored(repo_root: Path, profile_id: str) -> None:
         paths.materials_root / "manifest.json",
         paths.interviews_root / "privacy-probe" / "session.json",
         paths.submissions_root / "privacy-probe" / "submission.py",
+        paths.coach_root / "sessions.json",
     )
     # Validate lexical components before invoking Git.  On POSIX, git
     # check-ignore refuses to traverse a directory symlink and returns 128;
@@ -359,7 +363,13 @@ def init_profile(
     paths.root.mkdir(parents=True, exist_ok=False)
     ensure_profile_path_is_safe(repo_root, profile_id, paths.root, must_exist=True)
     _ensure_profile_subdirectories(repo_root, paths)
-    paths.profile_file.write_text(yaml.safe_dump(template, sort_keys=False, allow_unicode=True), encoding="utf-8", newline="\n")
+    # Keep profile creation compatible with the oldest supported runtimes;
+    # the optional ``newline`` keyword on Path.write_text is not needed for
+    # this UTF-8 YAML payload and is unavailable on some Python 3 releases.
+    paths.profile_file.write_text(
+        yaml.safe_dump(template, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
     append_event(paths.events_file, event_schema_path(repo_root), profile_id=profile_id, event_type="profile_created", problem_id=None, attempt_id=None, payload={"synthetic": False, "target_roles": template["target_roles"]})
     return InitResult(paths, True)
 

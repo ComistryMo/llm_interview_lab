@@ -11,6 +11,7 @@ Item {
     property string filterMode: "recommended"
     property string query: ""
     property var filteredProblems: []
+    property bool compactLayout: width < 780
 
     function statusText(value) {
         return ({not_started: "未开始", in_progress: "进行中", implemented: "已实现",
@@ -104,6 +105,7 @@ Item {
             ComboBox {
                 id: filter
                 objectName: "learnFilter"
+                Layout.preferredWidth: root.compactLayout ? 142 : 164
                 model: ["推荐", "全部可做", "实验性"]
                 onCurrentIndexChanged: {
                     root.filterMode = ["recommended", "available", "experimental"][currentIndex]
@@ -113,7 +115,7 @@ Item {
             TextField {
                 id: search
                 objectName: "learnSearch"
-                Layout.preferredWidth: 220
+                Layout.preferredWidth: root.compactLayout ? 188 : 220
                 placeholderText: "搜索标题、技能或 ID"
                 onTextChanged: { root.query = text; root.refreshList() }
             }
@@ -145,6 +147,7 @@ Item {
             objectName: "learnProblemList"
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: list.count > 0
             spacing: 12
             clip: true
             model: root.filteredProblems
@@ -166,7 +169,7 @@ Item {
                 required property var modelData
                 required property int index
                 width: list.width
-                height: 116
+                height: root.compactLayout ? 142 : 116
                 padding: 16
                 cardColor: root.palette.surface
                 prominent: modelData.status === "in_progress"
@@ -186,7 +189,9 @@ Item {
                         Text { text: modelData.title; color: root.palette.text; font.bold: true; font.pixelSize: 17; wrapMode: Text.Wrap; maximumLineCount: 2; Layout.fillWidth: true }
                         Text { text: modelData.skills && modelData.skills.length ? modelData.skills.slice(0, 3).join(" · ") : " "; color: root.palette.muted; font.pixelSize: 12; elide: Text.ElideRight; Layout.fillWidth: true }
                         Text { text: modelData.problem_id || ""; color: root.palette.muted; font.pixelSize: 11; elide: Text.ElideRight; Layout.fillWidth: true }
-                        RowLayout {
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 6
                             StatusPill { text: root.statusText(modelData.status); tone: modelData.status === "mastered" ? root.palette.success : root.palette.accent }
                             StatusPill { text: root.validationText(modelData.validation); tone: ["oracle", "field", "stable"].indexOf(modelData.validation) >= 0 ? root.palette.success : root.palette.warning }
                             StatusPill { text: modelData.environment || "当前可运行"; tone: root.palette.muted }
@@ -195,13 +200,15 @@ Item {
                     Button {
                         id: problemActionButton
                         objectName: "learnOpenProblemButton"
-                        text: modelData.locked ? "未解锁"
+                        text: modelData.validation === "contract" ? "实验未启用"
+                              : modelData.locked ? "未解锁"
                               : modelData.status === "in_progress" ? "继续"
                               : modelData.status === "mastered" ? "查看"
                               : "开始"
                         enabled: !modelData.locked
                                  && modelData.asset_status !== "planned"
                                  && modelData.environment_available !== false
+                                 && modelData.validation !== "contract"
                         Layout.preferredWidth: 82
                         Layout.preferredHeight: 40
                         Layout.alignment: Qt.AlignTop
@@ -224,7 +231,7 @@ Item {
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
-                        onClicked: app.openProblem(modelData.problem_id)
+                        onClicked: if (modelData.validation !== "contract") app.openProblem(modelData.problem_id)
                     }
                 }
             }

@@ -19,7 +19,13 @@ ApplicationWindow {
     // Keep native Material controls aligned with the shell palette.
     Material.accent: backend.theme === "dark" ? "#91adff" : "#3159d9"
 
-    property bool dark: Material.theme === Material.Dark
+    // Material.System is a style selection, not a resolved color scheme.  Use
+    // the platform hint as well so custom surfaces follow the system theme
+    // instead of silently remaining light on a dark desktop.
+    property bool dark: backend.theme === "dark"
+                        || (backend.theme === "system"
+                            && Qt.application.styleHints
+                            && Qt.application.styleHints.colorScheme === Qt.ColorScheme.Dark)
     property var colors: ({
         // A quiet neutral canvas keeps the single accent colour reserved for
         // actions and progress.  This is deliberately a palette adjustment,
@@ -42,6 +48,22 @@ ApplicationWindow {
     // tofu on minimal CI images.
     property string uiFontFamily: Qt.platform.os === "windows" ? "Microsoft YaHei UI"
                                        : Qt.platform.os === "osx" ? "PingFang SC" : ""
+    // The shell gets a small responsive breakpoint of its own.  Keeping the
+    // decision here lets pages use their full content width while the
+    // navigation/header remain legible at the 900px minimum window.
+    property bool compactShell: width < 1040
+    property string paletteQuery: ""
+    property var paletteActions: [
+        {id: "home", label: "打开首页", hint: "继续训练或开始模拟面试"},
+        {id: "learn", label: "打开刷题训练", hint: "按课程前置选择题目"},
+        {id: "interview", label: "打开模拟面试", hint: "开始或恢复结构化面试"},
+        {id: "coach", label: "打开 AI 教练", hint: "查看上下文并请求只读帮助"},
+        {id: "career", label: "打开求职材料", hint: "管理当前 Profile 的材料"},
+        {id: "progress", label: "打开学习进度", hint: "查看当前 Profile 的进度"},
+        {id: "connections", label: "打开 AI 连接", hint: "配置或测试普通 LLM"},
+        {id: "settings", label: "打开设置", hint: "外观、本地目录与 Codex"},
+        {id: "run-tests", label: "运行公开测试", hint: "保存当前编辑器并运行测试", exerciseOnly: true}
+    ]
     // A Codex request is owned by the shell, not by an individual page.  The
     // map is intentionally kept here so navigation cannot hide a pending
     // safety decision.
@@ -68,18 +90,56 @@ ApplicationWindow {
         approvalActionInFlight = true
         try {
             backend.resolveCodexApproval(requestId, decision)
-            // Resolve exactly the request the user saw.  Closing the details
-            // dialog by itself never reaches this function and is not approval.
-            pendingCodexApproval = ({})
-            approvalDialog.close()
         } catch (error) {
+            approvalActionInFlight = false
             message.text = "审批未发送，请重试；请求仍保持待处理。"
             toastPopup.open()
         }
-        approvalActionInFlight = false
+    }
+
+    function paletteItems() {
+        var query = paletteQuery.trim().toLowerCase()
+        var result = []
+        for (var i = 0; i < paletteActions.length; ++i) {
+            var action = paletteActions[i]
+            if (action.exerciseOnly
+                    && (backend.currentPage !== "exercise" || backend.busy))
+                continue
+            var haystack = (action.label + " " + action.hint).toLowerCase()
+            if (!query || haystack.indexOf(query) >= 0)
+                result.push(action)
+        }
+        return result
+    }
+
+    function triggerPaletteAction(actionId) {
+        if (actionId === "run-tests") {
+            if (backend.currentPage === "exercise" && !backend.busy)
+                backend.runTests()
+            commandPalette.close()
+            return
+        }
+        backend.navigate(actionId)
+        commandPalette.close()
+    }
+
+    function compactAiStatus(value) {
+        var status = String(value || "")
+        if (status.indexOf("已连接") >= 0 || status.indexOf("就绪") >= 0)
+            return "AI 已连接"
+        if (status.indexOf("失败") >= 0 || status.indexOf("不可用") >= 0
+                || status.indexOf("错误") >= 0)
+            return "AI 连接失败"
+        if (status.indexOf("检测") >= 0 || status.indexOf("连接中") >= 0
+                || status.indexOf("处理中") >= 0)
+            return "检测中"
+        return "No-AI 可用"
     }
     font.pixelSize: Math.round(14 * backend.fontScale)
-    font.family: uiFontFamily || Qt.application.font.family
+    // An empty family lets Qt use the platform fallback chain.  Reading
+    // Qt.application.font.family on minimal Linux/offscreen setups yields the
+    // synthetic “Sans Serif” alias and triggers a needless font lookup.
+    font.family: uiFontFamily
     color: colors.background
 
     menuBar: MenuBar {
@@ -112,6 +172,20 @@ ApplicationWindow {
         onActivated: backend.runTests()
     }
 
+    // A deliberately small command palette keeps navigation discoverable for
+    // keyboard users without introducing a second command/router layer.  All
+    // entries map to existing backend actions; unavailable actions are simply
+    // omitted from the list.
+    Shortcut {
+        sequences: ["Ctrl+K", "Meta+K"]
+        enabled: !backend.onboardingRequired
+        onActivated: {
+            commandPalette.open()
+            paletteSearch.forceActiveFocus()
+            paletteSearch.selectAll()
+        }
+    }
+
     onClosing: backend.shutdown()
 
     RowLayout {
@@ -119,7 +193,7 @@ ApplicationWindow {
         spacing: 0
 
         Rectangle {
-            Layout.preferredWidth: window.width < 1160 ? 190 : 216
+            Layout.preferredWidth: window.compactShell ? 184 : 216
             Layout.fillHeight: true
             color: window.dark ? "#121a27" : "#fbfcfe"
             border.color: window.colors.border
@@ -131,7 +205,7 @@ ApplicationWindow {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.bottomMargin: 20
+                    Layout.bottomMargin: window.compactShell ? 14 : 20
                     Rectangle {
                         width: 36; height: 36; radius: 10
                         color: window.colors.accent
@@ -154,10 +228,10 @@ ApplicationWindow {
                             id: brandTitle
                             // Keep the compact lockup intentional instead of
                             // letting the product name wrap at an arbitrary word.
-                            text: window.width < 1160 ? "LLM\nInterview Lab" : "LLM Interview Lab"
+                            text: window.compactShell ? "LLM\nInterview Lab" : "LLM Interview Lab"
                             color: window.colors.text
                             font.bold: true
-                            font.pixelSize: window.width < 1160 ? 14 : 15
+                            font.pixelSize: window.compactShell ? 14 : 15
                             Layout.fillWidth: true
                             elide: Text.ElideRight
                             maximumLineCount: window.width < 1160 ? 2 : 1
@@ -193,10 +267,16 @@ ApplicationWindow {
                         id: navButton
                         required property var modelData
                         Layout.fillWidth: true
-                        // Compact, 38px targets keep all three navigation
-                        // groups visible at the minimum supported window while
-                        // remaining comfortably keyboard/mouse accessible.
+                        // Compact, 38px targets keep the high-frequency loop
+                        // comfortably keyboard/mouse accessible.
                         Layout.preferredHeight: 38
+                        // Keep the compact shell focused on the daily loop;
+                        // the remaining destinations are exposed by the real
+                        // command palette and the explicit “更多入口…” action.
+                        visible: !window.compactShell || modelData.id === "home"
+                                 || modelData.id === "learn"
+                                 || modelData.id === "interview"
+                                 || modelData.id === "coach"
                         text: modelData.label
                         flat: true
                         font.weight: backend.currentPage === modelData.id ? Font.DemiBold : Font.Normal
@@ -250,6 +330,7 @@ ApplicationWindow {
                 }
 
                 Text {
+                    visible: !window.compactShell
                     text: "个人"
                     color: window.colors.muted
                     font.pixelSize: 11
@@ -267,6 +348,7 @@ ApplicationWindow {
                 }
 
                 Text {
+                    visible: !window.compactShell
                     text: "配置"
                     color: window.colors.muted
                     font.pixelSize: 11
@@ -280,6 +362,34 @@ ApplicationWindow {
                         {id: "settings", label: backend.uiText("nav.settings")}
                     ]
                     delegate: navButtonDelegate
+                }
+
+                // Secondary destinations remain real and keyboard reachable
+                // through the palette.  At the minimum window width the
+                // sidebar presents only the high-frequency loop, with an
+                // explicit affordance so newcomers do not have to know the
+                // Ctrl/⌘K shortcut in advance.
+                Button {
+                    id: moreNavigationButton
+                    objectName: "moreNavigationButton"
+                    visible: window.compactShell
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 36
+                    text: "更多入口…"
+                    flat: true
+                    onClicked: {
+                        commandPalette.open()
+                        paletteSearch.forceActiveFocus()
+                        paletteSearch.selectAll()
+                    }
+                    contentItem: Text {
+                        text: moreNavigationButton.text
+                        color: window.colors.muted
+                        font.pixelSize: 12
+                        horizontalAlignment: Text.AlignLeft
+                        verticalAlignment: Text.AlignVCenter
+                        leftPadding: 14
+                    }
                 }
 
                 Item { Layout.fillHeight: true }
@@ -327,14 +437,16 @@ ApplicationWindow {
                     anchors.leftMargin: 30
                     anchors.rightMargin: 30
                     Text {
+                        Layout.fillWidth: true
                         text: ({home:"首页", career:"求职材料", learn:"刷题训练", exercise:"答题工作区", interview:"模拟面试", coach:"AI 教练", progress:"学习进度", connections:"AI 连接", settings:"设置"})[backend.currentPage] || "LLM Interview Lab"
                         color: window.colors.text
-                        font.pixelSize: 21
+                        font.pixelSize: window.compactShell ? 19 : 21
                         font.weight: Font.DemiBold
+                        elide: Text.ElideRight
                     }
-                    Item { Layout.fillWidth: true }
+                    Item { Layout.fillWidth: true; visible: !window.compactShell }
                     Rectangle {
-                        visible: !!backend.profileDisplayName || !!backend.profileId
+                        visible: (!!backend.profileDisplayName || !!backend.profileId) && !window.compactShell
                         property int profileChipMaxWidth: window.width < 1100 ? 150 : 230
                         Layout.preferredHeight: 30
                         Layout.maximumWidth: profileChipMaxWidth
@@ -356,7 +468,14 @@ ApplicationWindow {
                             elide: Text.ElideRight
                         }
                     }
-                    StatusPill { text: backend.aiStatus; tone: backend.aiStatus.indexOf("已连接") >= 0 || backend.aiStatus.indexOf("就绪") >= 0 ? window.colors.success : window.colors.muted }
+                    StatusPill {
+                        visible: true
+                        text: window.compactShell ? window.compactAiStatus(backend.aiStatus) : backend.aiStatus
+                        tone: backend.aiStatus.indexOf("已连接") >= 0 || backend.aiStatus.indexOf("就绪") >= 0
+                              ? window.colors.success
+                              : backend.aiStatus.indexOf("失败") >= 0 || backend.aiStatus.indexOf("不可用") >= 0
+                                ? window.colors.danger : window.colors.muted
+                    }
                     BusyIndicator { running: backend.busy; visible: running; implicitWidth: 28; implicitHeight: 28 }
                 }
             }
@@ -437,6 +556,144 @@ ApplicationWindow {
     }
 
     Popup {
+        id: commandPalette
+        objectName: "commandPalette"
+        // The first-run flow is intentionally focused and has no navigation
+        // actions behind it.  Keep the popup closed if onboarding becomes
+        // required again; `enabled` avoids binding Popup.visible to its
+        // internal open/close state (which would otherwise show it at launch).
+        enabled: !backend.onboardingRequired
+        x: Math.max(24, Math.round((window.width - width) / 2))
+        y: 76
+        width: Math.min(560, window.width - 48)
+        height: Math.min(410, window.height - 112)
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        onOpened: {
+            if (backend.onboardingRequired) {
+                commandPalette.close()
+                return
+            }
+            paletteList.currentIndex = paletteList.count > 0 ? 0 : -1
+            paletteSearch.forceActiveFocus()
+            paletteSearch.selectAll()
+        }
+        onClosed: {
+            window.paletteQuery = ""
+            paletteSearch.text = ""
+        }
+        background: Rectangle {
+            color: window.colors.surface
+            radius: 12
+            border.color: window.colors.border
+            border.width: 1
+        }
+        contentItem: ColumnLayout {
+            spacing: 8
+            Text {
+                text: "快速操作"
+                color: window.colors.text
+                font.pixelSize: 16
+                font.bold: true
+                Layout.fillWidth: true
+            }
+            TextField {
+                id: paletteSearch
+                objectName: "commandPaletteSearch"
+                Layout.fillWidth: true
+                placeholderText: "搜索页面或动作…"
+                selectByMouse: true
+                onTextChanged: window.paletteQuery = text
+                onAccepted: {
+                    var items = window.paletteItems()
+                    if (items.length > 0)
+                        window.triggerPaletteAction(items[0].id)
+                }
+                Keys.onDownPressed: {
+                    if (paletteList.count > 0) {
+                        paletteList.forceActiveFocus()
+                        paletteList.currentIndex = Math.max(0, paletteList.currentIndex)
+                    }
+                }
+                background: Rectangle {
+                    color: window.colors.surfaceAlt
+                    radius: 8
+                    border.color: paletteSearch.activeFocus ? window.colors.accent : window.colors.border
+                    border.width: paletteSearch.activeFocus ? 2 : 1
+                }
+            }
+            ListView {
+                id: paletteList
+                objectName: "commandPaletteList"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                spacing: 3
+                model: window.paletteItems()
+                onCountChanged: {
+                    // Filtering can shrink the model below the previously
+                    // selected index. Always leave Enter on a real first
+                    // result (or no result), never on an invisible row.
+                    currentIndex = count > 0
+                                   ? Math.min(Math.max(currentIndex, 0), count - 1)
+                                   : -1
+                }
+                Keys.onReturnPressed: {
+                    if (currentIndex >= 0 && currentIndex < count)
+                        window.triggerPaletteAction(window.paletteItems()[currentIndex].id)
+                }
+                delegate: Button {
+                    required property var modelData
+                    required property int index
+                    property bool selected: index === paletteList.currentIndex
+                    width: paletteList.width
+                    height: 48
+                    flat: true
+                    focusPolicy: Qt.StrongFocus
+                    onClicked: window.triggerPaletteAction(modelData.id)
+                    background: Rectangle {
+                        radius: 8
+                        color: parent.selected || parent.hovered || parent.activeFocus
+                               ? window.colors.surfaceAlt
+                               : "transparent"
+                    }
+                    contentItem: RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        spacing: 10
+                        Text {
+                            text: modelData.label
+                            color: window.colors.text
+                            font.bold: true
+                            Layout.preferredWidth: 142
+                        }
+                        Text {
+                            text: modelData.hint
+                            color: window.colors.muted
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                    }
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: paletteList.count === 0
+                    text: "没有匹配的操作"
+                    color: window.colors.muted
+                }
+            }
+            Text {
+                text: "Enter 执行 · Esc 关闭 · Ctrl/⌘ K 打开"
+                color: window.colors.muted
+                font.pixelSize: 11
+                Layout.fillWidth: true
+            }
+        }
+    }
+
+    Popup {
         id: toastPopup
         objectName: "globalToast"
         x: window.width - width - 30
@@ -478,6 +735,33 @@ ApplicationWindow {
                 return
             window.pendingCodexApproval = value
             window.approvalActionInFlight = false
+        }
+    }
+    Connections {
+        target: backend
+        function onCodexApprovalResolved(requestId) {
+            if (!window.pendingCodexApproval
+                    || String(window.pendingCodexApproval.request_id) !== String(requestId))
+                return
+            window.pendingCodexApproval = ({})
+            window.approvalActionInFlight = false
+            approvalDialog.close()
+        }
+        function onCodexApprovalFailed(value) {
+            if (!value || !window.pendingCodexApproval
+                    || String(window.pendingCodexApproval.request_id) !== String(value.request_id))
+                return
+            window.approvalActionInFlight = false
+            message.text = String(value.error || "审批未发送，请重试；请求仍保持待处理。")
+            toastPopup.open()
+            toastTimer.restart()
+        }
+    }
+    Connections {
+        target: backend
+        function onStateChanged() {
+            if (backend.onboardingRequired && commandPalette.opened)
+                commandPalette.close()
         }
     }
 

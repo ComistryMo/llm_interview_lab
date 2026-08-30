@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
+import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import shutil
@@ -14,6 +16,7 @@ from llm_interview_lab.ai.context_builder import (
     build_role_interview_context_preview,
 )
 from llm_interview_lab.catalog import load_catalog
+from llm_interview_lab.application import ApplicationService
 from llm_interview_lab.context import build_interview_context, serialize_context
 from llm_interview_lab.materials import add_material, resolve_material_path
 from llm_interview_lab.role_interviews import (
@@ -28,6 +31,9 @@ from llm_interview_lab.role_interviews import (
     record_role_followup,
     role_interview_report,
     start_role_interview,
+    pause_role_interview,
+    resume_role_interview,
+    role_interview_state,
 )
 from llm_interview_lab.roles import load_role_catalog
 from llm_interview_lab.workspace import init_profile, profile_paths
@@ -236,12 +242,19 @@ def test_role_blueprint_selects_validated_coding_problem_and_creates_local_start
 ) -> None:
     root = _repository(tmp_path)
     catalog, roles = _catalogs(root)
+    # Keep the contract covered on the default (no optional torch) CI job;
+    # retain the original PyTorch-heavy role when that extra is installed.
+    role_id = (
+        "ai_algorithm_research_engineer"
+        if importlib.util.find_spec("torch") is not None
+        else "applied_ai_engineer"
+    )
     session = create_role_interview(
         root,
         "learner-one",
         catalog,
         roles,
-        role_id="ai_algorithm_research_engineer",
+        role_id=role_id,
         seniority="intern",
         difficulty="medium",
         now=T0,
@@ -259,6 +272,184 @@ def test_role_blueprint_selects_validated_coding_problem_and_creates_local_start
     )
     assert submission.is_file()
     assert "NotImplementedError" in submission.read_text(encoding="utf-8") or "TODO" in submission.read_text(encoding="utf-8")
+
+
+def test_grader_source_is_restricted_to_coding_rounds(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    session = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="ai_product_manager",
+        seniority="new_grad",
+        difficulty="medium",
+        now=T0,
+    )
+    start_role_interview(root, "learner-one", session["interview_id"], catalog, now=T0)
+    question = current_role_question(
+        root, "learner-one", session["interview_id"], now=T0
+    )["question"]
+    assert question["kind"] != "coding"
+    record_role_answer(
+        root,
+        "learner-one",
+        session["interview_id"],
+        question["question_id"],
+        "A bounded answer with explicit assumptions and evidence.",
+        now=T0,
+    )
+    with pytest.raises(RoleInterviewError, match="only valid for coding"):
+        record_role_assessment(
+            root,
+            "learner-one",
+            session["interview_id"],
+            question["question_id"],
+            {name: 3 for name in question["rubric"]["dimensions"]},
+            evidence="A fake grader result must never score a text answer.",
+            source="grader",
+            confidence="high",
+            now=T0,
+        )
+
+
+def test_coding_assessment_is_grader_bound_and_rejects_stale_or_subjective_scores(
+    tmp_path: Path,
+) -> None:
+    """A coding round cannot be upgraded by an arbitrary human/AI score."""
+
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    session = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="applied_ai_engineer",
+        seniority="intern",
+        difficulty="medium",
+        now=T0,
+    )
+    interview_id = session["interview_id"]
+    start_role_interview(root, "learner-one", interview_id, catalog, now=T0)
+    question = current_role_question(root, "learner-one", interview_id, now=T0)["question"]
+    assert question is not None and question["kind"] == "coding"
+    submission = (
+        profile_paths(root, "learner-one").interviews_root
+        / interview_id
+        / "coding"
+        / question["question_id"]
+        / "submission.py"
+    )
+    digest = hashlib.sha256(submission.read_bytes()).hexdigest()
+    path = profile_paths(root, "learner-one").interviews_root / interview_id / "session.json"
+    stored = json.loads(path.read_text(encoding="utf-8"))
+    stored["coding_evidence"][question["question_id"]] = {
+        "submission_sha256": digest,
+        "status": "failed",
+        "passed": 0,
+        "failed": 1,
+        "duration_ms": 12,
+        "recorded_at": "2026-08-28T09:01:00Z",
+    }
+    path.write_text(json.dumps(stored), encoding="utf-8")
+    dimensions = {name: 5 for name in question["rubric"]["dimensions"]}
+    with pytest.raises(RoleInterviewError, match="local Grader"):
+        record_role_assessment(
+            root,
+            "learner-one",
+            interview_id,
+            question["question_id"],
+            dimensions,
+            evidence="human says this is excellent",
+            source="human",
+            confidence="high",
+            now=T0 + timedelta(minutes=1),
+        )
+    with pytest.raises(RoleInterviewError, match="5=passed, 1=failed"):
+        record_role_assessment(
+            root,
+            "learner-one",
+            interview_id,
+            question["question_id"],
+            dimensions,
+            evidence="fake grader evidence",
+            source="grader",
+            confidence="high",
+            now=T0 + timedelta(minutes=1),
+        )
+    recorded = record_role_assessment(
+        root,
+        "learner-one",
+        interview_id,
+        question["question_id"],
+        {name: 1 for name in question["rubric"]["dimensions"]},
+        evidence="caller text is ignored for objective evidence",
+        source="grader",
+        confidence="high",
+        now=T0 + timedelta(minutes=1),
+    )
+    assessment = recorded["assessments"][question["question_id"]]
+    assert assessment["source"] == "grader"
+    assert "submission_sha256=" + digest in assessment["evidence"]
+
+    # A later edit invalidates the same persisted Grader result.
+    session_two = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="applied_ai_engineer",
+        seniority="intern",
+        difficulty="medium",
+        seed=1,
+        now=T0,
+    )
+    start_role_interview(root, "learner-one", session_two["interview_id"], catalog, now=T0)
+    second_question = current_role_question(
+        root, "learner-one", session_two["interview_id"], now=T0
+    )["question"]
+    assert second_question is not None and second_question["kind"] == "coding"
+    second_submission = (
+        profile_paths(root, "learner-one").interviews_root
+        / session_two["interview_id"]
+        / "coding"
+        / second_question["question_id"]
+        / "submission.py"
+    )
+    second_digest = hashlib.sha256(second_submission.read_bytes()).hexdigest()
+    second_path = (
+        profile_paths(root, "learner-one").interviews_root
+        / session_two["interview_id"]
+        / "session.json"
+    )
+    second_stored = json.loads(second_path.read_text(encoding="utf-8"))
+    second_stored["coding_evidence"][second_question["question_id"]] = {
+        "submission_sha256": second_digest,
+        "status": "passed",
+        "passed": 1,
+        "failed": 0,
+        "duration_ms": 12,
+        "recorded_at": "2026-08-28T09:01:00Z",
+    }
+    second_path.write_text(json.dumps(second_stored), encoding="utf-8")
+    second_submission.write_text(
+        second_submission.read_text(encoding="utf-8") + "\n# changed\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(RoleInterviewError, match="changed after Grader"):
+        record_role_assessment(
+            root,
+            "learner-one",
+            session_two["interview_id"],
+            second_question["question_id"],
+            {name: 5 for name in second_question["rubric"]["dimensions"]},
+            evidence="stale",
+            source="grader",
+            confidence="high",
+            now=T0 + timedelta(minutes=1),
+        )
 
 
 def test_interview_preflight_is_strict_and_writes_nothing_when_unavailable(
@@ -507,6 +698,122 @@ def test_timer_incomplete_finish_and_profile_isolation(tmp_path: Path) -> None:
         load_role_interview(root, "learner-two", one["interview_id"])
 
 
+def test_expired_active_interview_is_not_presented_as_resumable(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    created = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="ai_product_manager",
+        seniority="intern",
+        now=T0,
+    )
+    start_role_interview(root, "learner-one", created["interview_id"], catalog, now=T0)
+    service = ApplicationService(root)
+    assert service.resumable_interview("learner-one") is None
+    preferred = service.preferred_interview("learner-one")
+    assert preferred == {"kind": "expired", "interview_id": created["interview_id"]}
+
+
+def test_pause_resume_persists_clock_and_blocks_mutations(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    created = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="ai_product_manager",
+        seniority="intern",
+        now=T0,
+    )
+    interview_id = created["interview_id"]
+    start_role_interview(root, "learner-one", interview_id, catalog, now=T0)
+
+    paused = pause_role_interview(
+        root, "learner-one", interview_id, now=T0 + timedelta(minutes=7)
+    )
+    assert paused["status"] == "paused"
+    assert paused["deadline"] is None
+    assert paused["paused_at"] == "2026-08-28T09:07:00Z"
+    expected_remaining = created["duration_minutes"] * 60 - 7 * 60
+    assert paused["paused_remaining_seconds"] == expected_remaining
+    assert [item["event"] for item in paused["timeline"]][-1] == "paused"
+    assert role_interview_state(root, "learner-one", interview_id)["status"] == "paused"
+    with pytest.raises(RoleInterviewError, match="not active"):
+        current_role_question(root, "learner-one", interview_id, now=T0 + timedelta(minutes=8))
+    with pytest.raises(RoleInterviewError, match="not active"):
+        record_role_answer(
+            root, "learner-one", interview_id, "q-001", "must be blocked", now=T0
+        )
+    with pytest.raises(RoleInterviewError, match="explicit incomplete"):
+        finish_role_interview(root, "learner-one", interview_id, now=T0 + timedelta(minutes=8))
+
+    resumed = resume_role_interview(
+        root, "learner-one", interview_id, now=T0 + timedelta(hours=1)
+    )
+    assert resumed["status"] == "active"
+    assert resumed["paused_at"] is None
+    assert resumed["paused_remaining_seconds"] is None
+    assert resumed["deadline"] == (
+        T0 + timedelta(hours=1, seconds=expected_remaining)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert [item["event"] for item in resumed["timeline"]][-1] == "resumed"
+    state = role_interview_state(root, "learner-one", interview_id, now=T0 + timedelta(hours=1))
+    assert state["status"] == "active"
+    assert state["remaining_seconds"] == expected_remaining
+
+    service = ApplicationService(root)
+    wrapper_session = service.create_interview(
+        "learner-one", role_id="ai_product_manager", seniority="intern"
+    )
+    service.start_interview("learner-one", wrapper_session["interview_id"])
+    pause_again = service.pause_interview("learner-one", wrapper_session["interview_id"])
+    assert pause_again["status"] == "paused"
+    resumed_again = service.resume_interview("learner-one", wrapper_session["interview_id"])
+    assert resumed_again["status"] == "active"
+
+
+def test_paused_session_is_resumable_and_old_shape_is_readable(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    created = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="ai_product_manager",
+        seniority="intern",
+        now=T0,
+    )
+    interview_id = created["interview_id"]
+    start_role_interview(root, "learner-one", interview_id, catalog, now=T0)
+    pause_role_interview(root, "learner-one", interview_id, now=T0 + timedelta(minutes=1))
+    service = ApplicationService(root)
+    assert service.resumable_interview("learner-one")["status"] == "paused"
+    paused_context = build_interview_context(
+        root, catalog, "learner-one", interview_id, now=T0 + timedelta(minutes=2)
+    )
+    assert paused_context["current"]["status"] == "paused"
+    assert paused_context["current"]["question"]["question_id"] == "q-001"
+    assert paused_context["current"]["remaining_seconds"] > 0
+    assert paused_context["commands"]["next"].endswith(
+        f"role-resume {interview_id} --profile learner-one"
+    )
+
+    path = profile_paths(root, "learner-one").interviews_root / interview_id / "session.json"
+    value = json.loads(path.read_text(encoding="utf-8"))
+    value.pop("paused_at", None)
+    value.pop("paused_remaining_seconds", None)
+    value["status"] = "active"
+    value["deadline"] = "2026-08-28T10:15:00Z"
+    path.write_text(json.dumps(value), encoding="utf-8")
+    loaded = load_role_interview(root, "learner-one", interview_id)
+    assert loaded["status"] == "active"
+
+
 def test_plan_fingerprint_rejects_tampering(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     catalog, roles = _catalogs(root)
@@ -575,6 +882,58 @@ def test_assessment_rejects_empty_or_noncanonical_answer_evidence(tmp_path: Path
             source="human",
             confidence="high",
             now=T0 + timedelta(minutes=1),
+        )
+
+
+def test_finish_rejects_answer_file_changed_after_assessment(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    session = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="ai_product_manager",
+        seniority="new_grad",
+        now=T0,
+    )
+    interview_id = session["interview_id"]
+    start_role_interview(root, "learner-one", interview_id, catalog, now=T0)
+    question = current_role_question(root, "learner-one", interview_id, now=T0)["question"]
+    assert question is not None and question["kind"] != "coding"
+    record_role_answer(
+        root,
+        "learner-one",
+        interview_id,
+        question["question_id"],
+        "Original locked answer with explicit evidence.",
+        now=T0,
+    )
+    record_role_assessment(
+        root,
+        "learner-one",
+        interview_id,
+        question["question_id"],
+        {name: 3 for name in question["rubric"]["dimensions"]},
+        evidence="The original answer names evidence and trade-offs.",
+        source="human",
+        confidence="high",
+        now=T0 + timedelta(minutes=1),
+    )
+    answer_path = (
+        profile_paths(root, "learner-one").interviews_root
+        / interview_id
+        / "answers"
+        / f"{question['question_id']}.md"
+    )
+    answer_path.write_text("Tampered after scoring.\n", encoding="utf-8")
+    with pytest.raises(RoleInterviewError, match="locked answer changed"):
+        finish_role_interview(
+            root,
+            "learner-one",
+            interview_id,
+            confirm_incomplete=True,
+            now=T0 + timedelta(minutes=2),
         )
 
 
@@ -651,6 +1010,32 @@ def test_role_interview_context_reads_only_explicit_sha_bound_material(
             candidate_answer="Same answer.",
             now=T0 + timedelta(minutes=1),
         )
+
+
+def test_paused_role_interview_context_is_read_only_and_recoverable(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    session = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="ai_product_manager",
+        seniority="new_grad",
+        ai_mode="provider",
+        now=T0,
+    )
+    interview_id = session["interview_id"]
+    start_role_interview(root, "learner-one", interview_id, catalog, now=T0)
+    pause_role_interview(root, "learner-one", interview_id, now=T0 + timedelta(minutes=1))
+
+    preview = build_role_interview_context_preview(
+        root, "learner-one", interview_id, now=T0 + timedelta(minutes=2)
+    )
+    assert "read-only" in preview.parts[0].content
+    assert "q-001" in preview.parts[1].content
 
 
 def test_role_interviewer_context_never_previews_future_question(

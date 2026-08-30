@@ -9,6 +9,37 @@ Rectangle {
     required property var app
     required property var palette
     color: root.palette.background
+    // This page is a true gate, not a decorative overlay.  The input shield
+    // consumes clicks in the uncovered shell and the focus scope keeps Tab
+    // and keyboard activation inside onboarding until the Profile exists.
+    focus: visible
+    activeFocusOnTab: true
+    Keys.onPressed: function(event) {
+        if (root.visible) {
+            event.accepted = true
+            if (event.key === Qt.Key_Escape)
+                profileName.forceActiveFocus()
+        }
+    }
+    onVisibleChanged: if (visible) Qt.callLater(function() {
+        root.forceActiveFocus()
+        if (root.step === 0)
+            profileName.forceActiveFocus()
+        else if (roleGrid)
+            roleGrid.forceActiveFocus()
+    })
+
+    MouseArea {
+        id: onboardingInputShield
+        objectName: "onboardingInputShield"
+        anchors.fill: parent
+        z: 0
+        enabled: root.visible
+        acceptedButtons: Qt.AllButtons
+        hoverEnabled: true
+        onPressed: mouse.accepted = true
+        onClicked: mouse.accepted = true
+    }
 
     // The default path has only two user decisions: a display name and a
     // target role. The default path deliberately starts with a fresh
@@ -128,6 +159,7 @@ Rectangle {
     }
 
     ColumnLayout {
+        z: 1
         anchors.centerIn: parent
         width: Math.min(parent.width - 80, 900)
         height: Math.min(parent.height - 36, 690)
@@ -284,8 +316,7 @@ Rectangle {
                             // Keep a persistent affordance for the scrollable
                             // role list; the slimmer thumb avoids obscuring
                             // card copy at compact widths.
-                            policy: roleGrid.contentHeight > roleGrid.height
-                                    ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+                            policy: ScrollBar.AlwaysOn
                             width: 5
                             contentItem: Rectangle {
                                 implicitWidth: 5

@@ -16,6 +16,7 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtCore import QCoreApplication, QSettings
+from PySide6.QtTest import QTest
 
 from llm_interview_lab.desktop.controller import AppController, _decode_ai_assessment
 from llm_interview_lab.desktop.runtime import prepare_desktop_repository
@@ -125,13 +126,71 @@ def test_controller_first_launch_role_material_practice_and_interview(
     controller.shutdown()
 
 
+def test_controller_rehydrates_question_scoped_coding_grader_revision(
+    tmp_path: Path, qapp
+) -> None:
+    """A persisted coding result remains usable after the desktop reloads."""
+
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="coding-user")
+    controller.completeOnboarding(
+        "coding-user", "applied_ai_engineer", "intern", "disabled", "{}"
+    )
+    controller.createConfiguredInterview(
+        "applied_ai_engineer", "intern", "medium", "disabled"
+    )
+    assert controller.interview.get("question")
+    question = controller.interview["question"]
+    assert question["kind"] == "coding"
+    interview_id = controller.interview["interview_id"]
+    coding_path = (
+        profile_paths(root, "coding-user").interviews_root
+        / interview_id
+        / "coding"
+        / question["question_id"]
+        / "submission.py"
+    )
+    digest = hashlib.sha256(coding_path.read_bytes()).hexdigest()
+    session_path = (
+        profile_paths(root, "coding-user").interviews_root
+        / interview_id
+        / "session.json"
+    )
+    session = json.loads(session_path.read_text(encoding="utf-8"))
+    session["coding_evidence"][question["question_id"]] = {
+        "submission_sha256": digest,
+        "status": "passed",
+        "passed": 2,
+        "failed": 0,
+        "duration_ms": 20,
+        "recorded_at": "2026-08-30T08:00:00Z",
+    }
+    session_path.write_text(json.dumps(session), encoding="utf-8")
+
+    controller._load_interview(interview_id)
+    assert controller.interview["coding_tested_revision"] == digest
+    assert controller.interview["coding_test_current"] is True
+    assert controller.interview["phase"] == "assessment"
+    controller.shutdown()
+
+
 def test_demo_controller_exposes_every_page_and_keeps_demo_settings_deterministic(
     tmp_path: Path, qapp
 ) -> None:
     del qapp
     QSettings.setDefaultFormat(QSettings.IniFormat)
     QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    persisted = QSettings("ComistryMo", "LLMInterviewLab")
+    persisted.setValue("codexExecutable", "/private/maintainer/codex")
+    persisted.setValue("theme", "dark")
+    persisted.setValue("fontScale", 1.3)
+    persisted.sync()
     first = AppController(REPO_ROOT, demo_page="home")
+    assert first.codexExecutable == ""
+    assert first.codexAvailable is False
     for page in (
         "home",
         "career",
@@ -147,11 +206,18 @@ def test_demo_controller_exposes_every_page_and_keeps_demo_settings_deterministi
         assert first.currentPage == page
     first.setTheme("dark")
     first.setFontScale(1.25)
+    first.setCodexExecutable("/private/maintainer/codex")
+    first.clearCodexExecutable()
     first.navigate("exercise")
     first.saveSubmission("def demo():\n    return 1\n")
     first.runTests()
     assert "PASS" in first.testOutput
     first.shutdown()
+
+    persisted.sync()
+    assert persisted.value("codexExecutable") == "/private/maintainer/codex"
+    assert persisted.value("theme") == "dark"
+    assert float(persisted.value("fontScale")) == pytest.approx(1.3)
 
     # Demo/screenshot controllers intentionally do not inherit persisted user
     # preferences; otherwise release evidence would vary with the maintainer's
@@ -162,6 +228,28 @@ def test_demo_controller_exposes_every_page_and_keeps_demo_settings_deterministi
     assert restored.fontScale == pytest.approx(1.0)
     restored.testConnection("ollama-local")
     restored.shutdown()
+
+
+def test_demo_controller_never_persists_connections_or_legacy_paths(
+    tmp_path: Path, qapp
+) -> None:
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    legacy = tmp_path / "legacy-data"
+    legacy.mkdir()
+    root = _repository(tmp_path)
+    controller = AppController(
+        root, demo_page="settings", legacy_data_root=legacy
+    )
+    assert controller.legacyMigrationAvailable is False
+    assert controller.legacyDataDirectory == ""
+    assert controller.saveConnection(
+        "demo-provider", "openai", "model", "Demo", "", "not-a-real-key"
+    ) is False
+    assert controller.deleteConnection("ollama-local") is False
+    assert not (root / "workspace/profiles/demo/connections.json").exists()
+    controller.shutdown()
 
 
 def test_qml_offscreen_smoke_and_version_do_not_need_a_profile(tmp_path: Path) -> None:

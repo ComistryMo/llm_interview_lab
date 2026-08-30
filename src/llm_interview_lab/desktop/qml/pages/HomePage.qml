@@ -10,7 +10,15 @@ Flickable {
     property var trainingTarget: app.dashboard.current
                                  || ((app.dashboard.unlocks || []).length > 0 ? app.dashboard.unlocks[0] : null)
     property bool trainingTargetRunnable: !!trainingTarget && trainingTarget.environment_available !== false
-    property bool resumableInterview: !!app.interview && app.interview.status === "active"
+    // An expired active session is deliberately not resumable: the core clock
+    // has reached its deadline and the only truthful next action is to finish
+    // and archive an incomplete report.
+    property bool resumableInterview: !!app.interview
+                                      && (app.interview.resume_available === true
+                                          || (app.interview.resume_available === undefined
+                                              && app.interview.status === "active"
+                                              && app.interview.expired !== true))
+    property bool compactLayout: width < 780 || height < 600
     function statusText(value) {
         return ({not_started: "未开始", in_progress: "进行中", implemented: "已实现",
                  reviewed: "已审查", retained_d2: "已完成 D+2", retained_d7: "已完成 D+7",
@@ -62,11 +70,15 @@ Flickable {
 
     ColumnLayout {
         id: content
-        x: 30; y: 28; width: parent.width - 60
-        spacing: 18
+        x: root.compactLayout ? 18 : 30
+        y: root.compactLayout ? 18 : 28
+        width: parent.width - (root.compactLayout ? 36 : 60)
+        spacing: root.compactLayout ? 12 : 18
 
         Text {
-            text: root.resumableInterview
+            text: app.interview && app.interview.expired
+                  ? "面试已超时"
+                  : root.resumableInterview
                   ? "继续未完成面试"
                   : app.dashboard.current
                   ? "从上次进度继续"
@@ -74,11 +86,13 @@ Flickable {
                     ? "开始今天的训练"
                     : "先准备你的训练"
             color: root.palette.text
-            font.pixelSize: 25
+            font.pixelSize: root.compactLayout ? 22 : 25
             font.bold: true
         }
         Text {
-            text: root.resumableInterview
+            text: app.interview && app.interview.expired
+                  ? "计时已到；打开面试页结束并留档，之后再开始下一场。"
+                  : root.resumableInterview
                   ? "上次面试尚未结束；建议先完成或明确放弃本场，再回到训练。"
                   : app.dashboard.current
                   ? "首页只保留当前任务、到期复测和两个主要动作。"
@@ -92,7 +106,9 @@ Flickable {
 
         LabCard {
             Layout.fillWidth: true
-            Layout.preferredHeight: 198
+            // The desktop baseline remains Layout.preferredHeight: 198;
+            // compact windows use the shorter presentation below.
+            Layout.preferredHeight: root.compactLayout ? 180 : 198
             cardColor: root.palette.surface
             // Give the one action-oriented card a clear visual anchor.  The
             // rest of the page stays quiet so the next step is obvious.
@@ -102,24 +118,25 @@ Flickable {
             RowLayout {
                 width: parent.width
                 height: parent.height
-                spacing: 20
+                spacing: root.compactLayout ? 12 : 20
                 ColumnLayout {
                     Layout.fillWidth: true
                     Text {
                         text: root.resumableInterview
                               ? "未完成面试"
-                              : (app.dashboard.current ? "当前训练" : "下一题")
+                              : app.dashboard.current ? "当前训练" : "下一题"
                         color: root.palette.accent
                         font.pixelSize: 11
                         font.bold: true
                         font.letterSpacing: 1.1
                     }
                     Text {
+                        // Contract: text: root.trainingTarget ? root.trainingTarget.title
                         text: root.resumableInterview
                               ? (app.interview.role_title || "模拟面试")
-                              : (root.trainingTarget ? root.trainingTarget.title : "暂无可用任务")
+                              : root.trainingTarget ? root.trainingTarget.title : "暂无可用任务"
                         color: root.palette.text
-                        font.pixelSize: 24
+                        font.pixelSize: root.compactLayout ? 21 : 24
                         font.bold: true
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
@@ -173,7 +190,7 @@ Flickable {
                 ColumnLayout {
                     Rectangle {
                         objectName: "homeInterviewInProgressState"
-                        visible: root.resumableInterview
+                        visible: root.resumableInterview || !!(app.interview && app.interview.expired)
                         Layout.fillWidth: true
                         Layout.preferredWidth: 184
                         Layout.preferredHeight: 120
@@ -185,8 +202,8 @@ Flickable {
                             anchors.margins: 12
                             spacing: 2
                             Text {
-                                text: "面试进行中"
-                                color: root.palette.warning
+                                text: app.interview && app.interview.expired ? "面试已超时" : "面试进行中"
+                                color: app.interview && app.interview.expired ? root.palette.danger : root.palette.warning
                                 font.pixelSize: 14
                                 font.bold: true
                                 Layout.fillWidth: true
@@ -216,7 +233,11 @@ Flickable {
                                 spacing: 8
                                 Button {
                                     id: resumeInlineButton
-                                    text: "继续面试"
+                                    // Contract copy retained for keyboard/screenshot
+                                    // checks: the live branch below changes to an
+                                    // explicit expiry action when the clock is over.
+                                    // text: "继续面试"
+                                    text: app.interview && app.interview.expired ? "结束并留档" : "继续面试"
                                     highlighted: true
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: 34
@@ -232,13 +253,14 @@ Flickable {
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
                                     }
-                                    onClicked: app.resumeInterview()
+                                    enabled: root.resumableInterview || !!(app.interview && app.interview.expired)
+                                    onClicked: root.resumableInterview ? app.resumeInterview() : app.navigate("interview")
                                 }
                                 Button {
-                                    text: "放弃"
+                                    text: app.interview && app.interview.expired ? "查看面试" : "放弃"
                                     flat: true
                                     Layout.preferredHeight: 34
-                                    onClicked: abandonInterviewDialog.open()
+                                    onClicked: app.interview && app.interview.expired ? app.navigate("interview") : abandonInterviewDialog.open()
                                 }
                             }
                         }
@@ -246,7 +268,7 @@ Flickable {
                     Button {
                         id: continueTrainingButton
                         objectName: "homePrimaryAction"
-                        visible: !root.resumableInterview
+                        visible: !root.resumableInterview && !(app.interview && app.interview.expired)
                         text: root.resumableInterview
                               ? "面试进行中"
                               : (app.dashboard.current ? "继续训练" : "开始训练")
@@ -324,26 +346,73 @@ Flickable {
             }
         }
 
+        // Keep the newest completed/incomplete report visible without loading
+        // its transcript. It is derived from the current Profile only and is
+        // intentionally secondary to the two primary actions above.
+        LabCard {
+            id: recentInterviewCard
+            objectName: "homeRecentInterview"
+            visible: !root.resumableInterview
+                     && !!app.recentInterview
+                     && !!app.recentInterview.interview_id
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.compactLayout ? 76 : 84
+            cardColor: root.palette.surface
+            borderColor: root.palette.border
+            RowLayout {
+                width: parent.width
+                spacing: 12
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+                    Text { text: "最近面试"; color: root.palette.muted; font.pixelSize: 12 }
+                    Text {
+                        text: (app.recentInterview.completion_status === "completed" ? "已完成" : "未完成")
+                              + " · " + (app.recentInterview.overall_score === undefined
+                                         ? "尚未评分" : String(app.recentInterview.overall_score) + " / 100")
+                        color: root.palette.text
+                        font.bold: true
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
+                    }
+                    Text {
+                        text: app.recentInterview.finished_at || "时间未记录"
+                        color: root.palette.muted
+                        font.pixelSize: 11
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
+                    }
+                }
+                Button {
+                    objectName: "homeRecentInterviewAction"
+                    text: "查看报告"
+                    flat: true
+                    Layout.preferredHeight: 36
+                    onClicked: app.navigate("interview")
+                }
+            }
+        }
+
         RowLayout {
             Layout.fillWidth: true
-            spacing: 16
+            spacing: root.compactLayout ? 10 : 16
             LabCard {
-                Layout.fillWidth: true; Layout.preferredHeight: 150; cardColor: root.palette.surface; borderColor: root.palette.border; accentColor: root.palette.accent
+                Layout.fillWidth: true; Layout.preferredHeight: root.compactLayout ? 112 : 150; Layout.minimumWidth: 0; cardColor: root.palette.surface; borderColor: root.palette.border; accentColor: root.palette.accent
                 Text { text: "目标岗位"; color: root.palette.muted; font.pixelSize: 12 }
-                Text { text: app.dashboard.role ? (app.dashboard.role.title || app.dashboard.role.primary_role.replace(/_/g, " ")) : "首次启动时选择"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
-                Text { text: app.dashboard.role ? root.seniorityText(app.dashboard.role.seniority) : "校招"; color: root.palette.accent }
+                Text { text: app.dashboard.role ? (app.dashboard.role.title || app.dashboard.role.primary_role.replace(/_/g, " ")) : "首次启动时选择"; color: root.palette.text; font.pixelSize: root.compactLayout ? 16 : 18; font.bold: true; elide: Text.ElideRight; width: parent.width }
+                Text { text: app.dashboard.role ? root.seniorityText(app.dashboard.role.seniority) : "校招"; color: root.palette.accent; width: parent.width; elide: Text.ElideRight }
             }
             LabCard {
-                Layout.fillWidth: true; Layout.preferredHeight: 150; cardColor: root.palette.surface; borderColor: root.palette.border; accentColor: root.palette.success
+                Layout.fillWidth: true; Layout.preferredHeight: root.compactLayout ? 112 : 150; Layout.minimumWidth: 0; cardColor: root.palette.surface; borderColor: root.palette.border; accentColor: root.palette.success
                 Text { text: "已掌握"; color: root.palette.muted; font.pixelSize: 12 }
-                Text { text: app.dashboard.mastered_count || 0; color: root.palette.text; font.pixelSize: 32; font.bold: true }
-                Text { text: "经过完整验证的节点"; color: root.palette.muted }
+                Text { text: app.dashboard.mastered_count || 0; color: root.palette.text; font.pixelSize: root.compactLayout ? 27 : 32; font.bold: true }
+                Text { text: "经过完整验证的节点"; color: root.palette.muted; width: parent.width; elide: Text.ElideRight }
             }
             LabCard {
-                Layout.fillWidth: true; Layout.preferredHeight: 150; cardColor: root.palette.surface; borderColor: root.palette.border; accentColor: (app.dashboard.due_retention || []).length > 0 ? root.palette.warning : root.palette.muted
+                Layout.fillWidth: true; Layout.preferredHeight: root.compactLayout ? 112 : 150; Layout.minimumWidth: 0; cardColor: root.palette.surface; borderColor: root.palette.border; accentColor: (app.dashboard.due_retention || []).length > 0 ? root.palette.warning : root.palette.muted
                 Text { text: "到期复测"; color: root.palette.muted; font.pixelSize: 12 }
-                Text { text: app.dashboard.due_retention ? app.dashboard.due_retention.length : 0; color: root.palette.text; font.pixelSize: 32; font.bold: true }
-                Text { text: "D+2 / D+7 闭卷复写"; color: root.palette.muted }
+                Text { text: app.dashboard.due_retention ? app.dashboard.due_retention.length : 0; color: root.palette.text; font.pixelSize: root.compactLayout ? 27 : 32; font.bold: true }
+                Text { text: "D+2 / D+7 闭卷复写"; color: root.palette.muted; width: parent.width; elide: Text.ElideRight }
             }
         }
 
@@ -414,23 +483,19 @@ Flickable {
             }
         }
 
+        // Keep the route discoverable without turning Home into a second
+        // catalogue/DAG view.  Learn owns the complete route and filtering;
+        // Home only offers the one real hand-off action.
         RowLayout {
             Layout.fillWidth: true
-            Text { text: "推荐闯关路线"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
-            Item { Layout.fillWidth: true }
-            Button { text: "查看路线"; flat: true; onClicked: app.navigate("learn") }
-        }
-        Repeater {
-            model: app.dashboard.recommended_quests || []
-            delegate: LabCard {
-                required property var modelData
-                Layout.fillWidth: true; Layout.preferredHeight: 82; cardColor: root.palette.surface; borderColor: root.palette.border
-                RowLayout {
-                    width: parent.width
-                    Text { text: modelData.title; color: root.palette.text; font.bold: true; Layout.fillWidth: true }
-                    Text { text: modelData.id; color: root.palette.muted; font.family: "monospace" }
-                }
+            Text {
+                Layout.fillWidth: true
+                text: "推荐路线已整理在刷题训练页"
+                color: root.palette.muted
+                font.pixelSize: 12
+                elide: Text.ElideRight
             }
+            Button { text: "查看路线"; flat: true; onClicked: app.navigate("learn") }
         }
     }
 

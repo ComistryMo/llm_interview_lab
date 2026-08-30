@@ -10,7 +10,11 @@ from .base import ContextPart, ContextPreview
 from ..catalog import Catalog
 from ..events import read_events, reduce_events
 from ..materials import MaterialError, get_material, resolve_material_path
-from ..role_interviews import current_role_question, load_role_interview
+from ..role_interviews import (
+    current_role_question,
+    load_role_interview,
+    role_interview_state,
+)
 from ..submissions import inspect_submission
 from ..workspace import event_schema_path, load_profile, profile_paths
 
@@ -121,14 +125,30 @@ def build_role_interview_context_preview(
     session = load_role_interview(repo_root, profile_id, interview_id)
     if session["ai_mode"] == "disabled":
         raise ContextBuilderError("this interview was created without AI access")
-    current = current_role_question(repo_root, profile_id, interview_id, now=now)
+    # ``current_role_question`` is intentionally active-only for mutation
+    # paths.  A paused interview is still a valid read-only context preview:
+    # keep the frozen question visible so the user can inspect what would be
+    # sent, while Controller send/assessment entry points continue to reject
+    # network turns until the clock is resumed.
+    current = (
+        role_interview_state(repo_root, profile_id, interview_id, now=now)
+        if session.get("status") == "paused"
+        else current_role_question(repo_root, profile_id, interview_id, now=now)
+    )
     question = current["question"]
     if question is None:
         raise ContextBuilderError("the interview has no unanswered question")
+    paused_note = (
+        " The session is paused and read-only; do not ask, assess, or mutate "
+        "anything until the user explicitly resumes the clock."
+        if session.get("status") == "paused"
+        else ""
+    )
     policy = (
         "Mode=INTERVIEWER. Ask or assess only the frozen current question. "
         "Do not teach, edit a submission, invent career facts, grant Practice mastery, "
         "or output an offer probability. Separate evidence, inference, and uncertainty."
+        + paused_note
     )
     contract = (
         f"role={session['role_id']} seniority={session['seniority']} "

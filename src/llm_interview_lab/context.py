@@ -25,6 +25,7 @@ from .role_interviews import (
     RoleInterviewError,
     current_role_question,
     load_role_interview,
+    role_interview_state,
 )
 from .submissions import SubmissionError, inspect_submission
 from .workspace import (
@@ -594,10 +595,20 @@ def _build_role_interview_context(
         commands["next"] = (
             f"llm-lab interview role-start {interview_id} --profile {profile_id}"
         )
-    elif session["status"] == "active":
+    elif session["status"] in {"active", "paused"}:
+        paused = session["status"] == "paused"
         try:
-            stage = current_role_question(
-                repo_root, profile_id, interview_id, now=now
+            # Paused sessions remain a valid, read-only interviewer context.
+            # ``current_role_question`` intentionally rejects them because it
+            # is a mutation-facing active-only API; the recovery view keeps
+            # the frozen question and remaining time available without
+            # allowing answers, grading, or tests while paused.
+            stage = (
+                role_interview_state(repo_root, profile_id, interview_id, now=now)
+                if paused
+                else current_role_question(
+                    repo_root, profile_id, interview_id, now=now
+                )
             )
         except RoleInterviewError as error:
             if "expired" not in str(error):
@@ -605,15 +616,25 @@ def _build_role_interview_context(
             stage = {"question": None, "remaining_seconds": 0}
         question = stage["question"]
         current = {
-            "status": "expired" if stage["remaining_seconds"] == 0 else "active",
+            "status": (
+                "paused"
+                if paused
+                else "expired" if stage["remaining_seconds"] == 0 else "active"
+            ),
             "deadline": session["deadline"],
             "remaining_seconds": stage["remaining_seconds"],
             "question": None,
         }
-        if question is None:
+        if paused:
+            current["paused_remaining_seconds"] = stage["remaining_seconds"]
             commands["next"] = (
-                f"llm-lab interview role-finish {interview_id} --profile {profile_id}"
+                f"llm-lab interview role-resume {interview_id} --profile {profile_id}"
             )
+        if question is None:
+            if not paused:
+                commands["next"] = (
+                    f"llm-lab interview role-finish {interview_id} --profile {profile_id}"
+                )
         else:
             question_id = question["question_id"]
             current["question"] = {
@@ -663,16 +684,18 @@ def _build_role_interview_context(
                     "grader": session["coding_evidence"].get(question_id),
                 }
                 read_allowlist.extend((task_ref, submission_ref))
-                commands["test"] = (
-                    f"llm-lab interview role-test {interview_id} --profile {profile_id}"
-                )
+                if not paused:
+                    commands["test"] = (
+                        f"llm-lab interview role-test {interview_id} --profile {profile_id}"
+                    )
             else:
                 answer = session["answers"].get(question_id)
                 if answer is None:
-                    commands["next"] = (
-                        f"llm-lab interview role-answer {interview_id} "
-                        f"--profile {profile_id} --question {question_id} --file ANSWER_FILE"
-                    )
+                    if not paused:
+                        commands["next"] = (
+                            f"llm-lab interview role-answer {interview_id} "
+                            f"--profile {profile_id} --question {question_id} --file ANSWER_FILE"
+                        )
                 else:
                     answer_path = _profile_relative(
                         repo_root, profile_id, answer["relative_path"]
@@ -687,7 +710,7 @@ def _build_role_interview_context(
                         "sha256": answer_ref["sha256"],
                     }
                     read_allowlist.append(answer_ref)
-            if question_id not in session["assessments"] and (
+            if not paused and question_id not in session["assessments"] and (
                 question_id in session["answers"]
                 or question_id in session["coding_evidence"]
             ):

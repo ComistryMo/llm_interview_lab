@@ -35,6 +35,9 @@ from .role_interviews import (
     role_interview_answer_text,
     run_role_coding_test,
     start_role_interview,
+    pause_role_interview,
+    resume_role_interview,
+    role_interview_state,
 )
 from .roles import RoleCatalog, load_role_catalog
 from .submissions import inspect_submission
@@ -832,6 +835,17 @@ class ApplicationService:
     def current_interview(self, profile_id: str, interview_id: str) -> dict[str, Any]:
         return current_role_question(self.repo_root, profile_id, interview_id)
 
+    def interview_state(self, profile_id: str, interview_id: str) -> dict[str, Any]:
+        """Return active or paused question state for desktop recovery UI."""
+
+        return role_interview_state(self.repo_root, profile_id, interview_id)
+
+    def pause_interview(self, profile_id: str, interview_id: str) -> dict[str, Any]:
+        return pause_role_interview(self.repo_root, profile_id, interview_id)
+
+    def resume_interview(self, profile_id: str, interview_id: str) -> dict[str, Any]:
+        return resume_role_interview(self.repo_root, profile_id, interview_id)
+
     def answer_interview(
         self, profile_id: str, interview_id: str, question_id: str, answer: str
     ) -> dict[str, Any]:
@@ -849,9 +863,19 @@ class ApplicationService:
     def current_interview_coding_submission(
         self, profile_id: str, interview_id: str
     ) -> dict[str, str]:
-        """Return only the active coding answer from this exact Profile/session."""
+        """Return the frozen coding answer for the selected interview question.
 
-        current = self.current_interview(profile_id, interview_id)["question"]
+        A paused interview is intentionally read-only, but its editor still
+        needs to render after an application restart.  Use the recovery view
+        for that case; all mutation/grader methods continue to use the
+        active-only API and therefore remain blocked while paused.
+        """
+
+        session = self.interview_session(profile_id, interview_id)
+        if session.get("status") == "paused":
+            current = self.interview_state(profile_id, interview_id)["question"]
+        else:
+            current = self.current_interview(profile_id, interview_id)["question"]
         if current is None or current["kind"] != "coding":
             raise ApplicationError("the current interview question is not coding")
         paths = profile_paths(self.repo_root, profile_id)
@@ -985,13 +1009,30 @@ class ApplicationService:
         return load_role_interview(self.repo_root, profile_id, interview_id)
 
     def resumable_interview(self, profile_id: str) -> dict[str, Any] | None:
-        """Return the newest active role interview for one selected Profile."""
+        """Return the newest *answerable* active/paused interview.
 
-        active = [
-            session
-            for session in list_role_interviews(self.repo_root, profile_id)
-            if session["status"] == "active"
-        ]
+        An active session whose local deadline has elapsed is deliberately not
+        returned as resumable: the learner must finish it as incomplete, not
+        be sent back into a dead "continue" action.  ``preferred_interview``
+        still exposes that expired session for its explicit finish path.
+        """
+
+        active = []
+        for session in list_role_interviews(self.repo_root, profile_id):
+            if session["status"] == "paused":
+                active.append(session)
+                continue
+            if session["status"] != "active":
+                continue
+            try:
+                role_interview_state(
+                    self.repo_root, profile_id, session["interview_id"]
+                )
+            except RoleInterviewError:
+                # Expired (or otherwise no-longer-answerable) sessions are
+                # recovered through the presentation view below.
+                continue
+            active.append(session)
         return active[-1] if active else None
 
     def interview_result_view(
@@ -1079,6 +1120,18 @@ class ApplicationService:
         active = self.resumable_interview(profile_id)
         if active is not None:
             return {"kind": "active", "interview_id": active["interview_id"]}
+        # Keep an expired active session reachable so the desktop can show a
+        # truthful "timed out → finish incomplete" action after restart.
+        sessions = list_role_interviews(self.repo_root, profile_id)
+        for session in reversed(sessions):
+            if session.get("status") != "active":
+                continue
+            try:
+                role_interview_state(
+                    self.repo_root, profile_id, session["interview_id"]
+                )
+            except RoleInterviewError:
+                return {"kind": "expired", "interview_id": session["interview_id"]}
         result = self.recent_interview_result(profile_id)
         if result is not None:
             return {"kind": "result", **result}

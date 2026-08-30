@@ -82,6 +82,12 @@ def _parser() -> argparse.ArgumentParser:
         metavar="WIDTHxHEIGHT",
         help="resize the synthetic window before a screenshot or smoke test",
     )
+    parser.add_argument(
+        "--screenshot-theme",
+        choices=("light", "dark"),
+        default="light",
+        help="theme for synthetic screenshots (does not change a real Profile)",
+    )
     return parser
 
 
@@ -250,13 +256,18 @@ def main(argv: list[str] | None = None) -> int:
     try:
         from llm_interview_lab.desktop.controller import AppController
 
-        legacy_root = detect_legacy_desktop_data(repo_root)
+        # Screenshot/smoke controllers are synthetic and must not inspect a
+        # maintainer's legacy data directory (or expose its absolute path in
+        # Settings).  Real Profile startup retains the migration probe.
+        synthetic_desktop = bool(args.screenshot or args.smoke_test)
+        legacy_root = None if synthetic_desktop else detect_legacy_desktop_data(repo_root)
         controller = AppController(
             repo_root,
             profile_id=args.profile,
             demo_page=(args.screenshot_page if args.screenshot else "home")
             if (args.screenshot or args.smoke_test)
             else None,
+            demo_theme=args.screenshot_theme if (args.screenshot or args.smoke_test) else None,
             legacy_data_root=legacy_root,
             log_root=desktop_log_root(repo_root),
         )
@@ -366,7 +377,16 @@ def main(argv: list[str] | None = None) -> int:
             window.deleteLater()
             QTimer.singleShot(0, app.quit)
 
-        QTimer.singleShot(900, capture)
+        # Release tooling may use a shorter delay for synthetic offscreen
+        # captures; normal launches retain the conservative default so fonts
+        # and the first layout pass have time to settle.
+        try:
+            capture_delay_ms = max(
+                50, int(os.environ.get("LLM_LAB_SCREENSHOT_DELAY_MS", "900"))
+            )
+        except ValueError:
+            capture_delay_ms = 900
+        QTimer.singleShot(capture_delay_ms, capture)
     elif args.smoke_test:
         def finish_smoke() -> None:
             print(json.dumps({"status": "ok", **startup_metrics()}, sort_keys=True))

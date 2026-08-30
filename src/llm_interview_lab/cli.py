@@ -1080,12 +1080,24 @@ def _role_interview_create(repo_root: Path, args) -> int:
 
 
 def _role_interview_current(repo_root: Path, args) -> int:
-    value = ApplicationService(repo_root).current_interview(args.profile, args.interview_id)
+    # ``interview_state`` is the read-only recovery view shared by active and
+    # paused sessions.  The mutation-oriented current_interview API remains
+    # active-only, so using it here made a paused interview look broken.
+    value = ApplicationService(repo_root).interview_state(args.profile, args.interview_id)
     if args.json:
         print(json.dumps(value, ensure_ascii=False, indent=2))
         return 0
+    if value.get("status") == "paused":
+        print("STATUS paused (read-only)")
+        print(f"REMAINING {value['remaining_seconds']} seconds")
+        print(
+            f"RESUME llm-lab interview role-resume {args.interview_id} "
+            f"--profile {args.profile}"
+        )
+    else:
+        print(f"STATUS {value.get('status', 'active')}")
+        print(f"REMAINING {value['remaining_seconds']} seconds")
     question = value["question"]
-    print(f"REMAINING {value['remaining_seconds']} seconds")
     if question is None:
         print("QUESTION none; finish and score the interview")
         return 0
@@ -1129,6 +1141,26 @@ def _role_interview_score(repo_root: Path, args) -> int:
         fatal_issues=tuple(args.fatal_issue),
     )
     print(f"ASSESSMENT {args.question}: archived with evidence")
+    return 0
+
+
+def _role_interview_pause(repo_root: Path, args) -> int:
+    session = ApplicationService(repo_root).pause_interview(args.profile, args.interview_id)
+    print(f"ROLE INTERVIEW {args.interview_id}: paused")
+    print(
+        f"NEXT llm-lab interview role-resume {args.interview_id} "
+        f"--profile {args.profile}"
+    )
+    return 0
+
+
+def _role_interview_resume(repo_root: Path, args) -> int:
+    session = ApplicationService(repo_root).resume_interview(args.profile, args.interview_id)
+    print(f"ROLE INTERVIEW {args.interview_id}: active")
+    print(
+        f"NEXT llm-lab interview role-current {args.interview_id} "
+        f"--profile {args.profile}"
+    )
     return 0
 
 
@@ -1313,6 +1345,10 @@ def _build_parser() -> argparse.ArgumentParser:
     role_create.add_argument("--seed", type=int, default=0)
     role_start = interview_sub.add_parser("role-start")
     role_start.add_argument("interview_id"); role_start.add_argument("--profile", default="default")
+    role_pause = interview_sub.add_parser("role-pause")
+    role_pause.add_argument("interview_id"); role_pause.add_argument("--profile", default="default")
+    role_resume = interview_sub.add_parser("role-resume")
+    role_resume.add_argument("interview_id"); role_resume.add_argument("--profile", default="default")
     role_current = interview_sub.add_parser("role-current")
     role_current.add_argument("interview_id"); role_current.add_argument("--profile", default="default"); role_current.add_argument("--json", action="store_true")
     role_answer = interview_sub.add_parser("role-answer")
@@ -1320,7 +1356,7 @@ def _build_parser() -> argparse.ArgumentParser:
     role_test = interview_sub.add_parser("role-test")
     role_test.add_argument("interview_id"); role_test.add_argument("--profile", default="default")
     role_score = interview_sub.add_parser("role-score")
-    role_score.add_argument("interview_id"); role_score.add_argument("--profile", default="default"); role_score.add_argument("--question", required=True); role_score.add_argument("--scores-file", required=True); role_score.add_argument("--source", choices=("human", "ai", "self"), required=True); role_score.add_argument("--confidence", choices=("low", "medium", "high"), required=True); role_score.add_argument("--fatal-issue", action="append", default=[])
+    role_score.add_argument("interview_id"); role_score.add_argument("--profile", default="default"); role_score.add_argument("--question", required=True); role_score.add_argument("--scores-file", required=True); role_score.add_argument("--source", choices=("human", "ai", "self", "grader"), required=True); role_score.add_argument("--confidence", choices=("low", "medium", "high"), required=True); role_score.add_argument("--fatal-issue", action="append", default=[])
     role_score_evidence = role_score.add_mutually_exclusive_group(required=True)
     role_score_evidence.add_argument("--evidence"); role_score_evidence.add_argument("--evidence-file")
     role_finish = interview_sub.add_parser("role-finish")
@@ -1373,6 +1409,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(f"ROLE INTERVIEW {session['interview_id']}: active")
                 print(f"NEXT llm-lab interview role-current {args.interview_id} --profile {args.profile}")
                 return 0
+            if args.interview_command == "role-pause": return _role_interview_pause(repo_root, args)
+            if args.interview_command == "role-resume": return _role_interview_resume(repo_root, args)
             if args.interview_command == "role-current": return _role_interview_current(repo_root, args)
             if args.interview_command == "role-answer": return _role_interview_answer(repo_root, args)
             if args.interview_command == "role-test":

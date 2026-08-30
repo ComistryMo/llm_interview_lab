@@ -24,6 +24,7 @@ from .catalog import Catalog, Problem, compute_problem_fingerprint
 from .grader import GraderResult, run_public_tests
 from .materials import MaterialError, get_material
 from .roles import InterviewItem, RoleCatalog, RoleCatalogError
+from .submissions import SubmissionError, inspect_submission
 from .workspace import (
     WorkspaceError,
     ensure_profile_is_ignored,
@@ -40,7 +41,10 @@ DIFFICULTY_BANDS = {
     "medium": frozenset({2, 3, 4}),
     "hard": frozenset({4, 5}),
 }
-ASSESSOR_SOURCES = frozenset({"human", "ai", "self"})
+# ``grader`` is an objective, deterministic source for coding-round evidence.
+# It is intentionally distinct from human/AI/self judgement so reports and
+# the desktop UI cannot mislabel a public-test result as a subjective score.
+ASSESSOR_SOURCES = frozenset({"human", "ai", "self", "grader"})
 CONFIDENCE_LEVELS = frozenset({"low", "medium", "high"})
 
 
@@ -583,6 +587,8 @@ def create_role_interview(
         "plan_fingerprint": "0" * 64,
         "started_at": None,
         "deadline": None,
+        "paused_at": None,
+        "paused_remaining_seconds": None,
         "answers": {},
         "coding_evidence": {},
         "assessments": {},
@@ -683,6 +689,8 @@ def start_role_interview(
     session["deadline"] = _timestamp(
         current + timedelta(minutes=session["duration_minutes"])
     )
+    session["paused_at"] = None
+    session["paused_remaining_seconds"] = None
     session["timeline"].append({"event": "started", "timestamp": _timestamp(current)})
     _save(repo_root, profile_id, session)
     return session
@@ -716,6 +724,48 @@ def _is_complete(session: Mapping[str, Any], question: Mapping[str, Any]) -> boo
     return _has_response(session, question) and question_id in session["assessments"]
 
 
+def _next_role_question(session: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Select the next frozen question without depending on clock state."""
+
+    return next(
+        (value for value in session["questions"] if not _is_complete(session, value)),
+        None,
+    )
+
+
+def role_interview_state(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Return the current frozen question for an active or paused session.
+
+    This is a presentation/recovery view only. Mutation APIs continue to
+    require ``active`` and therefore cannot answer, assess, or grade while
+    the interview is paused.
+    """
+
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    status = session["status"]
+    if status == "paused":
+        remaining = session.get("paused_remaining_seconds")
+        if type(remaining) is not int or remaining <= 0:
+            raise RoleInterviewError("paused role interview has invalid remaining time")
+    elif status == "active":
+        remaining = _remaining_seconds(session, now)
+        if remaining == 0:
+            raise RoleInterviewError("role interview time has expired; finish it as incomplete")
+    else:
+        raise RoleInterviewError("role interview is not active or paused")
+    return {
+        "question": _next_role_question(session),
+        "remaining_seconds": remaining,
+        "status": status,
+    }
+
+
 def current_role_question(
     repo_root: Path,
     profile_id: str,
@@ -726,14 +776,61 @@ def current_role_question(
     session = load_role_interview(repo_root, profile_id, interview_id)
     if session["status"] != "active":
         raise RoleInterviewError("role interview is not active")
-    remaining = _remaining_seconds(session, now)
-    if remaining == 0:
-        raise RoleInterviewError("role interview time has expired; finish it as incomplete")
-    question = next(
-        (value for value in session["questions"] if not _is_complete(session, value)),
-        None,
+    state = role_interview_state(
+        repo_root, profile_id, interview_id, now=now
     )
-    return {"question": question, "remaining_seconds": remaining}
+    return {
+        "question": state["question"],
+        "remaining_seconds": state["remaining_seconds"],
+    }
+
+
+def pause_role_interview(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    if session["status"] != "active":
+        raise RoleInterviewError("only an active role interview can be paused")
+    current = _parse_timestamp(_timestamp(now))
+    remaining = _remaining_seconds(session, current)
+    if remaining <= 0:
+        raise RoleInterviewError("role interview time has expired; finish it as incomplete")
+    paused_at = _timestamp(current)
+    session["status"] = "paused"
+    session["paused_at"] = paused_at
+    session["paused_remaining_seconds"] = remaining
+    session["deadline"] = None
+    session["timeline"].append({"event": "paused", "timestamp": paused_at})
+    _save(repo_root, profile_id, session)
+    return session
+
+
+def resume_role_interview(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    if session["status"] != "paused":
+        raise RoleInterviewError("only a paused role interview can be resumed")
+    remaining = session.get("paused_remaining_seconds")
+    if type(remaining) is not int or remaining <= 0:
+        raise RoleInterviewError("paused role interview has invalid remaining time")
+    current = _parse_timestamp(_timestamp(now))
+    resumed_at = _timestamp(current)
+    session["status"] = "active"
+    session["deadline"] = _timestamp(current + timedelta(seconds=remaining))
+    session["paused_at"] = None
+    session["paused_remaining_seconds"] = None
+    session["timeline"].append({"event": "resumed", "timestamp": resumed_at})
+    _save(repo_root, profile_id, session)
+    return session
 
 
 def record_role_answer(
@@ -895,6 +992,99 @@ def record_role_followup(
     return session
 
 
+def _validated_coding_assessment(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    question: Mapping[str, Any],
+    assessment: Mapping[str, Any],
+    session: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Validate objective coding evidence before it can affect a report.
+
+    The persisted Grader record is keyed by question and by submission SHA.
+    Re-checking the file here closes both common loopholes: a caller cannot
+    submit a subjective score for a coding round, and editing the file after
+    the Grader ran invalidates the score instead of silently reusing it.
+    """
+
+    if assessment.get("source") != "grader":
+        raise RoleInterviewError(
+            "coding assessment must use the local Grader evidence"
+        )
+    question_id = str(question.get("question_id") or "")
+    coding_evidence = (session.get("coding_evidence") or {}).get(question_id)
+    if not isinstance(coding_evidence, Mapping):
+        raise RoleInterviewError("coding assessment requires a recorded Grader result")
+    status = coding_evidence.get("status")
+    # A timeout/import/collection/internal failure is diagnostic evidence, not
+    # a candidate score.  Only a completed assertion run may be recorded.
+    if status not in {"passed", "failed"}:
+        raise RoleInterviewError(
+            "coding assessment requires a completed passed/failed Grader result"
+        )
+    try:
+        submission_root = (
+            _session_root(repo_root, profile_id, interview_id)
+            / "coding"
+            / question_id
+        )
+        submission_path = ensure_profile_path_is_safe(
+            repo_root,
+            profile_id,
+            submission_root / "submission.py",
+            must_exist=True,
+        )
+        current_sha = inspect_submission(submission_path, submission_root).sha256
+    except (OSError, WorkspaceError, SubmissionError) as error:
+        raise RoleInterviewError(
+            "coding submission is unavailable; rerun the local Grader"
+        ) from error
+    tested_sha = str(coding_evidence.get("submission_sha256") or "")
+    if not tested_sha or tested_sha != current_sha:
+        raise RoleInterviewError(
+            "coding submission changed after Grader evidence; rerun the local Grader"
+        )
+    expected_score = 5 if status == "passed" else 1
+    scores = assessment.get("scores")
+    if not isinstance(scores, Mapping) or any(
+        value != expected_score for value in scores.values()
+    ):
+        raise RoleInterviewError(
+            "coding score must match the local Grader result (5=passed, 1=failed)"
+        )
+    return coding_evidence
+
+
+def _validate_answer_assessment_evidence(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    question_id: str,
+    assessment: Mapping[str, Any],
+    session: Mapping[str, Any],
+) -> None:
+    """Re-check a locked text answer before reusing its assessment."""
+
+    answer_record = (session.get("answers") or {}).get(question_id)
+    if not isinstance(answer_record, Mapping):
+        raise RoleInterviewError(
+            "answer evidence is missing; the assessment cannot be reused"
+        )
+    try:
+        role_interview_answer_text(repo_root, profile_id, interview_id, question_id)
+    except RoleInterviewError as error:
+        raise RoleInterviewError(
+            "locked answer changed after assessment; the question is now unscored"
+        ) from error
+    recorded_sha = str(answer_record.get("sha256") or "")
+    assessed_sha = str(assessment.get("answer_sha256") or "")
+    if assessed_sha and assessed_sha != recorded_sha:
+        raise RoleInterviewError(
+            "assessment is bound to a different answer revision; the question is now unscored"
+        )
+
+
 def record_role_assessment(
     repo_root: Path,
     profile_id: str,
@@ -922,10 +1112,44 @@ def record_role_assessment(
     )
     if question is None or not _has_response(session, question):
         raise RoleInterviewError("assessment requires completed question evidence")
+    if source == "grader" and question["kind"] != "coding":
+        raise RoleInterviewError(
+            "grader evidence is only valid for coding interview questions"
+        )
+    if question["kind"] == "coding":
+        # A coding round has one deterministic source of truth: the public
+        # Grader result bound to the exact submission revision.  Accepting a
+        # manually supplied ``human``/``ai`` score here would let a failed or
+        # stale implementation become a fabricated high score.
+        coding_evidence = _validated_coding_assessment(
+            repo_root,
+            profile_id,
+            interview_id,
+            question,
+            {
+                "source": source,
+                "scores": scores,
+            },
+            session,
+        )
+        # Store a canonical, machine-bound evidence line.  Caller prose is
+        # not allowed to masquerade as an objective test report.
+        evidence = (
+            "Local Grader objective evidence: "
+            f"status={coding_evidence.get('status')}; "
+            f"passed={coding_evidence.get('passed', 0)}; "
+            f"failed={coding_evidence.get('failed', 0)}; "
+            f"duration_ms={coding_evidence.get('duration_ms', 0)}; "
+            f"submission_sha256={coding_evidence.get('submission_sha256')}"
+        )
+    answer_sha256 = ""
     if question["kind"] != "coding":
         role_interview_answer_text(
             repo_root, profile_id, interview_id, question_id
         )
+        answer_record = (session.get("answers") or {}).get(question_id)
+        if isinstance(answer_record, Mapping):
+            answer_sha256 = str(answer_record.get("sha256") or "")
     current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
     if current is None or current["question_id"] != question_id:
         raise RoleInterviewError("only the current question may be assessed")
@@ -965,6 +1189,8 @@ def record_role_assessment(
     # no follow-up.  The optional field is emitted only when it carries data.
     if linked_followups:
         assessment["followup_ids"] = list(linked_followups)
+    if answer_sha256:
+        assessment["answer_sha256"] = answer_sha256
     session["assessments"][question_id] = assessment
     _save(repo_root, profile_id, session)
     return session
@@ -991,8 +1217,11 @@ def finish_role_interview(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
-    if session["status"] != "active":
-        raise RoleInterviewError("only an active role interview can be finished")
+    paused = session["status"] == "paused"
+    if session["status"] not in {"active", "paused"}:
+        raise RoleInterviewError("only an active or paused role interview can be finished")
+    if paused and not confirm_incomplete:
+        raise RoleInterviewError("paused interview requires explicit incomplete confirmation")
     unanswered = [
         q["question_id"] for q in session["questions"] if not _has_response(session, q)
     ]
@@ -1001,7 +1230,7 @@ def finish_role_interview(
         for q in session["questions"]
         if _has_response(session, q) and q["question_id"] not in session["assessments"]
     ]
-    expired = _remaining_seconds(session, now) == 0
+    expired = (not paused) and _remaining_seconds(session, now) == 0
     if (unanswered or unscored) and not (confirm_incomplete or expired):
         raise RoleInterviewError("interview evidence is incomplete; use explicit incomplete confirmation")
 
@@ -1014,6 +1243,24 @@ def finish_role_interview(
         assessment = session["assessments"].get(question_id)
         if assessment is None:
             continue
+        if question["kind"] == "coding":
+            _validated_coding_assessment(
+                repo_root,
+                profile_id,
+                interview_id,
+                question,
+                assessment,
+                session,
+            )
+        else:
+            _validate_answer_assessment_evidence(
+                repo_root,
+                profile_id,
+                interview_id,
+                question_id,
+                assessment,
+                session,
+            )
         score = _question_score(question, assessment)
         question_scores[question_id] = score
         weight = float(question["round_weight"])
@@ -1021,7 +1268,7 @@ def finish_role_interview(
         completed_weight += weight
         for skill_id in question["skills"]:
             skill_values.setdefault(skill_id, []).append((score, question_id))
-    completed = not unanswered and not unscored
+    completed = not paused and not unanswered and not unscored
     # Missing rounds contribute zero; partial evidence is never re-normalized.
     overall = round(weighted_total, 1)
     skill_scores = {
