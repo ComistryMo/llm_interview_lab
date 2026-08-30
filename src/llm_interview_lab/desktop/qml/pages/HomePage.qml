@@ -94,7 +94,10 @@ Flickable {
             Layout.fillWidth: true
             Layout.preferredHeight: 198
             cardColor: root.palette.surface
-            borderColor: root.palette.border
+            // Give the one action-oriented card a clear visual anchor.  The
+            // rest of the page stays quiet so the next step is obvious.
+            prominent: true
+            borderColor: root.resumableInterview ? root.palette.border : root.palette.accent
             RowLayout {
                 width: parent.width
                 height: parent.height
@@ -147,9 +150,39 @@ Flickable {
                     }
                 }
                 ColumnLayout {
+                    Text {
+                        visible: root.resumableInterview
+                        text: "面试进行中"
+                        color: root.palette.warning
+                        font.pixelSize: 16
+                        font.bold: true
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Text {
+                        visible: root.resumableInterview
+                        text: app.interview
+                              ? (app.interview.completed_questions || 0) + " / "
+                                + (app.interview.total_questions || 0)
+                              : "0 / 0"
+                        color: root.palette.text
+                        font.pixelSize: 28
+                        font.bold: true
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Text {
+                        visible: root.resumableInterview
+                        text: "问题已完成"
+                        color: root.palette.muted
+                        font.pixelSize: 12
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
                     Button {
                         id: continueTrainingButton
                         objectName: "homePrimaryAction"
+                        visible: !root.resumableInterview
                         text: root.resumableInterview
                               ? "面试进行中"
                               : (app.dashboard.current ? "继续训练" : "开始训练")
@@ -160,14 +193,14 @@ Flickable {
                         enabled: root.trainingTargetRunnable && !root.resumableInterview
                         background: Rectangle {
                             radius: 10
-                            color: continueTrainingButton.enabled && !root.resumableInterview
+                            color: continueTrainingButton.enabled
                                    ? root.palette.accent : root.palette.surface
-                            border.width: root.resumableInterview ? 1 : 0
+                            border.width: continueTrainingButton.enabled ? 0 : 1
                             border.color: root.palette.border
                         }
                         contentItem: Text {
                             text: continueTrainingButton.text
-                            color: continueTrainingButton.enabled && !root.resumableInterview
+                            color: continueTrainingButton.enabled
                                    ? "white" : root.palette.muted
                             font.bold: true
                             horizontalAlignment: Text.AlignHCenter
@@ -180,7 +213,7 @@ Flickable {
                     }
                     Text {
                         visible: root.resumableInterview
-                        text: "请先完成或放弃本场面试"
+                        text: "请先完成或放弃本场面试，再继续训练。"
                         color: root.palette.muted
                         font.pixelSize: 12
                         horizontalAlignment: Text.AlignHCenter
@@ -234,6 +267,7 @@ Flickable {
             Layout.preferredHeight: visible ? 112 : 0
             cardColor: root.palette.surface
             borderColor: root.palette.accent
+            prominent: true
             RowLayout {
                 width: parent.width; height: parent.height; spacing: 16
                 ColumnLayout {

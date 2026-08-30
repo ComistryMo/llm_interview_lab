@@ -5,7 +5,7 @@ Rectangle {
     property color tone: "#2563eb"
     Accessible.name: text
     Accessible.role: Accessible.StaticText
-    implicitWidth: label.implicitWidth + 18
+    implicitWidth: label.implicitWidth + 20
     implicitHeight: 26
     radius: 13
     color: Qt.rgba(tone.r, tone.g, tone.b, 0.13)
@@ -19,5 +19,6 @@ Rectangle {
         color: parent.tone
         font.pixelSize: 12
         font.weight: Font.DemiBold
+        font.letterSpacing: 0.1
     }
 }

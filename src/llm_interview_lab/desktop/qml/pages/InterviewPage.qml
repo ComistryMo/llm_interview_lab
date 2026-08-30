@@ -444,7 +444,9 @@ Item {
         LabCard {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            cardColor: root.palette.surface; borderColor: root.palette.border
+            cardColor: root.palette.surface
+            prominent: !!activeQuestion
+            borderColor: activeQuestion ? root.palette.accent : root.palette.border
             RowLayout {
                 width: parent.width
                 ColumnLayout {
@@ -535,7 +537,16 @@ Item {
                             }
                         }
                     }
-                    TextArea { id: evidence; width: parent.width; height: 86; visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted; placeholderText: "支持本次评分的回答证据（必填）"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.palette.border } }
+                    Text {
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding"
+                                 && root.answerLocked && !app.interview.answer_corrupted
+                        text: "回答证据 · 必填"
+                        color: root.palette.text
+                        font.bold: true
+                        font.pixelSize: 13
+                        width: parent.width
+                    }
+                    TextArea { id: evidence; width: parent.width; height: 86; visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted; placeholderText: "请引用回答中的具体证据（必填）"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.palette.border } }
                     ComboBox {
                         id: providerConnection
                         visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted && app.interview.ai_mode === "provider"

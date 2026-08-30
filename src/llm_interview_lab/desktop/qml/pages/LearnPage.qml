@@ -145,7 +145,7 @@ Item {
             objectName: "learnProblemList"
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 10
+            spacing: 12
             clip: true
             model: root.filteredProblems
             footer: Item {
@@ -166,9 +166,12 @@ Item {
                 required property var modelData
                 required property int index
                 width: list.width
-                height: 112
+                height: 116
+                padding: 16
                 cardColor: root.palette.surface
-                borderColor: root.palette.border
+                prominent: modelData.status === "in_progress"
+                borderColor: modelData.status === "in_progress"
+                              ? root.palette.accent : root.palette.border
                 RowLayout {
                     width: parent.width; height: parent.height; spacing: 16
                     Rectangle {

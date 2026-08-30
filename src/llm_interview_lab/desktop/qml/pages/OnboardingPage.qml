@@ -294,12 +294,16 @@ Rectangle {
                             radius: 10
                             color: root.selectedRole === modelData.id
                                    ? Qt.rgba(0.145, 0.388, 0.922, 0.12)
-                                   : root.palette.surfaceAlt
+                                   : roleHitArea.containsMouse
+                                     ? Qt.rgba(0.145, 0.388, 0.922, 0.06)
+                                     : root.palette.surfaceAlt
                             border.color: root.selectedRole === modelData.id
                                           ? root.palette.accent
                                           : roleCard.activeFocus
                                             ? root.palette.accent
-                                            : root.palette.border
+                                            : roleHitArea.containsMouse
+                                              ? root.palette.accent
+                                              : root.palette.border
                             border.width: root.selectedRole === modelData.id
                                           || roleCard.activeFocus ? 2 : 1
                             activeFocusOnTab: true
@@ -358,8 +362,10 @@ Rectangle {
                             }
 
                             MouseArea {
+                                id: roleHitArea
                                 objectName: "onboardingRoleHitArea-" + modelData.id
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onPressed: roleCard.forceActiveFocus()
                                 onClicked: root.selectRole(modelData.id)

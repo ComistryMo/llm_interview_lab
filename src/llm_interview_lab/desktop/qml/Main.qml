@@ -16,20 +16,25 @@ ApplicationWindow {
     Material.theme: backend.theme === "dark" ? Material.Dark
                     : backend.theme === "light" ? Material.Light
                     : Material.System
-    Material.accent: "#2563eb"
+    // Keep native Material controls aligned with the shell palette.
+    Material.accent: backend.theme === "dark" ? "#91adff" : "#3159d9"
 
     property bool dark: Material.theme === Material.Dark
     property var colors: ({
-        "background": dark ? "#0f141d" : "#f5f7fb",
-        "surface": dark ? "#171e29" : "#ffffff",
-        "surfaceAlt": dark ? "#202938" : "#eef2f7",
-        "border": dark ? "#303b4d" : "#d9e0ea",
-        "text": dark ? "#edf2f7" : "#18212f",
-        "muted": dark ? "#a3aec0" : "#5f6b7c",
-        "accent": dark ? "#83a7ff" : "#1d4ed8",
-        "success": dark ? "#66d6aa" : "#087a55",
-        "warning": dark ? "#f2bd75" : "#8a4b08",
-        "danger": dark ? "#ff8b9a" : "#b4233a"
+        // A quiet neutral canvas keeps the single accent colour reserved for
+        // actions and progress.  This is deliberately a palette adjustment,
+        // not a second theme system, so every existing page keeps its data
+        // and interaction behaviour.
+        "background": dark ? "#0e141f" : "#f4f7fb",
+        "surface": dark ? "#161e2b" : "#ffffff",
+        "surfaceAlt": dark ? "#1d2939" : "#edf2f8",
+        "border": dark ? "#2d3a4d" : "#d7e0ec",
+        "text": dark ? "#f0f4fa" : "#172033",
+        "muted": dark ? "#a8b5c8" : "#66738a",
+        "accent": dark ? "#91adff" : "#3159d9",
+        "success": dark ? "#6ddbb1" : "#087a55",
+        "warning": dark ? "#f2bf79" : "#8a4b08",
+        "danger": dark ? "#ff91a1" : "#b4233a"
     })
     // A Codex request is owned by the shell, not by an individual page.  The
     // map is intentionally kept here so navigation cannot hide a pending
@@ -109,17 +114,17 @@ ApplicationWindow {
         Rectangle {
             Layout.preferredWidth: window.width < 1160 ? 190 : 216
             Layout.fillHeight: true
-            color: window.colors.surface
+            color: window.dark ? "#121a27" : "#fbfcfe"
             border.color: window.colors.border
 
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 16
-                spacing: 6
+                spacing: 5
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.bottomMargin: 18
+                    Layout.bottomMargin: 20
                     Rectangle {
                         width: 34; height: 34; radius: 9; color: window.colors.accent
                         Text { anchors.centerIn: parent; text: "LL"; color: "white"; font.bold: true }
@@ -172,23 +177,40 @@ ApplicationWindow {
                         id: navButton
                         required property var modelData
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 42
+                        // Compact, 38px targets keep all three navigation
+                        // groups visible at the minimum supported window while
+                        // remaining comfortably keyboard/mouse accessible.
+                        Layout.preferredHeight: 38
                         text: modelData.label
                         flat: true
                         font.weight: backend.currentPage === modelData.id ? Font.DemiBold : Font.Normal
                         onClicked: backend.navigate(modelData.id)
                         background: Rectangle {
-                            radius: 8
+                            radius: 10
                             color: backend.currentPage === modelData.id
-                                   ? Qt.rgba(0.145, 0.388, 0.922, 0.13) : "transparent"
+                                   ? Qt.rgba(0.192, 0.349, 0.851, 0.13)
+                                   : navButton.hovered
+                                     ? Qt.rgba(0.192, 0.349, 0.851, 0.06)
+                                     : "transparent"
                             border.color: navButton.activeFocus ? window.colors.accent : "transparent"
                             border.width: navButton.activeFocus ? 2 : 0
+                            Rectangle {
+                                visible: backend.currentPage === modelData.id
+                                width: 3
+                                height: 20
+                                radius: 2
+                                anchors.left: parent.left
+                                anchors.leftMargin: 2
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: window.colors.accent
+                            }
                         }
                         contentItem: Text {
                             text: navButton.text
                             color: backend.currentPage === modelData.id ? window.colors.accent : window.colors.text
                             verticalAlignment: Text.AlignVCenter
-                            leftPadding: 12
+                            leftPadding: 14
+                            font.pixelSize: 13
                         }
                     }
                 }
@@ -197,6 +219,8 @@ ApplicationWindow {
                     text: "主要"
                     color: window.colors.muted
                     font.pixelSize: 11
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.6
                     Layout.topMargin: 2
                 }
                 Repeater {
@@ -212,6 +236,8 @@ ApplicationWindow {
                     text: "个人"
                     color: window.colors.muted
                     font.pixelSize: 11
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.6
                     Layout.topMargin: 8
                 }
                 Repeater {
@@ -227,6 +253,8 @@ ApplicationWindow {
                     text: "配置"
                     color: window.colors.muted
                     font.pixelSize: 11
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.6
                     Layout.topMargin: 8
                 }
                 Repeater {
@@ -238,10 +266,21 @@ ApplicationWindow {
                 }
 
                 Item { Layout.fillHeight: true }
-                Rectangle { Layout.fillWidth: true; height: 1; color: window.colors.border }
-                Text { text: "学习档案"; color: window.colors.muted; font.pixelSize: 11 }
-                Text { text: backend.profileDisplayName || backend.profileId; color: window.colors.text; font.weight: Font.DemiBold; elide: Text.ElideRight; Layout.fillWidth: true }
-                Text { text: "Alpha · 数据默认保存在本机"; color: window.colors.muted; font.pixelSize: 11 }
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 70
+                    radius: 10
+                    color: window.colors.surfaceAlt
+                    border.color: window.colors.border
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 12
+                        spacing: 3
+                        Text { text: "学习档案"; color: window.colors.muted; font.pixelSize: 11; font.weight: Font.DemiBold }
+                        Text { text: backend.profileDisplayName || backend.profileId; color: window.colors.text; font.weight: Font.DemiBold; elide: Text.ElideRight; Layout.fillWidth: true }
+                        Text { text: "Alpha · 数据默认保存在本机"; color: window.colors.muted; font.pixelSize: 10; elide: Text.ElideRight; Layout.fillWidth: true }
+                    }
+                }
             }
         }
 
@@ -252,20 +291,40 @@ ApplicationWindow {
 
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 62
+                Layout.preferredHeight: 68
                 color: window.colors.surface
                 border.color: window.colors.border
+                Rectangle {
+                    // A small anchor line gives the shell a quiet brand cue
+                    // without competing with page actions.
+                    width: 32
+                    height: 3
+                    radius: 1.5
+                    anchors.left: parent.left
+                    anchors.leftMargin: 30
+                    anchors.bottom: parent.bottom
+                    color: window.colors.accent
+                }
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 28
-                    anchors.rightMargin: 28
+                    anchors.leftMargin: 30
+                    anchors.rightMargin: 30
                     Text {
                         text: ({home:"首页", career:"求职材料", learn:"刷题训练", exercise:"答题工作区", interview:"模拟面试", coach:"AI 教练", progress:"学习进度", connections:"AI 连接", settings:"设置"})[backend.currentPage] || "LLM Interview Lab"
                         color: window.colors.text
-                        font.pixelSize: 20
+                        font.pixelSize: 21
                         font.weight: Font.DemiBold
                     }
                     Item { Layout.fillWidth: true }
+                    Text {
+                        visible: !!backend.profileDisplayName || !!backend.profileId
+                        text: backend.profileDisplayName || backend.profileId || ""
+                        color: window.colors.muted
+                        font.pixelSize: 12
+                        elide: Text.ElideRight
+                        Layout.maximumWidth: window.width < 1100 ? 130 : 220
+                        Layout.minimumWidth: 0
+                    }
                     StatusPill { text: backend.aiStatus; tone: backend.aiStatus.indexOf("已连接") >= 0 || backend.aiStatus.indexOf("就绪") >= 0 ? window.colors.success : window.colors.muted }
                     BusyIndicator { running: backend.busy; visible: running; implicitWidth: 28; implicitHeight: 28 }
                 }
@@ -359,7 +418,14 @@ ApplicationWindow {
         height: 52
         modal: false
         closePolicy: Popup.NoAutoClose
-        background: Rectangle { color: window.dark ? "#293244" : "#172033"; radius: 9 }
+        background: Rectangle {
+            color: window.dark ? "#222d3d" : "#172033"
+            radius: 10
+            border.color: window.dark
+                          ? Qt.rgba(0.569, 0.678, 1.0, 0.5)
+                          : Qt.rgba(0.192, 0.349, 0.851, 0.5)
+            border.width: 1
+        }
         contentItem: Text {
             id: message
             color: "white"
