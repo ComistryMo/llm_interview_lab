@@ -94,7 +94,15 @@ Flickable {
             }
             RowLayout {
                 Button { text: "选择 Codex"; onClicked: codexPicker.open() }
-                Button { text: "恢复自动查找"; enabled: !!app.codexExecutable; onClicked: app.clearCodexExecutable() }
+                // Keep this action available even on a fresh install.  The
+                // controller clears a stale manual path and starts the same
+                // asynchronous discovery used at launch, so a missing Codex
+                // is a retryable state rather than a dead control.
+                Button {
+                    objectName: "restoreCodexAutoDiscovery"
+                    text: app.codexExecutable ? "恢复自动查找" : "重新自动查找"
+                    onClicked: app.clearCodexExecutable()
+                }
             }
             Text { width: parent.width; text: "未检测到 Codex 不会影响本地训练或普通 LLM API。"; color: root.palette.muted; wrapMode: Text.Wrap }
         }
