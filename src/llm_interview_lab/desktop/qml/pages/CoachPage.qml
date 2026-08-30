@@ -156,7 +156,12 @@ Item {
         }
 
         LabCard {
-            Layout.fillWidth: true; Layout.fillHeight: true
+            Layout.fillWidth: true
+            // The offline state is a compact call to action, not a transcript
+            // canvas.  Let the card size to that state so a disconnected AI
+            // does not leave a large empty panel beside the context preview.
+            Layout.fillHeight: root.aiAvailable
+            Layout.alignment: Qt.AlignTop
             cardColor: root.palette.surface; borderColor: root.palette.border
             RowLayout {
                 width: parent.width
@@ -186,7 +191,7 @@ Item {
             Item {
                 id: noAiState
                 width: parent.width
-                height: transcriptPanel.height
+                height: root.aiAvailable ? 0 : 218
                 visible: !root.aiAvailable
                 Rectangle {
                     anchors.fill: parent
