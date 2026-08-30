@@ -98,3 +98,13 @@
 - 静态检查：`compileall`、JSON 解析和 `git diff --check` 通过；INF-003 独立公开测试 22/22 通过，PyTorch 相关题按环境约定跳过。
 - 桌面动态测试未在本容器声称通过：PySide6 未安装，`test_desktop.py` 及 Coach/Onboarding Qt 测试按项目约定跳过，Alpha3 controller 测试无法收集；不改变原生 Windows/macOS 尚未重拍的 P2 说明。
 - 未运行未经额外授权的全量 `python -m pytest -q`；后续发布前仍建议在具备 PySide6 的原生 Windows/macOS 环境执行一次最终回归和截图复核。
+
+
+## 发布记录：main（2026-08-30）
+
+- 目标分支：`main`。
+- 发布前远端 SHA：`5e83f8fe3887fd8667bab347931da91fd8bc02a5`。
+- 发布后远端 SHA：`77f46de2818777bae381630928b731669c703544`。
+- 远端相对基线为 1 个发布提交、170 个文件变更；最终文件树与本地发布前 `main`（`0f5a1bce77d6391bf96254df1cbfe1376d7f92d1`）一致，包含 Alpha3 桌面改动、面经知识层、研究附录、题目资产、测试与截图。
+- 该次发布通过已授权 GitHub 写入接口完成，引用更新使用 `force=false`；未强推、未删除分支、未覆盖并发更新。由于 Git HTTPS 推送通道在当前运行环境仍不可用，GitHub 上采用了一个内容等价的发布快照提交，而不是逐个重放本地提交历史。
+- 此节 supersede 上文“待 GitHub 连接/尚未推送”的临时状态记录；原记录保留用于审计时间线。
