@@ -130,17 +130,19 @@ ApplicationWindow {
                         Layout.minimumWidth: 0
                         Text {
                             id: brandTitle
-                            // Keep the compact sidebar legible without hiding the
-                            // full product name from assistive technology.
-                            text: window.width < 1160 ? "LLM Lab" : "LLM Interview Lab"
+                            // Keep one canonical product name across every page and
+                            // viewport.  Wrapping is preferable to silently
+                            // presenting a different brand in the compact shell.
+                            text: "LLM Interview Lab"
                             color: window.colors.text
                             font.bold: true
-                            font.pixelSize: 15
+                            font.pixelSize: window.width < 1160 ? 14 : 15
                             Layout.fillWidth: true
                             elide: Text.ElideRight
-                            maximumLineCount: 1
+                            maximumLineCount: window.width < 1160 ? 2 : 1
+                            wrapMode: window.width < 1160 ? Text.WordWrap : Text.NoWrap
                             Accessible.name: "LLM Interview Lab"
-                            ToolTip.visible: window.width < 1160 && brandHover.containsMouse
+                            ToolTip.visible: brandHover.containsMouse
                             ToolTip.text: "LLM Interview Lab"
                             ToolTip.delay: 500
                             MouseArea {

@@ -10,6 +10,7 @@ Flickable {
     property var trainingTarget: app.dashboard.current
                                  || ((app.dashboard.unlocks || []).length > 0 ? app.dashboard.unlocks[0] : null)
     property bool trainingTargetRunnable: !!trainingTarget && trainingTarget.environment_available !== false
+    property bool resumableInterview: !!app.interview && app.interview.status === "active"
     function statusText(value) {
         return ({not_started: "未开始", in_progress: "进行中", implemented: "已实现",
                  reviewed: "已审查", retained_d2: "已完成 D+2", retained_d7: "已完成 D+7",
@@ -65,7 +66,9 @@ Flickable {
         spacing: 18
 
         Text {
-            text: app.dashboard.current
+            text: root.resumableInterview
+                  ? "继续未完成面试"
+                  : app.dashboard.current
                   ? "从上次进度继续"
                   : root.trainingTarget
                     ? "开始今天的训练"
@@ -75,7 +78,9 @@ Flickable {
             font.bold: true
         }
         Text {
-            text: app.dashboard.current
+            text: root.resumableInterview
+                  ? "上次面试尚未结束；建议先完成或明确放弃本场，再回到训练。"
+                  : app.dashboard.current
                   ? "首页只保留当前任务、到期复测和两个主要动作。"
                   : root.trainingTarget
                     ? "已经为你准备好第一项可开始的任务。"
@@ -146,18 +151,22 @@ Flickable {
                         id: continueTrainingButton
                         objectName: "homePrimaryAction"
                         text: app.dashboard.current ? "继续训练" : "开始训练"
-                        highlighted: true
+                        highlighted: !root.resumableInterview
                         Layout.fillWidth: true
                         Layout.preferredWidth: 184
                         Layout.preferredHeight: 46
                         enabled: root.trainingTargetRunnable
                         background: Rectangle {
                             radius: 10
-                            color: continueTrainingButton.enabled ? root.palette.accent : root.palette.border
+                            color: continueTrainingButton.enabled && !root.resumableInterview
+                                   ? root.palette.accent : root.palette.surface
+                            border.width: root.resumableInterview ? 1 : 0
+                            border.color: root.palette.border
                         }
                         contentItem: Text {
                             text: continueTrainingButton.text
-                            color: continueTrainingButton.enabled ? "white" : root.palette.muted
+                            color: continueTrainingButton.enabled && !root.resumableInterview
+                                   ? "white" : root.palette.muted
                             font.bold: true
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
@@ -175,24 +184,29 @@ Flickable {
                     Button {
                         id: startInterviewButton
                         objectName: "homeInterviewSecondaryAction"
-                        text: "开始模拟面试"
+                        text: root.resumableInterview ? "查看未完成面试" : "开始模拟面试"
                         Layout.fillWidth: true
                         Layout.preferredHeight: 38
                         flat: true
                         background: Rectangle {
                             radius: 10
-                            color: "transparent"
-                            border.width: 1
+                            color: root.resumableInterview ? root.palette.surfaceAlt : "transparent"
+                            border.width: root.resumableInterview ? 0 : 1
                             border.color: root.palette.border
                         }
                         contentItem: Text {
                             text: startInterviewButton.text
-                            color: root.palette.muted
-                            font.bold: false
+                            color: root.palette.text
+                            font.bold: root.resumableInterview
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
-                        onClicked: app.navigate("interview")
+                        onClicked: {
+                            if (root.resumableInterview)
+                                app.resumeInterview()
+                            else
+                                app.navigate("interview")
+                        }
                     }
                 }
             }
