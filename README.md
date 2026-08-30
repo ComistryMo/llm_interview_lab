@@ -56,20 +56,20 @@ LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）�
 
 ## 下载与三分钟开始
 
-当前版本是 **v0.4.0-alpha.3**。桌面版适合普通用户；源码安装适合开发者、贡献者和需要完整 PyTorch 环境的用户。
+当前 `main` 是 **v0.4.0-alpha.3 未发布源码候选**。最新可下载的桌面版本仍是 **v0.4.0-alpha.2**；Alpha.3 桌面包要等 CI 与原生启动验收通过后才会发布。需要当前功能时请使用下方源码安装。
 
 | 你使用的环境 | 推荐方式 |
 |---|---|
-| Windows 10 / 11 x64 | 下载 `LLMInterviewLab-Windows-x64-portable.zip`，完整解压后运行 `LLMInterviewLab/LLMInterviewLab.exe` |
-| Apple Silicon Mac（M1 及更新） | 下载 `LLMInterviewLab-macOS-arm64.dmg` |
-| 需要直接解压验证的 Apple Silicon Mac | 下载 `LLMInterviewLab-macOS-arm64.app.zip` |
+| Windows 10 / 11 x64 | 最新公开版见 Alpha.2；Alpha.3 候选产物名为 `LLMInterviewLab-Windows-x64-portable.zip` |
+| Apple Silicon Mac（M1 及更新） | 最新公开版见 Alpha.2；Alpha.3 候选产物名为 `LLMInterviewLab-macOS-arm64.dmg` |
+| 需要直接解压验证的 Apple Silicon Mac | Alpha.3 候选产物名为 `LLMInterviewLab-macOS-arm64.app.zip` |
 | Intel Mac | Alpha.3 暂不提供未经真实运行验证的 x86_64 包 |
 | 开发者或贡献者 | 源码安装 |
 | 不希望连接 AI | 首次启动选择“暂不连接 AI” |
 
-[前往 v0.4.0-alpha.3 下载页](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3)
+[下载最新公开桌面版 v0.4.0-alpha.2](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.2) · [浏览当前 `main` 源码](https://github.com/ComistryMo/llm_interview_lab/tree/main)
 
-下载后只需：
+当前 Alpha.3 源码候选的首次启动流程如下；使用 Alpha.2 桌面版时请以对应 Release Notes 为准：
 
 ```text
 打开应用
@@ -327,7 +327,7 @@ Do not mark a problem as mastered yourself.
 
 ## 项目状态
 
-截至 **v0.4.0-alpha.3**，数字由当前 Catalog 与公共模型核对：
+当前 `main`（**v0.4.0-alpha.3 未发布候选**）的数字由 Catalog 与公共模型核对：
 
 | 指标 | 当前状态 |
 |---|---:|
@@ -360,11 +360,11 @@ Do not mark a problem as mastered yourself.
 
 ### macOS 为什么会显示 Gatekeeper 提示？
 
-Alpha.3 默认是 ad-hoc 签名、未使用 Apple Developer ID 且未经过 Notarization 的测试构建。请先核对 `SHA256SUMS.txt`，再从系统“隐私与安全”页面确认打开。不要运行校验值不一致的文件。
+Alpha.3 候选构建配置使用 ad-hoc 签名，未使用 Apple Developer ID，也未经过 Notarization。候选正式发布后，请先核对 `SHA256SUMS.txt`，再从系统“隐私与安全”页面确认打开。不要运行校验值不一致的文件。
 
 ### Intel Mac 可以用吗？
 
-本版只发布在固定 Apple Silicon Runner 上真实构建并启动验证的 arm64 包，不把交叉编译或重命名当作 Intel / Universal 支持。Intel 用户可以尝试源码运行，但不属于本版桌面 Artifact 承诺。
+Alpha.3 发布计划只接受在固定 Apple Silicon Runner 上真实构建并启动验证的 arm64 包，不把交叉编译或重命名当作 Intel / Universal 支持。Intel 用户可以尝试源码运行，但不属于 Alpha.3 桌面 Artifact 承诺。
 
 ## 参与贡献
 

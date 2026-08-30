@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "Run the full workflow or one release job"
+        description: "Run the full workflow or one desktop build job"
         required: true
         default: all
         type: choice

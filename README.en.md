@@ -2,7 +2,7 @@
 
 [简体中文（规范版本）](README.md) | English
 
-> This is the English translation for v0.4.0-alpha.3. The Chinese documentation is canonical when wording differs.
+> This is the English translation for the v0.4.0-alpha.3 unreleased source candidate. The Chinese documentation is canonical when wording differs.
 
 A local-first, role-aware, AI-assisted interview workbench. It combines role skill maps, structured mock interviews, tested coding exercises, oral review, and spaced retention so that “I understand it” can become “I can implement and explain it independently.”
 
@@ -31,20 +31,19 @@ This is not a random question list, a one-pass mastery badge, or a way for AI to
 
 ## Download
 
-Release: [v0.4.0-alpha.3](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3)
+Current `main` is the **v0.4.0-alpha.3 unreleased source candidate**. The latest published desktop release remains [v0.4.0-alpha.2](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.2). Use a source installation for current Alpha.3 functionality.
 
 | User | Artifact |
 |---|---|
-| Windows 10/11 x64 | `LLMInterviewLab-Windows-x64-portable.zip` |
-| Windows single file | `LLMInterviewLab-Windows-x64.exe` |
-| Apple Silicon Mac, macOS 12+ | `LLMInterviewLab-macOS-arm64.dmg` |
-| Apple Silicon automation/direct extraction | `LLMInterviewLab-macOS-arm64.app.zip` |
+| Windows 10/11 x64 | Alpha.3 candidate output: `LLMInterviewLab-Windows-x64-portable.zip` |
+| Apple Silicon Mac, macOS 12+ | Alpha.3 candidate output: `LLMInterviewLab-macOS-arm64.dmg` |
+| Apple Silicon automation/direct extraction | Alpha.3 candidate output: `LLMInterviewLab-macOS-arm64.app.zip` |
 | Intel Mac | No verified Alpha.3 artifact |
 | Developer or contributor | Source installation below |
 
-The macOS Alpha is ad-hoc signed, not signed with an Apple Developer ID, and not notarized. Verify `SHA256SUMS.txt`; see the canonical [macOS guide](docs/macos.md). The Windows Alpha is also unsigned; see the [Windows guide](docs/windows.md).
+The candidate macOS build is ad-hoc signed, not signed with an Apple Developer ID, and not notarized. Once published, verify `SHA256SUMS.txt`; see the canonical [macOS guide](docs/macos.md). The candidate Windows build is also unsigned; see the [Windows guide](docs/windows.md).
 
-First launch is intentionally short:
+The current Alpha.3 source candidate uses the following first-launch flow. Alpha.2 desktop users should follow that release's notes:
 
 ```text
 Open the app
@@ -134,9 +133,9 @@ Only fields selected in Context Preview are sent. API keys are stored in Windows
 
 ## Status
 
-As of v0.4.0-alpha.3: **45 Ready**, **184 Planned**, **33 Oracle-validated**, **24 Retention-ready**, **0 Field-tested runs**, **70 skills**, **8 roles**, **24 interview blueprints**, and **26 fixed non-coding interview items**.
+The current `main` source candidate (**v0.4.0-alpha.3, unreleased**) contains **45 Ready**, **184 Planned**, **33 Oracle-validated**, **24 Retention-ready**, **0 Field-tested runs**, **70 skills**, **8 roles**, **24 interview blueprints**, and **26 fixed non-coding interview items**.
 
-This is an Alpha. The Windows and macOS packages have automated build/smoke validation, but no real Field Run is claimed. Provider behavior varies by upstream service, and Apple Developer ID signing/notarization is not yet configured.
+This is an Alpha source candidate. Its build workflows include Windows and macOS smoke checks, but the Alpha.3 release artifacts do not exist yet and no real Field Run is claimed. Provider behavior varies by upstream service, and Apple Developer ID signing/notarization is not configured.
 
 ## Contributing and support
 

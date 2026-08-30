@@ -2,9 +2,11 @@
 
 ## 系统要求与下载
 
+> 发布状态：当前 `main` 是 Alpha.3 未发布源码候选，尚无公开 Alpha.3 Windows 包。最新公开桌面版仍是 [v0.4.0-alpha.2](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.2)。以下文件名描述 CI 候选构建，发布门禁通过前不可从 Release 下载。
+
 - Windows 10 / 11 x64；
-- 普通用户推荐 `LLMInterviewLab-Windows-x64-portable.zip`；
-- `SHA256SUMS.txt` 或 Windows 校验清单用于验证完整性。
+- Alpha.3 候选产物为 `LLMInterviewLab-Windows-x64-portable.zip`；
+- 对应校验清单为 `SHA256SUMS-Windows.txt`。
 
 Portable ZIP 是完整的 standalone 目录。请先完整解压，再双击
 `LLMInterviewLab\LLMInterviewLab.exe`；不要从压缩包预览器中运行，也不要只复制 EXE。

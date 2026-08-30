@@ -98,6 +98,39 @@ def test_download_names_and_platform_job_are_consistent() -> None:
     assert "macOS-x86_64" not in readme
 
 
+def test_unreleased_alpha3_does_not_link_to_a_nonexistent_release() -> None:
+    readme = _read("README.md")
+    english = _read("README.en.md")
+    windows = _read("docs/windows.md")
+    macos = _read("docs/macos.md")
+    changelog = _read("CHANGELOG.md")
+    workflow = _read(".github/workflows/ci.yml")
+    documents = (readme, english, windows, macos, changelog)
+
+    for text in documents:
+        assert "/releases/tag/v0.4.0-alpha.3" not in text
+        assert "/releases/download/v0.4.0-alpha.3/" not in text
+
+    assert "v0.4.0-alpha.3 未发布源码候选" in readme
+    assert "v0.4.0-alpha.3 unreleased source candidate" in english
+    assert "当前 Alpha.3 源码候选的首次启动流程" in readme
+    assert "current Alpha.3 source candidate" in english
+    assert "截至 **v0.4.0-alpha.3**" not in readme
+    assert "As of v0.4.0-alpha.3" not in english
+    assert "未发布源码候选" in windows
+    assert "未发布源码候选" in macos
+    assert "/releases/tag/v0.4.0-alpha.2" in readme
+    assert "/releases/tag/v0.4.0-alpha.2" in english
+    assert "/tree/main" in readme
+    assert "LLMInterviewLab-Windows-x64.exe" not in readme
+    assert "LLMInterviewLab-Windows-x64.exe" not in english
+    assert "LLMInterviewLab-Windows-x64.exe" not in windows
+    assert "SHA256SUMS-Windows.txt" in windows
+    assert "SHA256SUMS-Windows.txt" in workflow
+    assert "one release job" not in workflow
+    assert "compare/v0.4.0-alpha.2...HEAD" in changelog
+
+
 def test_readme_statistics_are_derived_from_the_catalog() -> None:
     catalog = load_catalog(REPO_ROOT)
     ready = [problem for problem in catalog.problems.values() if problem.ready]
