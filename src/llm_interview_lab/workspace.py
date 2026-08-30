@@ -405,12 +405,30 @@ def ensure_profile_path_is_safe(
 
     repository = repo_root.resolve()
     profiles_root = repository / "workspace/profiles"
-    profile_root = profiles_root / validate_profile_id(profile_id)
+    validated_profile_id = validate_profile_id(profile_id)
+    profile_root = profiles_root / validated_profile_id
     # ``Path.absolute()`` may retain a Windows 8.3 alias while ``repo_root``
     # came from ``resolve()``.  Normalize both sides before comparing; retain
     # the lexical path separately so link/reparse checks still inspect the
     # caller-provided components.
     lexical_target = (candidate or profile_root).absolute()
+
+    if not profiles_root.is_dir() or _is_obvious_link(profiles_root):
+        raise WorkspaceError("workspace/profiles must be a regular, unlinked directory")
+
+    # Inspect the caller-provided path before resolving it.  On POSIX a
+    # directory symlink can otherwise resolve outside the Profile and be
+    # misclassified as a generic containment failure.
+    lexical_current = lexical_target
+    while True:
+        if _is_obvious_link(lexical_current):
+            raise WorkspaceError("Profile path must not use a symlink or reparse point")
+        if lexical_current == lexical_current.parent:
+            break
+        if lexical_current.name.lower() == validated_profile_id.lower():
+            break
+        lexical_current = lexical_current.parent
+
     target = lexical_target.resolve(strict=False)
     normalized_profiles_root = profiles_root.resolve(strict=False)
     normalized_profile_root = profile_root.resolve(strict=False)
@@ -420,9 +438,6 @@ def ensure_profile_path_is_safe(
     except ValueError as error:
         raise WorkspaceError("Profile path is outside workspace/profiles") from error
 
-    if not profiles_root.is_dir() or _is_obvious_link(profiles_root):
-        raise WorkspaceError("workspace/profiles must be a regular, unlinked directory")
-
     current = profiles_root
     relative = target.relative_to(normalized_profiles_root)
     for part in relative.parts:
@@ -431,19 +446,6 @@ def ensure_profile_path_is_safe(
             raise WorkspaceError("Profile path must not use a symlink or reparse point")
         if current.exists() and current != target and not current.is_dir():
             raise WorkspaceError("Profile path contains a non-directory component")
-
-    # Check the original lexical path as well.  This catches a link before
-    # ``resolve`` can hide it, while the normalized path above handles short
-    # Windows aliases consistently.
-    lexical_current = lexical_target
-    while True:
-        if _is_obvious_link(lexical_current):
-            raise WorkspaceError("Profile path must not use a symlink or reparse point")
-        if lexical_current == lexical_current.parent:
-            break
-        if lexical_current.name.lower() == validate_profile_id(profile_id).lower():
-            break
-        lexical_current = lexical_current.parent
 
     if must_exist and not target.exists():
         raise WorkspaceError("required Profile path is missing")

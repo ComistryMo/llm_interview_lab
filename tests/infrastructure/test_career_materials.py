@@ -373,9 +373,11 @@ def test_init_and_material_add_reject_reparse_profile_components_without_admin(
 
     assert materials_module._is_obvious_link(target)
     assert workspace_module._is_obvious_link(target)
-    with pytest.raises(WorkspaceError, match="link|reparse|invalid"):
+    with pytest.raises(WorkspaceError, match="symlink or reparse point"):
         init_profile(root, "learner-one")
-    with pytest.raises((MaterialError, WorkspaceError), match="link|reparse|invalid"):
+    with pytest.raises(
+        (MaterialError, WorkspaceError), match="symlink or reparse point"
+    ):
         add_material(
             root,
             "learner-one",
@@ -404,15 +406,30 @@ def test_init_and_material_add_reject_linked_profile_components_when_supported(
     except (NotImplementedError, OSError) as error:
         pytest.skip(f"directory symlink creation is unavailable: {error}")
 
-    with pytest.raises(WorkspaceError, match="link|reparse|invalid"):
+    with pytest.raises(WorkspaceError, match="symlink or reparse point"):
         init_profile(root, "learner-one")
-    with pytest.raises((MaterialError, WorkspaceError), match="link|reparse|invalid"):
+    with pytest.raises(
+        (MaterialError, WorkspaceError), match="symlink or reparse point"
+    ):
         add_material(
             root,
             "learner-one",
             _text_source(tmp_path, f"linked-{component}.md"),
             material_id=f"linked-{component}",
             kind="other",
+        )
+
+
+def test_profile_path_outside_workspace_has_distinct_error(tmp_path: Path) -> None:
+    root = _workspace_repo(tmp_path)
+    init_profile(root, "learner-one")
+    outside = tmp_path / "outside-profile-path"
+
+    with pytest.raises(WorkspaceError, match="outside workspace/profiles"):
+        workspace_module.ensure_profile_path_is_safe(
+            root,
+            "learner-one",
+            outside,
         )
 
 
