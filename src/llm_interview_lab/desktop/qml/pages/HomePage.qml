@@ -248,7 +248,8 @@ Flickable {
                                     }
                                     contentItem: Text {
                                         text: resumeInlineButton.text
-                                        color: resumeInlineButton.enabled ? "white" : root.palette.muted
+                                        color: resumeInlineButton.enabled
+                                               ? root.palette.accentForeground : root.palette.muted
                                         font.bold: true
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
@@ -287,7 +288,7 @@ Flickable {
                         contentItem: Text {
                             text: continueTrainingButton.text
                             color: continueTrainingButton.enabled
-                                   ? "white" : root.palette.muted
+                                   ? root.palette.accentForeground : root.palette.muted
                             font.bold: true
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
@@ -472,10 +473,24 @@ Flickable {
                             tone: root.palette.warning
                         }
                         Button {
+                            id: retentionActionButton
                             objectName: "startDueRetention"
                             visible: root.retentionActionable(modelData)
                             text: "开始 " + (modelData.stage || "复测").toUpperCase()
                             highlighted: true
+                            background: Rectangle {
+                                radius: 8
+                                color: retentionActionButton.down
+                                       ? Qt.darker(root.palette.accent, 1.12)
+                                       : root.palette.accent
+                            }
+                            contentItem: Text {
+                                text: retentionActionButton.text
+                                color: root.palette.accentForeground
+                                font: retentionActionButton.font
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
                             onClicked: app.startRetentionFor(modelData.problem_id, modelData.stage)
                         }
                     }

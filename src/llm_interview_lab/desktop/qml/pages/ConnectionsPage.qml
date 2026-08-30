@@ -149,6 +149,11 @@ Flickable {
             rowSpacing: root.compactOverview ? 8 : 14
             LabCard {
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.preferredWidth: connectionOverview.columns === 2
+                                       ? (connectionOverview.width
+                                          - connectionOverview.columnSpacing) / 2
+                                       : connectionOverview.width
                 Layout.preferredHeight: Math.max(root.overviewCardMinHeight, implicitHeight)
                 Layout.alignment: Qt.AlignTop
                 cardColor: root.palette.surface; borderColor: root.palette.border
@@ -187,6 +192,11 @@ Flickable {
             LabCard {
                 id: codexCard
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.preferredWidth: connectionOverview.columns === 2
+                                       ? (connectionOverview.width
+                                          - connectionOverview.columnSpacing) / 2
+                                       : connectionOverview.width
                 Layout.alignment: Qt.AlignTop
                 // At the minimum supported window width the four actions do
                 // not fit in one row. Let the card use two predictable rows

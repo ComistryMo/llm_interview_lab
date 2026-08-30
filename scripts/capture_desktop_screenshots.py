@@ -151,6 +151,10 @@ def main(argv: list[str] | None = None) -> int:
             page,
             "--window-size",
             size,
+            "--screenshot-font-scale",
+            "1.0",
+            "--screenshot-motion-scale",
+            "0.0",
         ]
         if page == "onboarding":
             command.extend(
@@ -192,6 +196,7 @@ def main(argv: list[str] | None = None) -> int:
                 "platform": sys.platform,
                 "theme": theme,
                 "font_scale": 1.0,
+                "motion_scale": 0.0,
                 "sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
                 "synthetic": True,
             }

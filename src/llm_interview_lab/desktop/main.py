@@ -29,6 +29,26 @@ def _window_size(value: str) -> tuple[int, int]:
     return width, height
 
 
+def _scale(value: str, *, minimum: float, maximum: float, label: str) -> float:
+    try:
+        scale = float(value)
+    except (TypeError, ValueError) as error:
+        raise argparse.ArgumentTypeError(f"{label} must be a number") from error
+    if scale < minimum or scale > maximum:
+        raise argparse.ArgumentTypeError(
+            f"{label} must be between {minimum} and {maximum}"
+        )
+    return scale
+
+
+def _font_scale(value: str) -> float:
+    return _scale(value, minimum=0.85, maximum=1.4, label="font scale")
+
+
+def _motion_scale(value: str) -> float:
+    return _scale(value, minimum=0.0, maximum=1.0, label="motion scale")
+
+
 def _grader_worker(arguments: list[str]) -> int:
     import pytest
 
@@ -87,6 +107,20 @@ def _parser() -> argparse.ArgumentParser:
         choices=("light", "dark"),
         default="light",
         help="theme for synthetic screenshots (does not change a real Profile)",
+    )
+    parser.add_argument(
+        "--screenshot-font-scale",
+        type=_font_scale,
+        default=1.0,
+        metavar="SCALE",
+        help="synthetic UI font scale from 0.85 to 1.4 (never persisted)",
+    )
+    parser.add_argument(
+        "--screenshot-motion-scale",
+        type=_motion_scale,
+        default=0.0,
+        metavar="SCALE",
+        help="synthetic motion scale from 0.0 to 1.0 (never persisted)",
     )
     return parser
 
@@ -193,6 +227,7 @@ def main(argv: list[str] | None = None) -> int:
     record_bootstrap_event("runtime_assets", runtime_assets_found=assets_found)
     try:
         from PySide6.QtCore import QTimer, QUrl, QObject
+        from PySide6.QtGui import QFontDatabase
         from PySide6.QtWidgets import QApplication
         from PySide6.QtQml import QQmlApplicationEngine
         from PySide6.QtQuick import QQuickWindow
@@ -221,6 +256,21 @@ def main(argv: list[str] | None = None) -> int:
     app.setOrganizationName("ComistryMo")
     app.setOrganizationDomain("comistrymo.github.io")
     app.setApplicationVersion(__version__)
+    # Raw QML Text items do not inherit ApplicationWindow.font reliably.
+    # Select an installed platform CJK UI family once so Chinese copy keeps
+    # working consistently across pages, dialogs and native screenshots.
+    preferred_ui_fonts = (
+        ("Microsoft YaHei UI", "Microsoft YaHei")
+        if sys.platform == "win32"
+        else ("PingFang SC",) if sys.platform == "darwin" else ()
+    )
+    installed_families = set(QFontDatabase.families())
+    for family in preferred_ui_fonts:
+        if family in installed_families:
+            application_font = app.font()
+            application_font.setFamily(family)
+            app.setFont(application_font)
+            break
     loading = _show_loading_screen(
         app,
         enabled=not (args.screenshot or args.smoke_test)
@@ -317,6 +367,15 @@ def main(argv: list[str] | None = None) -> int:
         controller.shutdown()
         return 2
     window = engine.rootObjects()[0]
+    if args.screenshot or args.smoke_test:
+        # These are presentation-only overrides for deterministic evidence.
+        # They never pass through AppController or QSettings.
+        window.setProperty(
+            "displayFontScaleOverride", args.screenshot_font_scale
+        )
+        window.setProperty(
+            "displayMotionScaleOverride", args.screenshot_motion_scale
+        )
     if args.window_size is not None:
         window.resize(*args.window_size)
     if args.screenshot and args.screenshot_page == "onboarding":

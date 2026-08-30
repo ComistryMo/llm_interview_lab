@@ -13,11 +13,8 @@ ApplicationWindow {
     minimumHeight: 620
     visible: true
     title: "LLM Interview Lab"
-    Material.theme: backend.theme === "dark" ? Material.Dark
-                    : backend.theme === "light" ? Material.Light
-                    : Material.System
-    // Keep native Material controls aligned with the shell palette.
-    Material.accent: backend.theme === "dark" ? "#91adff" : "#3159d9"
+    Material.theme: dark ? Material.Dark : Material.Light
+    Material.accent: appTheme.accent
 
     // Material.System is a style selection, not a resolved color scheme.  Use
     // the platform hint as well so custom surfaces follow the system theme
@@ -26,43 +23,48 @@ ApplicationWindow {
                         || (backend.theme === "system"
                             && Qt.application.styleHints
                             && Qt.application.styleHints.colorScheme === Qt.ColorScheme.Dark)
-    property var colors: ({
-        // A quiet neutral canvas keeps the single accent colour reserved for
-        // actions and progress.  This is deliberately a palette adjustment,
-        // not a second theme system, so every existing page keeps its data
-        // and interaction behaviour.
-        "background": dark ? "#0e141f" : "#f4f7fb",
-        "surface": dark ? "#161e2b" : "#ffffff",
-        "surfaceAlt": dark ? "#1d2939" : "#edf2f8",
-        "border": dark ? "#2d3a4d" : "#d7e0ec",
-        "text": dark ? "#f0f4fa" : "#172033",
-        "muted": dark ? "#a8b5c8" : "#66738a",
-        "accent": dark ? "#91adff" : "#3159d9",
-        "success": dark ? "#6ddbb1" : "#087a55",
-        "warning": dark ? "#f2bf79" : "#8a4b08",
-        "danger": dark ? "#ff91a1" : "#b4233a"
-    })
+    // Synthetic evidence can override typography and motion without touching
+    // Controller settings, Profile data or events.
+    property real displayFontScaleOverride: 0.0
+    property real displayMotionScaleOverride: -1.0
+    readonly property real effectiveFontScale: displayFontScaleOverride > 0
+                                               ? displayFontScaleOverride
+                                               : backend.fontScale
+    readonly property real effectiveMotionScale: displayMotionScaleOverride >= 0
+                                                 ? displayMotionScaleOverride : 1.0
+    AppTheme {
+        id: appTheme
+        darkMode: window.dark
+        fontScale: window.effectiveFontScale
+        motionScale: window.effectiveMotionScale
+        uiFontFamily: window.uiFontFamily
+    }
+    property var colors: appTheme.legacyPalette
     // Prefer the platform's bundled CJK UI face when it is available.  The
     // empty Linux value deliberately keeps Qt's normal fallback chain intact;
     // forcing a font that is not installed is what turns Chinese copy into
     // tofu on minimal CI images.
     property string uiFontFamily: Qt.platform.os === "windows" ? "Microsoft YaHei UI"
                                        : Qt.platform.os === "osx" ? "PingFang SC" : ""
-    // The shell gets a small responsive breakpoint of its own.  Keeping the
-    // decision here lets pages use their full content width while the
-    // navigation/header remain legible at the 900px minimum window.
-    property bool compactShell: width < 1040
+    readonly property string layoutMode: width < 1040 ? "compact"
+                                         : width < 1400 ? "standard" : "wide"
+    readonly property bool compactShell: layoutMode !== "wide"
+    readonly property int sidebarWidth: layoutMode === "wide" ? 224
+                                        : layoutMode === "standard" ? 72 : 64
     property string paletteQuery: ""
     property var paletteActions: [
         {id: "home", label: "打开首页", hint: "继续训练或开始模拟面试"},
         {id: "learn", label: "打开刷题训练", hint: "按课程前置选择题目"},
+        {id: "exercise", label: "打开答题工作区", hint: "继续当前题目或浏览可练题目"},
         {id: "interview", label: "打开模拟面试", hint: "开始或恢复结构化面试"},
         {id: "coach", label: "打开 AI 教练", hint: "查看上下文并请求只读帮助"},
         {id: "career", label: "打开求职材料", hint: "管理当前 Profile 的材料"},
         {id: "progress", label: "打开学习进度", hint: "查看当前 Profile 的进度"},
         {id: "connections", label: "打开 AI 连接", hint: "配置或测试普通 LLM"},
         {id: "settings", label: "打开设置", hint: "外观、本地目录与 Codex"},
-        {id: "run-tests", label: "运行公开测试", hint: "保存当前编辑器并运行测试", exerciseOnly: true}
+        {id: "run-tests", label: "运行公开测试", hint: "保存当前编辑器并运行测试", exerciseOnly: true},
+        {id: "about", label: "关于 LLM Interview Lab", hint: "查看版本和产品说明"},
+        {id: "quit", label: "退出应用", hint: "安全关闭本地工作台"}
     ]
     // A Codex request is owned by the shell, not by an individual page.  The
     // map is intentionally kept here so navigation cannot hide a pending
@@ -112,6 +114,21 @@ ApplicationWindow {
         return result
     }
 
+    function pageTitle(pageId) {
+        var titles = {
+            home: backend.uiText("nav.home"),
+            learn: backend.uiText("nav.learn"),
+            exercise: "答题工作区",
+            interview: backend.uiText("nav.interview"),
+            progress: backend.uiText("nav.progress"),
+            career: backend.uiText("nav.career"),
+            coach: backend.uiText("nav.coach"),
+            connections: backend.uiText("nav.connections"),
+            settings: backend.uiText("nav.settings")
+        }
+        return titles[pageId] || "LLM Interview Lab"
+    }
+
     function triggerPaletteAction(actionId) {
         if (actionId === "run-tests") {
             if (backend.currentPage === "exercise" && !backend.busy)
@@ -119,30 +136,31 @@ ApplicationWindow {
             commandPalette.close()
             return
         }
+        if (actionId === "about") {
+            commandPalette.close()
+            aboutDialog.open()
+            return
+        }
+        if (actionId === "quit") {
+            commandPalette.close()
+            Qt.quit()
+            return
+        }
         backend.navigate(actionId)
         commandPalette.close()
     }
-
-    function compactAiStatus(value) {
-        var status = String(value || "")
-        if (status.indexOf("已连接") >= 0 || status.indexOf("就绪") >= 0)
-            return "AI 已连接"
-        if (status.indexOf("失败") >= 0 || status.indexOf("不可用") >= 0
-                || status.indexOf("错误") >= 0)
-            return "AI 连接失败"
-        if (status.indexOf("检测") >= 0 || status.indexOf("连接中") >= 0
-                || status.indexOf("处理中") >= 0)
-            return "检测中"
-        return "No-AI 可用"
-    }
-    font.pixelSize: Math.round(14 * backend.fontScale)
+    font.pixelSize: appTheme.scaledPx(14)
     // An empty family lets Qt use the platform fallback chain.  Reading
     // Qt.application.font.family on minimal Linux/offscreen setups yields the
     // synthetic “Sans Serif” alias and triggers a needless font lookup.
     font.family: uiFontFamily
-    color: colors.background
+    color: appTheme.canvas
 
     menuBar: MenuBar {
+        // Windows/Linux use the in-app command surface; macOS keeps the
+        // platform-native application menu semantics.
+        visible: Qt.platform.os === "osx"
+        height: visible ? implicitHeight : 0
         Menu {
             title: "应用"
             Action { text: "关于 LLM Interview Lab"; onTriggered: aboutDialog.open() }
@@ -155,6 +173,17 @@ ApplicationWindow {
             Action { text: "继续训练"; onTriggered: backend.navigate("home") }
                     Action { text: "运行公开测试"; enabled: backend.currentPage === "exercise" && !backend.busy; onTriggered: backend.runTests() }
         }
+    }
+
+    Shortcut {
+        sequence: StandardKey.Preferences
+        enabled: !backend.onboardingRequired
+        onActivated: backend.navigate("settings")
+    }
+
+    Shortcut {
+        sequence: StandardKey.Quit
+        onActivated: Qt.quit()
     }
 
     Shortcut {
@@ -192,49 +221,59 @@ ApplicationWindow {
         anchors.fill: parent
         spacing: 0
 
-        Rectangle {
-            Layout.preferredWidth: window.compactShell ? 184 : 216
+        LabSurface {
+            theme: appTheme
+            level: "chrome"
+            outlined: false
+            padding: 0
+            cornerRadius: 0
+            Layout.preferredWidth: window.sidebarWidth
             Layout.fillHeight: true
-            color: window.dark ? "#121a27" : "#fbfcfe"
-            border.color: window.colors.border
+
+            LabDivider {
+                theme: appTheme
+                orientation: Qt.Vertical
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+            }
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 16
-                spacing: 5
+                anchors.leftMargin: window.layoutMode === "wide" ? 16 : 10
+                anchors.rightMargin: window.layoutMode === "wide" ? 16 : 10
+                anchors.topMargin: 14
+                anchors.bottomMargin: 12
+                spacing: 4
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.bottomMargin: window.compactShell ? 14 : 20
-                    Rectangle {
-                        width: 36; height: 36; radius: 10
-                        color: window.colors.accent
-                        border.color: Qt.rgba(1, 1, 1, window.dark ? 0.16 : 0.24)
-                        border.width: 1
-                        Text {
-                            anchors.centerIn: parent
-                            text: "LL"
-                            color: "white"
-                            font.bold: true
-                            font.pixelSize: 13
-                            font.letterSpacing: 0.4
-                        }
+                    Layout.bottomMargin: 12
+                    Layout.alignment: window.layoutMode === "wide"
+                                      ? Qt.AlignLeft : Qt.AlignHCenter
+                    Image {
+                        source: Qt.resolvedUrl("../resources/app-icon.svg")
+                        sourceSize.width: 34
+                        sourceSize.height: 34
+                        Layout.preferredWidth: 34
+                        Layout.preferredHeight: 34
+                        fillMode: Image.PreserveAspectFit
+                        Accessible.name: "LLM Interview Lab"
                     }
                     ColumnLayout {
+                        visible: window.layoutMode === "wide"
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
                         Text {
                             id: brandTitle
-                            // Keep the compact lockup intentional instead of
-                            // letting the product name wrap at an arbitrary word.
-                            text: window.compactShell ? "LLM\nInterview Lab" : "LLM Interview Lab"
+                            text: "LLM Interview Lab"
                             color: window.colors.text
-                            font.bold: true
-                            font.pixelSize: window.compactShell ? 14 : 15
+                            font.weight: Font.DemiBold
+                            font.pixelSize: appTheme.scaledPx(14)
                             Layout.fillWidth: true
                             elide: Text.ElideRight
-                            maximumLineCount: window.width < 1160 ? 2 : 1
+                            maximumLineCount: 1
                             wrapMode: Text.NoWrap
                             Accessible.name: "LLM Interview Lab"
                             ToolTip.visible: brandHover.containsMouse
@@ -248,9 +287,9 @@ ApplicationWindow {
                             }
                         }
                         Text {
-                            text: "本地 AI 面试训练工作台"
+                            text: "本地面试训练工作台"
                             color: window.colors.muted
-                            font.pixelSize: 11
+                            font.pixelSize: appTheme.scaledPx(11)
                             Layout.fillWidth: true
                             elide: Text.ElideRight
                             maximumLineCount: 1
@@ -263,150 +302,119 @@ ApplicationWindow {
                 // small section labels make the shell easier to scan.
                 Component {
                     id: navButtonDelegate
-                    Button {
-                        id: navButton
+                    NavItem {
                         required property var modelData
-                        Layout.fillWidth: true
-                        // Compact, 38px targets keep the high-frequency loop
-                        // comfortably keyboard/mouse accessible.
-                        Layout.preferredHeight: 38
-                        // Keep the compact shell focused on the daily loop;
-                        // the remaining destinations are exposed by the real
-                        // command palette and the explicit “更多入口…” action.
-                        visible: !window.compactShell || modelData.id === "home"
-                                 || modelData.id === "learn"
-                                 || modelData.id === "interview"
-                                 || modelData.id === "coach"
-                        text: modelData.label
-                        flat: true
-                        font.weight: backend.currentPage === modelData.id ? Font.DemiBold : Font.Normal
+                        theme: appTheme
+                        compact: window.layoutMode !== "wide"
+                        label: modelData.label
+                        iconSource: Qt.resolvedUrl(modelData.icon)
+                        selected: backend.currentPage === modelData.id
+                        Layout.fillWidth: window.layoutMode === "wide"
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.preferredWidth: window.layoutMode === "wide" ? -1 : 44
+                        Layout.preferredHeight: window.layoutMode === "wide" ? 40 : 44
                         onClicked: backend.navigate(modelData.id)
-                        background: Rectangle {
-                            radius: 10
-                            color: backend.currentPage === modelData.id
-                                   ? Qt.rgba(0.192, 0.349, 0.851, 0.13)
-                                   : navButton.hovered
-                                     ? Qt.rgba(0.192, 0.349, 0.851, 0.06)
-                                     : "transparent"
-                            border.color: navButton.activeFocus ? window.colors.accent : "transparent"
-                            border.width: navButton.activeFocus ? 2 : 0
-                            Behavior on color { ColorAnimation { duration: 120 } }
-                            Rectangle {
-                                visible: backend.currentPage === modelData.id
-                                width: 3
-                                height: 20
-                                radius: 2
-                                anchors.left: parent.left
-                                anchors.leftMargin: 2
-                                anchors.verticalCenter: parent.verticalCenter
-                                color: window.colors.accent
-                            }
-                        }
-                        contentItem: Text {
-                            text: navButton.text
-                            color: backend.currentPage === modelData.id ? window.colors.accent : window.colors.text
-                            verticalAlignment: Text.AlignVCenter
-                            leftPadding: 14
-                            font.pixelSize: 13
-                        }
                     }
                 }
 
-                Text {
+                LabText {
+                    theme: appTheme
+                    visible: window.layoutMode === "wide"
                     text: "主要"
-                    color: window.colors.muted
-                    font.pixelSize: 11
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 0.6
+                    variant: "caption"
+                    tone: "muted"
+                    strong: true
                     Layout.topMargin: 2
                 }
                 Repeater {
                     model: [
-                        {id: "home", label: backend.uiText("nav.home")},
-                        {id: "learn", label: backend.uiText("nav.learn")},
-                        {id: "interview", label: backend.uiText("nav.interview")}
+                        {id: "home", label: backend.uiText("nav.home"), icon: "../resources/icons/home.svg"},
+                        {id: "learn", label: backend.uiText("nav.learn"), icon: "../resources/icons/book-open.svg"},
+                        {id: "exercise", label: "答题工作区", icon: "../resources/icons/code.svg"},
+                        {id: "interview", label: backend.uiText("nav.interview"), icon: "../resources/icons/interview.svg"}
                     ]
                     delegate: navButtonDelegate
                 }
 
-                Text {
-                    visible: !window.compactShell
-                    text: "个人"
-                    color: window.colors.muted
-                    font.pixelSize: 11
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 0.6
-                    Layout.topMargin: 8
+                LabDivider {
+                    theme: appTheme
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    Layout.bottomMargin: 4
+                }
+                LabText {
+                    theme: appTheme
+                    visible: window.layoutMode === "wide"
+                    text: "复盘与辅助"
+                    variant: "caption"
+                    tone: "muted"
+                    strong: true
                 }
                 Repeater {
                     model: [
-                        {id: "career", label: backend.uiText("nav.career")},
-                        {id: "coach", label: backend.uiText("nav.coach")},
-                        {id: "progress", label: backend.uiText("nav.progress")}
+                        {id: "progress", label: backend.uiText("nav.progress"), icon: "../resources/icons/chart.svg"},
+                        {id: "career", label: backend.uiText("nav.career"), icon: "../resources/icons/briefcase.svg"},
+                        {id: "coach", label: backend.uiText("nav.coach"), icon: "../resources/icons/messages.svg"}
                     ]
                     delegate: navButtonDelegate
                 }
 
-                Text {
-                    visible: !window.compactShell
-                    text: "配置"
-                    color: window.colors.muted
-                    font.pixelSize: 11
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 0.6
-                    Layout.topMargin: 8
+                LabDivider {
+                    theme: appTheme
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    Layout.bottomMargin: 4
                 }
                 Repeater {
                     model: [
-                        {id: "connections", label: backend.uiText("nav.connections")},
-                        {id: "settings", label: backend.uiText("nav.settings")}
+                        {id: "connections", label: backend.uiText("nav.connections"), icon: "../resources/icons/plug.svg"},
+                        {id: "settings", label: backend.uiText("nav.settings"), icon: "../resources/icons/settings.svg"}
                     ]
                     delegate: navButtonDelegate
                 }
 
-                // Secondary destinations remain real and keyboard reachable
-                // through the palette.  At the minimum window width the
-                // sidebar presents only the high-frequency loop, with an
-                // explicit affordance so newcomers do not have to know the
-                // Ctrl/⌘K shortcut in advance.
-                Button {
+                LabIconButton {
                     id: moreNavigationButton
                     objectName: "moreNavigationButton"
-                    visible: window.compactShell
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 36
-                    text: "更多入口…"
-                    flat: true
+                    theme: appTheme
+                    iconSource: Qt.resolvedUrl("../resources/icons/more.svg")
+                    accessibleName: "更多导航和命令"
+                    toolTip: "更多导航和命令 · Ctrl/⌘ K"
+                    Layout.alignment: Qt.AlignHCenter
                     onClicked: {
                         commandPalette.open()
                         paletteSearch.forceActiveFocus()
                         paletteSearch.selectAll()
                     }
-                    contentItem: Text {
-                        text: moreNavigationButton.text
-                        color: window.colors.muted
-                        font.pixelSize: 12
-                        horizontalAlignment: Text.AlignLeft
-                        verticalAlignment: Text.AlignVCenter
-                        leftPadding: 14
-                    }
                 }
 
                 Item { Layout.fillHeight: true }
-                Rectangle {
+                LabSurface {
+                    theme: appTheme
+                    visible: window.layoutMode === "wide"
+                    level: "sunken"
+                    outlined: false
+                    padding: 0
                     Layout.fillWidth: true
                     Layout.preferredHeight: 70
-                    radius: 10
-                    color: window.colors.surfaceAlt
-                    border.color: window.colors.border
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 12
                         spacing: 3
-                        Text { text: "学习档案"; color: window.colors.muted; font.pixelSize: 11; font.weight: Font.DemiBold }
-                        Text { text: backend.profileDisplayName || backend.profileId; color: window.colors.text; font.weight: Font.DemiBold; elide: Text.ElideRight; Layout.fillWidth: true }
-                        Text { text: "Alpha · 数据默认保存在本机"; color: window.colors.muted; font.pixelSize: 10; elide: Text.ElideRight; Layout.fillWidth: true }
+                        LabText { theme: appTheme; text: "学习档案"; variant: "caption"; tone: "muted"; strong: true }
+                        LabText { theme: appTheme; text: backend.profileDisplayName || backend.profileId; strong: true; elide: Text.ElideRight; Layout.fillWidth: true }
+                        LabText { theme: appTheme; text: "数据保存在本机"; variant: "caption"; tone: "muted"; elide: Text.ElideRight; Layout.fillWidth: true }
                     }
+                }
+                LabIconButton {
+                    visible: window.layoutMode !== "wide"
+                    theme: appTheme
+                    iconSource: Qt.resolvedUrl("../resources/icons/user.svg")
+                    accessibleName: backend.profileDisplayName || backend.profileId || "学习档案"
+                    toolTip: (backend.profileDisplayName || backend.profileId || "学习档案")
+                             + " · 数据保存在本机"
+                    Layout.alignment: Qt.AlignHCenter
+                    onClicked: backend.navigate("settings")
                 }
             }
         }
@@ -416,67 +424,80 @@ ApplicationWindow {
             Layout.fillHeight: true
             spacing: 0
 
-            Rectangle {
+            LabSurface {
+                theme: appTheme
+                level: "surface"
+                outlined: false
+                padding: 0
+                cornerRadius: 0
                 Layout.fillWidth: true
-                Layout.preferredHeight: 68
-                color: window.colors.surface
-                border.color: window.colors.border
-                Rectangle {
-                    // A small anchor line gives the shell a quiet brand cue
-                    // without competing with page actions.
-                    width: 32
-                    height: 3
-                    radius: 1.5
+                Layout.preferredHeight: 56
+                LabDivider {
+                    theme: appTheme
                     anchors.left: parent.left
-                    anchors.leftMargin: 30
+                    anchors.right: parent.right
                     anchors.bottom: parent.bottom
-                    color: window.colors.accent
                 }
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 30
-                    anchors.rightMargin: 30
-                    Text {
-                        Layout.fillWidth: true
-                        text: ({home:"首页", career:"求职材料", learn:"刷题训练", exercise:"答题工作区", interview:"模拟面试", coach:"AI 教练", progress:"学习进度", connections:"AI 连接", settings:"设置"})[backend.currentPage] || "LLM Interview Lab"
-                        color: window.colors.text
-                        font.pixelSize: window.compactShell ? 19 : 21
-                        font.weight: Font.DemiBold
+                    anchors.leftMargin: window.layoutMode === "compact" ? 14 : 20
+                    anchors.rightMargin: window.layoutMode === "compact" ? 14 : 20
+                    spacing: 10
+                    LabText {
+                        objectName: "shellRouteTitle"
+                        theme: appTheme
+                        text: window.pageTitle(backend.currentPage)
+                        strong: true
                         elide: Text.ElideRight
+                        Layout.maximumWidth: window.layoutMode === "compact" ? 156 : 190
                     }
-                    Item { Layout.fillWidth: true; visible: !window.compactShell }
-                    Rectangle {
-                        visible: (!!backend.profileDisplayName || !!backend.profileId) && !window.compactShell
-                        property int profileChipMaxWidth: window.width < 1100 ? 150 : 230
-                        Layout.preferredHeight: 30
-                        Layout.maximumWidth: profileChipMaxWidth
-                        Layout.minimumWidth: 48
-                        Layout.preferredWidth: Math.min(profileChipMaxWidth,
-                                                        Math.max(48, profileNameLabel.implicitWidth + 24))
-                        radius: 8
-                        color: window.colors.surfaceAlt
-                        border.color: window.colors.border
-                        Text {
-                            id: profileNameLabel
-                            anchors.fill: parent
-                            anchors.leftMargin: 12
-                            anchors.rightMargin: 12
-                            text: backend.profileDisplayName || backend.profileId || ""
-                            color: window.colors.muted
-                            font.pixelSize: 12
-                            verticalAlignment: Text.AlignVCenter
-                            elide: Text.ElideRight
+                    LabButton {
+                        visible: window.layoutMode !== "compact"
+                        theme: appTheme
+                        variant: "secondary"
+                        compact: true
+                        text: Qt.platform.os === "osx"
+                              ? "搜索或执行命令  ⌘ K"
+                              : "搜索或执行命令  Ctrl K"
+                        iconSource: Qt.resolvedUrl("../resources/icons/search.svg")
+                        toolTip: "打开 Command Palette"
+                        onClicked: {
+                            commandPalette.open()
+                            paletteSearch.forceActiveFocus()
+                            paletteSearch.selectAll()
                         }
                     }
-                    StatusPill {
-                        visible: true
-                        text: window.compactShell ? window.compactAiStatus(backend.aiStatus) : backend.aiStatus
-                        tone: backend.aiStatus.indexOf("已连接") >= 0 || backend.aiStatus.indexOf("就绪") >= 0
-                              ? window.colors.success
-                              : backend.aiStatus.indexOf("失败") >= 0 || backend.aiStatus.indexOf("不可用") >= 0
-                                ? window.colors.danger : window.colors.muted
+                    LabIconButton {
+                        visible: window.layoutMode === "compact"
+                        theme: appTheme
+                        highlighted: true
+                        iconSource: Qt.resolvedUrl("../resources/icons/search.svg")
+                        accessibleName: "搜索或执行命令"
+                        toolTip: "搜索或执行命令 · Ctrl/⌘ K"
+                        onClicked: {
+                            commandPalette.open()
+                            paletteSearch.forceActiveFocus()
+                            paletteSearch.selectAll()
+                        }
                     }
-                    BusyIndicator { running: backend.busy; visible: running; implicitWidth: 28; implicitHeight: 28 }
+                    Item { Layout.fillWidth: true }
+                    StatusPill {
+                        theme: appTheme
+                        compact: window.layoutMode === "compact"
+                        text: backend.aiStatusVariant === "connected" ? "AI 已连接"
+                              : backend.aiStatusVariant === "connecting" ? "AI 连接中"
+                              : "No-AI 可用"
+                        tone: backend.aiStatusVariant === "connected" ? appTheme.success
+                              : backend.aiStatusVariant === "connecting" ? appTheme.warning
+                              : appTheme.muted
+                    }
+                    LabBusyIndicator {
+                        theme: appTheme
+                        running: backend.busy
+                        visible: running
+                        implicitWidth: 24
+                        implicitHeight: 24
+                    }
                 }
             }
 
@@ -484,16 +505,20 @@ ApplicationWindow {
             // In the normal state this item has zero layout cost; when a
             // request arrives it reserves space above page content instead of
             // covering a page CTA.
-            Rectangle {
+            LabSurface {
                 id: codexApprovalBanner
                 objectName: "codexApprovalBanner"
+                theme: appTheme
+                level: "raised"
+                outlined: true
+                padding: 0
+                cornerRadius: 0
                 Layout.fillWidth: true
                 Layout.preferredHeight: visible ? 82 : 0
                 Layout.minimumHeight: 0
                 visible: !!(window.pendingCodexApproval
                             && window.pendingCodexApproval.request_id)
                 z: 30
-                color: window.dark ? "#3b2f1a" : "#fff7df"
                 border.color: window.colors.warning
                 RowLayout {
                     anchors.fill: parent
@@ -503,25 +528,28 @@ ApplicationWindow {
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 2
-                        Text {
+                        LabText {
+                            theme: appTheme
                             text: "Codex 请求等待审批"
-                            color: window.colors.warning
-                            font.bold: true
-                            font.pixelSize: 15
+                            tone: "warning"
+                            strong: true
+                            variant: "bodyLarge"
                         }
-                        Text {
+                        LabText {
+                            theme: appTheme
                             Layout.fillWidth: true
                             text: (window.pendingCodexApproval
                                    && window.pendingCodexApproval.action || "操作")
                                   + " · " + (window.pendingCodexApproval
                                               && window.pendingCodexApproval.scope
                                               || "当前仓库")
-                            color: window.colors.text
                             elide: Text.ElideRight
                         }
                     }
-                    Button {
+                    LabButton {
                         objectName: "codexApprovalViewButton"
+                        theme: appTheme
+                        variant: "secondary"
                         text: "查看并审批"
                         enabled: !window.approvalActionInFlight
                         onClicked: window.showApprovalDetails()
@@ -583,24 +611,26 @@ ApplicationWindow {
             window.paletteQuery = ""
             paletteSearch.text = ""
         }
-        background: Rectangle {
-            color: window.colors.surface
-            radius: 12
-            border.color: window.colors.border
-            border.width: 1
+        background: LabSurface {
+            theme: appTheme
+            level: "raised"
+            padding: 0
+            cornerRadius: appTheme.radiusLarge
         }
         contentItem: ColumnLayout {
             spacing: 8
-            Text {
+            LabText {
+                theme: appTheme
                 text: "快速操作"
-                color: window.colors.text
-                font.pixelSize: 16
-                font.bold: true
+                variant: "section"
+                strong: true
                 Layout.fillWidth: true
             }
-            TextField {
+            LabTextField {
                 id: paletteSearch
                 objectName: "commandPaletteSearch"
+                theme: appTheme
+                accessibleLabel: placeholderText
                 Layout.fillWidth: true
                 placeholderText: "搜索页面或动作…"
                 selectByMouse: true
@@ -615,12 +645,6 @@ ApplicationWindow {
                         paletteList.forceActiveFocus()
                         paletteList.currentIndex = Math.max(0, paletteList.currentIndex)
                     }
-                }
-                background: Rectangle {
-                    color: window.colors.surfaceAlt
-                    radius: 8
-                    border.color: paletteSearch.activeFocus ? window.colors.accent : window.colors.border
-                    border.width: paletteSearch.activeFocus ? 2 : 1
                 }
             }
             ListView {
@@ -643,51 +667,61 @@ ApplicationWindow {
                     if (currentIndex >= 0 && currentIndex < count)
                         window.triggerPaletteAction(window.paletteItems()[currentIndex].id)
                 }
-                delegate: Button {
+                delegate: LabButton {
+                    id: paletteActionButton
                     required property var modelData
                     required property int index
                     property bool selected: index === paletteList.currentIndex
+                    theme: appTheme
+                    variant: "ghost"
                     width: paletteList.width
                     height: 48
-                    flat: true
                     focusPolicy: Qt.StrongFocus
                     onClicked: window.triggerPaletteAction(modelData.id)
                     background: Rectangle {
-                        radius: 8
-                        color: parent.selected || parent.hovered || parent.activeFocus
-                               ? window.colors.surfaceAlt
+                        radius: appTheme.radiusMedium
+                        color: paletteActionButton.selected
+                               || paletteActionButton.hovered
+                               || paletteActionButton.activeFocus
+                               ? appTheme.surfaceHover
                                : "transparent"
+                        border.color: paletteActionButton.activeFocus
+                                      ? appTheme.focusRing : "transparent"
+                        border.width: paletteActionButton.activeFocus ? 2 : 0
                     }
                     contentItem: RowLayout {
                         anchors.fill: parent
                         anchors.leftMargin: 12
                         anchors.rightMargin: 12
                         spacing: 10
-                        Text {
-                            text: modelData.label
-                            color: window.colors.text
-                            font.bold: true
+                        LabText {
+                            theme: appTheme
+                            text: paletteActionButton.modelData.label
+                            strong: true
                             Layout.preferredWidth: 142
                         }
-                        Text {
-                            text: modelData.hint
-                            color: window.colors.muted
+                        LabText {
+                            theme: appTheme
+                            text: paletteActionButton.modelData.hint
+                            tone: "muted"
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
                     }
                 }
-                Text {
+                LabText {
+                    theme: appTheme
                     anchors.centerIn: parent
                     visible: paletteList.count === 0
                     text: "没有匹配的操作"
-                    color: window.colors.muted
+                    tone: "muted"
                 }
             }
-            Text {
+            LabText {
+                theme: appTheme
                 text: "Enter 执行 · Esc 关闭 · Ctrl/⌘ K 打开"
-                color: window.colors.muted
-                font.pixelSize: 11
+                tone: "muted"
+                variant: "caption"
                 Layout.fillWidth: true
             }
         }
@@ -707,16 +741,15 @@ ApplicationWindow {
         modal: false
         closePolicy: Popup.NoAutoClose
         background: Rectangle {
-            color: window.dark ? "#222d3d" : "#172033"
-            radius: 10
-            border.color: window.dark
-                          ? Qt.rgba(0.569, 0.678, 1.0, 0.5)
-                          : Qt.rgba(0.192, 0.349, 0.851, 0.5)
+            color: appTheme.toastBackground
+            radius: appTheme.radiusMedium
+            border.color: appTheme.borderStrong
             border.width: 1
         }
         contentItem: Text {
             id: message
-            color: "white"
+            color: appTheme.toastForeground
+            font.pixelSize: appTheme.fontBody
             wrapMode: Text.Wrap
             verticalAlignment: Text.AlignVCenter
             anchors.fill: parent
@@ -769,37 +802,54 @@ ApplicationWindow {
         id: approvalDialog
         objectName: "codexApprovalDetails"
         title: "检查 Codex 操作"
+        header: null
         modal: true
         closePolicy: Popup.NoAutoClose
         standardButtons: Dialog.NoButton
         anchors.centerIn: parent
         width: Math.min(window.width - 48, 720)
         height: Math.min(window.height - 64, 600)
+        background: Rectangle {
+            color: appTheme.surfaceRaised
+            radius: appTheme.radiusLarge
+            border.color: appTheme.borderDefault
+        }
 
         contentItem: ColumnLayout {
             spacing: 12
+            LabText {
+                theme: appTheme
+                text: approvalDialog.title
+                variant: "section"
+                strong: true
+                Layout.fillWidth: true
+            }
+            LabDivider { theme: appTheme; Layout.fillWidth: true }
             Flickable {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
                 contentWidth: width
                 contentHeight: approvalDetailsColumn.implicitHeight
-                ScrollBar.vertical: ScrollBar {
+                ScrollBar.vertical: LabScrollBar {
+                    theme: appTheme
                     policy: ScrollBar.AsNeeded
                 }
                 ColumnLayout {
                     id: approvalDetailsColumn
                     width: parent.width
                     spacing: 9
-                    Text {
+                    LabText {
+                        theme: appTheme
                         Layout.fillWidth: true
                         text: "请求 ID：" + (window.pendingCodexApproval
                                                && window.pendingCodexApproval.request_id || "")
-                        color: window.colors.muted
-                        font.pixelSize: 12
+                        tone: "muted"
+                        variant: "caption"
                         elide: Text.ElideMiddle
                     }
-                    Text {
+                    LabText {
+                        theme: appTheme
                         Layout.fillWidth: true
                         text: "操作：" + (window.pendingCodexApproval
                                            && window.pendingCodexApproval.action || "")
@@ -812,15 +862,15 @@ ApplicationWindow {
                                              && window.pendingCodexApproval.reason || "")
                               + "\n风险：" + (window.pendingCodexApproval
                                              && window.pendingCodexApproval.risk || "")
-                        color: window.colors.text
                         wrapMode: Text.WordWrap
                     }
-                    Text {
+                    LabText {
+                        theme: appTheme
                         visible: !!(window.pendingCodexApproval
                                     && window.pendingCodexApproval.diff)
                         text: "Diff"
-                        color: window.colors.muted
-                        font.bold: true
+                        tone: "muted"
+                        strong: true
                     }
                     TextArea {
                         visible: !!(window.pendingCodexApproval
@@ -845,23 +895,28 @@ ApplicationWindow {
             }
             RowLayout {
                 Layout.fillWidth: true
-                Button {
+                LabButton {
                     objectName: "codexApprovalClose"
+                    theme: appTheme
+                    variant: "ghost"
                     text: "稍后处理"
                     enabled: !window.approvalActionInFlight
                     onClicked: approvalDialog.close()
                 }
                 Item { Layout.fillWidth: true }
-                Button {
+                LabButton {
                     objectName: "codexApprovalDecline"
+                    theme: appTheme
+                    variant: "danger"
                     text: "拒绝"
                     enabled: !window.approvalActionInFlight
                     onClicked: window.resolveApproval("decline")
                 }
-                Button {
+                LabButton {
                     objectName: "codexApprovalApprove"
+                    theme: appTheme
+                    variant: "primary"
                     text: window.approvalActionInFlight ? "处理中…" : "仅批准本次"
-                    highlighted: true
                     enabled: !window.approvalActionInFlight
                     onClicked: window.resolveApproval("accept")
                 }
@@ -869,19 +924,16 @@ ApplicationWindow {
         }
     }
 
-    Dialog {
+    LabDialog {
         id: aboutDialog
+        objectName: "aboutDialog"
+        theme: appTheme
         title: "关于 LLM Interview Lab"
-        modal: true
-        standardButtons: Dialog.Ok
         anchors.centerIn: parent
         width: 440
-        contentItem: Text {
-            width: 400
-            text: "LLM Interview Lab " + Qt.application.version + "\n\n本地优先、岗位感知、AI 辅助的面试训练工作台。\n无需连接 AI 也可完整使用固定课程与手动模拟面试。"
-            color: window.colors.text
-            wrapMode: Text.Wrap
-            lineHeight: 1.35
-        }
+        message: "LLM Interview Lab " + Qt.application.version
+        detailText: "本地优先、岗位感知、AI 辅助的面试训练工作台。\n无需连接 AI 也可完整使用固定课程与手动模拟面试。"
+        primaryText: "知道了"
+        showSecondary: false
     }
 }

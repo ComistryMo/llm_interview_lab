@@ -1,0 +1,58 @@
+import QtQuick
+import QtQuick.Controls
+
+TextField {
+    id: control
+
+    property var theme: null
+    property string accessibleLabel: ""
+    property string errorText: ""
+    property bool busy: false
+    readonly property bool invalid: errorText.length > 0
+
+    enabled: !busy
+    hoverEnabled: true
+    focusPolicy: Qt.StrongFocus
+    implicitHeight: theme ? theme.controlHeight : 40
+    leftPadding: 12
+    rightPadding: busy ? 38 : 12
+    topPadding: 8
+    bottomPadding: 8
+    color: theme ? theme.text : "#2c2e29"
+    placeholderTextColor: theme ? theme.subtle : "#858880"
+    selectionColor: theme ? theme.accent : "#315ec7"
+    selectedTextColor: theme ? theme.accentForeground : "#ffffff"
+    font.pixelSize: theme ? theme.scaledPx(14) : 14
+    font.family: theme ? theme.uiFontFamily : ""
+    selectByMouse: true
+    Accessible.role: Accessible.EditableText
+    Accessible.name: accessibleLabel || placeholderText
+    Accessible.description: invalid ? errorText : ""
+    Accessible.focusable: true
+    Accessible.focused: activeFocus
+
+    background: Rectangle {
+        radius: control.theme ? control.theme.radiusMedium : 9
+        color: control.enabled
+               ? (control.theme ? control.theme.surfaceRaised : "#ffffff")
+               : (control.theme ? control.theme.surfaceSunken : "#eeede8")
+        border.color: control.invalid
+                      ? (control.theme ? control.theme.danger : "#b44249")
+                      : control.activeFocus
+                        ? (control.theme ? control.theme.focusRing : "#315ec7")
+                        : control.hovered
+                          ? (control.theme ? control.theme.borderStrong : "#a9aaa2")
+                          : (control.theme ? control.theme.controlBorder : "#cfcdc5")
+        border.width: control.activeFocus || control.invalid ? 2 : 1
+    }
+
+    LabBusyIndicator {
+        anchors.right: parent.right
+        anchors.rightMargin: 11
+        anchors.verticalCenter: parent.verticalCenter
+        width: 16
+        height: 16
+        theme: control.theme
+        running: control.busy
+    }
+}

@@ -50,7 +50,11 @@ where = ["src"]
 include = ["llm_interview_lab*"]
 
 [tool.setuptools.package-data]
-llm_interview_lab = ["desktop/qml/**/*.qml", "desktop/resources/*"]
+llm_interview_lab = [
+    "desktop/qml/**/*.qml",
+    "desktop/resources/*",
+    "desktop/resources/**/*",
+]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

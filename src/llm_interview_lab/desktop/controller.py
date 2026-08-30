@@ -770,6 +770,19 @@ class AppController(QObject):
     def aiStatus(self) -> str:
         return self._ai_status
 
+    @Property(str, notify=aiStateChanged)
+    def aiStatusVariant(self) -> str:
+        """Return a localization-independent presentation state for the shell."""
+
+        if (
+            self._codex_connect_future is not None
+            and not self._codex_connect_future.done()
+        ):
+            return "connecting"
+        if self._codex_backend is not None and self._codex_thread_id:
+            return "connected"
+        return "offline"
+
     @Property(bool, notify=aiStateChanged)
     def codexAvailable(self) -> bool:
         return self._codex_available
@@ -4725,6 +4738,7 @@ class AppController(QObject):
                 try:
                     future = asyncio.run_coroutine_threadsafe(open_thread(), loop)
                     self._codex_connect_future = future
+                    self.aiStateChanged.emit()
                 except Exception as error:
                     self._show_error(error)
                     return
@@ -4805,6 +4819,7 @@ class AppController(QObject):
 
             future = asyncio.run_coroutine_threadsafe(connect(), loop)
             self._codex_connect_future = future
+            self.aiStateChanged.emit()
 
             def finished(value) -> None:
                 try:
