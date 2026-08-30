@@ -122,7 +122,7 @@ def _atomic_write(path: Path, content: bytes) -> None:
 
 
 def _plan_value(session: Mapping[str, Any]) -> dict[str, Any]:
-    return {
+    value = {
         "role_id": session["role_id"],
         "seniority": session["seniority"],
         "difficulty": session["difficulty"],
@@ -132,6 +132,13 @@ def _plan_value(session: Mapping[str, Any]) -> dict[str, Any]:
         "material_refs": session["material_refs"],
         "questions": session["questions"],
     }
+    # Alpha.3 fallback sessions freeze their reduced delivery contract too.
+    # Preserve the exact legacy payload for existing/full sessions so their
+    # already-persisted fingerprints remain valid without a migration.
+    for key in ("delivery_mode", "blueprint_coverage"):
+        if key in session:
+            value[key] = session[key]
+    return value
 
 
 def _plan_fingerprint(session: Mapping[str, Any]) -> str:
@@ -264,6 +271,11 @@ def interview_preflight(
             "missing_rounds": [],
             "missing_environment": [],
             "error_code": "DIFFICULTY_INVALID",
+            "non_coding_fallback": {
+                "available": False,
+                "delivery_mode": "non_coding_fallback",
+                "reason": "invalid_configuration",
+            },
         }
     try:
         role = role_catalog.resolve_role(role_id)
@@ -275,6 +287,11 @@ def interview_preflight(
             "missing_rounds": [],
             "missing_environment": [],
             "error_code": "BLUEPRINT_UNAVAILABLE",
+            "non_coding_fallback": {
+                "available": False,
+                "delivery_mode": "non_coding_fallback",
+                "reason": "invalid_configuration",
+            },
         }
 
     has_torch = (
@@ -286,6 +303,7 @@ def interview_preflight(
     missing_environment: set[str] = set()
     round_views: list[dict[str, Any]] = []
     for round_index, round_value in enumerate(blueprint.rounds):
+        missing_for_environment = False
         if round_value.type == "coding":
             candidates = _coding_candidates(
                 catalog,
@@ -304,7 +322,11 @@ def interview_preflight(
                     round_value.skills,
                     torch_available=True,
                 )
-                if with_torch and not candidates:
+                missing_for_environment = (
+                    len(candidates) < round_value.item_count
+                    and len(with_torch) >= round_value.item_count
+                )
+                if missing_for_environment:
                     missing_environment.add("pytorch")
             candidate_ids = [problem.id for problem, _ in candidates]
         else:
@@ -323,6 +345,8 @@ def interview_preflight(
             "required_items": round_value.item_count,
             "candidate_ids": candidate_ids,
             "skills": list(round_value.skills),
+            "duration_minutes": round_value.duration,
+            "weight": round_value.weight,
         }
         round_views.append(round_view)
         if len(candidate_ids) < round_value.item_count:
@@ -332,12 +356,78 @@ def interview_preflight(
                     "available_items": len(candidate_ids),
                     "reason": (
                         "missing_environment"
-                        if round_value.type == "coding" and "pytorch" in missing_environment
+                        if missing_for_environment
                         else "no_strict_candidate"
                     ),
                 }
             )
     available = not missing_rounds
+    missing_only_for_environment = bool(missing_rounds) and all(
+        value["reason"] == "missing_environment" for value in missing_rounds
+    )
+    coding_rounds = [value for value in round_views if value["type"] == "coding"]
+    environment_blocked_rounds = {
+        int(value["round_index"])
+        for value in missing_rounds
+        if value["reason"] == "missing_environment"
+    }
+    all_coding_rounds_blocked = bool(coding_rounds) and all(
+        int(value["round_index"]) in environment_blocked_rounds
+        for value in coding_rounds
+    )
+    included_rounds = [
+        value
+        for value in round_views
+        if value["type"] != "coding"
+        and len(value["candidate_ids"]) >= value["required_items"]
+    ]
+    fallback_available = (
+        not available
+        and missing_only_for_environment
+        and all_coding_rounds_blocked
+        and bool(included_rounds)
+        and len(included_rounds)
+        == sum(value["type"] != "coding" for value in round_views)
+    )
+    if fallback_available:
+        omitted_rounds = [
+            {
+                "round_index": value["round_index"],
+                "type": value["type"],
+                "reason": value["reason"],
+                "environment": "pytorch",
+                "duration_minutes": value["duration_minutes"],
+                "weight": value["weight"],
+            }
+            for value in missing_rounds
+        ]
+        fallback: dict[str, Any] = {
+            "available": True,
+            "delivery_mode": "non_coding_fallback",
+            "full_blueprint": False,
+            "duration_minutes": sum(
+                int(value["duration_minutes"]) for value in included_rounds
+            ),
+            "coverage_weight": round(
+                sum(float(value["weight"]) for value in included_rounds), 8
+            ),
+            "included_rounds": included_rounds,
+            "omitted_rounds": omitted_rounds,
+        }
+    else:
+        fallback = {
+            "available": False,
+            "delivery_mode": "non_coding_fallback",
+            "reason": (
+                "full_blueprint_available"
+                if available
+                else "non_environment_content_gap"
+                if missing_rounds and not missing_only_for_environment
+                else "mixed_coding_availability"
+                if missing_only_for_environment and not all_coding_rounds_blocked
+                else "no_non_coding_rounds"
+            ),
+        }
     return {
         "available": available,
         "role_id": role.id,
@@ -347,12 +437,21 @@ def interview_preflight(
         "user_message": (
             "当前配置可用。"
             if available
+            else "完整岗位蓝图需要 PyTorch 代码环节；当前环境可选择明确标记的非代码专项面试。"
+            if fallback_available
             else "当前配置缺少满足岗位、难度与技能要求的固定面试题。"
         ),
         "missing_rounds": missing_rounds,
         "missing_environment": sorted(missing_environment),
         "rounds": round_views,
-        "error_code": "" if available else "INTERVIEW_UNAVAILABLE",
+        "error_code": (
+            ""
+            if available
+            else "PYTORCH_REQUIRED"
+            if fallback_available
+            else "INTERVIEW_UNAVAILABLE"
+        ),
+        "non_coding_fallback": fallback,
     }
 
 
@@ -450,6 +549,7 @@ def create_role_interview(
     material_ids: Iterable[str] = (),
     consent_materials: bool = False,
     seed: int = 0,
+    delivery_mode: str = "full_blueprint",
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Freeze one role blueprint without starting its clock."""
@@ -462,6 +562,10 @@ def create_role_interview(
         raise RoleInterviewError("difficulty must be easy, medium, or hard")
     if ai_mode not in {"disabled", "provider", "codex"}:
         raise RoleInterviewError("AI mode must be disabled, provider, or codex")
+    if delivery_mode not in {"full_blueprint", "non_coding_fallback"}:
+        raise RoleInterviewError(
+            "delivery mode must be full_blueprint or non_coding_fallback"
+        )
     if type(seed) is not int or isinstance(seed, bool) or seed < 0:
         raise RoleInterviewError("seed must be a non-negative integer")
     role = role_catalog.resolve_role(role_id)
@@ -476,8 +580,19 @@ def create_role_interview(
         difficulty=difficulty,
         torch_available=torch_available,
     )
-    if not availability["available"]:
-        raise RoleInterviewError(availability["user_message"])
+    if delivery_mode == "full_blueprint":
+        if not availability["available"]:
+            raise RoleInterviewError(availability["user_message"])
+        included_round_indices = None
+    else:
+        fallback = availability["non_coding_fallback"]
+        if not fallback["available"]:
+            raise RoleInterviewError(
+                "non-coding fallback is unavailable for this role interview configuration"
+            )
+        included_round_indices = {
+            int(value["round_index"]) for value in fallback["included_rounds"]
+        }
 
     selected_materials = tuple(dict.fromkeys(material_ids))
     if selected_materials and not consent_materials:
@@ -505,6 +620,11 @@ def create_role_interview(
     used_problems: set[str] = set()
     number = 1
     for round_index, round_value in enumerate(blueprint.rounds):
+        if (
+            included_round_indices is not None
+            and round_index not in included_round_indices
+        ):
+            continue
         each_timebox = max(1, round_value.duration // round_value.item_count)
         for item_index in range(round_value.item_count):
             question_id = f"q-{number:03d}"
@@ -580,7 +700,11 @@ def create_role_interview(
         "seniority": seniority,
         "difficulty": difficulty,
         "blueprint_id": blueprint.id,
-        "duration_minutes": blueprint.duration_minutes,
+        "duration_minutes": (
+            blueprint.duration_minutes
+            if delivery_mode == "full_blueprint"
+            else int(availability["non_coding_fallback"]["duration_minutes"])
+        ),
         "ai_mode": ai_mode,
         "material_refs": material_refs,
         "questions": questions,
@@ -596,6 +720,17 @@ def create_role_interview(
         "timeline": [{"event": "created", "timestamp": created_at}],
         "result": None,
     }
+    if delivery_mode == "non_coding_fallback":
+        fallback = availability["non_coding_fallback"]
+        session["delivery_mode"] = delivery_mode
+        session["blueprint_coverage"] = {
+            "full_blueprint": False,
+            "coverage_weight": fallback["coverage_weight"],
+            "included_round_indices": [
+                int(value["round_index"]) for value in fallback["included_rounds"]
+            ],
+            "omitted_rounds": fallback["omitted_rounds"],
+        }
     try:
         _write_session(repo_root, root / "session.json", session)
     except Exception:
@@ -1268,7 +1403,11 @@ def finish_role_interview(
         completed_weight += weight
         for skill_id in question["skills"]:
             skill_values.setdefault(skill_id, []).append((score, question_id))
-    completed = not paused and not unanswered and not unscored
+    evidence_complete = not paused and not unanswered and not unscored
+    completed = (
+        evidence_complete
+        and session.get("delivery_mode", "full_blueprint") == "full_blueprint"
+    )
     # Missing rounds contribute zero; partial evidence is never re-normalized.
     overall = round(weighted_total, 1)
     skill_scores = {
@@ -1334,6 +1473,16 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
         "## Evidence-backed question scores",
         "",
     ]
+    if session.get("delivery_mode") == "non_coding_fallback":
+        coverage = session["blueprint_coverage"]
+        omitted = ", ".join(
+            str(value["type"]) for value in coverage["omitted_rounds"]
+        )
+        lines[5:5] = [
+            "- Delivery mode: **non-coding fallback**",
+            f"- Blueprint evidence coverage: **{float(coverage['coverage_weight']) * 100:.1f}%**",
+            f"- Omitted rounds: **{omitted}** (missing local environment; counted as zero)",
+        ]
     for question in session["questions"]:
         question_id = question["question_id"]
         score = result["question_scores"].get(question_id)
@@ -1412,6 +1561,9 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
         "assessment_evidence": assessment_evidence,
         "followups": list(followups),
     }
+    if session.get("delivery_mode") == "non_coding_fallback":
+        report_payload["delivery_mode"] = "non_coding_fallback"
+        report_payload["blueprint_coverage"] = session["blueprint_coverage"]
     _atomic_write(
         root / "report.json",
         (json.dumps(report_payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),

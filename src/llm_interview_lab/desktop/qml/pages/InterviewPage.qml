@@ -226,6 +226,34 @@ Item {
         return message
     }
 
+    function nonCodingFallback() {
+        if (!root.configuration || !root.configuration.non_coding_fallback)
+            return ({"available": false})
+        return root.configuration.non_coding_fallback
+    }
+
+    function fallbackAvailable() {
+        return root.configuration.available === false
+               && root.nonCodingFallback().available === true
+    }
+
+    function fallbackRoundSummary(items) {
+        var values = items || []
+        var labels = []
+        for (var i = 0; i < values.length; ++i) {
+            var item = values[i] || {}
+            var label = root.roundTypeText(item.type || item.round || "")
+            if (item.duration_minutes !== undefined)
+                label += "（" + item.duration_minutes + " 分钟）"
+            labels.push(label)
+        }
+        return labels.length > 0 ? labels.join("、") : "无"
+    }
+
+    function fallbackCoveragePercent() {
+        return Math.round(Number(root.nonCodingFallback().coverage_weight || 0) * 100)
+    }
+
     function missingRoundLabel(item) {
         if (typeof item === "string")
             return root.roundTypeText(item)
@@ -432,8 +460,10 @@ Item {
                                 return "先选择岗位，系统会检查该难度是否有完整题目。"
                             if (root.configuration.available !== false)
                                 return "当前难度可用；开始后题目组合会冻结。"
+                            if (root.fallbackAvailable())
+                                return "完整蓝图需要 PyTorch 代码环节；当前可开始明确标记的非代码专项。"
                             if ((root.configuration.missing_environment || []).length > 0)
-                                return "当前环境暂缺所需依赖；可先切换到“标准”或查看环境说明。"
+                                return "当前配置无法形成可信的非代码专项；请补齐 PyTorch 环境或切换岗位 / 难度。"
                             return "当前岗位在此难度没有完整固定题；请切换到“标准”或更换岗位。"
                         }
                         color: root.configuration.available === false ? root.palette.warning : root.palette.muted
@@ -483,11 +513,47 @@ Item {
                         font.pixelSize: 12
                     }
                     Button {
+                        objectName: "startNonCodingInterview"
+                        width: parent.width
+                        visible: leftPanel.setupVisible && root.fallbackAvailable()
+                        text: app.busy ? "正在准备专项面试……" : "开始非代码专项面试"
+                        highlighted: true
+                        enabled: root.fallbackAvailable()
+                                 && !!role.currentValue
+                                 && !app.busy
+                                 && (!useMaterial.checked || (material.currentIndex >= 0 && app.materials[material.currentIndex].ai_access && consent.checked))
+                        onClicked: nonCodingInterviewDialog.open()
+                    }
+                    Text {
+                        objectName: "interviewPyTorchEnvironmentHelp"
+                        width: parent.width
+                        visible: leftPanel.setupVisible
+                                 && (root.configuration.missing_environment || []).indexOf("pytorch") >= 0
+                        text: "完整蓝图需要源码 PyTorch 环境。桌面应用不会自行安装依赖。需先克隆源码并进入仓库根目录，再运行：\npython -m pip install -e \".[torch,dev]\""
+                        color: root.palette.muted
+                        wrapMode: Text.WrapAnywhere
+                        font.pixelSize: 11
+                    }
+                    Text {
+                        objectName: "interviewSourceEnvironmentLink"
+                        width: parent.width
+                        visible: leftPanel.setupVisible
+                                 && (root.configuration.missing_environment || []).indexOf("pytorch") >= 0
+                        text: "<a href=\"https://github.com/ComistryMo/llm_interview_lab/blob/main/docs/desktop-app.md\">查看源码环境说明</a>"
+                        textFormat: Text.RichText
+                        color: root.palette.accent
+                        font.pixelSize: 11
+                        onLinkActivated: Qt.openUrlExternally(link)
+                    }
+                    Button {
                         objectName: "startConfiguredInterview"
                         width: parent.width
                         visible: leftPanel.setupVisible
-                        text: app.busy ? "正在准备面试……" : "开始模拟面试"
-                        highlighted: true
+                        text: app.busy ? "正在准备面试……"
+                                       : (root.fallbackAvailable()
+                                          ? "完整模拟面试（需要 PyTorch）"
+                                          : "开始模拟面试")
+                        highlighted: !root.fallbackAvailable()
                         enabled: root.configuration.available !== false
                                  && !!role.currentValue
                                  && !app.busy
@@ -508,6 +574,8 @@ Item {
                                 + "\n岗位  " + (app.interview.role_title || app.interview.role_id)
                                 + "\n求职级别  " + root.seniorityText(app.interview.seniority)
                                 + "\n选题档位  " + root.difficultyText(app.interview.difficulty)
+                                + (app.interview.delivery_mode === "non_coding_fallback"
+                                   ? "\n范围  非代码专项（部分证据）" : "")
                                 + "\n进度  " + (app.interview.completed_questions || 0)
                                 + " / " + (app.interview.total_questions || 0)
                               : "暂无进行中的面试"
@@ -843,6 +911,19 @@ Item {
                             color: root.palette.text
                             wrapMode: Text.Wrap
                             lineHeight: 1.4
+                        }
+                        Text {
+                            objectName: "interviewFallbackResultScope"
+                            width: parent.width
+                            visible: root.interviewResult.delivery_mode === "non_coding_fallback"
+                            text: "非代码专项 · 蓝图证据覆盖 "
+                                  + Math.round(Number((root.interviewResult.blueprint_coverage || {}).coverage_weight || 0) * 100)
+                                  + "%\n省略代码实现轮次："
+                                  + root.fallbackRoundSummary((root.interviewResult.blueprint_coverage || {}).omitted_rounds)
+                            color: root.palette.warning
+                            wrapMode: Text.Wrap
+                            font.pixelSize: 12
+                            font.bold: true
                         }
                         Text {
                             width: parent.width
@@ -1274,6 +1355,115 @@ Item {
                 color: root.palette.muted
                 wrapMode: Text.Wrap
                 font.pixelSize: 12
+            }
+        }
+    }
+
+    Dialog {
+        id: nonCodingInterviewDialog
+        objectName: "nonCodingInterviewConfirmationDialog"
+        modal: true
+        anchors.centerIn: parent
+        width: Math.min(540, root.width - 48)
+        height: Math.min(500, root.height - 48)
+        title: "这不是完整岗位蓝图"
+        onOpened: fallbackBackButton.forceActiveFocus()
+        contentItem: Flickable {
+            id: fallbackDialogViewport
+            clip: true
+            contentWidth: width
+            contentHeight: fallbackDialogContent.implicitHeight
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+            ColumnLayout {
+                id: fallbackDialogContent
+                width: Math.max(0, fallbackDialogViewport.width - 12)
+                spacing: 10
+                Text {
+                    Layout.fillWidth: true
+                    text: "当前环境缺少完整蓝图所需的 PyTorch 代码环节。你可以明确选择只完成其余固定非代码轮次。"
+                    color: root.palette.text
+                    wrapMode: Text.Wrap
+                    font.bold: true
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: "包含：" + root.fallbackRoundSummary(root.nonCodingFallback().included_rounds)
+                          + "\n省略：" + root.fallbackRoundSummary(root.nonCodingFallback().omitted_rounds)
+                          + "\n专项时长：" + Number(root.nonCodingFallback().duration_minutes || 0) + " 分钟"
+                          + "\n蓝图证据覆盖：" + root.fallbackCoveragePercent() + "%"
+                    color: root.palette.text
+                    wrapMode: Text.Wrap
+                    lineHeight: 1.4
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: "各轮仍保留原蓝图权重，不会重新归一化。即使所有专项问题都完成，本场也始终标记为未完整，只形成部分面试证据。"
+                    color: root.palette.warning
+                    wrapMode: Text.Wrap
+                    font.pixelSize: 12
+                    font.bold: true
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: "技术状态：incomplete / partial evidence"
+                    color: root.palette.muted
+                    wrapMode: Text.Wrap
+                    font.pixelSize: 11
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: "专项结果不会改变 Practice mastery。需要完整岗位面试时，需先克隆源码并进入仓库根目录，再运行：python -m pip install -e \".[torch,dev]\""
+                    color: root.palette.muted
+                    wrapMode: Text.WrapAnywhere
+                    font.pixelSize: 12
+                }
+                Text {
+                    objectName: "interviewFallbackSourceEnvironmentLink"
+                    Layout.fillWidth: true
+                    text: "<a href=\"https://github.com/ComistryMo/llm_interview_lab/blob/main/docs/desktop-app.md\">查看源码环境说明</a>"
+                    textFormat: Text.RichText
+                    color: root.palette.accent
+                    font.pixelSize: 12
+                    onLinkActivated: Qt.openUrlExternally(link)
+                }
+                Text {
+                    Layout.fillWidth: true
+                    visible: useMaterial.checked
+                    text: "材料：仅使用你勾选并同意的精确 ID / SHA；不会读取其他材料。"
+                    color: root.palette.warning
+                    wrapMode: Text.Wrap
+                    font.pixelSize: 12
+                }
+            }
+        }
+        footer: DialogButtonBox {
+            spacing: 8
+            alignment: Qt.AlignRight
+            Button {
+                id: fallbackBackButton
+                objectName: "nonCodingInterviewBackButton"
+                text: "返回"
+                focus: true
+                onClicked: nonCodingInterviewDialog.reject()
+            }
+            Button {
+                objectName: "nonCodingInterviewConfirmButton"
+                text: "确认开始专项"
+                highlighted: true
+                enabled: !app.busy
+                onClicked: {
+                    nonCodingInterviewDialog.close()
+                    app.createNonCodingInterview(
+                        role.currentValue,
+                        seniority.currentValue,
+                        difficulty.currentValue,
+                        aiMode.currentValue,
+                        useMaterial.checked ? material.currentValue : "",
+                        useMaterial.checked ? consent.checked : false
+                    )
+                }
             }
         }
     }

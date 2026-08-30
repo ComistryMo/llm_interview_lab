@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -127,6 +128,45 @@ def test_controller_first_launch_role_material_practice_and_interview(
         check=True,
     )
     assert status.stdout == ""
+    controller.shutdown()
+
+
+def test_controller_starts_only_explicit_non_coding_interview_fallback(
+    tmp_path: Path, qapp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="fallback-user")
+    assert controller.completeOnboarding(
+        "fallback-user",
+        "ai_algorithm_research_engineer",
+        "new_grad",
+        "disabled",
+        "{}",
+    )
+    original_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        "llm_interview_lab.role_interviews.importlib.util.find_spec",
+        lambda name: None if name == "torch" else original_find_spec(name),
+    )
+
+    controller.createNonCodingInterview(
+        "ai_algorithm_research_engineer",
+        "new_grad",
+        "medium",
+        "disabled",
+        "",
+        False,
+    )
+
+    interview_id = controller.interview["interview_id"]
+    session = controller.service.interview_session("fallback-user", interview_id)
+    assert session["status"] == "active"
+    assert session["delivery_mode"] == "non_coding_fallback"
+    assert session["blueprint_coverage"]["full_blueprint"] is False
+    assert all(question["kind"] != "coding" for question in session["questions"])
     controller.shutdown()
 
 
@@ -749,6 +789,7 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert "root.configuration.available !== false" in interview
     assert "root.configuration.missing_rounds" in interview
     assert "root.configuration.missing_environment" in interview
+    assert "root.configuration.non_coding_fallback" in interview
     assert "root.missingRoundLabel(rounds[i])" in interview
     assert "root.roundTypeText(item.round || item.type || \"\")" in interview
     assert "no_strict_candidate" in interview
@@ -757,6 +798,50 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert "root.confidenceText(modelData.confidence)" in interview
     assert 'rounds.join("、")' not in interview
     assert 'role.currentValue || "applied_ai_engineer"' not in interview
+    assert 'objectName: "startNonCodingInterview"' in interview
+    assert 'enabled: root.configuration.available !== false' in interview
+    assert 'visible: leftPanel.setupVisible && root.fallbackAvailable()' in interview
+    assert 'highlighted: true\n                        enabled: root.fallbackAvailable()' in interview
+    assert '"完整模拟面试（需要 PyTorch）"' in interview
+    assert interview.index('objectName: "startNonCodingInterview"') < interview.index(
+        'objectName: "interviewPyTorchEnvironmentHelp"'
+    )
+    assert 'objectName: "nonCodingInterviewConfirmationDialog"' in interview
+    assert 'title: "这不是完整岗位蓝图"' in interview
+    assert 'height: Math.min(500, root.height - 48)' in interview
+    assert 'id: fallbackDialogViewport' in interview
+    assert 'contentHeight: fallbackDialogContent.implicitHeight' in interview
+    assert 'footer: DialogButtonBox {' in interview
+    assert 'alignment: Qt.AlignRight' in interview
+    assert 'objectName: "nonCodingInterviewBackButton"' in interview
+    assert 'text: "返回"' in interview
+    assert 'objectName: "nonCodingInterviewConfirmButton"' in interview
+    assert 'text: "确认开始专项"' in interview
+    assert 'onOpened: fallbackBackButton.forceActiveFocus()' in interview
+    assert "各轮仍保留原蓝图权重，不会重新归一化" in interview
+    assert "始终标记为未完整，只形成部分面试证据" in interview
+    assert "技术状态：incomplete / partial evidence" in interview
+    assert "专项结果不会改变 Practice mastery" in interview
+    assert "root.fallbackRoundSummary(root.nonCodingFallback().included_rounds)" in interview
+    assert "root.fallbackRoundSummary(root.nonCodingFallback().omitted_rounds)" in interview
+    assert "root.nonCodingFallback().duration_minutes" in interview
+    assert "root.fallbackCoveragePercent()" in interview
+    assert 'app.createNonCodingInterview(' in interview
+    assert 'useMaterial.checked ? material.currentValue : ""' in interview
+    assert 'useMaterial.checked ? consent.checked : false' in interview
+    assert 'python -m pip install -e \\".[torch,dev]\\"' in interview
+    assert "桌面应用不会自行安装依赖" in interview
+    assert "需先克隆源码并进入仓库根目录" in interview
+    assert 'objectName: "interviewSourceEnvironmentLink"' in interview
+    assert 'objectName: "interviewFallbackSourceEnvironmentLink"' in interview
+    assert "https://github.com/ComistryMo/llm_interview_lab/blob/main/docs/desktop-app.md" in interview
+    assert "Qt.openUrlExternally(link)" in interview
+    assert "当前环境暂缺所需依赖；可先切换到“标准”或查看环境说明。" not in interview
+    assert "范围  非代码专项（部分证据）" in interview
+    assert 'objectName: "interviewFallbackResultScope"' in interview
+    assert "非代码专项 · 蓝图证据覆盖 " in interview
+    assert "省略代码实现轮次：" in interview
+    assert "root.interviewResult.blueprint_coverage" in interview
 
     assert 'objectName: "interviewResultCard"' in interview
     for evidence_field in (

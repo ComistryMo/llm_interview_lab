@@ -530,9 +530,283 @@ def test_interview_preflight_reports_missing_torch_without_relaxing_skills(
         torch_available=False,
     )
     assert result["available"] is False
+    assert result["error_code"] == "PYTORCH_REQUIRED"
     assert result["missing_environment"] == ["pytorch"]
     coding = next(item for item in result["missing_rounds"] if item["type"] == "coding")
     assert coding["reason"] == "missing_environment"
+    fallback = result["non_coding_fallback"]
+    assert fallback["available"] is True
+    assert fallback["delivery_mode"] == "non_coding_fallback"
+    assert fallback["full_blueprint"] is False
+    assert fallback["duration_minutes"] == 30
+    assert fallback["coverage_weight"] == 0.5
+    assert [item["round_index"] for item in fallback["included_rounds"]] == [1]
+    assert fallback["omitted_rounds"] == [
+        {
+            "round_index": 0,
+            "type": "coding",
+            "reason": "missing_environment",
+            "environment": "pytorch",
+            "duration_minutes": 30,
+            "weight": 0.5,
+        }
+    ]
+
+
+def test_interview_preflight_does_not_offer_non_coding_fallback_for_content_gaps(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+
+    result = interview_preflight(
+        root,
+        catalog,
+        roles,
+        role_id="ai_product_manager",
+        seniority="new_grad",
+        difficulty="hard",
+        torch_available=False,
+    )
+
+    assert result["available"] is False
+    assert result["missing_environment"] == []
+    assert result["non_coding_fallback"] == {
+        "available": False,
+        "delivery_mode": "non_coding_fallback",
+        "reason": "non_environment_content_gap",
+    }
+
+
+def test_interview_preflight_attributes_environment_per_coding_round(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    blueprint = roles.blueprint_for("ai_algorithm_research_engineer", "intern")
+    no_candidate_round = replace(
+        blueprint.rounds[0],
+        duration=5,
+        weight=0.1,
+        skills=("skill.does_not_exist",),
+    )
+    role_catalog = replace(
+        roles,
+        blueprints={
+            **roles.blueprints,
+            blueprint.id: replace(
+                blueprint,
+                rounds=(
+                    blueprint.rounds[0],
+                    no_candidate_round,
+                    *blueprint.rounds[1:],
+                ),
+            ),
+        },
+    )
+
+    result = interview_preflight(
+        root,
+        catalog,
+        role_catalog,
+        role_id="ai_algorithm_research_engineer",
+        seniority="intern",
+        difficulty="medium",
+        torch_available=False,
+    )
+
+    coding_gaps = [
+        (value["round_index"], value["reason"])
+        for value in result["missing_rounds"]
+        if value["type"] == "coding"
+    ]
+    assert coding_gaps == [(0, "missing_environment"), (1, "no_strict_candidate")]
+    assert result["missing_environment"] == ["pytorch"]
+    assert result["non_coding_fallback"]["available"] is False
+    assert (
+        result["non_coding_fallback"]["reason"]
+        == "non_environment_content_gap"
+    )
+
+
+def test_interview_preflight_does_not_drop_a_runnable_coding_round(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    blueprint = roles.blueprint_for("ai_algorithm_research_engineer", "intern")
+    runnable_round = replace(
+        blueprint.rounds[0],
+        duration=5,
+        weight=0.1,
+        skills=("skill.python_engineering.data_contracts",),
+    )
+    role_catalog = replace(
+        roles,
+        blueprints={
+            **roles.blueprints,
+            blueprint.id: replace(
+                blueprint,
+                rounds=(
+                    blueprint.rounds[0],
+                    runnable_round,
+                    *blueprint.rounds[1:],
+                ),
+            ),
+        },
+    )
+
+    result = interview_preflight(
+        root,
+        catalog,
+        role_catalog,
+        role_id="ai_algorithm_research_engineer",
+        seniority="intern",
+        difficulty="medium",
+        torch_available=False,
+    )
+
+    assert result["available"] is False
+    assert result["missing_rounds"][0]["round_index"] == 0
+    assert result["rounds"][1]["candidate_ids"]
+    assert result["non_coding_fallback"] == {
+        "available": False,
+        "delivery_mode": "non_coding_fallback",
+        "reason": "mixed_coding_availability",
+    }
+
+
+def test_non_coding_fallback_freezes_original_rounds_and_finishes_as_partial(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    original_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        "llm_interview_lab.role_interviews.importlib.util.find_spec",
+        lambda name: None if name == "torch" else original_find_spec(name),
+    )
+
+    session = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="ai_algorithm_research_engineer",
+        seniority="new_grad",
+        difficulty="medium",
+        delivery_mode="non_coding_fallback",
+        now=T0,
+    )
+
+    assert session["delivery_mode"] == "non_coding_fallback"
+    assert session["duration_minutes"] == 40
+    assert session["blueprint_coverage"] == {
+        "full_blueprint": False,
+        "coverage_weight": 0.55,
+        "included_round_indices": [1, 2],
+        "omitted_rounds": [
+            {
+                "round_index": 0,
+                "type": "coding",
+                "reason": "missing_environment",
+                "environment": "pytorch",
+                "duration_minutes": 35,
+                "weight": 0.45,
+            }
+        ],
+    }
+    assert [question["round_index"] for question in session["questions"]] == [1, 2]
+    assert [question["round_weight"] for question in session["questions"]] == [
+        0.35,
+        0.2,
+    ]
+    assert [question["kind"] for question in session["questions"]] == [
+        "oral",
+        "project_deep_dive",
+    ]
+    assert load_role_interview(
+        root, "learner-one", session["interview_id"]
+    )["plan_fingerprint"] == session["plan_fingerprint"]
+
+    start_role_interview(
+        root, "learner-one", session["interview_id"], catalog, now=T0
+    )
+    _answer_and_score_all(root, session["interview_id"])
+    finished = finish_role_interview(
+        root,
+        "learner-one",
+        session["interview_id"],
+        summary="Non-coding evidence only.",
+        now=T0 + timedelta(minutes=5),
+    )
+
+    assert finished["status"] == "incomplete"
+    assert finished["result"]["completion_status"] == "incomplete"
+    assert finished["result"]["unanswered"] == []
+    assert finished["result"]["unscored"] == []
+    assert finished["result"]["overall_score"] == 27.5
+    report = role_interview_report(root, "learner-one", session["interview_id"])
+    assert "non-coding fallback" in report
+    assert "55.0%" in report
+    assert "missing rounds count as zero" in report
+    json_report = json.loads(
+        role_interview_report(
+            root, "learner-one", session["interview_id"], format_name="json"
+        )
+    )
+    assert json_report["delivery_mode"] == "non_coding_fallback"
+    assert json_report["blueprint_coverage"] == session["blueprint_coverage"]
+    result_view = ApplicationService(root).interview_result_view(
+        "learner-one", session["interview_id"]
+    )
+    assert result_view is not None
+    assert result_view["delivery_mode"] == "non_coding_fallback"
+    assert result_view["blueprint_coverage"] == session["blueprint_coverage"]
+
+
+def test_non_coding_extension_preserves_legacy_full_session_fingerprint(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    session = create_role_interview(
+        root,
+        "learner-one",
+        catalog,
+        roles,
+        role_id="ai_product_manager",
+        seniority="intern",
+        now=T0,
+    )
+
+    assert "delivery_mode" not in session
+    assert "blueprint_coverage" not in session
+    legacy_plan = {
+        key: session[key]
+        for key in (
+            "role_id",
+            "seniority",
+            "difficulty",
+            "blueprint_id",
+            "duration_minutes",
+            "ai_mode",
+            "material_refs",
+            "questions",
+        )
+    }
+    expected = hashlib.sha256(
+        json.dumps(
+            legacy_plan,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    assert session["plan_fingerprint"] == expected
+    assert load_role_interview(
+        root, "learner-one", session["interview_id"]
+    )["plan_fingerprint"] == expected
 
 
 def test_interview_coding_skills_use_only_ontology_reverse_index(

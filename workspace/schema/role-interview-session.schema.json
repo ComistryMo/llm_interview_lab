@@ -21,8 +21,41 @@
     "seniority": {"enum": ["intern", "new_grad", "mid"]},
     "difficulty": {"enum": ["easy", "medium", "hard"]},
     "blueprint_id": {"type": "string", "pattern": "^interview\\."},
-    "duration_minutes": {"type": "integer", "minimum": 30, "maximum": 150},
+    "duration_minutes": {"type": "integer", "minimum": 1, "maximum": 150},
     "ai_mode": {"enum": ["disabled", "provider", "codex"]},
+    "delivery_mode": {"enum": ["full_blueprint", "non_coding_fallback"]},
+    "blueprint_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["full_blueprint", "coverage_weight", "included_round_indices", "omitted_rounds"],
+      "properties": {
+        "full_blueprint": {"const": false},
+        "coverage_weight": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "included_round_indices": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "integer", "minimum": 0}
+        },
+        "omitted_rounds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["round_index", "type", "reason", "environment", "duration_minutes", "weight"],
+            "properties": {
+              "round_index": {"type": "integer", "minimum": 0},
+              "type": {"const": "coding"},
+              "reason": {"const": "missing_environment"},
+              "environment": {"const": "pytorch"},
+              "duration_minutes": {"type": "integer", "minimum": 1, "maximum": 60},
+              "weight": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+            }
+          }
+        }
+      }
+    },
     "material_refs": {
       "type": "array",
       "uniqueItems": true,
@@ -41,7 +74,7 @@
     },
     "questions": {
       "type": "array",
-      "minItems": 2,
+      "minItems": 1,
       "items": {"$ref": "#/$defs/question"}
     },
     "plan_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
@@ -81,6 +114,25 @@
     },
     "result": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/result"}]}
   },
+  "allOf": [
+    {
+      "if": {
+        "required": ["delivery_mode"],
+        "properties": {"delivery_mode": {"const": "non_coding_fallback"}}
+      },
+      "then": {
+        "required": ["blueprint_coverage"],
+        "properties": {"questions": {"minItems": 1}}
+      },
+      "else": {
+        "properties": {
+          "duration_minutes": {"minimum": 30},
+          "questions": {"minItems": 2}
+        },
+        "not": {"required": ["blueprint_coverage"]}
+      }
+    }
+  ],
   "$defs": {
     "source": {
       "type": "object",

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import hashlib
+import importlib.util
 import shutil
 import subprocess
 import sys
@@ -575,6 +576,45 @@ def test_interview_configuration_and_canonical_result_preference(tmp_path: Path)
     service.start_interview("learner-one", active["interview_id"])
     preferred = service.preferred_interview("learner-one")
     assert preferred == {"kind": "active", "interview_id": active["interview_id"]}
+
+
+def test_application_service_creates_only_explicit_non_coding_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    service = ApplicationService(root)
+    service.initialize_profile(
+        "learner-one",
+        role_id="ai_algorithm_research_engineer",
+        seniority="new_grad",
+    )
+    original_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        "llm_interview_lab.role_interviews.importlib.util.find_spec",
+        lambda name: None if name == "torch" else original_find_spec(name),
+    )
+
+    configuration = service.interview_configuration(
+        "ai_algorithm_research_engineer", "new_grad", "medium"
+    )
+    assert configuration["available"] is False
+    assert configuration["error_code"] == "PYTORCH_REQUIRED"
+    assert configuration["non_coding_fallback"]["available"] is True
+
+    session = service.create_interview(
+        "learner-one",
+        role_id="ai_algorithm_research_engineer",
+        seniority="new_grad",
+        difficulty="medium",
+        delivery_mode="non_coding_fallback",
+    )
+
+    assert session["delivery_mode"] == "non_coding_fallback"
+    assert session["blueprint_coverage"]["full_blueprint"] is False
+    assert 0 < session["blueprint_coverage"]["coverage_weight"] < 1
+    assert all(question["kind"] != "coding" for question in session["questions"])
+    assert all(question["round_index"] > 0 for question in session["questions"])
+    assert sum(question["round_weight"] for question in session["questions"]) < 1
 
 
 def test_problem_environment_is_visible_before_home_or_exercise_navigation(

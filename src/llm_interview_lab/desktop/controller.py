@@ -1819,6 +1819,39 @@ class AppController(QObject):
         except Exception as error:
             self._show_error(error)
 
+    @Slot(str, str, str, str, str, bool)
+    def createNonCodingInterview(
+        self,
+        role_id: str,
+        seniority: str,
+        difficulty: str,
+        ai_mode: str,
+        material_id: str,
+        consent: bool,
+    ) -> None:
+        """Start an explicitly partial interview when only PyTorch is missing."""
+
+        if self._profile_id == "demo":
+            self._page = "interview"
+            self.pageChanged.emit()
+            return
+        try:
+            session = self.service.create_interview(
+                self._profile_id,
+                role_id=role_id,
+                seniority=seniority,
+                difficulty=difficulty,
+                ai_mode=ai_mode,
+                material_ids=(material_id,) if material_id else (),
+                consent_materials=consent if material_id else False,
+                delivery_mode="non_coding_fallback",
+            )
+            self.service.start_interview(self._profile_id, session["interview_id"])
+            self._load_interview(session["interview_id"])
+            self.navigate("interview")
+        except Exception as error:
+            self._show_error(error)
+
     @Slot(str, str, str, str, bool, str)
     def createTailoredInterview(
         self,
@@ -1911,6 +1944,8 @@ class AppController(QObject):
             "seniority": session["seniority"],
             "difficulty": session["difficulty"],
             "blueprint_id": session["blueprint_id"],
+            "delivery_mode": session.get("delivery_mode", "full_blueprint"),
+            "blueprint_coverage": session.get("blueprint_coverage", {}),
             "ai_mode": session["ai_mode"],
             "material_refs": session["material_refs"],
             "total_questions": len(questions),

@@ -1240,6 +1240,7 @@ class ApplicationService:
         material_ids: Iterable[str] = (),
         consent_materials: bool = False,
         seed: int = 0,
+        delivery_mode: str = "full_blueprint",
     ) -> dict[str, Any]:
         return create_role_interview(
             self.repo_root,
@@ -1253,6 +1254,7 @@ class ApplicationService:
             material_ids=material_ids,
             consent_materials=consent_materials,
             seed=seed,
+            delivery_mode=delivery_mode,
         )
 
     def interview_configuration(
@@ -1681,7 +1683,7 @@ class ApplicationService:
             for followup in session.get("followups", [])
             if isinstance(followup, Mapping)
         ]
-        return {
+        view = {
             "interview_id": interview_id,
             "status": session["status"],
             "role_id": session["role_id"],
@@ -1699,6 +1701,10 @@ class ApplicationService:
             "summary": result["summary"],
             "finished_at": result["finished_at"],
         }
+        if session.get("delivery_mode") == "non_coding_fallback":
+            view["delivery_mode"] = "non_coding_fallback"
+            view["blueprint_coverage"] = dict(session["blueprint_coverage"])
+        return view
 
     def recent_interview_result(self, profile_id: str) -> dict[str, Any] | None:
         """Return the newest completed/incomplete result after active recovery."""
