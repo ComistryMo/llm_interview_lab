@@ -64,8 +64,26 @@ Flickable {
         x: 30; y: 28; width: parent.width - 60
         spacing: 18
 
-        Text { text: "从上次进度继续"; color: root.palette.text; font.pixelSize: 25; font.bold: true }
-        Text { text: "首页只保留当前任务、到期复测和两个主要动作。"; color: root.palette.muted; font.pixelSize: 14 }
+        Text {
+            text: app.dashboard.current
+                  ? "从上次进度继续"
+                  : root.trainingTarget
+                    ? "开始今天的训练"
+                    : "先准备你的训练"
+            color: root.palette.text
+            font.pixelSize: 25
+            font.bold: true
+        }
+        Text {
+            text: app.dashboard.current
+                  ? "首页只保留当前任务、到期复测和两个主要动作。"
+                  : root.trainingTarget
+                    ? "已经为你准备好第一项可开始的任务。"
+                    : "完成学习档案设置后，这里会显示下一项可开始的任务。"
+            color: root.palette.muted
+            font.pixelSize: 14
+            wrapMode: Text.Wrap
+        }
 
         LabCard {
             Layout.fillWidth: true
