@@ -107,7 +107,11 @@ Item {
     function refreshConfiguration() {
         var roleId = role.currentValue || ""
         if (!roleId) {
-            root.configuration = ({"available": false, "user_message": "请选择一个目标岗位后再开始面试。"})
+            var storedRole = (app.dashboard.role && app.dashboard.role.primary_role) || ""
+            root.configuration = ({"available": false,
+                                   "user_message": storedRole
+                                      ? "档案中的目标岗位已不可用，请重新选择后再开始面试。"
+                                      : "请选择一个目标岗位后再开始面试。"})
             return
         }
         if (typeof app.interviewConfiguration === "function")
