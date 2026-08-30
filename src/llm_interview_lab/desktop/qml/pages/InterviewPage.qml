@@ -206,6 +206,24 @@ Item {
         return Qt.formatDateTime(date, "yyyy-MM-dd HH:mm")
     }
 
+    function followupLabelList(ids) {
+        var linked = ids || []
+        var records = root.interviewResult.followups || []
+        var labels = []
+        for (var i = 0; i < linked.length; ++i) {
+            var label = linked[i]
+            for (var j = 0; j < records.length; ++j) {
+                if (records[j].followup_id === linked[i]) {
+                    label = "追问 " + (j + 1)
+                           + (records[j].parent_title ? "（" + records[j].parent_title + "）" : "")
+                    break
+                }
+            }
+            labels.push(label)
+        }
+        return labels.join("、")
+    }
+
     function confidenceText(value) {
         return ({low: "低", medium: "中", high: "高"})[value] || "未标注"
     }
@@ -615,7 +633,7 @@ Item {
                                     Text {
                                         visible: (modelData.followup_ids || []).length > 0
                                         width: parent.width
-                                        text: "关联追问：" + (modelData.followup_ids || []).join("、")
+                                        text: "关联追问：" + root.followupLabelList(modelData.followup_ids)
                                         color: root.palette.accent
                                         font.pixelSize: 11
                                         wrapMode: Text.Wrap
