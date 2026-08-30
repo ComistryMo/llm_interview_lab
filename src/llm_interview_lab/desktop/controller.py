@@ -203,11 +203,44 @@ def _demo_dashboard() -> dict[str, Any]:
             }
         ],
         "mastered_count": 14,
+        "role_readiness_metric_version": 2,
         "role_readiness": [
-            {"id": "python_engineering", "label": "Python 工程", "self_reported": 0.75, "verified": 0.62},
-            {"id": "deep_learning", "label": "深度学习", "self_reported": 0.65, "verified": 0.48},
-            {"id": "llm_vlm", "label": "LLM / VLM", "self_reported": 0.55, "verified": 0.36},
-            {"id": "system_design", "label": "系统设计", "self_reported": 0.45, "verified": 0.18},
+            {
+                "id": "python_engineering", "label": "Python 工程",
+                "assessed_mastery": 0.75, "assessment_coverage": 0.62,
+                "assessment_coverage_ceiling": 0.88,
+                "self_assessed_attainment": 0.75, "self_assessment_coverage": 1.0,
+                "assessed_problem_count": 5, "assessable_problem_count": 8,
+                "mastered_problem_count": 4, "evidence_scope": "practice",
+                "self_reported": 0.75, "verified": 0.75,
+            },
+            {
+                "id": "deep_learning", "label": "深度学习",
+                "assessed_mastery": 0.60, "assessment_coverage": 0.48,
+                "assessment_coverage_ceiling": 0.78,
+                "self_assessed_attainment": 0.65, "self_assessment_coverage": 1.0,
+                "assessed_problem_count": 4, "assessable_problem_count": 7,
+                "mastered_problem_count": 2, "evidence_scope": "practice",
+                "self_reported": 0.65, "verified": 0.60,
+            },
+            {
+                "id": "llm_vlm", "label": "LLM / VLM",
+                "assessed_mastery": 0.50, "assessment_coverage": 0.36,
+                "assessment_coverage_ceiling": 0.70,
+                "self_assessed_attainment": 0.55, "self_assessment_coverage": 1.0,
+                "assessed_problem_count": 3, "assessable_problem_count": 8,
+                "mastered_problem_count": 2, "evidence_scope": "practice",
+                "self_reported": 0.55, "verified": 0.50,
+            },
+            {
+                "id": "system_design", "label": "系统设计",
+                "assessed_mastery": None, "assessment_coverage": 0.0,
+                "assessment_coverage_ceiling": 0.20,
+                "self_assessed_attainment": 0.45, "self_assessment_coverage": 1.0,
+                "assessed_problem_count": 0, "assessable_problem_count": 1,
+                "mastered_problem_count": 0, "evidence_scope": "practice",
+                "self_reported": 0.45, "verified": 0.0,
+            },
         ],
     }
 

@@ -41,7 +41,7 @@ from .role_interviews import (
     resume_role_interview,
     role_interview_state,
 )
-from .roles import RoleCatalog, load_role_catalog
+from .roles import RoleCatalog, RoleProfile, load_role_catalog
 from .submissions import inspect_submission
 from .workspace import (
     event_schema_path,
@@ -758,39 +758,9 @@ class ApplicationService:
             seniority = role_preferences.get("seniority", "new_grad")
             assessment = role_preferences.get("skill_self_assessment", {})
             if role is not None and seniority in role.seniority:
-                domains: dict[str, dict[str, float]] = {}
-                for skill_id, target in role.skill_weights.items():
-                    skill = self.roles.skills[skill_id]
-                    target_level = max(1, target.target_level[seniority])
-                    related = set(skill.related_problems)
-                    verified_level = (
-                        3 * len(related.intersection(state.mastered)) / len(related)
-                        if related
-                        else 0.0
-                    )
-                    bucket = domains.setdefault(
-                        skill.domain,
-                        {"weight": 0.0, "self": 0.0, "verified": 0.0},
-                    )
-                    bucket["weight"] += target.weight
-                    bucket["self"] += target.weight * min(
-                        float(assessment.get(skill_id, 0)) / target_level, 1.0
-                    )
-                    bucket["verified"] += target.weight * min(
-                        verified_level / target_level, 1.0
-                    )
-                role_readiness = [
-                    {
-                        "id": domain,
-                        "label": _DOMAIN_LABELS_ZH.get(
-                            domain, domain.replace("_", " ").title()
-                        ),
-                        "self_reported": round(value["self"] / value["weight"], 3),
-                        "verified": round(value["verified"] / value["weight"], 3),
-                    }
-                    for domain, value in sorted(domains.items())
-                    if value["weight"] > 0
-                ]
+                role_readiness = self._role_readiness(
+                    role, seniority, assessment, state
+                )
         role_view = None
         if role_preferences:
             role_view = dict(role_preferences)
@@ -826,8 +796,149 @@ class ApplicationService:
                 for problem in available[:3]
             ],
             "mastered_count": len(state.mastered),
+            "role_readiness_metric_version": 2,
             "role_readiness": role_readiness,
         }
+
+    @staticmethod
+    def _has_practice_assessment_evidence(
+        state: WorkspaceState, problem_id: str
+    ) -> bool:
+        if state.problem_status(problem_id) in {
+            "implemented",
+            "reviewed",
+            "retained_d2",
+            "retained_d7",
+            "mastered",
+        }:
+            return True
+        return any(
+            attempt.last_public_test is not None
+            and attempt.last_public_test.get("status")
+            in {"passed", "failed", "timed_out", "import_error"}
+            for attempt in state.attempts_for(problem_id)
+        )
+
+    def _role_readiness(
+        self,
+        role: RoleProfile,
+        seniority: str,
+        assessment: Mapping[str, int],
+        state: WorkspaceState,
+    ) -> list[dict[str, Any]]:
+        """Summarize local evidence without treating missing evidence as failure."""
+
+        domains: dict[str, dict[str, Any]] = {}
+        for skill_id, target in role.skill_weights.items():
+            skill = self.roles.skills[skill_id]
+            assessable = {
+                problem_id
+                for problem_id in skill.related_problems
+                if problem_id in self.catalog.problems
+                and self.catalog.get(problem_id).recommendable
+            }
+            assessed = {
+                problem_id
+                for problem_id in assessable
+                if self._has_practice_assessment_evidence(state, problem_id)
+            }
+            mastered = assessed.intersection(state.mastered)
+            bucket = domains.setdefault(
+                skill.domain,
+                {
+                    "weight": 0.0,
+                    "mastery_weight": 0.0,
+                    "mastery_sum": 0.0,
+                    "coverage_sum": 0.0,
+                    "ceiling_sum": 0.0,
+                    "self_weight": 0.0,
+                    "self_sum": 0.0,
+                    "legacy_self_sum": 0.0,
+                    "legacy_verified_sum": 0.0,
+                    "assessable": set(),
+                    "assessed": set(),
+                    "mastered": set(),
+                },
+            )
+            bucket["weight"] += target.weight
+            bucket["assessable"].update(assessable)
+            bucket["assessed"].update(assessed)
+            bucket["mastered"].update(mastered)
+            target_level = max(1, target.target_level[seniority])
+            related = set(skill.related_problems)
+            legacy_verified_level = (
+                3 * len(related.intersection(state.mastered)) / len(related)
+                if related
+                else 0.0
+            )
+            bucket["legacy_self_sum"] += target.weight * min(
+                float(assessment.get(skill_id, 0)) / target_level, 1.0
+            )
+            bucket["legacy_verified_sum"] += target.weight * min(
+                legacy_verified_level / target_level, 1.0
+            )
+            if assessable:
+                bucket["ceiling_sum"] += target.weight
+                bucket["coverage_sum"] += target.weight * (
+                    len(assessed) / len(assessable)
+                )
+            if assessed:
+                bucket["mastery_weight"] += target.weight
+                bucket["mastery_sum"] += target.weight * (
+                    len(mastered) / len(assessed)
+                )
+            if skill_id in assessment:
+                bucket["self_weight"] += target.weight
+                bucket["self_sum"] += target.weight * min(
+                    float(assessment[skill_id]) / target_level, 1.0
+                )
+
+        result: list[dict[str, Any]] = []
+        for domain, value in sorted(domains.items()):
+            if value["weight"] <= 0:
+                continue
+            assessed_mastery = (
+                round(value["mastery_sum"] / value["mastery_weight"], 3)
+                if value["mastery_weight"]
+                else None
+            )
+            self_attainment = (
+                round(value["self_sum"] / value["self_weight"], 3)
+                if value["self_weight"]
+                else None
+            )
+            result.append(
+                {
+                    "id": domain,
+                    "label": _DOMAIN_LABELS_ZH.get(
+                        domain, domain.replace("_", " ").title()
+                    ),
+                    "assessed_mastery": assessed_mastery,
+                    "assessment_coverage": round(
+                        value["coverage_sum"] / value["weight"], 3
+                    ),
+                    "assessment_coverage_ceiling": round(
+                        value["ceiling_sum"] / value["weight"], 3
+                    ),
+                    "self_assessed_attainment": self_attainment,
+                    "self_assessment_coverage": round(
+                        value["self_weight"] / value["weight"], 3
+                    ),
+                    "assessed_problem_count": len(value["assessed"]),
+                    "assessable_problem_count": len(value["assessable"]),
+                    "mastered_problem_count": len(value["mastered"]),
+                    "evidence_scope": "practice",
+                    # Compatibility fields for older desktop clients.  New
+                    # clients use the explicit evidence and coverage fields.
+                    "self_reported": round(
+                        value["legacy_self_sum"] / value["weight"], 3
+                    ),
+                    "verified": round(
+                        value["legacy_verified_sum"] / value["weight"], 3
+                    ),
+                }
+            )
+        return result
 
     def problem_view(self, problem_id: str) -> dict[str, Any]:
         problem = self.catalog.get(problem_id)

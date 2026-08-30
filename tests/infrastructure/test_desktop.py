@@ -683,6 +683,21 @@ def test_home_and_practice_expose_truthful_next_actions() -> None:
     assert 'font.family: "Cascadia Mono, Consolas, monospace"' not in exercise
 
 
+def test_progress_page_separates_mastery_from_evidence_coverage() -> None:
+    progress = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/ProgressPage.qml"
+    ).read_text(encoding="utf-8")
+
+    assert "尚无评测证据" in progress
+    assert "当前版本上限" in progress
+    assert "当前版本尚无可评测资产" in progress
+    assert "不表示你的能力为 0" in progress
+    assert "不是 Offer 概率" in progress
+    assert "modelData.assessed_mastery" in progress
+    assert "modelData.assessment_coverage" in progress
+    assert "modelData.verified" not in progress
+
+
 def test_home_and_learn_prioritize_primary_actions_and_secondary_metadata() -> None:
     main = (REPO_ROOT / "src/llm_interview_lab/desktop/qml/Main.qml").read_text(
         encoding="utf-8"

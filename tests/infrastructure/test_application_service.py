@@ -10,7 +10,7 @@ import sys
 import pytest
 
 from llm_interview_lab.application import ApplicationService
-from llm_interview_lab.events import append_event
+from llm_interview_lab.events import WorkspaceState, append_event
 from llm_interview_lab.workspace import event_schema_path, load_profile, profile_paths
 
 
@@ -149,6 +149,157 @@ def test_every_role_has_a_runnable_first_unlock_without_torch(
         current = service.current_submission(profile_id)
         assert current is not None
         assert current["problem_id"] == unlocks[0]["problem_id"]
+
+
+def test_dashboard_separates_assessed_mastery_from_evidence_coverage(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    service = ApplicationService(root)
+    service.initialize_profile(
+        "readiness-user",
+        role_id="applied_ai_engineer",
+        seniority="senior",
+        ai_mode="disabled",
+    )
+
+    fresh = service.dashboard("readiness-user")
+    python_evidence = next(
+        item
+        for item in fresh["role_readiness"]
+        if item["id"] == "python_engineering"
+    )
+    assert fresh["role_readiness_metric_version"] == 2
+    assert python_evidence["assessed_mastery"] is None
+    assert python_evidence["assessment_coverage"] == 0.0
+    assert python_evidence["assessment_coverage_ceiling"] > 0.0
+    assert python_evidence["self_assessed_attainment"] is None
+    assert isinstance(python_evidence["verified"], float)
+
+    service.start_practice("readiness-user", "FND-001")
+    current = service.current_submission("readiness-user")
+    assert current is not None
+    paths = profile_paths(root, "readiness-user")
+    append_event(
+        paths.events_file,
+        event_schema_path(root),
+        profile_id="readiness-user",
+        event_type="task_mastered",
+        problem_id="FND-001",
+        attempt_id=current["attempt_id"],
+        payload={"submission_sha256": current["sha256"]},
+        timestamp=T0,
+    )
+
+    assessed = next(
+        item
+        for item in service.dashboard("readiness-user")["role_readiness"]
+        if item["id"] == "python_engineering"
+    )
+    assert assessed["assessed_mastery"] == 1.0
+    assert assessed["verified"] < assessed["assessed_mastery"]
+    assert (
+        0.0
+        < assessed["assessment_coverage"]
+        < assessed["assessment_coverage_ceiling"]
+    )
+    assert assessed["assessed_problem_count"] == 1
+    assert assessed["mastered_problem_count"] == 1
+
+
+def test_dashboard_does_not_report_uncovered_role_skills_as_zero_ability(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    service = ApplicationService(root)
+    service.initialize_profile(
+        "product-user",
+        role_id="ai_product_manager",
+        seniority="new_grad",
+        ai_mode="disabled",
+    )
+
+    evidence = service.dashboard("product-user")["role_readiness"]
+
+    assert evidence
+    assert all(item["assessed_mastery"] is None for item in evidence)
+    assert all(item["assessment_coverage"] == 0.0 for item in evidence)
+    assert all(item["assessment_coverage_ceiling"] == 0.0 for item in evidence)
+
+
+def test_dashboard_counts_only_learner_attributable_test_results_as_evidence(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    service = ApplicationService(root)
+    statuses = (
+        ("passed", True),
+        ("failed", True),
+        ("timed_out", True),
+        ("import_error", True),
+        ("collection_error", False),
+        ("internal_error", False),
+    )
+    for index, (status, is_assessment) in enumerate(statuses, start=1):
+        profile_id = f"evidence-user-{index}"
+        service.initialize_profile(
+            profile_id,
+            role_id="applied_ai_engineer",
+            seniority="new_grad",
+            ai_mode="disabled",
+        )
+        service.start_practice(profile_id, "FND-001")
+        current = service.current_submission(profile_id)
+        assert current is not None
+        paths = profile_paths(root, profile_id)
+        append_event(
+            paths.events_file,
+            event_schema_path(root),
+            profile_id=profile_id,
+            event_type="public_tests_run",
+            problem_id="FND-001",
+            attempt_id=current["attempt_id"],
+            payload={
+                "submission_sha256": current["sha256"],
+                "exit_code": 0 if status == "passed" else 1,
+                "status": status,
+                "passed": 1 if status == "passed" else 0,
+                "failed": 0 if status == "passed" else 1,
+                "duration_ms": 10,
+                "output_truncated": False,
+            },
+            timestamp=T0,
+        )
+
+        evidence = next(
+            item
+            for item in service.dashboard(profile_id)["role_readiness"]
+            if item["id"] == "python_engineering"
+        )
+        if is_assessment:
+            assert evidence["assessed_mastery"] == 0.0, status
+            assert evidence["assessment_coverage"] > 0.0, status
+            assert evidence["assessed_problem_count"] == 1, status
+        else:
+            assert evidence["assessed_mastery"] is None, status
+            assert evidence["assessment_coverage"] == 0.0, status
+            assert evidence["assessed_problem_count"] == 0, status
+
+
+def test_dashboard_problem_counts_are_unique_across_skill_mappings(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    service = ApplicationService(root)
+    state = WorkspaceState(mastered={"AGT-006"})
+
+    evidence = service._role_readiness(
+        service.roles.roles["ai_agent_engineer"], "new_grad", {}, state
+    )
+    agent_domain = next(item for item in evidence if item["id"] == "agent_application")
+
+    assert agent_domain["assessed_problem_count"] == 1
+    assert agent_domain["mastered_problem_count"] == 1
 
 
 def test_knowledge_search_role_uses_weighted_skills_as_fallback(
