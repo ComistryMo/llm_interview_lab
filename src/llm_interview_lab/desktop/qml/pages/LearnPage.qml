@@ -170,6 +170,7 @@ Item {
                 padding: 16
                 cardColor: root.palette.surface
                 prominent: modelData.status === "in_progress"
+                accentColor: modelData.status === "in_progress" ? root.palette.accent : "transparent"
                 borderColor: modelData.status === "in_progress"
                               ? root.palette.accent : root.palette.border
                 RowLayout {

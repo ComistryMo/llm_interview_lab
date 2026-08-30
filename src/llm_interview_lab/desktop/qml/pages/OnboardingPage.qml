@@ -175,6 +175,7 @@ Rectangle {
             Layout.fillHeight: true
             cardColor: root.palette.surface
             borderColor: root.palette.border
+            accentColor: root.step >= 1 ? root.palette.accent : "transparent"
 
             StackLayout {
                 width: parent.width
@@ -272,7 +273,8 @@ Rectangle {
                             // Keep a persistent affordance for the scrollable
                             // role list; the slimmer thumb avoids obscuring
                             // card copy at compact widths.
-                            policy: ScrollBar.AlwaysOn
+                            policy: roleGrid.contentHeight > roleGrid.height
+                                    ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
                             width: 5
                             contentItem: Rectangle {
                                 implicitWidth: 5
@@ -404,17 +406,40 @@ Rectangle {
                         font.pixelSize: 11
                         Layout.fillWidth: true
                     }
-                    Text {
-                        id: selectedRoleLabel
-                        objectName: "onboardingSelectedRoleLabel"
+                    Rectangle {
+                        objectName: "onboardingSelectionSummary"
                         Layout.fillWidth: true
-                        text: root.selectedRoleCard
-                              ? "已选择：" + root.selectedRoleCard.title
-                              : "请选择一个岗位后继续"
+                        Layout.preferredHeight: 36
+                        radius: 8
                         color: root.selectedRoleCard
-                               ? root.palette.accent : root.palette.muted
-                        font.bold: root.selectedRoleCard !== null
-                        elide: Text.ElideRight
+                               ? Qt.rgba(0.192, 0.349, 0.851, 0.09)
+                               : root.palette.surfaceAlt
+                        border.color: root.selectedRoleCard
+                                      ? root.palette.accent : root.palette.border
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 12
+                            anchors.rightMargin: 10
+                            spacing: 8
+                            Text {
+                                id: selectedRoleLabel
+                                objectName: "onboardingSelectedRoleLabel"
+                                Layout.fillWidth: true
+                                text: root.selectedRoleCard
+                                      ? "已选择：" + root.selectedRoleCard.title
+                                      : "请选择一个岗位后继续"
+                                color: root.selectedRoleCard
+                                       ? root.palette.accent : root.palette.muted
+                                font.bold: root.selectedRoleCard !== null
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                text: root.selectedRoleCard ? "✓" : ""
+                                color: root.palette.accent
+                                font.bold: true
+                                font.pixelSize: 16
+                            }
+                        }
                     }
                 }
             }

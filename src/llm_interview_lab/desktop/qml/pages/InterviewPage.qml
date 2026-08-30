@@ -446,6 +446,7 @@ Item {
             Layout.fillHeight: true
             cardColor: root.palette.surface
             prominent: !!activeQuestion
+            accentColor: activeQuestion ? root.palette.accent : "transparent"
             borderColor: activeQuestion ? root.palette.accent : root.palette.border
             RowLayout {
                 width: parent.width

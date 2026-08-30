@@ -98,15 +98,26 @@ Flickable {
             // rest of the page stays quiet so the next step is obvious.
             prominent: true
             borderColor: root.resumableInterview ? root.palette.border : root.palette.accent
+            accentColor: root.trainingTargetRunnable ? root.palette.accent : root.palette.warning
             RowLayout {
                 width: parent.width
                 height: parent.height
                 spacing: 20
                 ColumnLayout {
                     Layout.fillWidth: true
-                    Text { text: app.dashboard.current ? "当前训练" : "下一题"; color: root.palette.accent; font.pixelSize: 11; font.bold: true; font.letterSpacing: 1.1 }
                     Text {
-                        text: root.trainingTarget ? root.trainingTarget.title : "暂无可用任务"
+                        text: root.resumableInterview
+                              ? "未完成面试"
+                              : (app.dashboard.current ? "当前训练" : "下一题")
+                        color: root.palette.accent
+                        font.pixelSize: 11
+                        font.bold: true
+                        font.letterSpacing: 1.1
+                    }
+                    Text {
+                        text: root.resumableInterview
+                              ? (app.interview.role_title || "模拟面试")
+                              : (root.trainingTarget ? root.trainingTarget.title : "暂无可用任务")
                         color: root.palette.text
                         font.pixelSize: 24
                         font.bold: true
@@ -114,12 +125,16 @@ Flickable {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: root.trainingTarget && root.trainingTarget.environment_available === false
-                              ? (root.trainingTarget.environment || "当前环境不能运行这道题。")
-                              : app.dashboard.current
-                                ? "状态：" + root.statusText(app.dashboard.current.status)
-                                : "一道经过验证的题目已经可以开始。"
-                        color: root.trainingTargetRunnable ? root.palette.muted : root.palette.warning
+                        text: root.resumableInterview
+                              ? "继续完成本场面试，训练任务会在结束后恢复。"
+                              : (root.trainingTarget && root.trainingTarget.environment_available === false
+                                 ? (root.trainingTarget.environment || "当前环境不能运行这道题。")
+                                 : app.dashboard.current
+                                   ? "状态：" + root.statusText(app.dashboard.current.status)
+                                   : "一道经过验证的题目已经可以开始。")
+                        color: root.resumableInterview
+                               ? root.palette.warning
+                               : (root.trainingTargetRunnable ? root.palette.muted : root.palette.warning)
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
                     }
@@ -131,10 +146,12 @@ Flickable {
                             tone: root.palette.muted
                         }
                         StatusPill {
+                            visible: !root.resumableInterview
                             text: "已掌握" + (app.dashboard.mastered_count || 0)
                             tone: root.palette.success
                         }
                         StatusPill {
+                            visible: !root.resumableInterview
                             text: "到期" + (app.dashboard.due_retention ? app.dashboard.due_retention.length : 0)
                             tone: (app.dashboard.due_retention || []).length > 0 ? root.palette.warning : root.palette.muted
                         }
@@ -142,42 +159,89 @@ Flickable {
                     Item { Layout.fillHeight: true }
                     Text {
                         Layout.fillWidth: true
-                        text: root.currentNextStep(app.dashboard.current ? app.dashboard.current.status : "not_started")
-                        color: root.currentNextStepTone(app.dashboard.current ? app.dashboard.current.status : "not_started")
+                        text: root.resumableInterview
+                              ? "下一步：继续面试或放弃本场"
+                              : root.currentNextStep(app.dashboard.current ? app.dashboard.current.status : "not_started")
+                        color: root.resumableInterview
+                               ? root.palette.warning
+                               : root.currentNextStepTone(app.dashboard.current ? app.dashboard.current.status : "not_started")
                         font.pixelSize: 12
                         font.bold: true
                         wrapMode: Text.Wrap
                     }
                 }
                 ColumnLayout {
-                    Text {
+                    Rectangle {
+                        objectName: "homeInterviewInProgressState"
                         visible: root.resumableInterview
-                        text: "面试进行中"
-                        color: root.palette.warning
-                        font.pixelSize: 16
-                        font.bold: true
                         Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    Text {
-                        visible: root.resumableInterview
-                        text: app.interview
-                              ? (app.interview.completed_questions || 0) + " / "
-                                + (app.interview.total_questions || 0)
-                              : "0 / 0"
-                        color: root.palette.text
-                        font.pixelSize: 28
-                        font.bold: true
-                        Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    Text {
-                        visible: root.resumableInterview
-                        text: "问题已完成"
-                        color: root.palette.muted
-                        font.pixelSize: 12
-                        Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
+                        Layout.preferredWidth: 184
+                        Layout.preferredHeight: 120
+                        radius: 10
+                        color: root.palette.surfaceAlt
+                        border.color: root.palette.border
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 12
+                            spacing: 2
+                            Text {
+                                text: "面试进行中"
+                                color: root.palette.warning
+                                font.pixelSize: 14
+                                font.bold: true
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+                            Text {
+                                text: app.interview
+                                      ? (app.interview.completed_questions || 0) + " / "
+                                        + (app.interview.total_questions || 0)
+                                      : "0 / 0"
+                                color: root.palette.text
+                                font.pixelSize: 26
+                                font.bold: true
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+                            Text {
+                                text: "问题已完成"
+                                color: root.palette.muted
+                                font.pixelSize: 11
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideRight
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 8
+                                Button {
+                                    id: resumeInlineButton
+                                    text: "继续面试"
+                                    highlighted: true
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 34
+                                    background: Rectangle {
+                                        radius: 8
+                                        color: resumeInlineButton.enabled
+                                              ? root.palette.accent : root.palette.border
+                                    }
+                                    contentItem: Text {
+                                        text: resumeInlineButton.text
+                                        color: resumeInlineButton.enabled ? "white" : root.palette.muted
+                                        font.bold: true
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                    onClicked: app.resumeInterview()
+                                }
+                                Button {
+                                    text: "放弃"
+                                    flat: true
+                                    Layout.preferredHeight: 34
+                                    onClicked: abandonInterviewDialog.open()
+                                }
+                            }
+                        }
                     }
                     Button {
                         id: continueTrainingButton
@@ -260,63 +324,23 @@ Flickable {
             }
         }
 
-        LabCard {
-            objectName: "resumableInterviewCard"
-            visible: app.interview && app.interview.status === "active"
-            Layout.fillWidth: true
-            Layout.preferredHeight: visible ? 112 : 0
-            cardColor: root.palette.surface
-            borderColor: root.palette.accent
-            prominent: true
-            RowLayout {
-                width: parent.width; height: parent.height; spacing: 16
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Text { text: "检测到未完成面试"; color: root.palette.text; font.pixelSize: 17; font.bold: true }
-                    Text {
-                        text: (app.interview.role_title || app.interview.role_id || "模拟面试")
-                              + " · 已完成 " + (app.interview.completed_questions || 0)
-                              + " / " + (app.interview.total_questions || 0)
-                        color: root.palette.muted
-                    }
-                }
-                Button {
-                    id: resumeInterviewButton
-                    text: "继续面试"
-                    highlighted: true
-                    Layout.preferredWidth: 112
-                    Layout.preferredHeight: 40
-                    background: Rectangle { radius: 8; color: root.palette.accent }
-                    contentItem: Text {
-                        text: resumeInterviewButton.text
-                        color: "white"
-                        font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-                    onClicked: app.resumeInterview()
-                }
-                Button { text: "放弃本场"; onClicked: abandonInterviewDialog.open() }
-            }
-        }
-
         RowLayout {
             Layout.fillWidth: true
             spacing: 16
             LabCard {
-                Layout.fillWidth: true; Layout.preferredHeight: 150; cardColor: root.palette.surface; borderColor: root.palette.border
+                Layout.fillWidth: true; Layout.preferredHeight: 150; cardColor: root.palette.surface; borderColor: root.palette.border; accentColor: root.palette.accent
                 Text { text: "目标岗位"; color: root.palette.muted; font.pixelSize: 12 }
                 Text { text: app.dashboard.role ? (app.dashboard.role.title || app.dashboard.role.primary_role.replace(/_/g, " ")) : "首次启动时选择"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
                 Text { text: app.dashboard.role ? root.seniorityText(app.dashboard.role.seniority) : "校招"; color: root.palette.accent }
             }
             LabCard {
-                Layout.fillWidth: true; Layout.preferredHeight: 150; cardColor: root.palette.surface; borderColor: root.palette.border
+                Layout.fillWidth: true; Layout.preferredHeight: 150; cardColor: root.palette.surface; borderColor: root.palette.border; accentColor: root.palette.success
                 Text { text: "已掌握"; color: root.palette.muted; font.pixelSize: 12 }
                 Text { text: app.dashboard.mastered_count || 0; color: root.palette.text; font.pixelSize: 32; font.bold: true }
                 Text { text: "经过完整验证的节点"; color: root.palette.muted }
             }
             LabCard {
-                Layout.fillWidth: true; Layout.preferredHeight: 150; cardColor: root.palette.surface; borderColor: root.palette.border
+                Layout.fillWidth: true; Layout.preferredHeight: 150; cardColor: root.palette.surface; borderColor: root.palette.border; accentColor: (app.dashboard.due_retention || []).length > 0 ? root.palette.warning : root.palette.muted
                 Text { text: "到期复测"; color: root.palette.muted; font.pixelSize: 12 }
                 Text { text: app.dashboard.due_retention ? app.dashboard.due_retention.length : 0; color: root.palette.text; font.pixelSize: 32; font.bold: true }
                 Text { text: "D+2 / D+7 闭卷复写"; color: root.palette.muted }

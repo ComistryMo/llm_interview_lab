@@ -13,6 +13,10 @@ Item {
     property bool coachOpen: false
     property bool focusMode: false
     property bool wideLayout: width >= 1260
+    // Only a completed test operation needs the expanded result viewport.
+    // Save/retention notices stay compact so the editor and primary action
+    // remain visible on a first visit.
+    property bool testResultExpanded: ["测试通过", "测试失败", "保存失败", "结果已过期"].indexOf(app.testState) >= 0
     property bool mediumLayout: width >= 1050
     property var actions: (app.currentTask && app.currentTask.actions) || ({})
     property string codeFontFamily: Qt.platform.os === "windows" ? "Cascadia Mono"
@@ -150,18 +154,30 @@ Item {
             color: root.palette.background
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 14; spacing: 10
-                RowLayout {
+                Rectangle {
+                    objectName: "exerciseToolbar"
                     Layout.fillWidth: true
-                    Text { text: "submission.py"; color: root.palette.text; font.bold: true }
-                    Item { Layout.fillWidth: true }
-                    Button { visible: !root.wideLayout && !root.focusMode; text: "题面"; onClicked: detailsDrawer.open() }
-                    Button {
-                        visible: !root.focusMode && (!root.wideLayout || !root.coachOpen)
-                        text: "AI 教练"
-                        onClicked: root.wideLayout ? root.coachOpen = true : coachDrawer.open()
+                    Layout.preferredHeight: 42
+                    radius: 10
+                    color: root.palette.surfaceAlt
+                    border.color: root.palette.border
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        spacing: 2
+                        Text { text: "submission.py"; color: root.palette.text; font.bold: true; Layout.leftMargin: 4 }
+                        Item { Layout.fillWidth: true }
+                        Button { visible: !root.wideLayout && !root.focusMode; text: "题面"; flat: true; onClicked: detailsDrawer.open() }
+                        Button {
+                            visible: !root.focusMode && (!root.wideLayout || !root.coachOpen)
+                            text: "AI 教练"
+                            flat: true
+                            onClicked: root.wideLayout ? root.coachOpen = true : coachDrawer.open()
+                        }
+                        Button { text: root.focusMode ? "退出专注" : "专注编码"; flat: true; onClicked: root.focusMode = !root.focusMode }
+                        Button { text: "保存"; flat: true; onClicked: app.saveSubmission(editor.text) }
                     }
-                    Button { text: root.focusMode ? "退出专注" : "专注编码"; onClicked: root.focusMode = !root.focusMode }
-                    Button { text: "保存"; flat: true; onClicked: app.saveSubmission(editor.text) }
                 }
                 Rectangle {
                     objectName: "exerciseContextStrip"
@@ -229,8 +245,18 @@ Item {
                     Text { visible: app.submissionDirty; text: "未保存"; color: root.palette.warning; font.pixelSize: 11 }
                 }
                 Rectangle {
-                    Layout.fillWidth: true; Layout.preferredHeight: 154; radius: 9
-                    color: root.palette.surface; border.color: root.palette.border
+                    objectName: "exerciseTestOutput"
+                    Layout.fillWidth: true
+                    // Keep the initial workspace focused on the editor.  Once
+                    // a real result exists the panel expands; long output is
+                    // still constrained by the inner ScrollView.
+                    Layout.preferredHeight: root.testResultExpanded ? 154 : 92
+                    Layout.minimumHeight: 80
+                    radius: 9
+                    color: root.palette.surface
+                    border.color: app.testState === "测试通过" ? root.palette.success
+                                  : app.testState === "测试失败" || app.testState === "保存失败"
+                                    ? root.palette.danger : root.palette.border
                     ScrollView {
                         anchors.fill: parent; anchors.margins: 12; clip: true
                         Text { width: parent.width; text: app.testOutput || "公开测试输出会显示在这里。"; color: root.palette.text; font.family: root.codeFontFamily; font.pixelSize: 12; wrapMode: Text.Wrap }

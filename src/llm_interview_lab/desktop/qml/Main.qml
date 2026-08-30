@@ -126,8 +126,18 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.bottomMargin: 20
                     Rectangle {
-                        width: 34; height: 34; radius: 9; color: window.colors.accent
-                        Text { anchors.centerIn: parent; text: "LL"; color: "white"; font.bold: true }
+                        width: 36; height: 36; radius: 10
+                        color: window.colors.accent
+                        border.color: Qt.rgba(1, 1, 1, window.dark ? 0.16 : 0.24)
+                        border.width: 1
+                        Text {
+                            anchors.centerIn: parent
+                            text: "LL"
+                            color: "white"
+                            font.bold: true
+                            font.pixelSize: 13
+                            font.letterSpacing: 0.4
+                        }
                     }
                     ColumnLayout {
                         spacing: 0
@@ -194,6 +204,7 @@ ApplicationWindow {
                                      : "transparent"
                             border.color: navButton.activeFocus ? window.colors.accent : "transparent"
                             border.width: navButton.activeFocus ? 2 : 0
+                            Behavior on color { ColorAnimation { duration: 120 } }
                             Rectangle {
                                 visible: backend.currentPage === modelData.id
                                 width: 3
@@ -316,14 +327,28 @@ ApplicationWindow {
                         font.weight: Font.DemiBold
                     }
                     Item { Layout.fillWidth: true }
-                    Text {
+                    Rectangle {
                         visible: !!backend.profileDisplayName || !!backend.profileId
-                        text: backend.profileDisplayName || backend.profileId || ""
-                        color: window.colors.muted
-                        font.pixelSize: 12
-                        elide: Text.ElideRight
-                        Layout.maximumWidth: window.width < 1100 ? 130 : 220
-                        Layout.minimumWidth: 0
+                        property int profileChipMaxWidth: window.width < 1100 ? 150 : 230
+                        Layout.preferredHeight: 30
+                        Layout.maximumWidth: profileChipMaxWidth
+                        Layout.minimumWidth: 48
+                        Layout.preferredWidth: Math.min(profileChipMaxWidth,
+                                                        Math.max(48, profileNameLabel.implicitWidth + 24))
+                        radius: 8
+                        color: window.colors.surfaceAlt
+                        border.color: window.colors.border
+                        Text {
+                            id: profileNameLabel
+                            anchors.fill: parent
+                            anchors.leftMargin: 12
+                            anchors.rightMargin: 12
+                            text: backend.profileDisplayName || backend.profileId || ""
+                            color: window.colors.muted
+                            font.pixelSize: 12
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                        }
                     }
                     StatusPill { text: backend.aiStatus; tone: backend.aiStatus.indexOf("已连接") >= 0 || backend.aiStatus.indexOf("就绪") >= 0 ? window.colors.success : window.colors.muted }
                     BusyIndicator { running: backend.busy; visible: running; implicitWidth: 28; implicitHeight: 28 }

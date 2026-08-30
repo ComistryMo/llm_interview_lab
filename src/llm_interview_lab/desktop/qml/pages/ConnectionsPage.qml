@@ -14,6 +14,10 @@ Flickable {
     property string editingConnectionId: ""
     property string formError: ""
     property bool saving: false
+    // Keep the first configuration fields in view on compact desktop windows.
+    // The full explanations remain available at a taller viewport without
+    // changing the connection model or its actions.
+    property bool compactOverview: height < 840
 
     function clearFormError() {
         root.formError = ""
@@ -78,7 +82,7 @@ Flickable {
 
     ColumnLayout {
         id: content
-        x: 28; y: 24; width: parent.width - 56; spacing: 16
+        x: 28; y: 24; width: parent.width - 56; spacing: 12
 
         // Main.qml owns the route title; use this smaller line for the
         // actionable context and keep the optional nature visible.
@@ -89,27 +93,57 @@ Flickable {
             font.pixelSize: 16
             font.bold: true
         }
-        Text { text: "不连接 AI 也能完成固定课程、公开测试、间隔复测和手动模拟面试。远程请求只发送你在上下文预览中确认的内容。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+        Text {
+            text: root.compactOverview
+                  ? "不连接 AI 也能训练；远程请求仅发送你确认的内容。"
+                  : "不连接 AI 也能完成固定课程、测试、复测和手动面试。远程请求只发送你确认的上下文。"
+            color: root.palette.muted
+            wrapMode: Text.Wrap
+            maximumLineCount: root.compactOverview ? 1 : 2
+            elide: Text.ElideRight
+            Layout.fillWidth: true
+        }
 
         GridLayout {
             id: connectionOverview
             Layout.fillWidth: true
             columns: content.width < 820 ? 1 : 2
             columnSpacing: 14
-            rowSpacing: 14
+            rowSpacing: root.compactOverview ? 8 : 14
             LabCard {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 142
+                Layout.preferredHeight: root.compactOverview
+                                           ? Math.max(78, implicitHeight)
+                                           : Math.max(118, implicitHeight)
                 Layout.alignment: Qt.AlignTop
                 cardColor: root.palette.surface; borderColor: root.palette.border
+                accentColor: root.palette.success
+                padding: root.compactOverview ? 10 : 14
                 RowLayout {
                     width: parent.width
                     Text { text: "无需 AI"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
                     Item { Layout.fillWidth: true }
                     StatusPill { text: "始终可用"; tone: root.palette.success }
                 }
-                Text { width: parent.width; text: "默认模式：课程、测试、审查、复测和手动面试都在本机运行。"; color: root.palette.muted; wrapMode: Text.Wrap }
-                Text { width: parent.width; text: "AI 不可用时仍可继续训练。"; color: root.palette.text; wrapMode: Text.Wrap; font.bold: true }
+                Text {
+                    width: parent.width
+                    text: root.compactOverview
+                          ? "无需配置，训练可直接进行。"
+                          : "课程、测试、审查、复测和手动面试都在本机运行。"
+                    color: root.compactOverview ? root.palette.text : root.palette.muted
+                    wrapMode: Text.Wrap
+                    maximumLineCount: root.compactOverview ? 1 : 2
+                    elide: Text.ElideRight
+                    font.bold: root.compactOverview
+                }
+                Text {
+                    visible: !root.compactOverview
+                    width: parent.width
+                    text: "AI 不可用时仍可继续训练。"
+                    color: root.palette.text
+                    wrapMode: Text.Wrap
+                    font.bold: true
+                }
             }
             LabCard {
                 id: codexCard
@@ -118,25 +152,39 @@ Flickable {
                 // At the minimum supported window width the four actions do
                 // not fit in one row. Let the card use two predictable rows
                 // instead of silently pushing the settings action off-screen.
-                Layout.preferredHeight: width < 500 ? 220 : 166
+                Layout.preferredHeight: root.compactOverview
+                                           ? Math.max(app.codexAvailable ? 86 : 96, implicitHeight)
+                                           : Math.max(width < 500 ? 190 : 150, implicitHeight)
                 cardColor: root.palette.surface; borderColor: root.palette.border
+                accentColor: root.palette.accent
+                padding: root.compactOverview ? 10 : 14
                 RowLayout {
                     width: parent.width
                     Text { text: "Codex"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
                     Item { Layout.fillWidth: true }
                     StatusPill { text: app.codexAvailable ? "可用" : "未检测到"; tone: app.codexAvailable ? root.palette.success : root.palette.warning }
                 }
-                Text { width: parent.width; text: "通过官方 App Server 使用 Thread、流式事件、Diff、取消和显式审批；不会解析交互式终端输出。"; color: root.palette.muted; wrapMode: Text.Wrap }
+                Text {
+                    width: parent.width
+                    text: root.compactOverview && !app.codexAvailable
+                          ? "未检测到 Codex，可在设置中选择路径或继续使用 No-AI。"
+                          : "通过官方 App Server 使用 Thread、流式事件、Diff、取消和显式审批；不会解析交互式终端输出。"
+                    color: root.palette.muted
+                    wrapMode: Text.Wrap
+                    maximumLineCount: root.compactOverview ? 1 : 3
+                    elide: Text.ElideRight
+                    visible: !root.compactOverview
+                }
                 GridLayout {
                     id: codexActions
                     width: parent.width
-                    columns: codexCard.width < 500 ? 2 : 4
+                    columns: root.compactOverview || codexCard.width < 500 ? 2 : 4
                     columnSpacing: 8
-                    rowSpacing: 6
-                    Button { Layout.fillWidth: true; text: "教练模式"; enabled: app.codexAvailable; onClicked: app.connectCodex("coach") }
-                    Button { Layout.fillWidth: true; text: "仓库代理模式"; enabled: app.codexAvailable; onClicked: app.connectCodex("repository_agent") }
-                    Button { Layout.fillWidth: true; text: "重新检测"; flat: true; onClicked: app.refreshCodexAvailability() }
-                    Button { Layout.fillWidth: true; text: "查找设置"; visible: !app.codexAvailable; onClicked: app.navigate("settings") }
+                    rowSpacing: root.compactOverview ? 4 : 6
+                    Button { visible: app.codexAvailable; Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "教练模式"; flat: true; onClicked: app.connectCodex("coach") }
+                    Button { visible: app.codexAvailable; Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "仓库代理模式"; flat: true; onClicked: app.connectCodex("repository_agent") }
+                    Button { Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "重新检测"; flat: true; onClicked: app.refreshCodexAvailability() }
+                    Button { Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "查找设置"; flat: true; visible: !app.codexAvailable; onClicked: app.navigate("settings") }
                 }
             }
         }
