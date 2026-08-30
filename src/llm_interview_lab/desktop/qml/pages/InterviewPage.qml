@@ -70,6 +70,23 @@ Item {
         return true
     }
 
+    // QML does not reliably notify bindings when a JavaScript object stored in
+    // a `var` property is mutated in place.  Always publish a new score map so
+    // the completion check, score labels and action button update immediately
+    // after a learner moves one rubric slider.
+    function setRubricScore(dimension, value) {
+        var next = {}
+        var current = root.rubricScores || {}
+        for (var key in current) {
+            // The map is created locally and only contains rubric dimensions;
+            // copying its enumerable keys is sufficient and Qt's QML JS
+            // runtime stays compatible with older desktop builds.
+            next[key] = current[key]
+        }
+        next[dimension] = Math.round(value)
+        root.rubricScores = next
+    }
+
     function roleIndex(roleId) {
         var values = app.roles || []
         for (var i = 0; i < values.length; ++i) {
@@ -486,7 +503,7 @@ Item {
                         width: parent.width
                         spacing: 6
                         Text { text: "自评 Rubric（每个维度 1–5 分）"; color: root.palette.muted; font.bold: true }
-                        Text { text: "用于自我校准，不代表客观面试结论。"; color: root.palette.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
+                        Text { text: "用于自我校准，不代表客观面试结论。请点击每个滑块选择分数，未评分项不会提交。"; color: root.palette.muted; font.pixelSize: 11; wrapMode: Text.Wrap; width: parent.width }
                         Repeater {
                             model: activeQuestion ? Object.keys(activeQuestion.rubric.dimensions) : []
                             delegate: RowLayout {
@@ -497,9 +514,9 @@ Item {
                                     id: dimensionScore
                                     from: 1; to: 5; stepSize: 1; value: 1
                                     Layout.fillWidth: true
-                                    onValueChanged: if (pressed) root.rubricScores[modelData] = Math.round(value)
+                                    onValueChanged: if (pressed) root.setRubricScore(modelData, value)
                                 }
-                                Text { text: root.rubricScores[modelData] === undefined ? "未评分" : Math.round(dimensionScore.value) + " / 5"; color: root.palette.text; font.bold: true; Layout.preferredWidth: 54 }
+                                Text { text: root.rubricScores[modelData] === undefined ? "未评分" : root.rubricScores[modelData] + " / 5"; color: root.palette.text; font.bold: true; Layout.preferredWidth: 54 }
                             }
                         }
                     }
@@ -526,6 +543,7 @@ Item {
                         width: parent.width
                         spacing: 8
                         Button {
+                            objectName: "recordSelfAssessment"
                             text: "记录自评结果"
                             enabled: root.rubricComplete() && evidence.text.trim().length > 0
                                      && !app.busy && !app.interview.assessment_recorded
