@@ -518,6 +518,13 @@ Item {
                                     id: dimensionScore
                                     from: 1; to: 5; stepSize: 1; value: 1
                                     Layout.fillWidth: true
+                                    Accessible.name: modelData.replace(/_/g, " ") + "自评分数"
+                                    Accessible.description: "点击或拖动选择 1 到 5 分"
+                                    // A click on the initial value (1) may not
+                                    // emit valueChanged. Record the press too,
+                                    // so choosing the lowest score is still an
+                                    // explicit, valid assessment.
+                                    onPressedChanged: if (pressed) root.setRubricScore(modelData, Math.round(value))
                                     onValueChanged: if (pressed) root.setRubricScore(modelData, value)
                                 }
                                 Text { text: root.rubricScores[modelData] === undefined ? "未评分" : root.rubricScores[modelData] + " / 5"; color: root.palette.text; font.bold: true; Layout.preferredWidth: 54 }
