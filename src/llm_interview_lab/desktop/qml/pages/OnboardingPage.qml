@@ -252,11 +252,22 @@ Rectangle {
                         id: roleGrid
                         objectName: "onboardingRoleGrid"
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
+                        // Show complete rows only. A fixed number of visible
+                        // rows prevents the next card from being cut in half
+                        // by the summary bar; the list remains scrollable when
+                        // more roles exist.
+                        Layout.fillHeight: false
+                        Layout.preferredHeight: visibleRows * cellHeight
                         clip: true
                         model: app.roles || []
-                        property int columnCount: !root.compactRoleLayout && width >= 760 ? 2 : 1
+                        // Choose columns from the actual role-list width, not
+                        // the outer window width. Two readable columns keep
+                        // the first viewport useful on compact windows while
+                        // the one-column mode remains available below 760px.
+                        property int columnCount: width >= 760 ? 2 : 1
                         property int roleCardHeight: root.compactRoleLayout ? 92 : 96
+                        property int rowCount: Math.max(1, Math.ceil((app.roles || []).length / columnCount))
+                        property int visibleRows: Math.min(rowCount, root.compactRoleLayout ? 2 : 3)
                         cellWidth: Math.max(1, columnCount === 2
                                              ? Math.floor((width - 12) / 2)
                                              : width)
@@ -406,6 +417,7 @@ Rectangle {
                         font.pixelSize: 11
                         Layout.fillWidth: true
                     }
+                    Item { Layout.fillHeight: true }
                     Rectangle {
                         objectName: "onboardingSelectionSummary"
                         Layout.fillWidth: true
@@ -426,18 +438,17 @@ Rectangle {
                                 objectName: "onboardingSelectedRoleLabel"
                                 Layout.fillWidth: true
                                 text: root.selectedRoleCard
-                                      ? "已选择：" + root.selectedRoleCard.title
+                                      ? "岗位已选 · " + root.selectedRoleCard.title
                                       : "请选择一个岗位后继续"
                                 color: root.selectedRoleCard
                                        ? root.palette.accent : root.palette.muted
                                 font.bold: root.selectedRoleCard !== null
                                 elide: Text.ElideRight
                             }
-                            Text {
-                                text: root.selectedRoleCard ? "✓" : ""
-                                color: root.palette.accent
-                                font.bold: true
-                                font.pixelSize: 16
+                            Rectangle {
+                                width: 8; height: 8; radius: 4
+                                color: root.selectedRoleCard ? root.palette.accent : root.palette.muted
+                                opacity: root.selectedRoleCard ? 1 : 0.55
                             }
                         }
                     }

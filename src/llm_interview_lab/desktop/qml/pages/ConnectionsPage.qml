@@ -18,6 +18,10 @@ Flickable {
     // The full explanations remain available at a taller viewport without
     // changing the connection model or its actions.
     property bool compactOverview: height < 840
+    // Keep the two status cards on one visual baseline.  A shared minimum is
+    // less distracting than letting each card size itself from a different
+    // amount of copy, especially beside the first configuration fields.
+    property int overviewCardMinHeight: compactOverview ? 96 : 150
 
     function clearFormError() {
         root.formError = ""
@@ -99,8 +103,11 @@ Flickable {
                   : "不连接 AI 也能完成固定课程、测试、复测和手动面试。远程请求只发送你确认的上下文。"
             color: root.palette.muted
             wrapMode: Text.Wrap
-            maximumLineCount: root.compactOverview ? 1 : 2
-            elide: Text.ElideRight
+            // Security guidance must not disappear behind an ellipsis.  The
+            // compact copy is short enough for one line on the target window,
+            // and may naturally wrap to a second line on narrower screens.
+            maximumLineCount: 2
+            elide: Text.ElideNone
             Layout.fillWidth: true
         }
 
@@ -112,9 +119,7 @@ Flickable {
             rowSpacing: root.compactOverview ? 8 : 14
             LabCard {
                 Layout.fillWidth: true
-                Layout.preferredHeight: root.compactOverview
-                                           ? Math.max(78, implicitHeight)
-                                           : Math.max(118, implicitHeight)
+                Layout.preferredHeight: Math.max(root.overviewCardMinHeight, implicitHeight)
                 Layout.alignment: Qt.AlignTop
                 cardColor: root.palette.surface; borderColor: root.palette.border
                 accentColor: root.palette.success
@@ -152,9 +157,7 @@ Flickable {
                 // At the minimum supported window width the four actions do
                 // not fit in one row. Let the card use two predictable rows
                 // instead of silently pushing the settings action off-screen.
-                Layout.preferredHeight: root.compactOverview
-                                           ? Math.max(app.codexAvailable ? 86 : 96, implicitHeight)
-                                           : Math.max(width < 500 ? 190 : 150, implicitHeight)
+                Layout.preferredHeight: Math.max(root.overviewCardMinHeight, implicitHeight)
                 cardColor: root.palette.surface; borderColor: root.palette.border
                 accentColor: root.palette.accent
                 padding: root.compactOverview ? 10 : 14

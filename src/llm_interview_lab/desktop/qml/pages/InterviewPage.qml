@@ -18,6 +18,10 @@ Item {
     property string answerDraft: ""
     property string activeQuestionId: activeQuestion ? activeQuestion.question_id : ""
     property bool showSessionDetails: false
+    // A short viewport needs to keep the answer action visible before asking
+    // the learner to scroll.  This is a presentation breakpoint only; it does
+    // not change interview timing or answer semantics.
+    property bool compactInterviewLayout: width < 1000 || height < 700
     property var configuration: ({"available": true, "user_message": "", "missing_rounds": [], "missing_environment": []})
     property string codeFontFamily: Qt.platform.os === "windows" ? "Cascadia Mono"
                                     : Qt.platform.os === "osx" ? "Menlo" : "monospace"
@@ -301,22 +305,32 @@ Item {
     }
 
     RowLayout {
-        anchors.fill: parent; anchors.margins: root.width < 1000 ? 16 : 26; spacing: 12
+        anchors.fill: parent; anchors.margins: root.compactInterviewLayout ? 12 : 26; spacing: 12
 
         LabCard {
             id: leftPanel
-            Layout.preferredWidth: root.width < 1000 ? 238 : 280
+            Layout.preferredWidth: root.compactInterviewLayout ? 220 : 280
             Layout.minimumWidth: 220
             Layout.fillHeight: true
             cardColor: root.palette.surface; borderColor: root.palette.border
             property bool setupVisible: !app.interview.interview_id || app.interview.status === "completed" || app.interview.status === "incomplete"
             padding: 12
 
-            ScrollView {
-                id: setupScroll
+            // LabCard's default content column is intentionally lightweight
+            // for static cards.  This panel has a viewport plus a persistent
+            // footer, so use a local layout to allocate the viewport's
+            // remaining height instead of letting its implicit content push
+            // the footer below a short window.
+            ColumnLayout {
                 width: parent.width
                 height: parent.height
-                clip: true
+                spacing: 10
+
+                ScrollView {
+                    id: setupScroll
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
 
                 Column {
                     width: setupScroll.availableWidth
@@ -440,6 +454,7 @@ Item {
                 }
             }
         }
+        }
 
         LabCard {
             Layout.fillWidth: true
@@ -448,8 +463,18 @@ Item {
             prominent: !!activeQuestion
             accentColor: activeQuestion ? root.palette.accent : "transparent"
             borderColor: activeQuestion ? root.palette.accent : root.palette.border
-            RowLayout {
+            // The question viewport and the persistent finish action need real
+            // remaining-space allocation.  LabCard intentionally uses a plain
+            // Column for simple cards, so this interview panel owns a local
+            // ColumnLayout rather than relying on ignored Layout.fillHeight
+            // hints inside that Column.
+            ColumnLayout {
                 width: parent.width
+                height: parent.height
+                spacing: 10
+
+                RowLayout {
+                    Layout.fillWidth: true
                 ColumnLayout {
                     Layout.fillWidth: true
                     Text { Layout.fillWidth: true; text: activeQuestion ? (activeQuestion.kind === "coding" ? "代码题" : (activeQuestion.kind === "system_design" ? "系统设计" : "结构化问答")) : "模拟面试室"; color: root.palette.accent; font.pixelSize: 11; font.bold: true; font.letterSpacing: 1 }
@@ -471,11 +496,11 @@ Item {
                           : root.statusText(app.interview.status)
                     tone: app.interview.status === "active" ? root.palette.warning : root.palette.muted
                 }
-            }
-            Rectangle { width: parent.width; height: 1; color: root.palette.border }
-            ScrollView {
+                }
+                Rectangle { Layout.fillWidth: true; height: 1; color: root.palette.border }
+                ScrollView {
                 id: questionScroll
-                width: parent.width
+                Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
                 // Keep the question column tied to the panel viewport.  Without
@@ -485,9 +510,9 @@ Item {
                 contentWidth: availableWidth
                 Column {
                     width: questionScroll.availableWidth
-                    spacing: 16
+                    spacing: root.compactInterviewLayout ? 12 : 16
                     Text { width: parent.width; text: activeQuestion ? activeQuestion.prompt : "选择岗位、求职阶段与难度。系统会冻结一份公共面试蓝图，每次只展示一个问题，并将客观代码证据与 Rubric 主观判断分开。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
-                    TextArea { id: answer; objectName: "interviewAnswerEditor"; width: parent.width; height: 180; visible: !!activeQuestion && activeQuestion.kind !== "coding"; text: root.answerLocked ? (app.interview.answer_text || "") : root.answerDraft; readOnly: root.answerLocked; onTextChanged: if (!root.answerLocked) root.answerDraft = text; placeholderText: root.answerLocked ? "回答已锁定" : "输入你的回答……"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.answerLocked ? root.palette.accent : root.palette.border } }
+                    TextArea { id: answer; objectName: "interviewAnswerEditor"; width: parent.width; height: root.compactInterviewLayout ? 140 : 180; visible: !!activeQuestion && activeQuestion.kind !== "coding"; text: root.answerLocked ? (app.interview.answer_text || "") : root.answerDraft; readOnly: root.answerLocked; onTextChanged: if (!root.answerLocked) root.answerDraft = text; placeholderText: root.answerLocked ? "回答已锁定" : "输入你的回答……"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.answerLocked ? root.palette.accent : root.palette.border } }
                     LabCard {
                         objectName: "interviewAnswerCorruption"
                         visible: !!app.interview.answer_corrupted
@@ -773,7 +798,7 @@ Item {
                         Text { text: "本场冻结的代码答案"; color: root.palette.text; font.bold: true }
                         TextArea {
                             id: codingEditor
-                            Layout.fillWidth: true; Layout.preferredHeight: 260
+                            Layout.fillWidth: true; Layout.preferredHeight: root.compactInterviewLayout ? 210 : 260
                             text: app.interview.coding_text || ""
                             color: root.palette.text
                             font.family: root.codeFontFamily
@@ -802,21 +827,26 @@ Item {
                         Text { text: "面试进行中不会展示教学提示。"; color: root.palette.warning; font.pixelSize: 12; font.bold: true }
                     }
                 }
-            }
-            RowLayout {
-                width: parent.width
-                Text {
-                    text: activeQuestion ? "一次只完成一个主问题" : ""
-                    color: root.palette.muted
-                    font.pixelSize: 12
                 }
-                Item { Layout.fillWidth: true }
-                Button {
-                    objectName: "finishInterviewButton"
-                    text: "结束本场"
-                    flat: true
-                    enabled: !!app.interview.interview_id && !app.busy
-                    onClicked: finishDialog.open()
+                Rectangle { Layout.fillWidth: true; height: 1; color: root.palette.border; opacity: 0.8 }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: 40
+                    Text {
+                        text: activeQuestion ? "一次只完成一个主问题" : ""
+                        color: root.palette.muted
+                        font.pixelSize: 12
+                    }
+                    Item { Layout.fillWidth: true }
+                    Button {
+                        objectName: "finishInterviewButton"
+                        text: "结束本场"
+                        flat: true
+                        Layout.preferredWidth: 96
+                        Layout.preferredHeight: 36
+                        enabled: !!app.interview.interview_id && !app.busy
+                        onClicked: finishDialog.open()
+                    }
                 }
             }
         }

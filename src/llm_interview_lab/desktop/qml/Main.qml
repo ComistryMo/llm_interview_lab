@@ -36,6 +36,12 @@ ApplicationWindow {
         "warning": dark ? "#f2bf79" : "#8a4b08",
         "danger": dark ? "#ff91a1" : "#b4233a"
     })
+    // Prefer the platform's bundled CJK UI face when it is available.  The
+    // empty Linux value deliberately keeps Qt's normal fallback chain intact;
+    // forcing a font that is not installed is what turns Chinese copy into
+    // tofu on minimal CI images.
+    property string uiFontFamily: Qt.platform.os === "windows" ? "Microsoft YaHei UI"
+                                       : Qt.platform.os === "osx" ? "PingFang SC" : ""
     // A Codex request is owned by the shell, not by an individual page.  The
     // map is intentionally kept here so navigation cannot hide a pending
     // safety decision.
@@ -73,6 +79,7 @@ ApplicationWindow {
         approvalActionInFlight = false
     }
     font.pixelSize: Math.round(14 * backend.fontScale)
+    font.family: uiFontFamily || Qt.application.font.family
     color: colors.background
 
     menuBar: MenuBar {
@@ -145,17 +152,16 @@ ApplicationWindow {
                         Layout.minimumWidth: 0
                         Text {
                             id: brandTitle
-                            // Keep one canonical product name across every page and
-                            // viewport.  Wrapping is preferable to silently
-                            // presenting a different brand in the compact shell.
-                            text: "LLM Interview Lab"
+                            // Keep the compact lockup intentional instead of
+                            // letting the product name wrap at an arbitrary word.
+                            text: window.width < 1160 ? "LLM\nInterview Lab" : "LLM Interview Lab"
                             color: window.colors.text
                             font.bold: true
                             font.pixelSize: window.width < 1160 ? 14 : 15
                             Layout.fillWidth: true
                             elide: Text.ElideRight
                             maximumLineCount: window.width < 1160 ? 2 : 1
-                            wrapMode: window.width < 1160 ? Text.WordWrap : Text.NoWrap
+                            wrapMode: Text.NoWrap
                             Accessible.name: "LLM Interview Lab"
                             ToolTip.visible: brandHover.containsMouse
                             ToolTip.text: "LLM Interview Lab"

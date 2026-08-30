@@ -209,32 +209,64 @@ Item {
                         }
                     }
                 }
-                TextArea {
-                    id: editor
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    text: app.submissionText
-                    color: root.palette.text
-                    selectionColor: root.palette.accent
-                    font.family: root.codeFontFamily
-                    font.pixelSize: 14
-                    wrapMode: TextEdit.NoWrap
-                    tabStopDistance: 32
-                    padding: 12
+                Rectangle {
+                    id: editorFrame
+                    objectName: "exerciseEditorFrame"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    color: root.palette.surface
+                    radius: 9
+                    border.color: root.palette.border
                     clip: true
-                    background: Rectangle { color: root.palette.surface; radius: 9; border.color: root.palette.border }
-                    Accessible.name: "Submission editor"
-                    onTextChanged: app.updateSubmissionDraft(text)
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 0
+                        Rectangle {
+                            objectName: "exerciseEditorHeader"
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 30
+                            color: root.palette.surfaceAlt
+                            border.color: root.palette.border
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 14
+                                anchors.rightMargin: 12
+                                spacing: 10
+                                Text { text: "Python"; color: root.palette.accent; font.bold: true; font.pixelSize: 11 }
+                                Text { text: "纯文本编辑"; color: root.palette.muted; font.pixelSize: 11 }
+                                Item { Layout.fillWidth: true }
+                                Text { text: "自动保存草稿"; color: root.palette.muted; font.pixelSize: 11 }
+                            }
+                        }
+                        TextArea {
+                            id: editor
+                            Layout.fillWidth: true; Layout.fillHeight: true
+                            text: app.submissionText
+                            color: root.palette.text
+                            selectionColor: root.palette.accent
+                            font.family: root.codeFontFamily
+                            font.pixelSize: 14
+                            wrapMode: TextEdit.NoWrap
+                            tabStopDistance: 32
+                            padding: 12
+                            clip: true
+                            background: Rectangle { color: "transparent" }
+                            Accessible.name: "Submission editor"
+                            onTextChanged: app.updateSubmissionDraft(text)
+                        }
+                    }
+                    // A quiet rail makes the editor boundary legible without
+                    // pretending to render a second, non-interactive editor.
+                    Rectangle {
+                        x: 0; y: 30; width: 3
+                        height: Math.max(0, parent.height - 30)
+                        color: root.palette.accent
+                        opacity: 0.72
+                    }
                 }
                 RowLayout {
                     Layout.fillWidth: true
-                    Text {
-                        text: app.testState || "未测试"
-                        color: app.testState === "测试通过" ? root.palette.success
-                               : app.testState === "测试失败" || app.testState === "保存失败" ? root.palette.danger
-                               : app.testState === "结果已过期" ? root.palette.warning : root.palette.muted
-                        font.pixelSize: 12
-                        font.bold: true
-                    }
                     Text {
                         visible: app.testedRevision.length > 0
                         text: "测试版本：" + app.testedRevision.slice(0, 12)
@@ -257,9 +289,29 @@ Item {
                     border.color: app.testState === "测试通过" ? root.palette.success
                                   : app.testState === "测试失败" || app.testState === "保存失败"
                                     ? root.palette.danger : root.palette.border
-                    ScrollView {
-                        anchors.fill: parent; anchors.margins: 12; clip: true
-                        Text { width: parent.width; text: app.testOutput || "公开测试输出会显示在这里。"; color: root.palette.text; font.family: root.codeFontFamily; font.pixelSize: 12; wrapMode: Text.Wrap }
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 12
+                        spacing: 6
+                        Text {
+                            text: "公开测试输出"
+                            color: root.palette.muted
+                            font.bold: true
+                            font.pixelSize: 11
+                        }
+                        ScrollView {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            clip: true
+                            Text {
+                                width: parent.width
+                                text: app.testOutput || "运行公开测试后，结果会显示在这里。"
+                                color: root.palette.text
+                                font.family: root.codeFontFamily
+                                font.pixelSize: 12
+                                wrapMode: Text.Wrap
+                            }
+                        }
                     }
                 }
                 Rectangle {
