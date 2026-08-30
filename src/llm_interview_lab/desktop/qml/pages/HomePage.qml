@@ -150,12 +150,14 @@ Flickable {
                     Button {
                         id: continueTrainingButton
                         objectName: "homePrimaryAction"
-                        text: app.dashboard.current ? "继续训练" : "开始训练"
+                        text: root.resumableInterview
+                              ? "面试进行中"
+                              : (app.dashboard.current ? "继续训练" : "开始训练")
                         highlighted: !root.resumableInterview
                         Layout.fillWidth: true
                         Layout.preferredWidth: 184
                         Layout.preferredHeight: 46
-                        enabled: root.trainingTargetRunnable
+                        enabled: root.trainingTargetRunnable && !root.resumableInterview
                         background: Rectangle {
                             radius: 10
                             color: continueTrainingButton.enabled && !root.resumableInterview
@@ -171,7 +173,19 @@ Flickable {
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
-                        onClicked: app.openProblem(root.trainingTarget.problem_id)
+                        onClicked: {
+                            if (!root.resumableInterview)
+                                app.openProblem(root.trainingTarget.problem_id)
+                        }
+                    }
+                    Text {
+                        visible: root.resumableInterview
+                        text: "请先完成或放弃本场面试"
+                        color: root.palette.muted
+                        font.pixelSize: 12
+                        horizontalAlignment: Text.AlignHCenter
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
                     }
                     Button {
                         visible: !!root.trainingTarget && !root.trainingTargetRunnable
@@ -184,6 +198,7 @@ Flickable {
                     Button {
                         id: startInterviewButton
                         objectName: "homeInterviewSecondaryAction"
+                        visible: !root.resumableInterview
                         text: root.resumableInterview ? "查看未完成面试" : "开始模拟面试"
                         Layout.fillWidth: true
                         Layout.preferredHeight: 38
