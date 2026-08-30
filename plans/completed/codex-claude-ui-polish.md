@@ -56,7 +56,7 @@
 - [x] 基线命令与共享仓库地图检查。
 - [x] 视觉/UX/Coach 评审与 QML 改动。
 - [x] Coach session 薄接口及定向测试。
-- [x] Interview/Connections 整合；截图矩阵待生成。
+- [x] Interview/Connections 整合；截图矩阵已生成并完成哈希/尺寸校验。
 - [x] 独立 Review、截图归档与最终回归（全量测试仍待用户授权）。
 
 ## 最终复盘
