@@ -122,6 +122,35 @@ def test_shared_application_service_initializes_role_and_local_material(
     ).read_text(encoding="utf-8")
 
 
+def test_every_role_has_a_runnable_first_unlock_without_torch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _repository(tmp_path)
+    service = ApplicationService(root)
+    monkeypatch.setattr(
+        "llm_interview_lab.application.importlib.util.find_spec",
+        lambda _: None,
+    )
+
+    for index, role in enumerate(service.role_cards(), start=1):
+        profile_id = f"role-user-{index}"
+        service.initialize_profile(
+            profile_id,
+            role_id=role["id"],
+            seniority="new_grad",
+            ai_mode="disabled",
+        )
+        unlocks = service.dashboard(profile_id)["unlocks"]
+
+        assert unlocks, role["id"]
+        assert unlocks[0]["environment_available"] is True, (role["id"], unlocks)
+        service.start_practice(profile_id, unlocks[0]["problem_id"])
+        current = service.current_submission(profile_id)
+        assert current is not None
+        assert current["problem_id"] == unlocks[0]["problem_id"]
+
+
 def test_knowledge_search_role_uses_weighted_skills_as_fallback(
     tmp_path: Path,
 ) -> None:

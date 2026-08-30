@@ -347,7 +347,7 @@ problems:
     tracks: ["vlm_algorithm","post_training"]
     tier: core
     difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["VLM-006","PT-001"]
+    prerequisites: ["PT-001"]
     skills: [vlm.mask, vlm.collator, post_training.mask, loss.reduction]
     validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/VLM-007-multimodal-label-mask}
@@ -543,7 +543,7 @@ problems:
     tracks: ["post_training"]
     tier: core
     difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["PT-008","PT-015"]
+    prerequisites: ["PT-014"]
     skills: [post_training.reward, post_training.grpo, post_training.mask, statistics.robustness]
     validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/PT-016-invalid-completion-handling}

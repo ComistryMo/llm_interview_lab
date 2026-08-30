@@ -64,7 +64,7 @@ roles:
       skill.post_training_rl.policy_optimization: *agent_secondary
       skill.evaluation_safety.leakage: *agent_secondary
       skill.system_design.reliability: *agent_secondary
-    required_tracks: [agent]
+    required_tracks: [agent, ai_foundation]
     recommended_quests: [agent_runtime, python_data_reliability]
     optional_quests: [post_training_quest, vlm_data_flow]
     interview_blueprints:

@@ -157,7 +157,7 @@ problems:
     tracks: ["systems"]
     tier: advanced
     difficulty: {concept: 4, coding: 5, debugging: 5}
-    prerequisites: ["ALG-007","INF-002"]
+    prerequisites: ["ATT-009"]
     skills: [inference.scheduling, inference.batching, inference.kv_cache, systems.fairness]
     validation: {level: contract, field_runs: 0}
     assets: {problem_dir: curriculum/problems/INF-003-continuous-batching-scheduler}

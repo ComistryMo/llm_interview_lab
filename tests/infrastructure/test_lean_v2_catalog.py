@@ -154,6 +154,29 @@ def test_dag_rejects_unknown_prerequisite_and_cycle() -> None:
         topological_order({"FND-001": ["FND-002"], "FND-002": ["FND-001"]})
 
 
+def test_ready_problems_never_require_planned_recursive_prerequisites() -> None:
+    catalog = load_catalog(REPO_ROOT)
+
+    for problem in catalog.problems.values():
+        if not problem.ready:
+            continue
+        pending = [(problem.id, prerequisite) for prerequisite in problem.prerequisites]
+        visited: set[str] = set()
+        while pending:
+            parent, prerequisite_id = pending.pop()
+            if prerequisite_id in visited:
+                continue
+            visited.add(prerequisite_id)
+            prerequisite = catalog.get(prerequisite_id)
+            assert prerequisite.ready, (
+                f"{problem.id}: {parent} -> {prerequisite_id} is planned"
+            )
+            pending.extend(
+                (prerequisite_id, ancestor)
+                for ancestor in prerequisite.prerequisites
+            )
+
+
 def test_transformer_quest_exposes_linear_softmax_mask_and_attention_without_false_hard_edges() -> None:
     catalog = load_catalog(REPO_ROOT)
     sequence = catalog.quests["transformer_forward"].problem_ids
