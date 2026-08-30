@@ -428,6 +428,16 @@ Item {
                     Text { Layout.fillWidth: true; text: activeQuestion ? activeQuestion.title : "按岗位蓝图开始一场面试"; color: root.palette.text; font.pixelSize: 22; font.bold: true; wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight }
                 }
                 StatusPill {
+                    // Keep the existing test/accessibility hook while moving
+                    // the phase marker next to the question title.
+                    objectName: "interviewPhasePill"
+                    visible: !!activeQuestion && app.interview.status === "active"
+                    text: root.answerLocked
+                          ? (app.interview.pending_followup ? "阶段 C · 追问" : "阶段 B · 评估")
+                          : "阶段 A · 回答"
+                    tone: root.answerLocked ? root.palette.accent : root.palette.muted
+                }
+                StatusPill {
                     text: app.interview.status === "active"
                           ? root.timerText(app.interview.remaining_seconds)
                           : root.statusText(app.interview.status)
@@ -461,13 +471,6 @@ Item {
                     RowLayout {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                         width: parent.width
-                        StatusPill {
-                            objectName: "interviewPhasePill"
-                            text: root.answerLocked
-                                  ? (app.interview.pending_followup ? "阶段 C · 追问" : "阶段 B · 评估")
-                                  : "阶段 A · 回答"
-                            tone: root.answerLocked ? root.palette.accent : root.palette.muted
-                        }
                         Text { text: root.answerLocked ? "阶段 B：回答已锁定，下面进入评估" : "阶段 A：先完成回答；锁定后才会显示评分维度"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
                         Button { objectName: "lockInterviewAnswer"; visible: !root.answerLocked; text: "提交并锁定回答"; highlighted: true; enabled: answer.text.trim().length > 0 && !app.busy; onClicked: app.lockInterviewAnswer(answer.text) }
                     }
@@ -765,7 +768,8 @@ Item {
                 Item { Layout.fillWidth: true }
                 Button {
                     objectName: "finishInterviewButton"
-                    text: "结束并标记未完成"
+                    text: "结束本场"
+                    flat: true
                     enabled: !!app.interview.interview_id && !app.busy
                     onClicked: finishDialog.open()
                 }

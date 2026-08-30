@@ -163,6 +163,36 @@ Item {
                     Button { text: root.focusMode ? "退出专注" : "专注编码"; onClicked: root.focusMode = !root.focusMode }
                     Button { text: "保存"; flat: true; onClicked: app.saveSubmission(editor.text) }
                 }
+                Rectangle {
+                    objectName: "exerciseContextStrip"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 38
+                    radius: 8
+                    color: root.palette.surfaceAlt
+                    border.color: root.palette.border
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        spacing: 10
+                        Text {
+                            objectName: "exerciseContextLabel"
+                            text: (app.currentTask.problem_id || "当前题目")
+                                  + " · " + (app.currentTask.title || "未命名题目")
+                            color: root.palette.text
+                            font.bold: true
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                        StatusPill {
+                            objectName: "exerciseContextStatus"
+                            text: app.submissionDirty ? "未保存" : (app.testState || "未测试")
+                            tone: app.submissionDirty ? root.palette.warning
+                                  : app.testState === "测试通过" ? root.palette.success
+                                  : root.palette.muted
+                        }
+                    }
+                }
                 TextArea {
                     id: editor
                     Layout.fillWidth: true; Layout.fillHeight: true
