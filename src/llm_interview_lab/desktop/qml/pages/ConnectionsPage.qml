@@ -28,10 +28,16 @@ Flickable {
         Text { text: "AI 连接（可选）"; color: root.palette.text; font.pixelSize: 24; font.bold: true }
         Text { text: "不连接 AI 也能完成固定课程、公开测试、间隔复测和手动模拟面试。远程请求只发送你在上下文预览中确认的内容。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
 
-        RowLayout {
-            Layout.fillWidth: true; spacing: 14
+        GridLayout {
+            id: connectionOverview
+            Layout.fillWidth: true
+            columns: content.width < 820 ? 1 : 2
+            columnSpacing: 14
+            rowSpacing: 14
             LabCard {
-                Layout.fillWidth: true; Layout.preferredHeight: 142
+                Layout.fillWidth: true
+                Layout.preferredHeight: 142
+                Layout.alignment: Qt.AlignTop
                 cardColor: root.palette.surface; borderColor: root.palette.border
                 RowLayout {
                     width: parent.width
@@ -43,7 +49,13 @@ Flickable {
                 Text { width: parent.width; text: "AI 不可用时仍可继续训练。"; color: root.palette.text; wrapMode: Text.Wrap; font.bold: true }
             }
             LabCard {
-                Layout.fillWidth: true; Layout.preferredHeight: 166
+                id: codexCard
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignTop
+                // At the minimum supported window width the four actions do
+                // not fit in one row. Let the card use two predictable rows
+                // instead of silently pushing the settings action off-screen.
+                Layout.preferredHeight: width < 500 ? 220 : 166
                 cardColor: root.palette.surface; borderColor: root.palette.border
                 RowLayout {
                     width: parent.width
@@ -52,11 +64,16 @@ Flickable {
                     StatusPill { text: app.codexAvailable ? "可用" : "未检测到"; tone: app.codexAvailable ? root.palette.success : root.palette.warning }
                 }
                 Text { width: parent.width; text: "通过官方 App Server 使用 Thread、流式事件、Diff、取消和显式审批；不会解析交互式终端输出。"; color: root.palette.muted; wrapMode: Text.Wrap }
-                RowLayout {
-                    Button { text: "教练模式"; enabled: app.codexAvailable; onClicked: app.connectCodex("coach") }
-                    Button { text: "仓库代理模式"; enabled: app.codexAvailable; onClicked: app.connectCodex("repository_agent") }
-                    Button { text: "重新检测"; flat: true; onClicked: app.refreshCodexAvailability() }
-                    Button { text: "查找设置"; visible: !app.codexAvailable; onClicked: app.navigate("settings") }
+                GridLayout {
+                    id: codexActions
+                    width: parent.width
+                    columns: codexCard.width < 500 ? 2 : 4
+                    columnSpacing: 8
+                    rowSpacing: 6
+                    Button { Layout.fillWidth: true; text: "教练模式"; enabled: app.codexAvailable; onClicked: app.connectCodex("coach") }
+                    Button { Layout.fillWidth: true; text: "仓库代理模式"; enabled: app.codexAvailable; onClicked: app.connectCodex("repository_agent") }
+                    Button { Layout.fillWidth: true; text: "重新检测"; flat: true; onClicked: app.refreshCodexAvailability() }
+                    Button { Layout.fillWidth: true; text: "查找设置"; visible: !app.codexAvailable; onClicked: app.navigate("settings") }
                 }
             }
         }
