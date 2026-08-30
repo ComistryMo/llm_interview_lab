@@ -1017,6 +1017,30 @@ class ApplicationService:
                     "score": result["question_scores"].get(question_id),
                 }
             )
+        question_titles = {
+            question["question_id"]: question["title"]
+            for question in session["questions"]
+        }
+        followups = [
+            {
+                key: followup[key]
+                for key in (
+                    "followup_id",
+                    "parent_question_id",
+                    "prompt",
+                    "answer",
+                    "source",
+                    "recorded_at",
+                )
+            }
+            | {
+                "parent_title": question_titles.get(
+                    followup["parent_question_id"], followup["parent_question_id"]
+                )
+            }
+            for followup in session.get("followups", [])
+            if isinstance(followup, Mapping)
+        ]
         return {
             "interview_id": interview_id,
             "status": session["status"],
@@ -1027,6 +1051,7 @@ class ApplicationService:
             "overall_score": result["overall_score"],
             "question_scores": dict(result["question_scores"]),
             "assessment_evidence": assessment_evidence,
+            "followups": followups,
             "skill_scores": dict(result["skill_scores"]),
             "critical_gaps": list(result["critical_gaps"]),
             "unanswered": list(result["unanswered"]),

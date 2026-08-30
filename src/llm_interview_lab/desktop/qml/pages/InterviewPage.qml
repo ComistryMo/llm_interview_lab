@@ -32,6 +32,10 @@ Item {
         return ({intern: "实习", new_grad: "校招", mid: "有经验", senior: "高级"})[value] || value || "未设置"
     }
 
+    function difficultyText(value) {
+        return ({easy: "基础", medium: "标准", hard: "高压"})[value] || value || "未设置"
+    }
+
     function timerText(seconds) {
         if (seconds === undefined || seconds === null)
             return "未开始"
@@ -141,6 +145,67 @@ Item {
                || "未标注"
     }
 
+    function resultAssessmentSources(result) {
+        var evidence = result && Array.isArray(result.assessment_evidence)
+                       ? result.assessment_evidence : []
+        var sources = []
+        for (var i = 0; i < evidence.length; ++i) {
+            var source = evidence[i].source || ""
+            if (source && sources.indexOf(source) < 0)
+                sources.push(source)
+        }
+        return sources
+    }
+
+    function resultScoreLabel(result) {
+        var sources = root.resultAssessmentSources(result)
+        var partial = result && (result.completion_status !== "completed"
+                                 || (result.unanswered || []).length > 0
+                                 || (result.unscored || []).length > 0)
+        if (sources.length === 0)
+            return "评分"
+        if (partial && sources.length === 1 && sources[0] === "self")
+            return "自评（部分证据）"
+        if (partial)
+            return "部分证据分数"
+        if (sources.length === 1 && sources[0] === "self")
+            return "自评分数"
+        if (sources.length === 1 && sources[0] === "ai")
+            return "AI 评估分数"
+        if (sources.length === 1 && sources[0] === "human")
+            return "人工评估分数"
+        if (sources.length > 1)
+            return "混合证据分数"
+        return "本场分数"
+    }
+
+    function resultSourceNote(result) {
+        var sources = root.resultAssessmentSources(result)
+        if (sources.length === 0)
+            return ""
+        var labels = []
+        for (var i = 0; i < sources.length; ++i)
+            labels.push(root.assessmentSourceText(sources[i]))
+        var partial = result && (result.completion_status !== "completed"
+                                 || (result.unanswered || []).length > 0
+                                 || (result.unscored || []).length > 0)
+        if (partial)
+            return "本场未完整完成；当前数值基于已记录证据，未完成环节按 0 计入，不代表完整面试结果。评分来源："
+                   + labels.join("、") + "。"
+        if (sources.length === 1 && sources[0] === "self")
+            return "本场只包含自评记录；用于复盘，不是面试官结论。"
+        return "评分来源：" + labels.join("、") + "。请结合下方证据逐条核对。"
+    }
+
+    function recordedAtText(value) {
+        if (!value)
+            return "时间未记录"
+        var date = new Date(value)
+        if (isNaN(date.getTime()))
+            return value
+        return Qt.formatDateTime(date, "yyyy-MM-dd HH:mm")
+    }
+
     function confidenceText(value) {
         return ({low: "低", medium: "中", high: "高"})[value] || "未标注"
     }
@@ -153,6 +218,8 @@ Item {
 
     function resultScoreText(result) {
         if (!result)
+            return "尚未评分"
+        if (root.resultAssessmentSources(result).length === 0)
             return "尚未评分"
         var score = result.overall_score
         return score === undefined || score === null ? "尚未评分" : String(score)
@@ -218,6 +285,25 @@ Item {
                     ComboBox { visible: leftPanel.setupVisible; id: seniority; width: parent.width; model: [{id:"intern", label:"实习"}, {id:"new_grad", label:"校招"}, {id:"mid", label:"有经验"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.refreshConfiguration() }
                     Text { visible: leftPanel.setupVisible; text: "难度"; color: root.palette.muted; font.pixelSize: 12 }
                     ComboBox { visible: leftPanel.setupVisible; id: difficulty; width: parent.width; model: [{id:"easy", label:"基础"}, {id:"medium", label:"标准"}, {id:"hard", label:"高压"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.refreshConfiguration() }
+                    Text {
+                        objectName: "interviewDifficultyHint"
+                        visible: leftPanel.setupVisible
+                        width: parent.width
+                        text: {
+                            if (!role.currentValue)
+                                return "先选择岗位，系统会检查该难度是否有完整题目。"
+                            if (root.configuration.available !== false)
+                                return "当前难度可用；开始后题目组合会冻结。"
+                            if ((root.configuration.missing_environment || []).length > 0)
+                                return "当前环境暂缺所需依赖；可先切换到“标准”或查看环境说明。"
+                            return "当前岗位在此难度没有完整固定题；请切换到“标准”或更换岗位。"
+                        }
+                        color: root.configuration.available === false ? root.palette.warning : root.palette.muted
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                        font.pixelSize: 11
+                    }
                     Text { visible: leftPanel.setupVisible; text: "面试官"; color: root.palette.muted; font.pixelSize: 12 }
                     ComboBox { visible: leftPanel.setupVisible; id: aiMode; width: parent.width; model: [{id:"disabled", label:"手动 / 无 AI"}, {id:"provider", label:"普通 LLM API"}, {id:"codex", label:"Codex"}]; textRole: "label"; valueRole: "id" }
                     CheckBox {
@@ -262,10 +348,11 @@ Item {
                         objectName: "startConfiguredInterview"
                         width: parent.width
                         visible: leftPanel.setupVisible
-                        text: "开始模拟面试"
+                        text: app.busy ? "正在准备面试……" : "开始模拟面试"
                         highlighted: true
                         enabled: root.configuration.available !== false
                                  && !!role.currentValue
+                                 && !app.busy
                                  && (!useMaterial.checked || (material.currentIndex >= 0 && app.materials[material.currentIndex].ai_access && consent.checked))
                         onClicked: {
                             if (useMaterial.checked)
@@ -281,7 +368,10 @@ Item {
                         text: app.interview.interview_id
                               ? "状态  " + root.statusText(app.interview.status)
                                 + "\n岗位  " + (app.interview.role_title || app.interview.role_id)
-                                + "\n阶段  " + root.seniorityText(app.interview.seniority)
+                                + "\n求职级别  " + root.seniorityText(app.interview.seniority)
+                                + "\n选题档位  " + root.difficultyText(app.interview.difficulty)
+                                + "\n进度  " + (app.interview.completed_questions || 0)
+                                + " / " + (app.interview.total_questions || 0)
                               : "暂无进行中的面试"
                         color: root.palette.muted
                         wrapMode: Text.Wrap
@@ -296,6 +386,8 @@ Item {
                         visible: root.showSessionDetails && !!app.interview.interview_id
                         width: parent.width
                         text: "会话 ID：" + app.interview.interview_id
+                              + (app.interview.blueprint_id ? "\n蓝图：" + app.interview.blueprint_id : "")
+                              + "\n本场选题难度：" + root.difficultyText(app.interview.difficulty)
                               + (root.activeQuestionId ? "\n当前问题 ID：" + root.activeQuestionId : "")
                         color: root.palette.muted
                         font.pixelSize: 10
@@ -372,7 +464,8 @@ Item {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted
                         width: parent.width
                         spacing: 6
-                        Text { text: "候选人自评 Rubric（每个维度 1–5 分）"; color: root.palette.muted; font.bold: true }
+                        Text { text: "自评 Rubric（每个维度 1–5 分）"; color: root.palette.muted; font.bold: true }
+                        Text { text: "用于自我校准，不代表客观面试结论。"; color: root.palette.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
                         Repeater {
                             model: activeQuestion ? Object.keys(activeQuestion.rubric.dimensions) : []
                             delegate: RowLayout {
@@ -412,7 +505,7 @@ Item {
                         width: parent.width
                         spacing: 8
                         Button {
-                            text: "记录自评"
+                            text: "记录自评结果"
                             enabled: root.rubricComplete() && evidence.text.trim().length > 0
                                      && !app.busy && !app.interview.assessment_recorded
                             onClicked: app.answerInterviewDetailed(answer.text, JSON.stringify(root.rubricScores), evidence.text)
@@ -446,7 +539,19 @@ Item {
                         borderColor: root.palette.accent
                         Text { width: parent.width; text: "自适应追问\n" + (app.interview.pending_followup || ""); color: root.palette.text; wrapMode: Text.Wrap; font.bold: true }
                         TextArea { id: followupAnswer; width: parent.width; height: 100; placeholderText: "回答这一个追问"; wrapMode: Text.Wrap; padding: 12; clip: true }
-                        Button { text: "记录追问与 AI 评分卡"; highlighted: true; onClicked: app.answerAIFollowup(followupAnswer.text) }
+                        Text {
+                            width: parent.width
+                            text: "追问回答会留档；当前评分仍采用主回答生成的 AI 评估，不会根据这次追问自动改分。"
+                            color: root.palette.muted
+                            font.pixelSize: 11
+                            wrapMode: Text.Wrap
+                        }
+                        Button {
+                            text: "记录追问回答并采用已有评估"
+                            highlighted: true
+                            enabled: followupAnswer.text.trim().length > 0 && !app.busy
+                            onClicked: app.answerAIFollowup(followupAnswer.text)
+                        }
                     }
                     LabCard {
                         objectName: "interviewResultCard"
@@ -457,11 +562,19 @@ Item {
                         Text { width: parent.width; text: "本场评估"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
                         Text {
                             width: parent.width
-                            text: "分数：" + root.resultScoreText(root.interviewResult)
+                            text: root.resultScoreLabel(root.interviewResult) + "：" + root.resultScoreText(root.interviewResult)
                                   + "\n完成状态：" + root.statusText(root.interviewResult.completion_status)
                             color: root.palette.text
                             wrapMode: Text.Wrap
                             lineHeight: 1.4
+                        }
+                        Text {
+                            width: parent.width
+                            visible: root.resultSourceNote(root.interviewResult).length > 0
+                            text: root.resultSourceNote(root.interviewResult)
+                            color: root.palette.muted
+                            wrapMode: Text.Wrap
+                            font.pixelSize: 12
                         }
                         Text {
                             width: parent.width
@@ -504,6 +617,47 @@ Item {
                                         text: modelData.evidence || "未记录评分证据。"
                                         color: root.palette.text
                                         wrapMode: Text.Wrap
+                                    }
+                                }
+                            }
+                        }
+                        Column {
+                            visible: (root.interviewResult.followups || []).length > 0
+                            width: parent.width
+                            spacing: 8
+                            Text { width: parent.width; text: "追问记录"; color: root.palette.muted; font.bold: true }
+                            Repeater {
+                                model: root.interviewResult.followups || []
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    required property int index
+                                    width: parent.width
+                                    height: followupColumn.implicitHeight + 16
+                                    radius: 8
+                                    color: root.palette.surface
+                                    border.color: root.palette.border
+                                    Column {
+                                        id: followupColumn
+                                        x: 10; y: 8; width: parent.width - 20; spacing: 4
+                                        Text {
+                                            width: parent.width
+                                            text: "追问 " + (index + 1) + " · "
+                                                  + (modelData.parent_title || modelData.parent_question_id || "原问题未记录")
+                                            color: root.palette.accent
+                                            font.bold: true
+                                            wrapMode: Text.Wrap
+                                        }
+                                        Text { width: parent.width; text: modelData.prompt || ""; color: root.palette.text; wrapMode: Text.Wrap }
+                                        Text { width: parent.width; text: "回答：" + (modelData.answer || ""); color: root.palette.text; wrapMode: Text.Wrap }
+                                        Text { width: parent.width; text: "来源：" + root.assessmentSourceText(modelData.source); color: root.palette.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
+                                        Text {
+                                            width: parent.width
+                                            text: "记录：" + (modelData.followup_id || "未编号")
+                                                  + " · " + root.recordedAtText(modelData.recorded_at)
+                                            color: root.palette.muted
+                                            font.pixelSize: 11
+                                            wrapMode: Text.Wrap
+                                        }
                                     }
                                 }
                             }
@@ -599,7 +753,7 @@ Item {
         anchors.centerIn: parent
         width: Math.min(560, root.width - 64)
         height: Math.min(520, root.height - 64)
-        title: "上下文预览"
+        title: "上下文预览（只读）"
         standardButtons: Dialog.Ok | Dialog.Cancel
         onAccepted: {
             if (root.pendingAIAction === "provider")
@@ -624,7 +778,7 @@ Item {
             spacing: 10
             Text {
                 Layout.fillWidth: true
-                text: "只有下面可见且勾选的内容会被发送；取消则不会发送任何内容。"
+                text: "只有下面标记为“将发送”的内容会被发送；取消则不会发送任何内容。"
                 color: root.palette.text
                 wrapMode: Text.Wrap
             }
@@ -640,7 +794,10 @@ Item {
                         delegate: RowLayout {
                             required property var modelData
                             width: parent.width
-                            CheckBox { checked: modelData.selected; enabled: false }
+                            StatusPill {
+                                text: modelData.selected ? "将发送" : "不发送"
+                                tone: modelData.selected ? root.palette.accent : root.palette.muted
+                            }
                             Text {
                                 text: modelData.label
                                 color: root.palette.text

@@ -1036,13 +1036,31 @@ def finish_role_interview(
 def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, Any]) -> None:
     root = _session_root(repo_root, profile_id, session["interview_id"])
     result = session["result"]
+    assessments = session.get("assessments", {})
+    score_scope = (
+        "unscored"
+        if not assessments
+        else "complete"
+        if result["completion_status"] == "completed"
+        else "partial"
+    )
+    if score_scope == "unscored":
+        overall_line = "- Overall score: **unscored** (no assessment evidence)"
+    elif score_scope == "complete":
+        overall_line = f"- Overall score: **{result['overall_score']:.1f}/100**"
+    else:
+        overall_line = (
+            f"- Partial evidence score: **{result['overall_score']:.1f}/100** "
+            "(missing rounds count as zero; not a complete interview score)"
+        )
     lines = [
         f"# {session['interview_id']} — {session['role_id']}",
         "",
         f"- Status: **{result['completion_status']}**",
         f"- Seniority: `{session['seniority']}`",
-        f"- Difficulty: `{session['difficulty']}`",
-        f"- Overall score: **{result['overall_score']:.1f}/100**",
+        f"- Blueprint: `{session['blueprint_id']}`",
+        f"- Difficulty band: `{session['difficulty']}`",
+        overall_line,
         "- Practice mastery: **unchanged**",
         "",
         "## Evidence-backed question scores",
@@ -1051,10 +1069,42 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
     for question in session["questions"]:
         question_id = question["question_id"]
         score = result["question_scores"].get(question_id)
-        lines.append(
-            f"- {question_id} {question['title']}: "
-            + (f"{score:.1f}" if score is not None else "unscored")
+        assessment = assessments.get(question_id)
+        if assessment is None:
+            lines.append(f"- {question_id} {question['title']}: unscored")
+            continue
+        lines.extend(
+            [
+                f"### {question_id} {question['title']} — {score:.1f}/100",
+                "",
+                f"- **Source:** `{assessment['source']}`",
+                f"- **Confidence:** `{assessment['confidence']}`",
+                f"- **Evidence:** {assessment['evidence']}",
+                f"- **Recorded at:** `{assessment['recorded_at']}`",
+                "",
+            ]
         )
+    followups = session.get("followups", ())
+    if followups:
+        lines.extend(["", "## Follow-up records", ""])
+        question_titles = {
+            question["question_id"]: question["title"]
+            for question in session["questions"]
+        }
+        for followup in followups:
+            parent_id = followup["parent_question_id"]
+            parent_title = question_titles.get(parent_id, parent_id)
+            lines.extend(
+                [
+                    f"### {followup['followup_id']} — {parent_id} {parent_title}",
+                    "",
+                    f"- **Prompt:** {followup['prompt']}",
+                    f"- **Answer:** {followup['answer']}",
+                    f"- **Source:** `{followup['source']}`",
+                    f"- **Recorded at:** `{followup['recorded_at']}`",
+                    "",
+                ]
+            )
     lines.extend(["", "## Skill scorecard", ""])
     for skill_id, value in result["skill_scores"].items():
         lines.append(
@@ -1073,9 +1123,25 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
         ]
     )
     _atomic_write(root / "report.md", "\n".join(lines).encode("utf-8"))
+    assessment_evidence = [
+        {
+            "question_id": question["question_id"],
+            "title": question["title"],
+            **assessments[question["question_id"]],
+            "score": result["question_scores"].get(question["question_id"]),
+        }
+        for question in session["questions"]
+        if question["question_id"] in assessments
+    ]
+    report_payload = {
+        **result,
+        "score_scope": score_scope,
+        "assessment_evidence": assessment_evidence,
+        "followups": list(followups),
+    }
     _atomic_write(
         root / "report.json",
-        (json.dumps(result, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
+        (json.dumps(report_payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
     )
 
 
