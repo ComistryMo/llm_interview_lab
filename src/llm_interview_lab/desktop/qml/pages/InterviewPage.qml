@@ -541,7 +541,7 @@ Item {
                         TextArea { id: followupAnswer; width: parent.width; height: 100; placeholderText: "回答这一个追问"; wrapMode: Text.Wrap; padding: 12; clip: true }
                         Text {
                             width: parent.width
-                            text: "追问回答会留档；当前评分仍采用主回答生成的 AI 评估，不会根据这次追问自动改分。"
+                            text: "追问回答会留档并关联到本题评估；当前评分仍采用主回答生成的 AI 评估，不会根据这次追问自动重算。"
                             color: root.palette.muted
                             font.pixelSize: 11
                             wrapMode: Text.Wrap
@@ -609,6 +609,14 @@ Item {
                                         text: "来源：" + root.assessmentSourceText(modelData.source)
                                               + " · 置信度：" + root.confidenceText(modelData.confidence)
                                         color: root.palette.muted
+                                        font.pixelSize: 11
+                                        wrapMode: Text.Wrap
+                                    }
+                                    Text {
+                                        visible: (modelData.followup_ids || []).length > 0
+                                        width: parent.width
+                                        text: "关联追问：" + (modelData.followup_ids || []).join("、")
+                                        color: root.palette.accent
                                         font.pixelSize: 11
                                         wrapMode: Text.Wrap
                                     }

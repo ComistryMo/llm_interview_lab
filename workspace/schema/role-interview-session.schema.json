@@ -163,6 +163,7 @@
         "source": {"enum": ["human", "ai", "self"]},
         "confidence": {"enum": ["low", "medium", "high"]},
         "fatal_issues": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "followup_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^f-[0-9]{3}$"}},
         "recorded_at": {"type": "string", "format": "date-time"}
       }
     },

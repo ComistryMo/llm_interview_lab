@@ -913,6 +913,7 @@ class ApplicationService:
         source: str,
         confidence: str,
         fatal_issues: Iterable[str] = (),
+        followup_ids: Iterable[str] = (),
     ) -> dict[str, Any]:
         return record_role_assessment(
             self.repo_root,
@@ -924,6 +925,7 @@ class ApplicationService:
             source=source,
             confidence=confidence,
             fatal_issues=fatal_issues,
+            followup_ids=followup_ids,
         )
 
     def interview_answer_text(
@@ -1007,16 +1009,18 @@ class ApplicationService:
             assessment = session["assessments"].get(question_id)
             if not isinstance(assessment, Mapping):
                 continue
-            assessment_evidence.append(
-                {
-                    "question_id": question_id,
-                    "title": question["title"],
-                    "source": assessment["source"],
-                    "evidence": assessment["evidence"],
-                    "confidence": assessment["confidence"],
-                    "score": result["question_scores"].get(question_id),
-                }
-            )
+            evidence_view = {
+                "question_id": question_id,
+                "title": question["title"],
+                "source": assessment["source"],
+                "evidence": assessment["evidence"],
+                "confidence": assessment["confidence"],
+                "score": result["question_scores"].get(question_id),
+            }
+            linked_followups = assessment.get("followup_ids", [])
+            if linked_followups:
+                evidence_view["followup_ids"] = list(linked_followups)
+            assessment_evidence.append(evidence_view)
         question_titles = {
             question["question_id"]: question["title"]
             for question in session["questions"]

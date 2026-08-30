@@ -906,6 +906,7 @@ def record_role_assessment(
     source: str,
     confidence: str,
     fatal_issues: Iterable[str] = (),
+    followup_ids: Iterable[str] = (),
     now: datetime | None = None,
 ) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
@@ -937,7 +938,19 @@ def record_role_assessment(
     unknown = set(declared_fatal) - set(question["rubric"]["fatal_issues"])
     if unknown:
         raise RoleInterviewError("assessment contains an unknown fatal issue")
-    session["assessments"][question_id] = {
+    linked_followups = tuple(dict.fromkeys(followup_ids))
+    followup_by_id = {
+        item["followup_id"]: item
+        for item in session.get("followups", [])
+        if isinstance(item, Mapping)
+    }
+    if any(
+        followup_id not in followup_by_id
+        or followup_by_id[followup_id]["parent_question_id"] != question_id
+        for followup_id in linked_followups
+    ):
+        raise RoleInterviewError("assessment follow-up link does not belong to this question")
+    assessment = {
         "scores": dict(scores),
         "evidence": evidence.strip(),
         "source": source,
@@ -945,6 +958,11 @@ def record_role_assessment(
         "fatal_issues": list(declared_fatal),
         "recorded_at": _timestamp(now),
     }
+    # Keep the persisted shape of legacy assessments unchanged when there is
+    # no follow-up.  The optional field is emitted only when it carries data.
+    if linked_followups:
+        assessment["followup_ids"] = list(linked_followups)
+    session["assessments"][question_id] = assessment
     _save(repo_root, profile_id, session)
     return session
 
@@ -1080,6 +1098,11 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
                 f"- **Source:** `{assessment['source']}`",
                 f"- **Confidence:** `{assessment['confidence']}`",
                 f"- **Evidence:** {assessment['evidence']}",
+                *(
+                    [f"- **Follow-ups:** {', '.join(assessment['followup_ids'])}"]
+                    if assessment.get("followup_ids")
+                    else []
+                ),
                 f"- **Recorded at:** `{assessment['recorded_at']}`",
                 "",
             ]

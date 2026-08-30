@@ -9,7 +9,7 @@ import logging
 import os
 from pathlib import Path
 import threading
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 from uuid import uuid4
 
 from PySide6.QtCore import QObject, Property, QRunnable, QSettings, QThreadPool, QTimer, QUrl, Signal, Slot
@@ -1581,12 +1581,18 @@ class AppController(QObject):
                 self._pending_ai_assessment = None
                 self._show_error("当前面试问题已经切换，请重新请求 AI 评估。")
                 return
-            self.service.record_interview_followup(
+            updated = self.service.record_interview_followup(
                 profile_id,
                 pending["interview_id"],
                 parent_question_id=pending["question_id"],
                 prompt=pending["follow_up"],
                 answer=answer,
+            )
+            followup_id = (
+                updated.get("followups", [])[-1].get("followup_id")
+                if updated.get("followups")
+                and isinstance(updated["followups"][-1], Mapping)
+                else None
             )
             self.service.score_interview(
                 profile_id,
@@ -1597,6 +1603,7 @@ class AppController(QObject):
                 source="ai",
                 confidence=pending["confidence"],
                 fatal_issues=pending["fatal_issues"],
+                followup_ids=[followup_id] if followup_id else (),
             )
             interview_id = pending["interview_id"]
             self._pending_ai_assessment = None
