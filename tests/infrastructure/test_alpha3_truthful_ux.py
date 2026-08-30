@@ -13,7 +13,6 @@ import pytest
 from llm_interview_lab.application import ApplicationService
 from llm_interview_lab import __version__
 from llm_interview_lab.desktop import runtime
-from llm_interview_lab.desktop.controller import AppController
 from llm_interview_lab.grader import GraderResult
 from llm_interview_lab.workspace import (
     init_profile,
@@ -25,6 +24,16 @@ from llm_interview_lab.workspace import (
 
 pytestmark = pytest.mark.infrastructure
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _app_controller_type():
+    pytest.importorskip(
+        "PySide6",
+        reason="requires the optional desktop dependency",
+    )
+    from llm_interview_lab.desktop.controller import AppController
+
+    return AppController
 
 
 def _repository(tmp_path: Path) -> Path:
@@ -63,7 +72,8 @@ def test_display_name_is_separate_from_safe_profile_id_and_legacy_ids_resume(
 
 def test_chinese_display_name_onboarding_persists_and_reopens(tmp_path: Path) -> None:
     root = _repository(tmp_path)
-    controller = AppController(root, profile_id="default")
+    controller_type = _app_controller_type()
+    controller = controller_type(root, profile_id="default")
     assert controller.completeOnboardingWithDisplayName(
         "洪洲的后训练秋招准备",
         "post_training_engineer",
@@ -76,7 +86,7 @@ def test_chinese_display_name_onboarding_persists_and_reopens(tmp_path: Path) ->
     assert controller.profileDisplayName == "洪洲的后训练秋招准备"
     controller.shutdown()
 
-    reopened = AppController(root, profile_id=profile_id)
+    reopened = controller_type(root, profile_id=profile_id)
     assert not reopened.onboardingRequired
     assert reopened.profileDisplayName == "洪洲的后训练秋招准备"
     reopened.shutdown()
@@ -128,7 +138,8 @@ def test_editor_snapshot_is_saved_before_grading_and_records_operation(
 
 def test_controller_rejects_duplicate_test_while_busy(qapp=None) -> None:
     del qapp
-    controller = AppController(REPO_ROOT, demo_page="exercise")
+    controller_type = _app_controller_type()
+    controller = controller_type(REPO_ROOT, demo_page="exercise")
     messages: list[str] = []
     controller.toast.connect(messages.append)
     controller._busy = True
@@ -140,7 +151,8 @@ def test_controller_rejects_duplicate_test_while_busy(qapp=None) -> None:
 def test_codex_availability_property_is_cached_not_a_path_scan(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    controller = AppController(REPO_ROOT, demo_page="home")
+    controller_type = _app_controller_type()
+    controller = controller_type(REPO_ROOT, demo_page="home")
 
     def fail_if_called(*args, **kwargs):
         del args, kwargs
@@ -175,7 +187,8 @@ def test_problem_cards_distinguish_recommendation_and_environment(
 
 def test_active_interview_is_restored_for_the_same_profile(tmp_path: Path) -> None:
     root = _repository(tmp_path)
-    first = AppController(root, profile_id="resume-user")
+    controller_type = _app_controller_type()
+    first = controller_type(root, profile_id="resume-user")
     assert first.completeOnboarding(
         "resume-user", "ai_product_manager", "new_grad", "disabled", "{}"
     )
@@ -185,7 +198,7 @@ def test_active_interview_is_restored_for_the_same_profile(tmp_path: Path) -> No
     interview_id = first.interview["interview_id"]
     first.shutdown()
 
-    reopened = AppController(root, profile_id="resume-user")
+    reopened = controller_type(root, profile_id="resume-user")
     assert reopened.interview["interview_id"] == interview_id
     assert reopened.interview["status"] == "active"
     assert reopened.interview["resume_available"] is True

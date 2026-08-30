@@ -426,7 +426,7 @@ Item {
                             spacing: 10
                             property var detail: app.knowledgeDetail || ({})
                             Text {
-                                visible: parent.detail.title
+                                visible: !!parent.detail.title
                                 text: parent.detail.title || "选择左侧卡片"
                                 color: root.palette.text
                                 font.pixelSize: 18

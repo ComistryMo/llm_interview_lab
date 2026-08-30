@@ -769,7 +769,7 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert 'font.family: "Cascadia Mono, Consolas, monospace"' not in interview
 
 
-@pytest.mark.parametrize("page", ["home", "exercise", "interview"])
+@pytest.mark.parametrize("page", ["home", "learn", "exercise", "interview"])
 def test_truthful_desktop_pages_render_at_1080x680(
     page: str, tmp_path: Path
 ) -> None:
