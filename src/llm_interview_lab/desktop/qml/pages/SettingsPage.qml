@@ -27,7 +27,15 @@ Flickable {
         id: content
         x: 30; y: 28; width: parent.width - 60; spacing: 16
 
-        Text { text: "设置"; color: root.palette.text; font.pixelSize: 24; font.bold: true }
+        // Main.qml owns the route title; keep the page body focused on the
+        // settings context instead of repeating the same large heading.
+        Text {
+            objectName: "settingsRouteContext"
+            text: "本地设置与连接"
+            color: root.palette.text
+            font.pixelSize: 16
+            font.bold: true
+        }
         Text {
             text: Qt.platform.os === "osx"
                   ? "调整显示、查看本地数据，并在 Finder 启动无法继承 PATH 时指定 Codex。"
