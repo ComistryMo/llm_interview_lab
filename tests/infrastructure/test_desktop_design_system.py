@@ -210,11 +210,14 @@ def test_shell_breakpoints_and_exercise_route_are_permanent() -> None:
 def test_shell_and_legacy_home_actions_use_accessible_theme_foregrounds() -> None:
     theme_source = _read(THEME_PATH)
     home_source = _read(QML_ROOT / "pages/HomePage.qml")
+    button_source = _read(QML_ROOT / "components/LabButton.qml")
     shell_source = _read(MAIN_QML_PATH)
 
     assert "readonly property color accentForeground: theme.accentForeground" in theme_source
-    assert home_source.count("root.palette.accentForeground") >= 3
-    assert 'id: retentionActionButton' in home_source
+    assert "return theme ? theme.accentForeground" in button_source
+    assert "color: control.resolvedForeground" in button_source
+    assert 'id: continueTrainingButton' in home_source
+    assert 'variant: "primary"' in home_source
     assert 'variant: "secondary"' in shell_source
     assert 'highlighted: true' in shell_source
 

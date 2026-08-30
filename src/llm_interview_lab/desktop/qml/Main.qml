@@ -562,9 +562,19 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 currentIndex: ({home:0, career:1, learn:2, exercise:3, interview:4, coach:5, progress:6, connections:7, settings:8})[backend.currentPage] || 0
-                HomePage { app: backend; palette: window.colors }
+                HomePage {
+                    app: backend
+                    palette: window.colors
+                    theme: appTheme
+                    layoutMode: window.layoutMode
+                }
                 CareerPage { app: backend; palette: window.colors }
-                LearnPage { app: backend; palette: window.colors }
+                LearnPage {
+                    app: backend
+                    palette: window.colors
+                    theme: appTheme
+                    layoutMode: window.layoutMode
+                }
                 ExercisePage { app: backend; palette: window.colors }
                 InterviewPage { app: backend; palette: window.colors }
                 CoachPage { app: backend; palette: window.colors }
@@ -581,6 +591,8 @@ ApplicationWindow {
         visible: backend.onboardingRequired
         app: backend
         palette: window.colors
+        theme: appTheme
+        layoutMode: window.layoutMode
     }
 
     Popup {

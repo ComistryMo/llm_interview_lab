@@ -126,7 +126,10 @@ def test_onboarding_uses_explicit_grid_geometry_and_no_index_default() -> None:
     assert "Qt.callLater" in source
     assert 'objectName: "onboardingRoleGrid"' in source
     assert 'objectName: "onboardingContinueButton"' in source
-    assert "policy: ScrollBar.AlwaysOn" in source
+    assert "policy: roleGrid.interactive" in source
+    assert "ScrollBar.AsNeeded" in source
+    assert 'readonly property bool wideLayout: width >= 1180' in source
+    assert "roleGrid.currentIndex = i" in source
     assert "property int stepCount: 2" in source
     assert "Layout.preferredWidth: root.step >= 1 ? 144 : 112" in source
 
@@ -158,6 +161,19 @@ def test_role_cards_have_positive_non_overlapping_geometry(onboarding_scene) -> 
                     first.y() + first.height() <= second.y()
                     or second.y() + second.height() <= first.y()
                 )
+
+
+def test_supported_small_window_uses_one_reliable_role_column(onboarding_scene) -> None:
+    _, window, page, _ = onboarding_scene
+    window.resize(1080, 680)
+    for _ in range(4):
+        QCoreApplication.processEvents()
+    grid = page.findChild(QQuickItem, "onboardingRoleGrid")
+    assert grid is not None
+    assert grid.property("columnCount") == 1
+    cards = _role_cards(onboarding_scene)
+    assert cards
+    assert all(card.width() > 0 and 92 <= card.height() <= 108 for card in cards)
 
 
 @pytest.mark.parametrize("index", [0, 3, 7])

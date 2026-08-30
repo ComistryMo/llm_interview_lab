@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.impl
 
 Button {
     id: control
@@ -89,6 +90,18 @@ Button {
         }
     }
 
+    contentItem: IconLabel {
+        spacing: control.spacing
+        mirrored: control.mirrored
+        display: control.display
+        alignment: Qt.AlignCenter
+        icon: control.icon
+        text: control.text
+        font: control.font
+        color: control.resolvedForeground
+        opacity: control.busy ? 0 : 1
+    }
+
     LabBusyIndicator {
         anchors.centerIn: parent
         theme: control.theme
@@ -98,7 +111,6 @@ Button {
                         : (control.theme ? control.theme.accent : "#315ec7")
     }
 
-    contentItem.opacity: busy ? 0 : 1
     ToolTip.visible: toolTip.length > 0 && hovered && !busy
     ToolTip.text: toolTip
     ToolTip.delay: 500

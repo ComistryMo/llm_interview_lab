@@ -699,7 +699,7 @@ def test_home_and_practice_expose_truthful_next_actions() -> None:
     assert 'objectName: "dueRetentionList"' in home
     assert "modelData.blocked_reason" in home
     assert "id: continueTrainingButton" in home
-    assert 'text: "继续面试"' in home
+    assert 'return "继续面试"' in home
 
     assert 'objectName: "practicePrimaryAction"' in exercise
     assert "id: practicePrimaryButton" in exercise
@@ -760,22 +760,29 @@ def test_home_and_learn_prioritize_primary_actions_and_secondary_metadata() -> N
     assert home.index('objectName: "homePrimaryAction"') < home.index(
         'objectName: "homeInterviewSecondaryAction"'
     )
-    assert "Layout.preferredHeight: 198" in home
-    assert "text: root.trainingTarget ? root.trainingTarget.title" in home
+    assert 'readonly property string focusKind:' in home
+    assert ': activeInterview ? "interview"' in home
+    assert ': currentPractice ? "practice"' in home
+    assert ': actionableRetention ? "retention"' in home
+    assert ': firstUnlock ? "unlock" : "empty"' in home
+    assert 'id: evidenceRail' in home
+    assert 'return "浏览可练题目"' in home
     assert 'StatusPill {' in home
 
     assert 'objectName: "learnProblemList"' in learn
     assert 'objectName: "learnOpenProblemButton"' in learn
-    assert "font.pixelSize: 17" in learn
+    assert 'objectName: "knowledgeBrowserButton"' in learn
+    assert 'objectName: "knowledgeBrowser"' in learn
+    assert 'readonly property bool drillDownLayout:' in learn
+    assert 'section === "courses" ? 0 : 1' in learn
+    assert 'root.selectSection("knowledge")' in learn
     assert "maximumLineCount: 2" in learn
-    assert "text: modelData.skills && modelData.skills.length ? modelData.skills.slice(0, 3).join(\" · \") : \" \"" in learn
-    assert 'text: modelData.problem_id || ""' in learn
-    assert learn.index('text: modelData.title; color: root.palette.text; font.bold: true; font.pixelSize: 17') < learn.index(
-        'text: modelData.problem_id || ""'
-    )
-    assert learn.index('text: modelData.problem_id || ""') < learn.index(
-        'objectName: "learnOpenProblemButton"'
-    )
+    assert 'modelData.skills.slice(0, 3).join(" · ")' in learn
+    assert 'root.blockingReason(root.selectedProblem)' in learn
+    assert 'root.app.openProblem(root.selectedProblem.problem_id)' in learn
+    assert 'app.loadKnowledge()' in learn
+    assert 'app.searchKnowledge(knowledgeQuery.text)' in learn
+    assert 'app.openKnowledgeCard' in learn
 
 
 def test_interview_setup_uses_profile_role_availability_and_real_report() -> None:

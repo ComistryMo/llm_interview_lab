@@ -6,55 +6,32 @@ import "../components"
 Rectangle {
     id: root
     objectName: "onboardingPage"
+
     required property var app
     required property var palette
-    color: root.palette.background
-    // This page is a true gate, not a decorative overlay.  The input shield
-    // consumes clicks in the uncovered shell and the focus scope keeps Tab
-    // and keyboard activation inside onboarding until the Profile exists.
-    focus: visible
-    activeFocusOnTab: true
-    Keys.onPressed: function(event) {
-        if (root.visible) {
-            event.accepted = true
-            if (event.key === Qt.Key_Escape)
-                profileName.forceActiveFocus()
-        }
-    }
-    onVisibleChanged: if (visible) Qt.callLater(function() {
-        root.forceActiveFocus()
-        if (root.step === 0)
-            profileName.forceActiveFocus()
-        else if (roleGrid)
-            roleGrid.forceActiveFocus()
-    })
+    // Main.qml supplies these during the Quiet Forge migration. Keeping both
+    // optional preserves source-mode and older embedding compatibility.
+    property var theme: null
+    property string layoutMode: width < 1040 ? "compact"
+                                               : width < 1400 ? "standard" : "wide"
 
-    MouseArea {
-        id: onboardingInputShield
-        objectName: "onboardingInputShield"
-        anchors.fill: parent
-        z: 0
-        enabled: root.visible
-        acceptedButtons: Qt.AllButtons
-        hoverEnabled: true
-        onPressed: mouse.accepted = true
-        onClicked: mouse.accepted = true
-    }
-
-    // The default path has only two user decisions: a display name and a
-    // target role. The default path deliberately starts with a fresh
-    // self-assessment and No-AI; interview seniority and AI connections can be
-    // chosen later without changing the Practice history.
     property int step: 0
     property int stepCount: 2
-    // Keep the role picker readable on the smallest supported window.  The
-    // content area is narrower than the top-level window because the shell
-    // owns margins and the progress/header rows; using the window width here
-    // gives us one predictable breakpoint for Chinese copy.
-    property bool compactRoleLayout: width < 1180
     property string selectedRole: ""
-    property bool rolesAvailable: (app.roles || []).length > 0
-    property var selectedRoleCard: {
+    property string inlineError: ""
+    property bool roleSelectionAttempted: false
+    property bool submitting: false
+
+    // The onboarding overlay owns the entire window, so its 1180px content
+    // threshold is more useful than the shell's sidebar breakpoint here.
+    readonly property bool wideLayout: width >= 1180
+    readonly property bool compactLayout: width < 1040
+    // Compatibility name retained for the targeted first-run contract.
+    readonly property bool compactRoleLayout: !wideLayout
+    readonly property bool largeText: !!theme && theme.resolvedFontScale > 1.15
+    readonly property bool rolesAvailable: (app.roles || []).length > 0
+    readonly property bool profileNameValid: profileName.text.trim().length > 0
+    readonly property var selectedRoleCard: {
         var cards = app.roles || []
         for (var i = 0; i < cards.length; ++i) {
             if (cards[i].id === root.selectedRole)
@@ -62,24 +39,25 @@ Rectangle {
         }
         return null
     }
-    property string inlineError: ""
-    // Do not show a validation banner merely because the user arrived at the
-    // role step.  The disabled CTA and helper text already explain what is
-    // required; reserve the banner for an actual submit attempt or backend
-    // error so the role list keeps its usable height.
-    property bool roleSelectionAttempted: false
-    property bool submitting: false
-    property bool profileNameValid: profileName.text.trim().length > 0
-    property string roleSelectionError: root.roleSelectionAttempted
-                                        && root.step >= 1
-                                        && !root.selectedRoleCard
-                                        ? (root.rolesAvailable
-                                           ? "请选择一个目标岗位后继续。"
-                                           : "当前没有可用岗位，请检查课程资源后重试。")
-                                        : ""
-    property string displayedError: root.inlineError !== ""
-                                    ? root.inlineError
-                                    : ((app.onboardingError || "") || root.roleSelectionError)
+    readonly property string roleSelectionError: root.roleSelectionAttempted
+                                                    && root.step >= 1
+                                                    && !root.selectedRoleCard
+                                                ? (root.rolesAvailable
+                                                   ? "请选择一个目标岗位后继续。"
+                                                   : "当前没有可用岗位，请检查课程资源后重试。")
+                                                : ""
+    readonly property string displayedError: root.inlineError !== ""
+                                               ? root.inlineError
+                                               : ((app.onboardingError || "")
+                                                  || root.roleSelectionError)
+
+    color: theme ? theme.canvas : root.palette.background
+    focus: visible
+    activeFocusOnTab: true
+
+    function scaledPx(px) {
+        return root.theme ? root.theme.scaledPx(px) : px
+    }
 
     function clearError() {
         root.inlineError = ""
@@ -89,8 +67,16 @@ Rectangle {
 
     function selectRole(roleId) {
         root.selectedRole = String(roleId || "")
+        var cards = app.roles || []
+        for (var i = 0; i < cards.length; ++i) {
+            if (cards[i].id === root.selectedRole) {
+                roleGrid.currentIndex = i
+                break
+            }
+        }
         root.roleSelectionAttempted = false
         root.clearError()
+        Qt.callLater(function() { root.positionSelectedRole() })
     }
 
     function positionSelectedRole() {
@@ -98,21 +84,19 @@ Rectangle {
             return
         var cards = app.roles || []
         for (var index = 0; index < cards.length; ++index) {
-            if (cards[index].id === root.selectedRole) {
-                // A click already leaves the selected card in view.  Only
-                // move the viewport when a restored/keyboard-selected card
-                // is genuinely outside the visible range; this avoids the
-                // jarring jump that used to hide the first cards.
-                var item = roleGrid.itemAtIndex(index)
-                if (!item || item.y < roleGrid.contentY
-                        || item.y + item.height > roleGrid.contentY + roleGrid.height)
-                    roleGrid.positionViewAtIndex(index, GridView.Contain)
-                return
-            }
+            if (cards[index].id !== root.selectedRole)
+                continue
+            var item = roleGrid.itemAtIndex(index)
+            if (!item || item.y < roleGrid.contentY
+                    || item.y + item.height > roleGrid.contentY + roleGrid.height)
+                roleGrid.positionViewAtIndex(index, GridView.Center)
+            return
         }
     }
 
     function submitDefaultOnboarding() {
+        if (root.submitting || app.onboardingBusy)
+            return
         if (!root.profileNameValid) {
             root.step = 0
             root.inlineError = "请先输入一个档案名称。"
@@ -124,27 +108,44 @@ Rectangle {
             return
         }
 
-        // These defaults are deliberate: they make the first-run path local
-        // and deterministic. Advanced choices remain available after Home.
+        // The first run is deliberately local and deterministic. Seniority
+        // and AI connections remain editable after onboarding.
         var displayName = profileName.text.trim()
         var roleId = root.selectedRole
         root.submitting = true
         Qt.callLater(function() {
-            app.completeOnboardingWithDisplayName(
-                displayName, roleId, "new_grad", "disabled", "{}"
-            )
-            root.submitting = false
+            try {
+                app.completeOnboardingWithDisplayName(
+                    displayName, roleId, "new_grad", "disabled", "{}"
+                )
+            } finally {
+                root.submitting = false
+            }
         })
     }
 
-    onSelectedRoleChanged: {
-        if (!root.selectedRole)
-            return
-        // The selected role can be supplied before the GridView has its final
-        // geometry. Recompute the index after the layout pass instead of
-        // capturing a loop variable in a delayed closure.
-        Qt.callLater(function() { root.positionSelectedRole() })
+    // Consume only the one page-level shortcut we own. Tab, Shift+Tab and
+    // arrow navigation remain available to the controls and GridView.
+    Keys.onEscapePressed: function(event) {
+        if (root.step > 0) {
+            root.clearError()
+            root.step = 0
+        } else {
+            profileName.forceActiveFocus()
+        }
+        event.accepted = true
     }
+
+    onVisibleChanged: if (visible) Qt.callLater(function() {
+        root.forceActiveFocus()
+        if (root.step === 0)
+            profileName.forceActiveFocus()
+        else
+            roleGrid.forceActiveFocus()
+    })
+
+    onSelectedRoleChanged: if (root.selectedRole)
+        Qt.callLater(function() { root.positionSelectedRole() })
 
     onStepChanged: {
         if (root.step === 0)
@@ -158,407 +159,615 @@ Rectangle {
         }
     }
 
-    ColumnLayout {
+    MouseArea {
+        id: onboardingInputShield
+        objectName: "onboardingInputShield"
+        anchors.fill: parent
+        z: 0
+        enabled: root.visible
+        acceptedButtons: Qt.AllButtons
+        hoverEnabled: true
+        onPressed: mouse.accepted = true
+        onClicked: mouse.accepted = true
+    }
+
+    RowLayout {
+        id: onboardingFrame
         z: 1
         anchors.centerIn: parent
-        width: Math.min(parent.width - 80, 900)
-        height: Math.min(parent.height - 36, 690)
-        spacing: 14
+        width: Math.min(parent.width - (root.compactLayout ? 28 : 48),
+                        root.wideLayout ? 1220 : 900)
+        height: Math.min(parent.height - (root.compactLayout ? 24 : 36), 720)
+        spacing: root.wideLayout ? 16 : 0
 
-        RowLayout {
-            Layout.fillWidth: true
-            Rectangle {
-                width: 42; height: 42; radius: 11; color: root.palette.accent
-                Text { anchors.centerIn: parent; text: "LL"; color: "white"; font.bold: true }
-            }
-            ColumnLayout {
-                spacing: 2
-                Text {
-                    text: "开始你的 AI 面试训练"
-                    color: root.palette.text
-                    font.pixelSize: 25
-                    font.bold: true
-                }
-                Text {
-                    text: "只需填写名称并选择岗位；首次使用默认 No-AI，其他选项可以稍后调整。"
-                    color: root.palette.muted
-                    font.pixelSize: 14
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
-            }
-            Item { Layout.fillWidth: true }
-            Text {
-                text: (Math.min(Math.max(root.step, 0), root.stepCount - 1) + 1)
-                      + " / " + root.stepCount
-                color: root.palette.muted
-                font.bold: true
-            }
-        }
-
-        ProgressBar {
-            Layout.fillWidth: true
-            value: (Math.min(Math.max(root.step, 0), root.stepCount - 1) + 1)
-                   / root.stepCount
-        }
-
-        LabCard {
-            Layout.fillWidth: true
+        Rectangle {
+            id: brandPanel
+            visible: root.wideLayout
             Layout.fillHeight: true
-            cardColor: root.palette.surface
-            borderColor: root.palette.border
-            accentColor: root.step >= 1 ? root.palette.accent : "transparent"
+            Layout.preferredWidth: visible
+                                   ? Math.round((onboardingFrame.width - 16) * 0.32) : 0
+            radius: root.theme ? root.theme.radiusLarge : 12
+            color: root.theme ? root.theme.surfaceSunken : root.palette.surfaceAlt
+            border.color: root.theme ? root.theme.borderSubtle : root.palette.border
 
-            StackLayout {
-                width: parent.width
-                height: parent.height
-                currentIndex: Math.min(Math.max(root.step, 0), 1)
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 32
+                spacing: 16
 
-                ColumnLayout {
-                    objectName: "onboardingProfileStep"
-                    spacing: 14
-                    Text {
-                        text: "创建学习档案"
-                        color: root.palette.text
-                        font.pixelSize: 22
-                        font.bold: true
-                    }
-                    Text {
-                        text: "刷题记录、答案、面试报告和求职材料都会保存在本机的学习档案中。"
-                        color: root.palette.muted
-                        wrapMode: Text.WordWrap
-                        Layout.fillWidth: true
-                    }
-                    TextField {
-                        id: profileName
-                        objectName: "onboardingProfileName"
-                        Layout.fillWidth: true
-                        placeholderText: "例如：我的秋招准备"
-                        maximumLength: 120
-                        onTextChanged: {
-                            if (root.inlineError.length > 0)
-                                root.inlineError = ""
-                        }
-                        focus: true
-                    }
-                    Text {
-                        visible: profileName.text.length > 0 && !root.profileNameValid
-                        text: "请输入至少一个可见字符。"
-                        color: root.palette.danger
-                        font.pixelSize: 12
-                        Layout.fillWidth: true
-                    }
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 74
-                        radius: 8
-                        color: root.palette.surfaceAlt
-                        Text {
-                            anchors.fill: parent
-                            anchors.margins: 14
-                            text: "默认保护隐私\nworkspace/profiles/<id>/ 会被 Git 忽略；连接 AI 不是必选项，首次使用按校招、No-AI 开始。"
-                            color: root.palette.text
-                            wrapMode: Text.WordWrap
-                        }
-                    }
-                    Item { Layout.fillHeight: true }
+                Image {
+                    Layout.preferredWidth: 68
+                    Layout.preferredHeight: 68
+                    source: "../../resources/app-icon.svg"
+                    sourceSize.width: 136
+                    sourceSize.height: 136
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    Accessible.name: "LLM Interview Lab"
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "把面试准备，变成可验证的能力"
+                    color: root.theme ? root.theme.textStrong : root.palette.text
+                    font.pixelSize: root.scaledPx(26)
+                    font.weight: Font.DemiBold
+                    wrapMode: Text.WordWrap
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "根据目标岗位安排训练路线，用公开测试、复盘和间隔复测帮助你独立完成，而不是替你给出答案。"
+                    color: root.theme ? root.theme.text : root.palette.muted
+                    font.pixelSize: root.scaledPx(14)
+                    lineHeight: 1.35
+                    wrapMode: Text.WordWrap
                 }
 
                 ColumnLayout {
-                    objectName: "onboardingRoleStep"
-                    spacing: 8
-                    Text {
-                        text: "选择目标岗位"
-                        color: root.palette.text
-                        font.pixelSize: 22
-                        font.bold: true
-                    }
-                    Text {
-                        text: "岗位会影响推荐路线和面试蓝图，不会改变公共课程。"
-                        color: root.palette.muted
-                        wrapMode: Text.WordWrap
-                        Layout.fillWidth: true
-                    }
-
-                    GridView {
-                        id: roleGrid
-                        objectName: "onboardingRoleGrid"
-                        Layout.fillWidth: true
-                        // Show complete rows only. A fixed number of visible
-                        // rows prevents the next card from being cut in half
-                        // by the summary bar; the list remains scrollable when
-                        // more roles exist.
-                        Layout.fillHeight: false
-                        Layout.preferredHeight: visibleRows * cellHeight
-                        clip: true
-                        model: app.roles || []
-                        // Choose columns from the actual role-list width, not
-                        // the outer window width. Two readable columns keep
-                        // the first viewport useful on compact windows while
-                        // the one-column mode remains available below 760px.
-                        property int columnCount: width >= 760 ? 2 : 1
-                        property int roleCardHeight: root.compactRoleLayout ? 92 : 96
-                        property int rowCount: Math.max(1, Math.ceil((app.roles || []).length / columnCount))
-                        property int visibleRows: Math.min(rowCount, root.compactRoleLayout ? 2 : 3)
-                        cellWidth: Math.max(1, columnCount === 2
-                                             ? Math.floor((width - 12) / 2)
-                                             : width)
-                        cellHeight: roleCardHeight + 12
-                        boundsBehavior: Flickable.StopAtBounds
-                        interactive: contentHeight > height
-                        // Keep a scroll gesture from stopping halfway through
-                        // a card, which makes the next role look clipped.
-                        snapMode: GridView.SnapToRow
-                        keyNavigationWraps: false
-                        onWidthChanged: Qt.callLater(function() { root.positionSelectedRole() })
-                        onHeightChanged: Qt.callLater(function() { root.positionSelectedRole() })
-                        ScrollBar.vertical: ScrollBar {
-                            // Keep a persistent affordance for the scrollable
-                            // role list; the slimmer thumb avoids obscuring
-                            // card copy at compact widths.
-                            policy: ScrollBar.AlwaysOn
-                            width: 5
-                            contentItem: Rectangle {
-                                implicitWidth: 5
-                                radius: 4
-                                color: root.palette.muted
-                                opacity: 0.45
-                            }
-                        }
-
-                        delegate: Rectangle {
-                            id: roleCard
-                            required property var modelData
-                            required property int index
-                            objectName: "onboardingRoleCard-" + modelData.id
-                            width: Math.max(1, roleGrid.columnCount === 2
-                                               ? roleGrid.cellWidth - 12
-                                               : roleGrid.cellWidth)
-                            height: roleGrid.roleCardHeight
-                            radius: 10
-                            color: root.selectedRole === modelData.id
-                                   ? Qt.rgba(0.145, 0.388, 0.922, 0.12)
-                                   : roleHitArea.containsMouse
-                                     ? Qt.rgba(0.145, 0.388, 0.922, 0.06)
-                                     : root.palette.surfaceAlt
-                            border.color: root.selectedRole === modelData.id
-                                          ? root.palette.accent
-                                          : roleCard.activeFocus
-                                            ? root.palette.accent
-                                            : roleHitArea.containsMouse
-                                              ? root.palette.accent
-                                              : root.palette.border
-                            border.width: root.selectedRole === modelData.id
-                                          || roleCard.activeFocus ? 2 : 1
-                            activeFocusOnTab: true
-                            Accessible.name: modelData.title || "未命名岗位"
-                            Accessible.description: modelData.summary || ""
-                            Accessible.role: Accessible.ListItem
-
-                            ColumnLayout {
-                                anchors.fill: parent
-                                anchors.margins: root.compactRoleLayout ? 9 : 10
-                                spacing: 3
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: root.compactRoleLayout ? 19 : 20
-                                    Text {
-                                        objectName: "onboardingRoleTitle-" + modelData.id
-                                        text: modelData.title || "未命名岗位"
-                                        color: root.palette.text
-                                        font.bold: true
-                                        font.pixelSize: root.compactRoleLayout ? 14 : 15
-                                        Layout.fillWidth: true
-                                        elide: Text.ElideRight
-                                    }
-                                    Text {
-                                        objectName: "onboardingRoleSelected-" + modelData.id
-                                        text: "✓"
-                                        visible: root.selectedRole === modelData.id
-                                        color: root.palette.accent
-                                        font.bold: true
-                                        font.pixelSize: 19
-                                        horizontalAlignment: Text.AlignRight
-                                        Layout.preferredWidth: 22
-                                    }
-                                }
-                                Text {
-                                    text: modelData.summary || ""
-                                    color: root.palette.muted
-                                    font.pixelSize: 12
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: root.compactRoleLayout ? 27 : 30
-                                    maximumLineCount: 2
-                                    wrapMode: Text.WordWrap
-                                    elide: Text.ElideRight
-                                }
-                                // Descriptive copy, not a hyperlink.
-                                Text {
-                                    text: "面试重点：" + (modelData.interview_content
-                                           || "结构化问答与能力验证")
-                                    color: root.palette.muted
-                                    font.pixelSize: 11
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: 14
-                                    maximumLineCount: 1
-                                    elide: Text.ElideRight
-                                }
-                            }
-
-                            MouseArea {
-                                id: roleHitArea
-                                objectName: "onboardingRoleHitArea-" + modelData.id
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onPressed: roleCard.forceActiveFocus()
-                                onClicked: root.selectRole(modelData.id)
-                            }
-                            Keys.onReturnPressed: {
-                                root.selectRole(modelData.id)
-                                event.accepted = true
-                            }
-                            Keys.onSpacePressed: {
-                                root.selectRole(modelData.id)
-                                event.accepted = true
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        objectName: "onboardingRoleEmptyState"
-                        visible: (app.roles || []).length === 0
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: visible ? 54 : 0
-                        radius: 8
-                        color: root.palette.surfaceAlt
-                        Text {
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            text: "暂时没有可用岗位。请检查课程资源后重试。"
-                            color: root.palette.muted
-                            wrapMode: Text.WordWrap
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                    }
-                    Text {
-                        visible: roleGrid.contentHeight > roleGrid.height
-                        text: "向下滚动查看更多岗位"
-                        color: root.palette.muted
-                        font.pixelSize: 11
-                        Layout.fillWidth: true
-                    }
-                    Item { Layout.fillHeight: true }
-                    Rectangle {
-                        objectName: "onboardingSelectionSummary"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 36
-                        radius: 8
-                        color: root.selectedRoleCard
-                               ? Qt.rgba(0.192, 0.349, 0.851, 0.09)
-                               : root.palette.surfaceAlt
-                        border.color: root.selectedRoleCard
-                                      ? root.palette.accent : root.palette.border
+                    Layout.fillWidth: true
+                    spacing: 10
+                    Repeater {
+                        model: [
+                            "岗位导向的推荐路线",
+                            "本地保存的个人训练记录",
+                            "无需连接 AI 也能完整开始"
+                        ]
                         RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 12
-                            anchors.rightMargin: 10
-                            spacing: 8
-                            Text {
-                                id: selectedRoleLabel
-                                objectName: "onboardingSelectedRoleLabel"
-                                Layout.fillWidth: true
-                                text: root.selectedRoleCard
-                                      ? "岗位已选 · " + root.selectedRoleCard.title
-                                      : "请选择一个岗位后继续"
-                                color: root.selectedRoleCard
-                                       ? root.palette.accent : root.palette.muted
-                                font.bold: root.selectedRoleCard !== null
-                                elide: Text.ElideRight
-                            }
+                            required property string modelData
+                            spacing: 9
                             Rectangle {
-                                width: 8; height: 8; radius: 4
-                                color: root.selectedRoleCard ? root.palette.accent : root.palette.muted
-                                opacity: root.selectedRoleCard ? 1 : 0.55
+                                Layout.preferredWidth: 18
+                                Layout.preferredHeight: 18
+                                radius: 9
+                                color: root.theme ? root.theme.accentSoft
+                                                  : Qt.rgba(0.32, 0.39, 0.85, 0.12)
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "✓"
+                                    color: root.palette.accent
+                                    font.pixelSize: root.scaledPx(11)
+                                    font.bold: true
+                                }
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: modelData
+                                color: root.theme ? root.theme.textStrong : root.palette.text
+                                font.pixelSize: root.scaledPx(14)
+                                wrapMode: Text.WordWrap
                             }
                         }
                     }
+                }
+
+                Item { Layout.fillHeight: true }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "源码模式使用仓库内 Workspace；桌面安装包使用系统应用数据目录。两种模式都默认保存在本机。"
+                    color: root.theme ? root.theme.subtle : root.palette.muted
+                    font.pixelSize: root.scaledPx(12)
+                    lineHeight: 1.35
+                    wrapMode: Text.WordWrap
                 }
             }
         }
 
         Rectangle {
-            id: onboardingErrorPanel
-            objectName: "onboardingInlineError"
-            visible: root.displayedError.length > 0
+            id: formPanel
             Layout.fillWidth: true
-            Layout.preferredHeight: visible
-                                      ? Math.max(54, onboardingErrorText.implicitHeight + 24)
-                                      : 0
-            radius: 8
-            color: Qt.rgba(0.776, 0.239, 0.310, 0.12)
-            border.color: root.palette.danger
-            Text {
-                id: onboardingErrorText
-                anchors.fill: parent
-                anchors.margins: 12
-                text: root.displayedError
-                color: root.palette.danger
-                wrapMode: Text.WordWrap
-                verticalAlignment: Text.AlignVCenter
-            }
-        }
+            Layout.fillHeight: true
+            radius: root.theme ? root.theme.radiusLarge : 12
+            color: root.theme ? root.theme.surface : root.palette.surface
+            border.color: root.theme ? root.theme.borderDefault : root.palette.border
 
-        RowLayout {
-            Layout.fillWidth: true
-            Button {
-                objectName: "onboardingBackButton"
-                text: "上一步"
-                enabled: root.step > 0 && !root.submitting && !app.onboardingBusy
-                onClicked: {
-                    root.clearError()
-                    root.step = 0
-                }
-            }
-            Item { Layout.fillWidth: true }
-            Button {
-                id: continueButton
-                objectName: "onboardingContinueButton"
-                Layout.preferredWidth: root.step >= 1 ? 144 : 112
-                Layout.preferredHeight: 44
-                text: root.step >= 1
-                      ? (root.submitting || app.onboardingBusy ? "正在创建…" : "开始训练")
-                      : "继续"
-                highlighted: true
-                enabled: !root.submitting
-                         && !app.onboardingBusy
-                         && !(root.step === 0 && !root.profileNameValid)
-                         && !(root.step >= 1 && !root.selectedRoleCard)
-                background: Rectangle {
-                    radius: 8
-                    color: continueButton.enabled
-                           ? root.palette.accent : root.palette.border
-                    border.width: continueButton.activeFocus ? 2 : 0
-                    border.color: root.palette.text
-                }
-                contentItem: Text {
-                    text: continueButton.text
-                    color: continueButton.enabled ? "white" : root.palette.muted
-                    font.bold: true
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-                onClicked: {
-                    root.clearError()
-                    if (root.step === 0) {
-                        if (!root.profileNameValid) {
-                            root.inlineError = "请先输入一个档案名称。"
-                            return
-                        }
-                        root.step = 1
-                        return
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: root.compactLayout ? 16 : 24
+                spacing: root.compactLayout ? 9 : 12
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    Image {
+                        visible: !root.wideLayout
+                        Layout.preferredWidth: visible ? 40 : 0
+                        Layout.preferredHeight: visible ? 40 : 0
+                        source: "../../resources/app-icon.svg"
+                        sourceSize.width: 80
+                        sourceSize.height: 80
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        Accessible.name: "LLM Interview Lab"
                     }
-                    root.submitDefaultOnboarding()
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.step === 0 ? "创建你的学习档案" : "选择目标岗位"
+                            color: root.theme ? root.theme.textStrong : root.palette.text
+                            font.pixelSize: Math.min(
+                                root.scaledPx(root.compactLayout ? 22 : 25),
+                                root.compactLayout ? 28 : 32
+                            )
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.step === 0
+                                  ? "只需一个名称；首次使用默认按校招、No-AI 开始。"
+                                  : "岗位只影响推荐路线和面试蓝图，不会改变公共课程。"
+                            color: root.theme ? root.theme.text : root.palette.muted
+                            font.pixelSize: root.scaledPx(13)
+                            maximumLineCount: root.compactLayout ? 1 : 2
+                            wrapMode: Text.WordWrap
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    Text {
+                        text: (Math.min(Math.max(root.step, 0), root.stepCount - 1) + 1)
+                              + " / " + root.stepCount
+                        color: root.theme ? root.theme.subtle : root.palette.muted
+                        font.pixelSize: root.scaledPx(12)
+                        font.bold: true
+                    }
+                }
+
+                ProgressBar {
+                    id: stepProgress
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 4
+                    value: (Math.min(Math.max(root.step, 0), root.stepCount - 1) + 1)
+                           / root.stepCount
+                    background: Rectangle {
+                        radius: 2
+                        color: root.theme ? root.theme.surfaceSunken : root.palette.surfaceAlt
+                    }
+                    contentItem: Item {
+                        implicitHeight: 4
+                        Rectangle {
+                            width: parent.width * stepProgress.visualPosition
+                            height: parent.height
+                            radius: 2
+                            color: root.palette.accent
+                        }
+                    }
+                }
+
+                StackLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    currentIndex: Math.min(Math.max(root.step, 0), 1)
+
+                    Flickable {
+                        id: profileStep
+                        objectName: "onboardingProfileStep"
+                        clip: true
+                        contentWidth: width
+                        contentHeight: profileContent.implicitHeight
+                        boundsBehavior: Flickable.StopAtBounds
+                        interactive: contentHeight > height
+                        ScrollBar.vertical: ScrollBar {
+                            policy: profileStep.interactive
+                                    ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+                        }
+
+                        Column {
+                            id: profileContent
+                            width: profileStep.width
+                            spacing: 14
+
+                            Text {
+                                width: parent.width
+                                text: "学习档案名称"
+                                color: root.theme ? root.theme.textStrong : root.palette.text
+                                font.pixelSize: root.scaledPx(15)
+                                font.weight: Font.DemiBold
+                            }
+
+                            LabTextField {
+                                id: profileName
+                                objectName: "onboardingProfileName"
+                                width: parent.width
+                                theme: root.theme
+                                accessibleLabel: "学习档案名称"
+                                placeholderText: "例如：我的秋招准备"
+                                maximumLength: 120
+                                busy: root.submitting || app.onboardingBusy
+                                onTextChanged: {
+                                    if (root.inlineError.length > 0)
+                                        root.inlineError = ""
+                                }
+                            }
+
+                            Text {
+                                width: parent.width
+                                visible: profileName.text.length > 0 && !root.profileNameValid
+                                text: "请输入至少一个可见字符。"
+                                color: root.palette.danger
+                                font.pixelSize: root.scaledPx(12)
+                                wrapMode: Text.WordWrap
+                            }
+
+                            Rectangle {
+                                width: parent.width
+                                height: Math.max(root.scaledPx(78), privacyCopy.implicitHeight + 28)
+                                radius: root.theme ? root.theme.radiusMedium : 8
+                                color: root.theme ? root.theme.surfaceSunken : root.palette.surfaceAlt
+                                border.color: root.theme ? root.theme.borderSubtle : "transparent"
+
+                                Text {
+                                    id: privacyCopy
+                                    anchors.fill: parent
+                                    anchors.margins: 14
+                                    text: "默认保存在本机\n源码运行时使用仓库内 workspace/profiles/；桌面安装包使用系统应用数据目录。连接 AI 不是必选项，只有你确认的上下文才会发送。"
+                                    color: root.theme ? root.theme.text : root.palette.text
+                                    font.pixelSize: root.scaledPx(13)
+                                    lineHeight: 1.3
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
+                        }
+                    }
+
+                    Item {
+                        objectName: "onboardingRoleStep"
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: 7
+
+                            GridView {
+                                id: roleGrid
+                                objectName: "onboardingRoleGrid"
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                clip: true
+                                model: app.roles || []
+                                property int columnCount: root.wideLayout ? 2 : 1
+                                property int roleCardHeight: root.largeText ? 108
+                                                               : root.wideLayout ? 96 : 94
+                                property int rowCount: Math.max(
+                                    1, Math.ceil((app.roles || []).length / columnCount)
+                                )
+                                property int visibleRows: Math.max(
+                                    1, Math.floor(Math.max(1, height) / cellHeight)
+                                )
+                                cellWidth: Math.max(1, columnCount === 2
+                                                     ? Math.floor((width - 12) / 2)
+                                                     : width)
+                                cellHeight: roleCardHeight + 10
+                                cacheBuffer: Math.max(0, contentHeight)
+                                boundsBehavior: Flickable.StopAtBounds
+                                interactive: contentHeight > height
+                                snapMode: GridView.SnapToRow
+                                keyNavigationWraps: false
+                                onWidthChanged: Qt.callLater(function() {
+                                    root.positionSelectedRole()
+                                })
+                                onHeightChanged: Qt.callLater(function() {
+                                    root.positionSelectedRole()
+                                })
+                                ScrollBar.vertical: ScrollBar {
+                                    policy: roleGrid.interactive
+                                            ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+                                    width: 5
+                                    contentItem: Rectangle {
+                                        implicitWidth: 5
+                                        radius: 3
+                                        color: root.theme ? root.theme.borderStrong
+                                                          : root.palette.muted
+                                        opacity: 0.65
+                                    }
+                                }
+
+                                delegate: Rectangle {
+                                    id: roleCard
+                                    required property var modelData
+                                    required property int index
+                                    objectName: "onboardingRoleCard-" + modelData.id
+                                    width: Math.max(1, roleGrid.columnCount === 2
+                                                       ? roleGrid.cellWidth - 10
+                                                       : roleGrid.cellWidth - 8)
+                                    height: roleGrid.roleCardHeight
+                                    radius: root.theme ? root.theme.radiusMedium : 9
+                                    color: root.selectedRole === modelData.id
+                                           ? (root.theme ? root.theme.accentSoft
+                                                         : Qt.rgba(0.32, 0.39, 0.85, 0.12))
+                                           : roleHitArea.containsMouse
+                                             ? (root.theme ? root.theme.surfaceHover
+                                                           : Qt.rgba(0.32, 0.39, 0.85, 0.06))
+                                             : (root.theme ? root.theme.surfaceRaised
+                                                           : root.palette.surfaceAlt)
+                                    border.color: root.selectedRole === modelData.id
+                                                  || roleCard.activeFocus
+                                                  || roleHitArea.containsMouse
+                                                  ? root.palette.accent
+                                                  : (root.theme
+                                                     ? root.theme.borderDefault
+                                                     : root.palette.border)
+                                    border.width: root.selectedRole === modelData.id
+                                                  || roleCard.activeFocus ? 2 : 1
+                                    activeFocusOnTab: true
+                                    Accessible.name: modelData.title || "未命名岗位"
+                                    Accessible.description: modelData.summary || ""
+                                    Accessible.role: Accessible.ListItem
+                                    Accessible.selected: root.selectedRole === modelData.id
+
+                                    ColumnLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: root.largeText ? 8 : 10
+                                        spacing: 2
+
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 6
+                                            Text {
+                                                objectName: "onboardingRoleTitle-" + modelData.id
+                                                Layout.fillWidth: true
+                                                text: modelData.title || "未命名岗位"
+                                                color: root.theme ? root.theme.textStrong
+                                                                  : root.palette.text
+                                                font.pixelSize: root.scaledPx(14)
+                                                font.weight: Font.DemiBold
+                                                maximumLineCount: root.largeText ? 1 : 2
+                                                wrapMode: Text.WordWrap
+                                                elide: Text.ElideRight
+                                            }
+                                            Text {
+                                                objectName: "onboardingRoleSelected-" + modelData.id
+                                                Layout.preferredWidth: 22
+                                                text: "✓"
+                                                visible: root.selectedRole === modelData.id
+                                                color: root.palette.accent
+                                                font.pixelSize: root.scaledPx(17)
+                                                font.bold: true
+                                                horizontalAlignment: Text.AlignRight
+                                            }
+                                        }
+
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: modelData.summary || ""
+                                            color: root.theme ? root.theme.text : root.palette.muted
+                                            font.pixelSize: root.scaledPx(11)
+                                            maximumLineCount: root.largeText ? 1 : 2
+                                            wrapMode: Text.WordWrap
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: "面试重点 · " + (modelData.interview_content
+                                                  || "结构化问答与能力验证")
+                                            color: root.theme ? root.theme.subtle : root.palette.muted
+                                            font.pixelSize: root.scaledPx(10)
+                                            maximumLineCount: 1
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: roleHitArea
+                                        objectName: "onboardingRoleHitArea-" + modelData.id
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onPressed: roleCard.forceActiveFocus()
+                                        onClicked: root.selectRole(modelData.id)
+                                    }
+                                    Keys.onReturnPressed: function(event) {
+                                        root.selectRole(modelData.id)
+                                        event.accepted = true
+                                    }
+                                    Keys.onSpacePressed: function(event) {
+                                        root.selectRole(modelData.id)
+                                        event.accepted = true
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                objectName: "onboardingRoleEmptyState"
+                                visible: !root.rolesAvailable
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: visible ? 64 : 0
+                                radius: root.theme ? root.theme.radiusMedium : 8
+                                color: root.theme ? root.theme.surfaceSunken
+                                                  : root.palette.surfaceAlt
+                                border.color: root.theme ? root.theme.borderSubtle
+                                                         : root.palette.border
+                                Text {
+                                    anchors.fill: parent
+                                    anchors.margins: 12
+                                    text: "暂时没有可用岗位。请检查课程资源后重试。"
+                                    color: root.theme ? root.theme.text : root.palette.muted
+                                    font.pixelSize: root.scaledPx(13)
+                                    wrapMode: Text.WordWrap
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                            }
+
+                            Text {
+                                visible: roleGrid.contentHeight > roleGrid.height
+                                Layout.fillWidth: true
+                                text: "滚动查看更多岗位"
+                                color: root.theme ? root.theme.subtle : root.palette.muted
+                                font.pixelSize: root.scaledPx(11)
+                            }
+
+                            Rectangle {
+                                objectName: "onboardingSelectionSummary"
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: root.largeText ? 42 : 38
+                                radius: root.theme ? root.theme.radiusSmall : 8
+                                color: root.selectedRoleCard
+                                       ? (root.theme ? root.theme.accentSoft
+                                                     : Qt.rgba(0.32, 0.39, 0.85, 0.09))
+                                       : (root.theme ? root.theme.surfaceSunken
+                                                     : root.palette.surfaceAlt)
+                                border.color: root.selectedRoleCard
+                                              ? root.palette.accent
+                                              : (root.theme ? root.theme.borderSubtle
+                                                            : root.palette.border)
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 12
+                                    anchors.rightMargin: 10
+                                    spacing: 8
+                                    Text {
+                                        id: selectedRoleLabel
+                                        objectName: "onboardingSelectedRoleLabel"
+                                        Layout.fillWidth: true
+                                        text: root.selectedRoleCard
+                                              ? "已选择：" + root.selectedRoleCard.title
+                                              : "请选择一个岗位后继续"
+                                        color: root.selectedRoleCard
+                                               ? root.palette.accent
+                                               : (root.theme ? root.theme.subtle
+                                                             : root.palette.muted)
+                                        font.pixelSize: root.scaledPx(12)
+                                        font.bold: root.selectedRoleCard !== null
+                                        elide: Text.ElideRight
+                                    }
+                                    Rectangle {
+                                        width: 8
+                                        height: 8
+                                        radius: 4
+                                        color: root.selectedRoleCard
+                                               ? root.palette.accent
+                                               : (root.theme ? root.theme.subtle
+                                                             : root.palette.muted)
+                                        opacity: root.selectedRoleCard ? 1 : 0.5
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    id: onboardingErrorPanel
+                    objectName: "onboardingInlineError"
+                    visible: root.displayedError.length > 0
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: visible
+                                              ? Math.max(root.scaledPx(48),
+                                                         onboardingErrorText.implicitHeight + 20)
+                                              : 0
+                    radius: root.theme ? root.theme.radiusSmall : 8
+                    color: root.theme ? root.theme.dangerSoft
+                                      : Qt.rgba(0.776, 0.239, 0.310, 0.12)
+                    border.color: root.palette.danger
+
+                    Text {
+                        id: onboardingErrorText
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        text: root.displayedError
+                        color: root.palette.danger
+                        font.pixelSize: root.scaledPx(12)
+                        wrapMode: Text.WordWrap
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: root.theme ? root.theme.borderSubtle : root.palette.border
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    LabButton {
+                        objectName: "onboardingBackButton"
+                        theme: root.theme
+                        variant: "ghost"
+                        font.pixelSize: Math.min(root.scaledPx(14), 17)
+                        text: "上一步"
+                        visible: root.step > 0
+                        enabled: root.step > 0 && !root.submitting && !app.onboardingBusy
+                        onClicked: {
+                            root.clearError()
+                            root.step = 0
+                        }
+                    }
+
+                    Text {
+                        visible: root.step >= 1 && !root.selectedRoleCard
+                        Layout.fillWidth: true
+                        text: "选择岗位后即可开始；稍后仍可在设置中调整。"
+                        color: root.theme ? root.theme.subtle : root.palette.muted
+                        font.pixelSize: root.scaledPx(11)
+                        maximumLineCount: 1
+                        elide: Text.ElideRight
+                    }
+
+                    Item {
+                        visible: root.step === 0 || !!root.selectedRoleCard
+                        Layout.fillWidth: true
+                    }
+
+                    LabButton {
+                        id: continueButton
+                        objectName: "onboardingContinueButton"
+                        theme: root.theme
+                        variant: "primary"
+                        font.pixelSize: Math.min(root.scaledPx(14), 17)
+                        Layout.preferredWidth: root.step >= 1 ? 144 : 112
+                        Layout.preferredHeight: 44
+                        text: root.step >= 1
+                              ? (root.submitting || app.onboardingBusy
+                                 ? "正在创建…" : "开始训练")
+                              : "继续"
+                        busy: root.submitting || app.onboardingBusy
+                        enabled: !root.submitting
+                                 && !app.onboardingBusy
+                                 && !(root.step === 0 && !root.profileNameValid)
+                                 && !(root.step >= 1 && !root.selectedRoleCard)
+                        onClicked: {
+                            root.clearError()
+                            if (root.step === 0) {
+                                if (!root.profileNameValid) {
+                                    root.inlineError = "请先输入一个档案名称。"
+                                    return
+                                }
+                                root.step = 1
+                                return
+                            }
+                            root.submitDefaultOnboarding()
+                        }
+                    }
                 }
             }
         }
