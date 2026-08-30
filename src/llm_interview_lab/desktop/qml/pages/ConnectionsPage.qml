@@ -13,14 +13,19 @@ Flickable {
     // from the keyring; an empty key field means "keep existing".
     property string editingConnectionId: ""
     property string formError: ""
+    property bool saving: false
+
+    function clearFormError() {
+        root.formError = ""
+        if (typeof app.clearConnectionError === "function")
+            app.clearConnectionError()
+    }
 
     function beginEditConnection(item) {
         if (!item)
             return
         root.editingConnectionId = String(item.connection_id || "")
-        root.formError = ""
-        if (typeof app.clearConnectionError === "function")
-            app.clearConnectionError()
+        root.clearFormError()
         root.advanced = true
         var providers = app.providerOptions || []
         var providerIndex = -1
@@ -50,9 +55,7 @@ Flickable {
 
     function cancelEditConnection() {
         root.editingConnectionId = ""
-        root.formError = ""
-        if (typeof app.clearConnectionError === "function")
-            app.clearConnectionError()
+        root.clearFormError()
         root.advanced = false
         provider.currentIndex = 0
         model.text = ""
@@ -174,10 +177,11 @@ Flickable {
                 spacing: 12
                 Button {
                     objectName: "saveAndTestConnection"
-                    text: "保存并测试"
+                    text: root.saving ? "正在保存并测试…" : "保存并测试"
                     highlighted: true
-                    enabled: model.text.length > 0
+                    enabled: model.text.trim().length > 0 && !root.saving && !app.busy
                     onClicked: {
+                        root.saving = true
                         var isOllama = provider.currentText === "ollama"
                         var saved = app.saveConnection(connectionId.text, provider.currentText, model.text,
                                                        displayName.text, isOllama ? secretOrEndpoint.text : endpoint.text,
@@ -190,6 +194,11 @@ Flickable {
                         } else {
                             root.formError = "保存失败。请检查连接 ID、模型和地址；远程服务的 API Key 必须可由系统密钥环保存。"
                         }
+                        // saveConnection is synchronous; testConnection owns
+                        // the asynchronous busy state. Release this local guard
+                        // after the one save call so a failed save can be fixed
+                        // immediately, while app.busy blocks duplicate tests.
+                        root.saving = false
                     }
                 }
                 Text {
@@ -208,9 +217,15 @@ Flickable {
                     Layout.fillWidth: true
                     model: app.providerOptions
                     enabled: root.editingConnectionId.length === 0
+                    onActivated: root.clearFormError()
                 }
                 Text { text: "模型"; color: root.palette.muted }
-                TextField { id: model; Layout.fillWidth: true; placeholderText: "例如 gpt-5、claude 或本地模型 ID" }
+                TextField {
+                    id: model
+                    Layout.fillWidth: true
+                    placeholderText: "例如 gpt-5、claude 或本地模型 ID"
+                    onTextEdited: root.clearFormError()
+                }
                 Text {
                     visible: model.text.trim().length === 0
                     text: "请输入模型 ID 后才能保存并测试。"
@@ -225,6 +240,7 @@ Flickable {
                     id: secretOrEndpoint; Layout.fillWidth: true
                     placeholderText: provider.currentText === "ollama" ? "http://127.0.0.1:11434" : "仅保存到系统密钥环"
                     echoMode: provider.currentText === "ollama" ? TextInput.Normal : TextInput.Password
+                    onTextEdited: root.clearFormError()
                 }
                 Text {
                     visible: provider.currentText === "ollama"
@@ -257,8 +273,20 @@ Flickable {
                     placeholderText: root.editingConnectionId.length > 0
                                      ? "编辑时保持连接 ID 不变" : "连接 ID"
                 }
-                TextField { id: displayName; Layout.fillWidth: true; text: provider.currentText === "ollama" ? "本地 Ollama" : provider.currentText; placeholderText: "显示名称" }
-                TextField { id: endpoint; Layout.columnSpan: 2; Layout.fillWidth: true; placeholderText: "自定义 Endpoint（OpenAI-compatible 可选）" }
+                TextField {
+                    id: displayName
+                    Layout.fillWidth: true
+                    text: provider.currentText === "ollama" ? "本地 Ollama" : provider.currentText
+                    placeholderText: "显示名称"
+                    onTextEdited: root.clearFormError()
+                }
+                TextField {
+                    id: endpoint
+                    Layout.columnSpan: 2
+                    Layout.fillWidth: true
+                    placeholderText: "自定义 Endpoint（OpenAI-compatible 可选）"
+                    onTextEdited: root.clearFormError()
+                }
             }
             Text {
                 text: "Key 不会写入学习档案、事件或日志。"
