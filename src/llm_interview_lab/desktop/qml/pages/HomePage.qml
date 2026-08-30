@@ -23,7 +23,7 @@ Flickable {
         return ({
             not_started: "尚未开始；打开题目后先完成一次独立实现。",
             in_progress: "答案仍在编辑；下一步运行公开测试并修复失败。",
-            implemented: "实现已验证；下一步完成契约审查与口述答辩。",
+            implemented: "实现已验证；下一步完成自助复盘与口述自答。",
             reviewed: "审查已完成；等待到期的间隔复测。",
             retained_d2: "D+2 已完成；等待 D+7 迁移复测。",
             retained_d7: "D+7 已完成；掌握状态仍由固定规则计算。",

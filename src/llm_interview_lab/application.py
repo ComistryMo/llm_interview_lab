@@ -334,7 +334,7 @@ class ApplicationService:
             if completed:
                 value["state"] = "complete"
             elif not reviewed:
-                value["blocked_reason"] = "先完成契约审查与口述答辩。"
+                value["blocked_reason"] = "先完成自助复盘与口述自答。"
             elif stage == "d7" and problem_id not in state.retained_d2:
                 value["blocked_reason"] = "先通过 D+2 间隔复测。"
             elif problem.retention_variant(self.repo_root, stage) is None:

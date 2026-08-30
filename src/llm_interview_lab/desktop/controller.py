@@ -996,7 +996,7 @@ class AppController(QObject):
                 self._profile_id, self._current_task["problem_id"]
             )
             self.toast.emit(
-                "实现已通过；仍需完成契约审查和口述答辩。"
+                "实现已通过；仍需完成自助复盘和口述自答。"
                 if result["implemented"]
                 else "提交已记录，但当前公开测试尚未通过。"
             )

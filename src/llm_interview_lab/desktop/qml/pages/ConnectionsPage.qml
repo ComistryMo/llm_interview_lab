@@ -23,12 +23,16 @@ Flickable {
             app.clearConnectionError()
         root.advanced = true
         var providers = app.providerOptions || []
-        var providerIndex = 0
+        var providerIndex = -1
         for (var i = 0; i < providers.length; ++i) {
             if (String(providers[i]) === String(item.provider_id || "")) {
                 providerIndex = i
                 break
             }
+        }
+        if (providerIndex < 0) {
+            root.formError = "该连接使用了当前版本不支持的服务，无法安全编辑；请保留原配置或新建受支持的连接。"
+            return
         }
         provider.currentIndex = providerIndex
         // Keep the stable storage id tied to the record being edited.  The
