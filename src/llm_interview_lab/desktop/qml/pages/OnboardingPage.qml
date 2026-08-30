@@ -32,9 +32,16 @@ Rectangle {
         return null
     }
     property string inlineError: ""
+    // Do not show a validation banner merely because the user arrived at the
+    // role step.  The disabled CTA and helper text already explain what is
+    // required; reserve the banner for an actual submit attempt or backend
+    // error so the role list keeps its usable height.
+    property bool roleSelectionAttempted: false
     property bool submitting: false
     property bool profileNameValid: profileName.text.trim().length > 0
-    property string roleSelectionError: root.step >= 1 && !root.selectedRoleCard
+    property string roleSelectionError: root.roleSelectionAttempted
+                                        && root.step >= 1
+                                        && !root.selectedRoleCard
                                         ? (root.rolesAvailable
                                            ? "请选择一个目标岗位后继续。"
                                            : "当前没有可用岗位，请检查课程资源后重试。")
@@ -51,6 +58,7 @@ Rectangle {
 
     function selectRole(roleId) {
         root.selectedRole = String(roleId || "")
+        root.roleSelectionAttempted = false
         root.clearError()
     }
 
@@ -80,6 +88,7 @@ Rectangle {
             return
         }
         if (!root.selectedRoleCard) {
+            root.roleSelectionAttempted = true
             root.inlineError = "请先选择一个目标岗位。"
             return
         }
@@ -107,6 +116,8 @@ Rectangle {
     }
 
     onStepChanged: {
+        if (root.step === 0)
+            root.roleSelectionAttempted = false
         if (root.step === 1) {
             Qt.callLater(function() {
                 root.positionSelectedRole()
@@ -251,16 +262,23 @@ Rectangle {
                         cellHeight: roleCardHeight + 12
                         boundsBehavior: Flickable.StopAtBounds
                         interactive: contentHeight > height
+                        // Keep a scroll gesture from stopping halfway through
+                        // a card, which makes the next role look clipped.
+                        snapMode: GridView.SnapToRow
                         keyNavigationWraps: false
                         onWidthChanged: Qt.callLater(function() { root.positionSelectedRole() })
                         onHeightChanged: Qt.callLater(function() { root.positionSelectedRole() })
                         ScrollBar.vertical: ScrollBar {
+                            // Keep a persistent affordance for the scrollable
+                            // role list; the slimmer thumb avoids obscuring
+                            // card copy at compact widths.
                             policy: ScrollBar.AlwaysOn
+                            width: 5
                             contentItem: Rectangle {
-                                implicitWidth: 7
+                                implicitWidth: 5
                                 radius: 4
                                 color: root.palette.muted
-                                opacity: 0.55
+                                opacity: 0.45
                             }
                         }
 
