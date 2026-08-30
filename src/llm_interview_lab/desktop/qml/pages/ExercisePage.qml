@@ -290,10 +290,14 @@ Item {
                             }
                             onClicked: root.runPrimaryAction()
                         }
-                        StatusPill {
+                        Button {
+                            objectName: "practiceBlockedNextAction"
                             visible: root.primaryActionKind() === "blocked"
-                            text: "已说明原因"
-                            tone: root.palette.warning
+                            text: "返回可做题目"
+                            flat: true
+                            Layout.preferredWidth: 132
+                            Layout.preferredHeight: 40
+                            onClicked: app.navigate("learn")
                         }
                     }
                 }
