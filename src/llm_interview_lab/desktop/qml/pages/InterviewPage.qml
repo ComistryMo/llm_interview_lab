@@ -176,7 +176,7 @@ Item {
             return "人工评估分数"
         if (sources.length > 1)
             return "混合证据分数"
-        return "本场分数"
+        return root.assessmentSourceText(sources[0]) + "评估分数"
     }
 
     function resultSourceNote(result) {
