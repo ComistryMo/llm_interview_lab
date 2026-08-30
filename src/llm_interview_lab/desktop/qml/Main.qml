@@ -181,6 +181,8 @@ ApplicationWindow {
                             radius: 8
                             color: backend.currentPage === modelData.id
                                    ? Qt.rgba(0.145, 0.388, 0.922, 0.13) : "transparent"
+                            border.color: navButton.activeFocus ? window.colors.accent : "transparent"
+                            border.width: navButton.activeFocus ? 2 : 0
                         }
                         contentItem: Text {
                             text: navButton.text
