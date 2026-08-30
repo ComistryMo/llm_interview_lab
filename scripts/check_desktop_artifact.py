@@ -10,6 +10,8 @@ import sys
 import tempfile
 import zipfile
 
+from PySide6.QtGui import QImage
+
 
 FORBIDDEN_REPORT_FRAGMENTS = (
     "workspace/profiles/maintainer",
@@ -22,12 +24,28 @@ FORBIDDEN_REPORT_FRAGMENTS = (
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("executable", type=Path)
+    parser.add_argument("--bundle-root", type=Path)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--archive", type=Path)
     args = parser.parse_args()
     executable = args.executable.resolve()
     if not executable.is_file() or executable.suffix.lower() != ".exe":
         raise SystemExit("desktop executable is missing")
+    bundle_root = (args.bundle_root or executable.parent).resolve()
+    if not bundle_root.is_dir():
+        raise SystemExit("standalone desktop bundle is missing")
+    try:
+        executable.relative_to(bundle_root)
+    except ValueError as error:
+        raise SystemExit("desktop executable must be inside the standalone bundle") from error
+    for relative in (
+        "runtime_assets/curriculum",
+        "runtime_assets/coach",
+        "runtime_assets/workspace/schema",
+        "runtime_assets/workspace/templates",
+    ):
+        if not (bundle_root / relative).exists():
+            raise SystemExit(f"standalone desktop bundle is missing {relative}")
     report = args.report.read_text(encoding="utf-8", errors="replace").lower()
     for fragment in FORBIDDEN_REPORT_FRAGMENTS:
         if fragment.lower() in report:
@@ -35,6 +53,13 @@ def main() -> int:
     if args.archive:
         with zipfile.ZipFile(args.archive) as archive:
             names = [name.replace("\\", "/").lower() for name in archive.namelist()]
+        for required in (
+            "llminterviewlab/llminterviewlab.exe",
+            "llminterviewlab/runtime_assets/curriculum/",
+            "llminterviewlab/runtime_assets/coach/",
+        ):
+            if not any(name == required or name.startswith(required) for name in names):
+                raise SystemExit(f"desktop archive is missing standalone content: {required}")
         for fragment in (
             *FORBIDDEN_REPORT_FRAGMENTS,
             "events.jsonl",
@@ -95,14 +120,14 @@ def main() -> int:
             raise SystemExit(
                 f"desktop event-loop smoke failed: {smoke_cycle.stdout}{smoke_cycle.stderr}"
             )
-        screenshot = root / "home.png"
+        screenshot = root / "onboarding.png"
         smoke = subprocess.run(
             [
                 str(executable),
                 "--screenshot",
                 str(screenshot),
                 "--screenshot-page",
-                "home",
+                "onboarding",
             ],
             check=False,
             capture_output=True,
@@ -111,14 +136,38 @@ def main() -> int:
             env=environment,
             cwd=root,
         )
-        if smoke.returncode or not screenshot.is_file() or screenshot.stat().st_size < 10_000:
+        screenshot_size = screenshot.stat().st_size if screenshot.is_file() else 0
+        image = QImage(str(screenshot)) if screenshot.is_file() else QImage()
+        sampled_colors = {
+            image.pixelColor(x, y).rgba()
+            for x in range(0, image.width(), max(1, image.width() // 8))
+            for y in range(0, image.height(), max(1, image.height() // 8))
+        }
+        screenshot_valid = (
+            not image.isNull()
+            and image.width() >= 1100
+            and image.height() >= 700
+            and len(sampled_colors) >= 2
+        )
+        if smoke.returncode or not screenshot_valid:
             raise SystemExit(
-                "desktop GUI smoke failed: " + smoke.stdout + smoke.stderr
+                "desktop GUI smoke failed: "
+                f"returncode={smoke.returncode} screenshot_bytes={screenshot_size} "
+                f"dimensions={image.width()}x{image.height()} "
+                f"sampled_colors={len(sampled_colors)}\n"
+                + smoke.stdout
+                + smoke.stderr
             )
         profiles = root / "local-app-data/LLMInterviewLab/workspace/profiles"
         if not profiles.is_dir() or any(profiles.iterdir()):
             raise SystemExit("desktop smoke unexpectedly packaged or created a real Profile")
-    print(f"desktop artifact OK: {executable.name}")
+        bootstrap = root / "local-app-data/LLMInterviewLab/logs/bootstrap.log"
+        if not bootstrap.is_file():
+            raise SystemExit("desktop bootstrap log was not created")
+        events = bootstrap.read_text(encoding="utf-8")
+        if '"startup_stage": "first_window"' not in events:
+            raise SystemExit("desktop bootstrap log did not record the first window")
+    print(f"desktop standalone artifact OK: {bundle_root.name}/{executable.name}")
     return 0
 
 

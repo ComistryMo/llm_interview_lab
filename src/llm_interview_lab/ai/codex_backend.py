@@ -98,6 +98,26 @@ class CodexAppServerBackend:
         self._pending: dict[int, asyncio.Future] = {}
         self._events: asyncio.Queue[CodexEvent] = asyncio.Queue()
         self._next_request_id = 1
+        # ``events()`` is consumed by the Controller's transport pump.  A
+        # process EOF must wake that consumer; otherwise it would remain
+        # blocked on ``Queue.get`` while the UI still advertises a live Codex
+        # connection.  Keep the marker private to this transport and let the
+        # async generator turn it into a normal StopAsyncIteration.
+        self._closed_marker_enqueued = False
+
+    def _mark_closed(self, message: str) -> None:
+        """Wake event consumers exactly once when the App Server disappears."""
+
+        if self._closed_marker_enqueued:
+            return
+        self._closed_marker_enqueued = True
+        try:
+            self._events.put_nowait(CodexEvent("transport/closed", {"message": message}))
+        except asyncio.QueueFull:
+            # The queue is unbounded today, but a defensive fallback keeps a
+            # close path from masking the original transport failure if that
+            # implementation detail changes later.
+            pass
 
     def available(self) -> bool:
         return discover_codex_executable(self._configured_executable) is not None
@@ -124,6 +144,14 @@ class CodexAppServerBackend:
             )
         except OSError as error:
             raise CodexBackendError("Codex App Server could not be started") from error
+        # A backend instance is normally one-shot, but resetting the marker
+        # makes an explicit reconnect safe for test/fallback adapters too.
+        while True:
+            try:
+                self._events.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+        self._closed_marker_enqueued = False
         self._reader_task = asyncio.create_task(self._read_loop())
         result = await self.request(
             "initialize",
@@ -173,37 +201,55 @@ class CodexAppServerBackend:
 
     async def _read_loop(self) -> None:
         assert self._process is not None and self._process.stdout is not None
-        while True:
-            line = await self._process.stdout.readline()
-            if not line:
-                error = CodexBackendError("Codex App Server closed its event stream")
-                for future in self._pending.values():
-                    if not future.done():
-                        future.set_exception(error)
-                self._pending.clear()
-                return
-            try:
-                message = json.loads(line.decode("utf-8"))
-            except (UnicodeError, json.JSONDecodeError):
-                await self._events.put(CodexEvent("transport/error", {"message": "invalid App Server JSON"}))
-                continue
-            request_id = message.get("id")
-            if request_id in self._pending and ("result" in message or "error" in message):
-                future = self._pending.pop(request_id)
-                if "error" in message:
-                    value = message["error"]
-                    detail = value.get("message") if isinstance(value, dict) else value
-                    future.set_exception(
-                        CodexBackendError(str(detail or "Codex request failed"))
+        try:
+            while True:
+                line = await self._process.stdout.readline()
+                if not line:
+                    error = CodexBackendError("Codex App Server closed its event stream")
+                    for future in self._pending.values():
+                        if not future.done():
+                            future.set_exception(error)
+                    self._pending.clear()
+                    self._mark_closed(str(error))
+                    # Make the public connection state agree with the EOF.
+                    # ``events`` consumes the marker before returning, while
+                    # callers can still inspect ``_process`` to see that the
+                    # transport is gone.
+                    self._process = None
+                    return
+                try:
+                    message = json.loads(line.decode("utf-8"))
+                except (UnicodeError, json.JSONDecodeError):
+                    await self._events.put(CodexEvent("transport/error", {"message": "invalid App Server JSON"}))
+                    continue
+                request_id = message.get("id")
+                if request_id in self._pending and ("result" in message or "error" in message):
+                    future = self._pending.pop(request_id)
+                    if "error" in message:
+                        value = message["error"]
+                        detail = value.get("message") if isinstance(value, dict) else value
+                        future.set_exception(
+                            CodexBackendError(str(detail or "Codex request failed"))
+                        )
+                    else:
+                        future.set_result(message.get("result", {}))
+                    continue
+                method = message.get("method")
+                if isinstance(method, str):
+                    await self._events.put(
+                        CodexEvent(method, message.get("params") or {}, request_id)
                     )
-                else:
-                    future.set_result(message.get("result", {}))
-                continue
-            method = message.get("method")
-            if isinstance(method, str):
-                await self._events.put(
-                    CodexEvent(method, message.get("params") or {}, request_id)
-                )
+        except asyncio.CancelledError:
+            # ``close`` deliberately cancels the reader.  It still enqueues a
+            # marker there so a concurrent ``events()`` consumer is released.
+            raise
+        except Exception as error:
+            for future in self._pending.values():
+                if not future.done():
+                    future.set_exception(CodexBackendError("Codex App Server transport failed"))
+            self._pending.clear()
+            self._mark_closed(str(error))
+            self._process = None
 
     async def account(self) -> dict[str, Any]:
         return await self.request("account/read", {"refreshToken": False})
@@ -245,11 +291,17 @@ class CodexAppServerBackend:
         await self._send({"id": request_id, "result": {"decision": decision}})
 
     async def events(self) -> AsyncIterator[CodexEvent]:
-        while self._process is not None:
-            yield await self._events.get()
+        while True:
+            if self._process is None and self._events.empty():
+                return
+            event = await self._events.get()
+            if event.method == "transport/closed":
+                return
+            yield event
 
     async def close(self) -> None:
         process, self._process = self._process, None
+        self._mark_closed("Codex App Server connection closed")
         if self._reader_task is not None:
             self._reader_task.cancel()
             try:

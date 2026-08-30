@@ -152,14 +152,40 @@ problems:
     description: "Estimate cache bytes from layers, sequence, dtype, and KV heads."
   - id: INF-003
     title: "Continuous Batching Scheduler"
-    status: planned
+    status: ready
     domain: inference
     tracks: ["systems"]
     tier: advanced
     difficulty: {concept: 4, coding: 5, debugging: 5}
     prerequisites: ["ALG-007","INF-002"]
-    problem_type: implementation
-    description: "Admit prefill and decode work under token and memory budgets."
+    skills: [inference.scheduling, inference.batching, inference.kv_cache, systems.fairness]
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/INF-003-continuous-batching-scheduler}
+    interface: {language: python, framework: stdlib, symbol: ContinuousBatchScheduler}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 5000
+      output_limit_kb: 256
+      memory_limit_mb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: property_only
+        target: deterministic prefill/decode state-machine reference
+        description: "Public contract tests check FIFO admission, round-robin fairness, capacity release, deadlines, and immutable snapshots."
+      oral_questions:
+        - "Why are prefill and decode budgets separate resources?"
+        - "How does a persistent round-robin cursor prevent starvation?"
+        - "What does head-of-line blocking trade for fairness?"
+        - "Which state and capacity must be released on cancel, finish, or expiry?"
+    variant_axes: [queue_length, prompt_length, decode_budget, deadline, cancellation]
+    invariants: [fifo_admission, bounded_active_tokens, fair_decode_order, terminal_release, immutable_snapshot]
+    common_bugs: [head_skipping, decode_new_admission, stale_round_robin_cursor, capacity_leak, deadline_off_by_one]
+    retention:
+      d2: Rebuild the scheduler with a different event representation while preserving FIFO and fairness contracts.
+      d7: Diagnose a serving trace with starvation, leaked capacity, or an expired request decoded after its deadline.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room continuous batching exercise}
   - id: INF-004
     title: "Prefix Cache"
     status: planned
@@ -430,4 +456,3 @@ problems:
     prerequisites: ["GPU-007"]
     problem_type: debugging
     description: "Interpret public profiler traces for launch, memory, and occupancy bottlenecks."
-

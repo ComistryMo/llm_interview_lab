@@ -41,7 +41,7 @@ skills:
     description: Validate Python values and preserve clear input-output contracts.
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [FND-001, FND-002, FND-003]
+    related_problems: [FND-001, FND-002, FND-003, FND-004]
   - id: skill.python_engineering.exceptions
     title: Exceptions and Failure Semantics
     domain: python_engineering
@@ -106,35 +106,35 @@ skills:
     description: Manipulate shapes, broadcasts, gathers and masks correctly.
     levels: *levels
     evidence: [coding, debugging, oral]
-    related_problems: [TNS-002, TNS-003, TNS-006, TNS-010]
+    related_problems: [TNS-002, TNS-003, TNS-006, TNS-010, TNS-011, CAP-LOSS-001, CAP-TRN-001]
   - id: skill.deep_learning.autograd
     title: Autograd and Gradient Flow
     domain: deep_learning
     description: Trace computation graphs, detach boundaries and gradients.
     levels: *levels
     evidence: [coding, debugging, oral]
-    related_problems: [TNS-007, TNS-008, TNS-013]
+    related_problems: [TNS-007, TNS-008, TNS-013, CAP-LOSS-001, CAP-TRN-001]
   - id: skill.deep_learning.neural_layers
     title: Neural Network Layers
     domain: deep_learning
     description: Implement and verify trainable neural primitives.
     levels: *levels
     evidence: [coding, debugging]
-    related_problems: [NNL-001, NNL-002, NNL-008]
+    related_problems: [NNL-001, NNL-002, NNL-008, CAP-LOSS-001, CAP-TRN-001]
   - id: skill.deep_learning.losses
     title: Stable Loss Functions
     domain: deep_learning
     description: Implement objectives with stable numerics and clear reductions.
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [LOSS-007, LOSS-008, LOSS-013, LOSS-014]
+    related_problems: [LOSS-007, LOSS-008, LOSS-013, LOSS-014, CAP-LOSS-001, CAP-TRN-001]
   - id: skill.deep_learning.optimizers
     title: Stateful Optimizers
     domain: deep_learning
     description: Implement stateful parameter updates and resume semantics.
     levels: *levels
     evidence: [coding, debugging, oral]
-    related_problems: [OPT-001, OPT-002, OPT-004, OPT-005]
+    related_problems: [OPT-001, OPT-002, OPT-004, OPT-005, CAP-TRN-001]
 
   - id: skill.llm_vlm.tokenization
     title: Tokenization and Templates
@@ -236,7 +236,7 @@ skills:
     description: Define schemas, validate calls and execute tools safely.
     levels: *levels
     evidence: [coding, debugging, design]
-    related_problems: [AGT-001, AGT-002, AGT-003, AGT-004]
+    related_problems: [AGT-001, AGT-002, AGT-003, AGT-004, AGT-006]
   - id: skill.agent_application.agent_loop
     title: Agent Loop
     domain: agent_application
@@ -351,7 +351,7 @@ skills:
     description: Validate, sample, deduplicate and audit training data.
     levels: *levels
     evidence: [coding, case, debugging]
-    related_problems: [FND-002, FND-012, FND-014]
+    related_problems: [FND-002, FND-004, FND-012, FND-014]
   - id: skill.data_mlops.pipelines
     title: Reproducible Data Pipelines
     domain: data_mlops
@@ -372,7 +372,7 @@ skills:
     description: Control seeds, environments, artifacts and reruns.
     levels: *levels
     evidence: [coding, debugging, project]
-    related_problems: [FND-011, OPT-011]
+    related_problems: [FND-011, OPT-011, CAP-TRN-001]
 
   - id: skill.training_infra.distributed
     title: Distributed Training

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ComistryMo/llm_interview_lab/workspace/schema/coach-sessions.schema.json",
+  "title": "Profile-local resumable Coach sessions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile_id", "sessions"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "sessions": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {"$ref": "#/$defs/session"}
+    }
+  },
+  "$defs": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["references", "hashes"],
+      "properties": {
+        "references": {"type": "array", "maxItems": 100, "items": {"type": "string"}},
+        "hashes": {"type": "object", "additionalProperties": {"type": "string"}}
+      }
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["message_id", "role", "content", "created_at", "metadata"],
+      "properties": {
+        "message_id": {"type": "string", "pattern": "^msg-[a-f0-9]{12,64}$"},
+        "role": {"enum": ["user", "assistant", "system", "tool", "approval", "error"]},
+        "content": {"type": "string", "maxLength": 200000},
+        "created_at": {"type": "string", "format": "date-time"},
+        "metadata": {"type": "object"}
+      }
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_id", "profile_id", "title", "mode", "provider_kind",
+        "provider_id", "model", "problem_id", "status", "created_at",
+        "updated_at", "draft", "context", "messages", "last_turn"
+      ],
+      "properties": {
+        "session_id": {"type": "string", "pattern": "^coach-[a-f0-9]{12,64}$"},
+        "profile_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 200},
+        "mode": {"enum": ["coach", "teacher", "reviewer"]},
+        "provider_kind": {"type": "string", "maxLength": 100},
+        "provider_id": {"type": "string", "maxLength": 100},
+        "model": {"type": "string", "maxLength": 200},
+        "problem_id": {"type": ["string", "null"], "maxLength": 200},
+        "status": {"enum": ["idle", "streaming", "stopped", "error"]},
+        "created_at": {"type": "string", "format": "date-time"},
+        "updated_at": {"type": "string", "format": "date-time"},
+        "draft": {"type": "string", "maxLength": 200000},
+        "context": {"$ref": "#/$defs/context"},
+        "messages": {"type": "array", "maxItems": 400, "items": {"$ref": "#/$defs/message"}},
+        "last_turn": {"type": ["object", "null"]}
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # macOS 使用指南
 
-Alpha.2 提供经过固定 GitHub Apple Silicon Runner 构建、架构检查和离屏启动验证的 macOS arm64 版本。
+Alpha.3 提供经过固定 GitHub Apple Silicon Runner 构建、架构检查和离屏启动验证的 macOS arm64 版本。
 
 ## 系统要求
 
@@ -45,7 +45,7 @@ cat SHA256SUMS.txt
 
 ## 签名与公证
 
-默认 Alpha.2 使用 ad-hoc signing：
+默认 Alpha.3 使用 ad-hoc signing：
 
 - 未使用 Apple Developer ID；
 - 未经过 Apple Notarization；

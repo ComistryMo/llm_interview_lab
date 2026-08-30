@@ -15,7 +15,7 @@
     "schema_version": {"const": 1},
     "interview_id": {"type": "string", "pattern": "^role-interview-[0-9]{4}$"},
     "profile_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
-    "status": {"enum": ["ready", "active", "completed", "incomplete"]},
+    "status": {"enum": ["ready", "active", "paused", "completed", "incomplete"]},
     "created_at": {"type": "string", "format": "date-time"},
     "role_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
     "seniority": {"enum": ["intern", "new_grad", "mid"]},
@@ -47,6 +47,8 @@
     "plan_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "started_at": {"type": ["string", "null"], "format": "date-time"},
     "deadline": {"type": ["string", "null"], "format": "date-time"},
+    "paused_at": {"type": ["string", "null"], "format": "date-time"},
+    "paused_remaining_seconds": {"type": ["integer", "null"], "minimum": 1},
     "answers": {
       "type": "object",
       "additionalProperties": {"$ref": "#/$defs/answer"}
@@ -70,7 +72,7 @@
         "type": "object",
         "required": ["event", "timestamp"],
         "properties": {
-          "event": {"enum": ["created", "started", "answered", "coding_tested", "finished"]},
+          "event": {"enum": ["created", "started", "paused", "resumed", "answered", "coding_tested", "finished"]},
           "timestamp": {"type": "string", "format": "date-time"},
           "question_id": {"type": "string", "pattern": "^q-[0-9]{3}$"}
         },
@@ -160,9 +162,11 @@
       "properties": {
         "scores": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "integer", "minimum": 1, "maximum": 5}},
         "evidence": {"type": "string", "minLength": 1},
-        "source": {"enum": ["human", "ai", "self"]},
+        "source": {"enum": ["human", "ai", "self", "grader"]},
         "confidence": {"enum": ["low", "medium", "high"]},
         "fatal_issues": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "followup_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^f-[0-9]{3}$"}},
+        "answer_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "recorded_at": {"type": "string", "format": "date-time"}
       }
     },

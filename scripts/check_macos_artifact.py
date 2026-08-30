@@ -45,7 +45,7 @@ def main() -> int:
     expected = {
         "CFBundleIdentifier": "io.github.comistrymo.llminterviewlab",
         "CFBundleShortVersionString": "0.4.0",
-        "CFBundleVersion": "2",
+        "CFBundleVersion": "3",
         "LSMinimumSystemVersion": "12.0",
     }
     for key, value in expected.items():

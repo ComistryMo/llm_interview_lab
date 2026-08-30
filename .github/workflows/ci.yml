@@ -5,12 +5,22 @@ on:
     branches: [main, "refactor/**"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      job:
+        description: "Run the full workflow or one release job"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - desktop-windows
 
 permissions:
   contents: read
 
 jobs:
   repository-health:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all'
     name: ${{ matrix.os }} / Python ${{ matrix.python }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 12
@@ -33,6 +43,7 @@ jobs:
       - run: python scripts/validate_external_courses.py
 
   cpu-pytorch-validation:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all'
     name: Ubuntu / Python 3.11 / CPU PyTorch
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -48,6 +59,7 @@ jobs:
       - run: llm-lab doctor
 
   documentation:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all'
     name: 中文文档契约 / Python 3.11
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -61,6 +73,7 @@ jobs:
       - run: python -m pytest tests/infrastructure/test_chinese_docs.py tests/infrastructure/test_training_foundations_readme.py -q
 
   desktop-windows:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all' || inputs.job == 'desktop-windows'
     name: Windows Desktop / Python 3.11
     runs-on: windows-latest
     timeout-minutes: 90
@@ -76,15 +89,15 @@ jobs:
           cache: pip
       - name: Install optional desktop and AI dependencies
         run: python -m pip install -e ".[desktop,ai,dev]"
-      - name: Verify desktop, provider, and interview workflows
+      - name: Verify desktop first-run workflows
         run: >-
           python -m pytest
           tests/infrastructure/test_desktop.py
-          tests/infrastructure/test_ai_connections.py
-          tests/infrastructure/test_application_service.py
-          tests/infrastructure/test_role_interviews.py
+          tests/infrastructure/test_onboarding_completion_hotfix.py
+          tests/infrastructure/test_onboarding_qml_hotfix.py
+          tests/infrastructure/test_windows_startup_hotfix.py
           -q
-      - name: Build Windows executable
+      - name: Build Windows standalone application
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist/desktop | Out-Null
@@ -95,34 +108,34 @@ jobs:
           Copy-Item -LiteralPath scripts/pysidedeploy.spec -Destination dist/pysidedeploy-ci.spec
           python scripts/generate_desktop_icons.py --output dist/icons
           pyside6-deploy -c dist/pysidedeploy-ci.spec -f
-          Copy-Item -LiteralPath dist/desktop/LLMInterviewLab.exe -Destination dist/desktop/LLMInterviewLab-Windows-x64.exe
-      - name: Verify packaged executable and privacy boundary
-        run: >-
-          python scripts/check_desktop_artifact.py
-          dist/desktop/LLMInterviewLab-Windows-x64.exe
-          --report desktop-nuitka-report.xml
-      - name: Assemble portable release
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path dist/release/LLMInterviewLab | Out-Null
-          Copy-Item -LiteralPath dist/desktop/LLMInterviewLab-Windows-x64.exe -Destination dist/release/LLMInterviewLab/
+          # pyside6-deploy names the executable after the input file (main.exe)
+          # inside the title-named .dist directory.  Normalize that generated
+          # name only in the release bundle so the public launch path stays
+          # stable for Explorer users.
+          $executables = @(Get-ChildItem -Path dist/desktop -Recurse -File -Filter *.exe |
+            Where-Object { $_.Directory.Name -eq 'LLMInterviewLab.dist' })
+          if ($executables.Count -ne 1) {
+            throw "Expected one standalone executable in LLMInterviewLab.dist, found $($executables.Count)"
+          }
+          New-Item -ItemType Directory -Force -Path dist/release | Out-Null
+          Copy-Item -LiteralPath $executables[0].Directory.FullName -Destination dist/release/LLMInterviewLab -Recurse
+          $releaseExecutable = Join-Path dist/release/LLMInterviewLab 'LLMInterviewLab.exe'
+          $generatedExecutable = Join-Path dist/release/LLMInterviewLab $executables[0].Name
+          if ($generatedExecutable -ne $releaseExecutable) {
+            Rename-Item -LiteralPath $generatedExecutable -NewName 'LLMInterviewLab.exe'
+          }
           Copy-Item -LiteralPath LICENSE -Destination dist/release/LLMInterviewLab/
           Copy-Item -LiteralPath docs/third-party-notices.md -Destination dist/release/LLMInterviewLab/THIRD_PARTY_NOTICES.md
           Copy-Item -LiteralPath docs/desktop-app.md -Destination dist/release/LLMInterviewLab/README.md
           Compress-Archive -Path dist/release/LLMInterviewLab -DestinationPath dist/release/LLMInterviewLab-Windows-x64-portable.zip
-          $files = @(
-            'dist/desktop/LLMInterviewLab-Windows-x64.exe',
-            'dist/release/LLMInterviewLab-Windows-x64-portable.zip'
-          )
-          $lines = foreach ($file in $files) {
-            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLowerInvariant()
-            "$hash  $([IO.Path]::GetFileName($file))"
-          }
-          Set-Content -LiteralPath dist/release/SHA256SUMS-Windows.txt -Value $lines -Encoding utf8
-      - name: Inspect unpacked portable archive
+          $file = 'dist/release/LLMInterviewLab-Windows-x64-portable.zip'
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLowerInvariant()
+          Set-Content -LiteralPath dist/release/SHA256SUMS-Windows.txt -Value "$hash  $([IO.Path]::GetFileName($file))" -Encoding utf8
+      - name: Verify standalone executable and privacy boundary
         run: >-
           python scripts/check_desktop_artifact.py
-          dist/desktop/LLMInterviewLab-Windows-x64.exe
+          dist/release/LLMInterviewLab/LLMInterviewLab.exe
+          --bundle-root dist/release/LLMInterviewLab
           --report desktop-nuitka-report.xml
           --archive dist/release/LLMInterviewLab-Windows-x64-portable.zip
       - name: Upload Windows portable artifact
@@ -130,12 +143,12 @@ jobs:
         with:
           name: LLMInterviewLab-Windows-x64
           path: |
-            dist/desktop/LLMInterviewLab-Windows-x64.exe
             dist/release/LLMInterviewLab-Windows-x64-portable.zip
             dist/release/SHA256SUMS-Windows.txt
           if-no-files-found: error
 
   desktop-macos-arm64:
+    if: github.event_name != 'workflow_dispatch' || inputs.job == 'all'
     name: macOS 15 arm64 Desktop / Python 3.11
     runs-on: macos-15
     timeout-minutes: 120

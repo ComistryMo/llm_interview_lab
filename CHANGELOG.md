@@ -4,6 +4,18 @@
 
 ## [未发布]
 
+### 新增
+
+- 研究型面经/八股/手撕题知识层：63 张带来源 claims、分层答案和角色筛选的卡片，191 条 URL-unique 公开来源登记；新增 VLM/视频、packing、DAPO/GSPO、RAG、Agent 评测、推理 SLO 卡片和 3 个可运行手撕入口，并保留 `llm-lab knowledge list/search/show/validate` 与 `doctor --knowledge` 校验入口；不改变 Practice Grader、Profile 事件或 mastery 语义。
+
+## [0.4.0-alpha.3] - 2026-08-29
+
+### 修复
+
+- 修复桌面端首次启动、岗位选择、最新答案测试与错误提示的可靠性；
+- 练习页在窄窗口下改用真实的题面与 AI 教练入口，移除无法发送的假聊天控件；
+- 启动诊断日志补充最小运行环境信息，并同步 Alpha.3 版本元数据。
+
 ## [0.4.0-alpha.2] - 2026-08-28
 
 ### 新增
@@ -76,7 +88,8 @@
 
 - Stage 00 训练原型、Python 环境检查、限定 pytest 入口、隐私交接导出和初始开源治理。
 
-[未发布]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.2...HEAD
+[未发布]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.3...HEAD
+[0.4.0-alpha.3]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.2...v0.4.0-alpha.3
 [0.4.0-alpha.2]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.1...v0.4.0-alpha.2
 [0.4.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.3.0-alpha.1...v0.4.0-alpha.1
 [0.3.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.2.0-alpha.2...v0.3.0-alpha.1

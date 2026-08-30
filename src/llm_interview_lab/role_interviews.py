@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -22,7 +23,8 @@ from jsonschema import Draft202012Validator
 from .catalog import Catalog, Problem, compute_problem_fingerprint
 from .grader import GraderResult, run_public_tests
 from .materials import MaterialError, get_material
-from .roles import InterviewItem, RoleCatalog
+from .roles import InterviewItem, RoleCatalog, RoleCatalogError
+from .submissions import SubmissionError, inspect_submission
 from .workspace import (
     WorkspaceError,
     ensure_profile_is_ignored,
@@ -39,7 +41,10 @@ DIFFICULTY_BANDS = {
     "medium": frozenset({2, 3, 4}),
     "hard": frozenset({4, 5}),
 }
-ASSESSOR_SOURCES = frozenset({"human", "ai", "self"})
+# ``grader`` is an objective, deterministic source for coding-round evidence.
+# It is intentionally distinct from human/AI/self judgement so reports and
+# the desktop UI cannot mislabel a public-test result as a subjective score.
+ASSESSOR_SOURCES = frozenset({"human", "ai", "self", "grader"})
 CONFIDENCE_LEVELS = frozenset({"low", "medium", "high"})
 
 
@@ -167,24 +172,188 @@ def _stable_choice(values: tuple[Any, ...], identity: str) -> Any:
     return values[index]
 
 
+def _effective_problem_skills(
+    problem: Problem, role_catalog: RoleCatalog
+) -> frozenset[str]:
+    """Resolve coding skills from the ontology's single reverse index."""
+
+    return frozenset(
+        skill.id
+        for skill in role_catalog.skills.values()
+        if problem.id in skill.related_problems
+    )
+
+
+def _requires_torch(problem: Problem) -> bool:
+    interface = problem.raw.get("interface", {})
+    return isinstance(interface, Mapping) and str(interface.get("framework", "")).lower() == "pytorch"
+
+
 def _coding_candidates(
-    catalog: Catalog, track_ids: tuple[str, ...], difficulty: str
-) -> tuple[Problem, ...]:
+    catalog: Catalog,
+    role_catalog: RoleCatalog,
+    track_ids: tuple[str, ...],
+    difficulty: str,
+    required_skills: tuple[str, ...],
+    *,
+    torch_available: bool,
+) -> tuple[tuple[Problem, tuple[str, ...]], ...]:
     band = DIFFICULTY_BANDS[difficulty]
     tracks = set(track_ids)
+    wanted = set(required_skills)
+    candidates: list[tuple[Problem, tuple[str, ...]]] = []
+    for problem in catalog.problems.values():
+        effective_skills = _effective_problem_skills(problem, role_catalog)
+        matched_skills = tuple(sorted(wanted.intersection(effective_skills)))
+        if (
+            problem.recommendable
+            and not problem.id.startswith("CAP-")
+            and tracks.intersection(problem.raw["tracks"])
+            and problem.raw["difficulty"]["coding"] in band
+            and matched_skills
+            and (torch_available or not _requires_torch(problem))
+        ):
+            candidates.append((problem, matched_skills))
     return tuple(
-        sorted(
-            (
-                problem
-                for problem in catalog.problems.values()
-                if problem.recommendable
-                and not problem.id.startswith("CAP-")
-                and tracks.intersection(problem.raw["tracks"])
-                and problem.raw["difficulty"]["coding"] in band
-            ),
-            key=lambda problem: problem.id,
-        )
+        sorted(candidates, key=lambda candidate: candidate[0].id)
     )
+
+
+def _item_candidates(
+    role_catalog: RoleCatalog,
+    *,
+    role_id: str,
+    seniority: str,
+    round_type: str,
+    difficulty: str,
+    required_skills: tuple[str, ...],
+) -> tuple[tuple[InterviewItem, tuple[str, ...]], ...]:
+    band = DIFFICULTY_BANDS[difficulty]
+    wanted = set(required_skills)
+    candidates: list[tuple[InterviewItem, tuple[str, ...]]] = []
+    for item in role_catalog.items.values():
+        matched_skills = tuple(sorted(wanted.intersection(item.skills)))
+        if (
+            item.status == "ready"
+            and role_id in item.roles
+            and seniority in item.seniority
+            and item.kind == round_type
+            and item.difficulty in band
+            and matched_skills
+        ):
+            candidates.append((item, matched_skills))
+    return tuple(sorted(candidates, key=lambda candidate: candidate[0].id))
+
+
+def interview_preflight(
+    repo_root: Path,
+    catalog: Catalog,
+    role_catalog: RoleCatalog,
+    *,
+    role_id: str,
+    seniority: str,
+    difficulty: str,
+    torch_available: bool | None = None,
+) -> dict[str, Any]:
+    """Return deterministic availability without writing a Profile or session."""
+
+    if difficulty not in DIFFICULTY_BANDS:
+        return {
+            "available": False,
+            "user_message": "面试难度无效，请选择 easy、medium 或 hard。",
+            "missing_rounds": [],
+            "missing_environment": [],
+            "error_code": "DIFFICULTY_INVALID",
+        }
+    try:
+        role = role_catalog.resolve_role(role_id)
+        blueprint = role_catalog.blueprint_for(role.id, seniority)
+    except RoleCatalogError:
+        return {
+            "available": False,
+            "user_message": "当前岗位或求职阶段没有可用的固定面试蓝图。",
+            "missing_rounds": [],
+            "missing_environment": [],
+            "error_code": "BLUEPRINT_UNAVAILABLE",
+        }
+
+    has_torch = (
+        importlib.util.find_spec("torch") is not None
+        if torch_available is None
+        else bool(torch_available)
+    )
+    missing_rounds: list[dict[str, Any]] = []
+    missing_environment: set[str] = set()
+    round_views: list[dict[str, Any]] = []
+    for round_index, round_value in enumerate(blueprint.rounds):
+        if round_value.type == "coding":
+            candidates = _coding_candidates(
+                catalog,
+                role_catalog,
+                role.required_tracks,
+                difficulty,
+                round_value.skills,
+                torch_available=has_torch,
+            )
+            if not has_torch:
+                with_torch = _coding_candidates(
+                    catalog,
+                    role_catalog,
+                    role.required_tracks,
+                    difficulty,
+                    round_value.skills,
+                    torch_available=True,
+                )
+                if with_torch and not candidates:
+                    missing_environment.add("pytorch")
+            candidate_ids = [problem.id for problem, _ in candidates]
+        else:
+            candidates = _item_candidates(
+                role_catalog,
+                role_id=role.id,
+                seniority=seniority,
+                round_type=round_value.type,
+                difficulty=difficulty,
+                required_skills=round_value.skills,
+            )
+            candidate_ids = [item.id for item, _ in candidates]
+        round_view = {
+            "round_index": round_index,
+            "type": round_value.type,
+            "required_items": round_value.item_count,
+            "candidate_ids": candidate_ids,
+            "skills": list(round_value.skills),
+        }
+        round_views.append(round_view)
+        if len(candidate_ids) < round_value.item_count:
+            missing_rounds.append(
+                {
+                    **round_view,
+                    "available_items": len(candidate_ids),
+                    "reason": (
+                        "missing_environment"
+                        if round_value.type == "coding" and "pytorch" in missing_environment
+                        else "no_strict_candidate"
+                    ),
+                }
+            )
+    available = not missing_rounds
+    return {
+        "available": available,
+        "role_id": role.id,
+        "seniority": seniority,
+        "difficulty": difficulty,
+        "blueprint_id": blueprint.id,
+        "user_message": (
+            "当前配置可用。"
+            if available
+            else "当前配置缺少满足岗位、难度与技能要求的固定面试题。"
+        ),
+        "missing_rounds": missing_rounds,
+        "missing_environment": sorted(missing_environment),
+        "rounds": round_views,
+        "error_code": "" if available else "INTERVIEW_UNAVAILABLE",
+    }
 
 
 def _item_question(
@@ -194,6 +363,7 @@ def _item_question(
     round_index: int,
     round_weight: float,
     timebox_minutes: int,
+    skills: tuple[str, ...],
 ) -> dict[str, Any]:
     task = item.task_path.read_bytes()
     loaded_rubric = yaml.safe_load(item.rubric_path.read_text(encoding="utf-8"))
@@ -214,7 +384,7 @@ def _item_question(
         "title": item.title,
         "timebox_minutes": timebox_minutes,
         "round_weight": round_weight,
-        "skills": list(item.skills),
+        "skills": list(skills),
         "source": {
             "kind": "fixed_item",
             "id": item.id,
@@ -244,7 +414,7 @@ def _coding_question(
         "title": f"{problem.id} {problem.title}",
         "timebox_minutes": timebox_minutes,
         "round_weight": round_weight,
-        "skills": list(skills or problem.canonical_skills),
+        "skills": list(skills),
         "source": {
             "kind": "catalog_problem",
             "id": problem.id,
@@ -296,6 +466,18 @@ def create_role_interview(
         raise RoleInterviewError("seed must be a non-negative integer")
     role = role_catalog.resolve_role(role_id)
     blueprint = role_catalog.blueprint_for(role.id, seniority)
+    torch_available = importlib.util.find_spec("torch") is not None
+    availability = interview_preflight(
+        repo_root,
+        catalog,
+        role_catalog,
+        role_id=role.id,
+        seniority=seniority,
+        difficulty=difficulty,
+        torch_available=torch_available,
+    )
+    if not availability["available"]:
+        raise RoleInterviewError(availability["user_message"])
 
     selected_materials = tuple(dict.fromkeys(material_ids))
     if selected_materials and not consent_materials:
@@ -321,7 +503,6 @@ def create_role_interview(
     questions: list[dict[str, Any]] = []
     used_items: set[str] = set()
     used_problems: set[str] = set()
-    coding_pool = _coding_candidates(catalog, role.required_tracks, difficulty)
     number = 1
     for round_index, round_value in enumerate(blueprint.rounds):
         each_timebox = max(1, round_value.duration // round_value.item_count)
@@ -332,8 +513,20 @@ def create_role_interview(
                 f"{round_index}|{item_index}"
             )
             if round_value.type == "coding":
-                available = tuple(p for p in coding_pool if p.id not in used_problems)
-                problem = _stable_choice(available or coding_pool, identity)
+                coding_pool = _coding_candidates(
+                    catalog,
+                    role_catalog,
+                    role.required_tracks,
+                    difficulty,
+                    round_value.skills,
+                    torch_available=torch_available,
+                )
+                available = tuple(
+                    candidate
+                    for candidate in coding_pool
+                    if candidate[0].id not in used_problems
+                )
+                problem, matched_skills = _stable_choice(available, identity)
                 used_problems.add(problem.id)
                 question = _coding_question(
                     repo_root,
@@ -342,26 +535,22 @@ def create_role_interview(
                     round_index=round_index,
                     round_weight=round_value.weight,
                     timebox_minutes=each_timebox,
-                    skills=round_value.skills,
+                    skills=matched_skills,
                 )
             else:
                 pool = tuple(
-                    item
-                    for item in role_catalog.eligible_items(
-                        role.id, seniority, round_value.type, round_value.skills
+                    candidate
+                    for candidate in _item_candidates(
+                        role_catalog,
+                        role_id=role.id,
+                        seniority=seniority,
+                        round_type=round_value.type,
+                        difficulty=difficulty,
+                        required_skills=round_value.skills,
                     )
-                    if item.id not in used_items
-                    and item.difficulty in DIFFICULTY_BANDS[difficulty]
+                    if candidate[0].id not in used_items
                 )
-                if not pool:
-                    pool = tuple(
-                        item
-                        for item in role_catalog.eligible_items(
-                            role.id, seniority, round_value.type, round_value.skills
-                        )
-                        if item.id not in used_items
-                    )
-                item = _stable_choice(pool, identity)
+                item, matched_skills = _stable_choice(pool, identity)
                 used_items.add(item.id)
                 question = _item_question(
                     item,
@@ -369,6 +558,7 @@ def create_role_interview(
                     round_index=round_index,
                     round_weight=round_value.weight,
                     timebox_minutes=each_timebox,
+                    skills=matched_skills,
                 )
             questions.append(question)
             number += 1
@@ -397,6 +587,8 @@ def create_role_interview(
         "plan_fingerprint": "0" * 64,
         "started_at": None,
         "deadline": None,
+        "paused_at": None,
+        "paused_remaining_seconds": None,
         "answers": {},
         "coding_evidence": {},
         "assessments": {},
@@ -437,6 +629,31 @@ def load_role_interview(
     return session
 
 
+def list_role_interviews(
+    repo_root: Path, profile_id: str
+) -> tuple[dict[str, Any], ...]:
+    """List only the explicitly selected Profile's role-interview sessions."""
+
+    paths = profile_paths(repo_root, profile_id)
+    root = ensure_profile_path_is_safe(
+        repo_root, profile_id, paths.interviews_root
+    )
+    if not root.exists():
+        return ()
+    sessions: list[dict[str, Any]] = []
+    for entry in sorted(root.iterdir(), key=lambda item: item.name):
+        name = entry.name
+        if not (
+            name.startswith(ROLE_INTERVIEW_ID_PREFIX)
+            and len(name)
+            == len(ROLE_INTERVIEW_ID_PREFIX) + ROLE_INTERVIEW_ID_WIDTH
+            and name[-ROLE_INTERVIEW_ID_WIDTH:].isdigit()
+        ):
+            continue
+        sessions.append(load_role_interview(repo_root, profile_id, name))
+    return tuple(sessions)
+
+
 def _save(repo_root: Path, profile_id: str, session: dict[str, Any]) -> None:
     root = _session_root(repo_root, profile_id, session["interview_id"])
     _write_session(repo_root, root / "session.json", session)
@@ -472,6 +689,8 @@ def start_role_interview(
     session["deadline"] = _timestamp(
         current + timedelta(minutes=session["duration_minutes"])
     )
+    session["paused_at"] = None
+    session["paused_remaining_seconds"] = None
     session["timeline"].append({"event": "started", "timestamp": _timestamp(current)})
     _save(repo_root, profile_id, session)
     return session
@@ -505,6 +724,48 @@ def _is_complete(session: Mapping[str, Any], question: Mapping[str, Any]) -> boo
     return _has_response(session, question) and question_id in session["assessments"]
 
 
+def _next_role_question(session: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Select the next frozen question without depending on clock state."""
+
+    return next(
+        (value for value in session["questions"] if not _is_complete(session, value)),
+        None,
+    )
+
+
+def role_interview_state(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Return the current frozen question for an active or paused session.
+
+    This is a presentation/recovery view only. Mutation APIs continue to
+    require ``active`` and therefore cannot answer, assess, or grade while
+    the interview is paused.
+    """
+
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    status = session["status"]
+    if status == "paused":
+        remaining = session.get("paused_remaining_seconds")
+        if type(remaining) is not int or remaining <= 0:
+            raise RoleInterviewError("paused role interview has invalid remaining time")
+    elif status == "active":
+        remaining = _remaining_seconds(session, now)
+        if remaining == 0:
+            raise RoleInterviewError("role interview time has expired; finish it as incomplete")
+    else:
+        raise RoleInterviewError("role interview is not active or paused")
+    return {
+        "question": _next_role_question(session),
+        "remaining_seconds": remaining,
+        "status": status,
+    }
+
+
 def current_role_question(
     repo_root: Path,
     profile_id: str,
@@ -515,14 +776,61 @@ def current_role_question(
     session = load_role_interview(repo_root, profile_id, interview_id)
     if session["status"] != "active":
         raise RoleInterviewError("role interview is not active")
-    remaining = _remaining_seconds(session, now)
-    if remaining == 0:
-        raise RoleInterviewError("role interview time has expired; finish it as incomplete")
-    question = next(
-        (value for value in session["questions"] if not _is_complete(session, value)),
-        None,
+    state = role_interview_state(
+        repo_root, profile_id, interview_id, now=now
     )
-    return {"question": question, "remaining_seconds": remaining}
+    return {
+        "question": state["question"],
+        "remaining_seconds": state["remaining_seconds"],
+    }
+
+
+def pause_role_interview(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    if session["status"] != "active":
+        raise RoleInterviewError("only an active role interview can be paused")
+    current = _parse_timestamp(_timestamp(now))
+    remaining = _remaining_seconds(session, current)
+    if remaining <= 0:
+        raise RoleInterviewError("role interview time has expired; finish it as incomplete")
+    paused_at = _timestamp(current)
+    session["status"] = "paused"
+    session["paused_at"] = paused_at
+    session["paused_remaining_seconds"] = remaining
+    session["deadline"] = None
+    session["timeline"].append({"event": "paused", "timestamp": paused_at})
+    _save(repo_root, profile_id, session)
+    return session
+
+
+def resume_role_interview(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    if session["status"] != "paused":
+        raise RoleInterviewError("only a paused role interview can be resumed")
+    remaining = session.get("paused_remaining_seconds")
+    if type(remaining) is not int or remaining <= 0:
+        raise RoleInterviewError("paused role interview has invalid remaining time")
+    current = _parse_timestamp(_timestamp(now))
+    resumed_at = _timestamp(current)
+    session["status"] = "active"
+    session["deadline"] = _timestamp(current + timedelta(seconds=remaining))
+    session["paused_at"] = None
+    session["paused_remaining_seconds"] = None
+    session["timeline"].append({"event": "resumed", "timestamp": resumed_at})
+    _save(repo_root, profile_id, session)
+    return session
 
 
 def record_role_answer(
@@ -561,6 +869,41 @@ def record_role_answer(
     )
     _save(repo_root, profile_id, session)
     return session
+
+
+def role_interview_answer_text(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    question_id: str,
+) -> str:
+    """Read one locked text answer only from its canonical Profile path."""
+
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    record = session.get("answers", {}).get(question_id)
+    if not isinstance(record, Mapping):
+        raise RoleInterviewError("interview answer evidence is missing")
+    try:
+        path = ensure_profile_path_is_safe(
+            repo_root,
+            profile_id,
+            _session_root(repo_root, profile_id, interview_id)
+            / "answers"
+            / f"{question_id}.md",
+            must_exist=True,
+        )
+        expected_relative = path.relative_to(
+            profile_paths(repo_root, profile_id).root
+        ).as_posix()
+        if record.get("relative_path") != expected_relative:
+            raise RoleInterviewError("interview answer path is invalid")
+        content = path.read_bytes()
+        text = content.decode("utf-8").strip()
+    except (OSError, UnicodeError, WorkspaceError) as error:
+        raise RoleInterviewError("interview answer evidence is unavailable") from error
+    if not text or record.get("sha256") != hashlib.sha256(content).hexdigest():
+        raise RoleInterviewError("interview answer evidence failed integrity validation")
+    return text
 
 
 def run_role_coding_test(
@@ -628,6 +971,11 @@ def record_role_followup(
     if not prompt.strip() or not answer.strip() or len(prompt) > 4000 or len(answer) > 20_000:
         raise RoleInterviewError("follow-up prompt or answer is empty or too long")
     session = load_role_interview(repo_root, profile_id, interview_id)
+    if session["status"] != "active":
+        raise RoleInterviewError("follow-up may only be recorded for an active interview")
+    current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
+    if current is None or current["question_id"] != parent_question_id:
+        raise RoleInterviewError("follow-up must belong to the current question")
     if parent_question_id not in session["answers"]:
         raise RoleInterviewError("follow-up requires an answered primary question")
     session["followups"].append(
@@ -644,6 +992,99 @@ def record_role_followup(
     return session
 
 
+def _validated_coding_assessment(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    question: Mapping[str, Any],
+    assessment: Mapping[str, Any],
+    session: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Validate objective coding evidence before it can affect a report.
+
+    The persisted Grader record is keyed by question and by submission SHA.
+    Re-checking the file here closes both common loopholes: a caller cannot
+    submit a subjective score for a coding round, and editing the file after
+    the Grader ran invalidates the score instead of silently reusing it.
+    """
+
+    if assessment.get("source") != "grader":
+        raise RoleInterviewError(
+            "coding assessment must use the local Grader evidence"
+        )
+    question_id = str(question.get("question_id") or "")
+    coding_evidence = (session.get("coding_evidence") or {}).get(question_id)
+    if not isinstance(coding_evidence, Mapping):
+        raise RoleInterviewError("coding assessment requires a recorded Grader result")
+    status = coding_evidence.get("status")
+    # A timeout/import/collection/internal failure is diagnostic evidence, not
+    # a candidate score.  Only a completed assertion run may be recorded.
+    if status not in {"passed", "failed"}:
+        raise RoleInterviewError(
+            "coding assessment requires a completed passed/failed Grader result"
+        )
+    try:
+        submission_root = (
+            _session_root(repo_root, profile_id, interview_id)
+            / "coding"
+            / question_id
+        )
+        submission_path = ensure_profile_path_is_safe(
+            repo_root,
+            profile_id,
+            submission_root / "submission.py",
+            must_exist=True,
+        )
+        current_sha = inspect_submission(submission_path, submission_root).sha256
+    except (OSError, WorkspaceError, SubmissionError) as error:
+        raise RoleInterviewError(
+            "coding submission is unavailable; rerun the local Grader"
+        ) from error
+    tested_sha = str(coding_evidence.get("submission_sha256") or "")
+    if not tested_sha or tested_sha != current_sha:
+        raise RoleInterviewError(
+            "coding submission changed after Grader evidence; rerun the local Grader"
+        )
+    expected_score = 5 if status == "passed" else 1
+    scores = assessment.get("scores")
+    if not isinstance(scores, Mapping) or any(
+        value != expected_score for value in scores.values()
+    ):
+        raise RoleInterviewError(
+            "coding score must match the local Grader result (5=passed, 1=failed)"
+        )
+    return coding_evidence
+
+
+def _validate_answer_assessment_evidence(
+    repo_root: Path,
+    profile_id: str,
+    interview_id: str,
+    question_id: str,
+    assessment: Mapping[str, Any],
+    session: Mapping[str, Any],
+) -> None:
+    """Re-check a locked text answer before reusing its assessment."""
+
+    answer_record = (session.get("answers") or {}).get(question_id)
+    if not isinstance(answer_record, Mapping):
+        raise RoleInterviewError(
+            "answer evidence is missing; the assessment cannot be reused"
+        )
+    try:
+        role_interview_answer_text(repo_root, profile_id, interview_id, question_id)
+    except RoleInterviewError as error:
+        raise RoleInterviewError(
+            "locked answer changed after assessment; the question is now unscored"
+        ) from error
+    recorded_sha = str(answer_record.get("sha256") or "")
+    assessed_sha = str(assessment.get("answer_sha256") or "")
+    if assessed_sha and assessed_sha != recorded_sha:
+        raise RoleInterviewError(
+            "assessment is bound to a different answer revision; the question is now unscored"
+        )
+
+
 def record_role_assessment(
     repo_root: Path,
     profile_id: str,
@@ -656,8 +1097,13 @@ def record_role_assessment(
     confidence: str,
     fatal_issues: Iterable[str] = (),
     now: datetime | None = None,
+    followup_ids: Iterable[str] = (),
 ) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
+    if session["status"] != "active":
+        raise RoleInterviewError("assessment may only be recorded for an active interview")
+    if question_id in session["assessments"]:
+        raise RoleInterviewError("the current question already has recorded assessment evidence")
     if source not in ASSESSOR_SOURCES or confidence not in CONFIDENCE_LEVELS:
         raise RoleInterviewError("assessment source or confidence is invalid")
     question = next(
@@ -666,6 +1112,47 @@ def record_role_assessment(
     )
     if question is None or not _has_response(session, question):
         raise RoleInterviewError("assessment requires completed question evidence")
+    if source == "grader" and question["kind"] != "coding":
+        raise RoleInterviewError(
+            "grader evidence is only valid for coding interview questions"
+        )
+    if question["kind"] == "coding":
+        # A coding round has one deterministic source of truth: the public
+        # Grader result bound to the exact submission revision.  Accepting a
+        # manually supplied ``human``/``ai`` score here would let a failed or
+        # stale implementation become a fabricated high score.
+        coding_evidence = _validated_coding_assessment(
+            repo_root,
+            profile_id,
+            interview_id,
+            question,
+            {
+                "source": source,
+                "scores": scores,
+            },
+            session,
+        )
+        # Store a canonical, machine-bound evidence line.  Caller prose is
+        # not allowed to masquerade as an objective test report.
+        evidence = (
+            "Local Grader objective evidence: "
+            f"status={coding_evidence.get('status')}; "
+            f"passed={coding_evidence.get('passed', 0)}; "
+            f"failed={coding_evidence.get('failed', 0)}; "
+            f"duration_ms={coding_evidence.get('duration_ms', 0)}; "
+            f"submission_sha256={coding_evidence.get('submission_sha256')}"
+        )
+    answer_sha256 = ""
+    if question["kind"] != "coding":
+        role_interview_answer_text(
+            repo_root, profile_id, interview_id, question_id
+        )
+        answer_record = (session.get("answers") or {}).get(question_id)
+        if isinstance(answer_record, Mapping):
+            answer_sha256 = str(answer_record.get("sha256") or "")
+    current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
+    if current is None or current["question_id"] != question_id:
+        raise RoleInterviewError("only the current question may be assessed")
     expected = set(question["rubric"]["dimensions"])
     if set(scores) != expected or any(type(value) is not int or value < 1 or value > 5 for value in scores.values()):
         raise RoleInterviewError("assessment must score every rubric dimension from 1 to 5")
@@ -675,7 +1162,22 @@ def record_role_assessment(
     unknown = set(declared_fatal) - set(question["rubric"]["fatal_issues"])
     if unknown:
         raise RoleInterviewError("assessment contains an unknown fatal issue")
-    session["assessments"][question_id] = {
+    linked_followups = tuple(dict.fromkeys(followup_ids))
+    followup_by_id = {}
+    for item in session.get("followups", []):
+        if not isinstance(item, Mapping):
+            continue
+        followup_id = item.get("followup_id")
+        parent_question_id = item.get("parent_question_id")
+        if followup_id and parent_question_id:
+            followup_by_id[followup_id] = item
+    if any(
+        followup_id not in followup_by_id
+        or followup_by_id[followup_id]["parent_question_id"] != question_id
+        for followup_id in linked_followups
+    ):
+        raise RoleInterviewError("assessment follow-up link does not belong to this question")
+    assessment = {
         "scores": dict(scores),
         "evidence": evidence.strip(),
         "source": source,
@@ -683,6 +1185,13 @@ def record_role_assessment(
         "fatal_issues": list(declared_fatal),
         "recorded_at": _timestamp(now),
     }
+    # Keep the persisted shape of legacy assessments unchanged when there is
+    # no follow-up.  The optional field is emitted only when it carries data.
+    if linked_followups:
+        assessment["followup_ids"] = list(linked_followups)
+    if answer_sha256:
+        assessment["answer_sha256"] = answer_sha256
+    session["assessments"][question_id] = assessment
     _save(repo_root, profile_id, session)
     return session
 
@@ -708,13 +1217,20 @@ def finish_role_interview(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
-    if session["status"] != "active":
-        raise RoleInterviewError("only an active role interview can be finished")
+    paused = session["status"] == "paused"
+    if session["status"] not in {"active", "paused"}:
+        raise RoleInterviewError("only an active or paused role interview can be finished")
+    if paused and not confirm_incomplete:
+        raise RoleInterviewError("paused interview requires explicit incomplete confirmation")
     unanswered = [
         q["question_id"] for q in session["questions"] if not _has_response(session, q)
     ]
-    unscored = [q["question_id"] for q in session["questions"] if q["question_id"] not in session["assessments"]]
-    expired = _remaining_seconds(session, now) == 0
+    unscored = [
+        q["question_id"]
+        for q in session["questions"]
+        if _has_response(session, q) and q["question_id"] not in session["assessments"]
+    ]
+    expired = (not paused) and _remaining_seconds(session, now) == 0
     if (unanswered or unscored) and not (confirm_incomplete or expired):
         raise RoleInterviewError("interview evidence is incomplete; use explicit incomplete confirmation")
 
@@ -727,6 +1243,24 @@ def finish_role_interview(
         assessment = session["assessments"].get(question_id)
         if assessment is None:
             continue
+        if question["kind"] == "coding":
+            _validated_coding_assessment(
+                repo_root,
+                profile_id,
+                interview_id,
+                question,
+                assessment,
+                session,
+            )
+        else:
+            _validate_answer_assessment_evidence(
+                repo_root,
+                profile_id,
+                interview_id,
+                question_id,
+                assessment,
+                session,
+            )
         score = _question_score(question, assessment)
         question_scores[question_id] = score
         weight = float(question["round_weight"])
@@ -734,7 +1268,7 @@ def finish_role_interview(
         completed_weight += weight
         for skill_id in question["skills"]:
             skill_values.setdefault(skill_id, []).append((score, question_id))
-    completed = not unanswered and not unscored
+    completed = not paused and not unanswered and not unscored
     # Missing rounds contribute zero; partial evidence is never re-normalized.
     overall = round(weighted_total, 1)
     skill_scores = {
@@ -770,13 +1304,31 @@ def finish_role_interview(
 def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, Any]) -> None:
     root = _session_root(repo_root, profile_id, session["interview_id"])
     result = session["result"]
+    assessments = session.get("assessments", {})
+    score_scope = (
+        "unscored"
+        if not assessments
+        else "complete"
+        if result["completion_status"] == "completed"
+        else "partial"
+    )
+    if score_scope == "unscored":
+        overall_line = "- Overall score: **unscored** (no assessment evidence)"
+    elif score_scope == "complete":
+        overall_line = f"- Overall score: **{result['overall_score']:.1f}/100**"
+    else:
+        overall_line = (
+            f"- Partial evidence score: **{result['overall_score']:.1f}/100** "
+            "(missing rounds count as zero; not a complete interview score)"
+        )
     lines = [
         f"# {session['interview_id']} — {session['role_id']}",
         "",
         f"- Status: **{result['completion_status']}**",
         f"- Seniority: `{session['seniority']}`",
-        f"- Difficulty: `{session['difficulty']}`",
-        f"- Overall score: **{result['overall_score']:.1f}/100**",
+        f"- Blueprint: `{session['blueprint_id']}`",
+        f"- Difficulty band: `{session['difficulty']}`",
+        overall_line,
         "- Practice mastery: **unchanged**",
         "",
         "## Evidence-backed question scores",
@@ -785,10 +1337,47 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
     for question in session["questions"]:
         question_id = question["question_id"]
         score = result["question_scores"].get(question_id)
-        lines.append(
-            f"- {question_id} {question['title']}: "
-            + (f"{score:.1f}" if score is not None else "unscored")
+        assessment = assessments.get(question_id)
+        if assessment is None:
+            lines.append(f"- {question_id} {question['title']}: unscored")
+            continue
+        lines.extend(
+            [
+                f"### {question_id} {question['title']} — {score:.1f}/100",
+                "",
+                f"- **Source:** `{assessment['source']}`",
+                f"- **Confidence:** `{assessment['confidence']}`",
+                f"- **Evidence:** {assessment['evidence']}",
+                *(
+                    [f"- **Follow-ups:** {', '.join(assessment['followup_ids'])}"]
+                    if assessment.get("followup_ids")
+                    else []
+                ),
+                f"- **Recorded at:** `{assessment['recorded_at']}`",
+                "",
+            ]
         )
+    followups = session.get("followups", ())
+    if followups:
+        lines.extend(["", "## Follow-up records", ""])
+        question_titles = {
+            question["question_id"]: question["title"]
+            for question in session["questions"]
+        }
+        for followup in followups:
+            parent_id = followup["parent_question_id"]
+            parent_title = question_titles.get(parent_id, parent_id)
+            lines.extend(
+                [
+                    f"### {followup['followup_id']} — {parent_id} {parent_title}",
+                    "",
+                    f"- **Prompt:** {followup['prompt']}",
+                    f"- **Answer:** {followup['answer']}",
+                    f"- **Source:** `{followup['source']}`",
+                    f"- **Recorded at:** `{followup['recorded_at']}`",
+                    "",
+                ]
+            )
     lines.extend(["", "## Skill scorecard", ""])
     for skill_id, value in result["skill_scores"].items():
         lines.append(
@@ -807,9 +1396,25 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
         ]
     )
     _atomic_write(root / "report.md", "\n".join(lines).encode("utf-8"))
+    assessment_evidence = [
+        {
+            "question_id": question["question_id"],
+            "title": question["title"],
+            **assessments[question["question_id"]],
+            "score": result["question_scores"].get(question["question_id"]),
+        }
+        for question in session["questions"]
+        if question["question_id"] in assessments
+    ]
+    report_payload = {
+        **result,
+        "score_scope": score_scope,
+        "assessment_evidence": assessment_evidence,
+        "followups": list(followups),
+    }
     _atomic_write(
         root / "report.json",
-        (json.dumps(result, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
+        (json.dumps(report_payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
     )
 
 

@@ -56,19 +56,18 @@ LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）�
 
 ## 下载与三分钟开始
 
-当前版本是 **v0.4.0-alpha.2**。桌面版适合普通用户；源码安装适合开发者、贡献者和需要完整 PyTorch 环境的用户。
+当前版本是 **v0.4.0-alpha.3**。桌面版适合普通用户；源码安装适合开发者、贡献者和需要完整 PyTorch 环境的用户。
 
 | 你使用的环境 | 推荐方式 |
 |---|---|
-| Windows 10 / 11 x64 | 下载 `LLMInterviewLab-Windows-x64-portable.zip` |
-| 只需要单文件 Windows 版本 | 下载 `LLMInterviewLab-Windows-x64.exe` |
+| Windows 10 / 11 x64 | 下载 `LLMInterviewLab-Windows-x64-portable.zip`，完整解压后运行 `LLMInterviewLab/LLMInterviewLab.exe` |
 | Apple Silicon Mac（M1 及更新） | 下载 `LLMInterviewLab-macOS-arm64.dmg` |
 | 需要直接解压验证的 Apple Silicon Mac | 下载 `LLMInterviewLab-macOS-arm64.app.zip` |
-| Intel Mac | Alpha.2 暂不提供未经真实运行验证的 x86_64 包 |
+| Intel Mac | Alpha.3 暂不提供未经真实运行验证的 x86_64 包 |
 | 开发者或贡献者 | 源码安装 |
 | 不希望连接 AI | 首次启动选择“暂不连接 AI” |
 
-[前往 v0.4.0-alpha.2 下载页](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.2)
+[前往 v0.4.0-alpha.3 下载页](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3)
 
 下载后只需：
 
@@ -76,7 +75,7 @@ LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）�
 打开应用
 → 创建学习档案
 → 选择目标岗位
-→ 选择是否连接 AI（默认不连接）
+→ 直接开始（默认使用 No-AI；AI 可稍后在设置中连接）
 → 点击“开始训练”
 ```
 
@@ -138,16 +137,20 @@ llm-lab quickstart
 
 ## GUI 使用流程
 
-首次启动最多四步：创建学习档案、选择岗位、可跳过的能力自评、选择 AI。默认选择 **暂不连接 AI**。
+首次启动只需两步：创建学习档案、选择岗位。应用随后直接以 **No-AI** 模式进入训练；能力自评、求职阶段和 AI 连接都可以在设置或后续面试前再补充。
 
-![四步首次启动](docs/images/desktop-onboarding.png)
+![两步首次启动](docs/images/desktop-onboarding.png)
 
 首页只突出两个动作：**继续训练** 与 **开始模拟面试**。完整课程、技能和连接配置不会挤在首页。
 
 <details>
 <summary>查看答题、面试和 AI 连接界面</summary>
 
-答题工作区把题面、答案、公开测试、审查、间隔复测和可折叠 AI 教练放在一起。AI 不会静默修改编辑器内容。
+训练页只保留真实有效的“推荐 / 全部可做 / 实验性 / 搜索”，并在进入题目前显示当前环境是否可运行。
+
+![课程筛选](docs/images/desktop-learn.png)
+
+答题工作区把题面、答案、公开测试、审查和间隔复测放在一起；AI 教练通过独立页面入口打开，不会静默修改编辑器内容。
 
 ![答题工作区](docs/images/desktop-exercise.png)
 
@@ -206,6 +209,26 @@ llm-lab graph --quest tensor_and_autograd
 
 面试分数不会改变刷题训练、间隔复测或 `mastered`。项目不会生成虚假的 Offer 概率。
 更多说明见[结构化模拟面试](docs/interviews.md)。
+
+### 面经、八股与手撕题知识库
+
+项目还提供一个独立、只读的研究型知识层：`eight_stock` 是带公式/shape/排障追问的八股卡，`experience_pattern` 是注明范围和置信度的面经模式，`coding_prompt` 是原创手撕题契约。它们不改变固定题库、Grader 或掌握事件；手撕卡通过 `related_problems` 指向 Catalog 题目（已就绪题可直接运行，规划题会明确保留为后续练习入口）。
+
+```bash
+# 按优先级浏览（默认只列摘要）
+llm-lab knowledge list --kind eight_stock --priority P0 --limit 20
+# 搜索中文或英文关键词；所有词都必须命中
+llm-lab knowledge search "GRPO reward" --track post_training
+# 查看完整答案层、手撕契约和来源记录
+llm-lab knowledge show COD-PT-001
+# 发布前验证 schema、来源和题库关联
+llm-lab knowledge validate --with-catalog
+llm-lab doctor --knowledge
+```
+
+内容采用 clean-room 链接+改写政策：论文/官方文档负责核验算法和 API，公开面经只作为带范围的题型信号，不复制原帖题面、答案、代码或个人信息。来源登记见 [`references/interview-sources.json`](references/interview-sources.json)，研究与刷新规则见 [`docs/interview-content-research.md`](docs/interview-content-research.md)。
+
+本轮深度研究附录按方向拆分：[`VLM/多模态`](docs/research/vlm_interview_deep_dive.md)、[`后训练/RL`](docs/research/post_training_deep_dive.md)、[`Agent/RAG/推理服务`](docs/research/agent_inference_deep_dive.md)。附录是可复核底稿，卡片是可检索摘要；易变 API 和 benchmark 仍以检索日、版本和来源定位为准。
 
 开发者也可以直接使用同一套本地 CLI（不需要连接 AI）：
 
@@ -304,19 +327,19 @@ Do not mark a problem as mastered yourself.
 
 ## 项目状态
 
-截至 **v0.4.0-alpha.2**，数字由当前 Catalog 与公共模型核对：
+截至 **v0.4.0-alpha.3**，数字由当前 Catalog 与公共模型核对：
 
 | 指标 | 当前状态 |
 |---|---:|
-| Ready Problems | 41 |
-| Planned Problems | 188 |
-| Oracle-validated Problems | 32 |
+| Ready Problems | 45 |
+| Planned Problems | 184 |
+| Oracle-validated Problems | 33 |
 | Retention-ready Problems | 24 |
 | Field-tested runs | 0 |
 | Canonical Skills | 70 |
 | Role Profiles | 8 |
 | Interview Blueprints | 24 |
-| Fixed non-coding interview Items | 24 |
+| Fixed non-coding interview Items | 26 |
 
 这是 **Alpha**，不是 Beta 或 Stable。Windows 与 macOS 桌面、真实 Provider 和跨岗位面试内容仍需要真实用户验证；当前 field runs 诚实保持 0。
 `ready` 不自动等于完成数值 Oracle 验证，公开测试也不是隐藏的防作弊测试。
@@ -337,7 +360,7 @@ Do not mark a problem as mastered yourself.
 
 ### macOS 为什么会显示 Gatekeeper 提示？
 
-Alpha.2 默认是 ad-hoc 签名、未使用 Apple Developer ID 且未经过 Notarization 的测试构建。请先核对 `SHA256SUMS.txt`，再从系统“隐私与安全”页面确认打开。不要运行校验值不一致的文件。
+Alpha.3 默认是 ad-hoc 签名、未使用 Apple Developer ID 且未经过 Notarization 的测试构建。请先核对 `SHA256SUMS.txt`，再从系统“隐私与安全”页面确认打开。不要运行校验值不一致的文件。
 
 ### Intel Mac 可以用吗？
 

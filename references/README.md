@@ -3,6 +3,7 @@
 本目录只保存外部来源的机器可读登记，不镜像第三方内容。
 
 - `registry.json`：固定 revision、审计日期、许可证状态、可复核审计方法、范围、设计影响和明确排除项；
+- [`interview-sources.json`](./interview-sources.json)：VLM/多模态、后训练、Agent、推理与评测的官方 JD、论文/文档和公开面经登记（检索日 2026-08-30）。记录 URL、日期、可靠性、使用范围、版权风险和规范化主题；面经仅作题型信号，遵守 clean-room 链接+摘要边界，不复制题面、答案、代码或测试；
 - 原生题目来源规则见 [课程编写规范](../docs/curriculum-authoring.md)；
 - 外部课程边界见 [外部课程包说明](../docs/EXTERNAL_COURSE_PACKS.md)。
 

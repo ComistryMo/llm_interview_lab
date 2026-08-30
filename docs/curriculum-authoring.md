@@ -61,6 +61,15 @@ Runner 是执行方式，例如 pytest；Oracle 是正确性依据，二者不�
 
 优先原始论文、官方文档和官方源码。可以借鉴公开定义与通用算法名，但题面、starter、测试、提示和 Rubric 必须 clean-room 原创。不得复制付费平台或许可证不明内容。
 
+面经、八股和手撕题的研究型卡片使用独立的
+[`curriculum/schema/knowledge.schema.json`](../curriculum/schema/knowledge.schema.json)
+与 [`curriculum/interviews/knowledge.yaml`](../curriculum/interviews/knowledge.yaml)。
+`eight_stock` 卡必须把关键事实拆成带来源的 claims；`experience_pattern` 只
+记录有范围/置信度的公开报告模式；`coding_prompt` 只定义原创
+input/output/constraints、测试重点和边界；已就绪题目的可运行答案仍由 Catalog
+题目资产管理，规划题只作为显式的后续入口。用 `llm-lab knowledge validate --with-catalog` 检查来源和题库
+关联，不能把匿名面经当作算法定义或必考统计。
+
 ## PR 最小清单
 
 1. Catalog 节点或合法元数据更新；

@@ -8,23 +8,57 @@ Flickable {
     id: root
     required property var app
     required property var palette
+    property bool compactLayout: width < 780
+    property bool refreshRequested: false
     contentWidth: width
     contentHeight: content.implicitHeight + 60
     clip: true
+    ScrollBar.vertical: ScrollBar {
+        width: 6
+        policy: ScrollBar.AlwaysOn
+        visible: root.contentHeight > root.height
+        contentItem: Rectangle {
+            implicitWidth: 5
+            radius: 3
+            color: root.palette.muted
+            opacity: 0.45
+        }
+    }
 
     ColumnLayout {
         id: content
-        x: 30; y: 28; width: parent.width - 60; spacing: 16
+        x: root.compactLayout ? 18 : 30
+        y: root.compactLayout ? 18 : 28
+        width: parent.width - (root.compactLayout ? 36 : 60)
+        spacing: root.compactLayout ? 12 : 16
 
-        Text { text: "设置"; color: root.palette.text; font.pixelSize: 24; font.bold: true }
-        Text { text: "调整显示、查看本地数据，并在 Finder 启动无法继承 PATH 时指定 Codex。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+        // Main.qml owns the route title; keep the page body focused on the
+        // settings context instead of repeating the same large heading.
+        Text {
+            objectName: "settingsRouteContext"
+            text: "本地设置与连接"
+            color: root.palette.text
+            font.pixelSize: 16
+            font.bold: true
+        }
+        Text {
+            text: Qt.platform.os === "osx"
+                  ? "调整显示、查看本地数据，并在 Finder 启动无法继承 PATH 时指定 Codex。"
+                  : Qt.platform.os === "windows"
+                    ? "调整显示、查看本地数据，并在 Windows 无法自动找到 Codex 时指定可执行文件。"
+                    : "调整显示、查看本地数据，并在应用无法从 PATH 找到 Codex 时指定可执行文件。"
+            color: root.palette.muted
+            wrapMode: Text.Wrap
+            Layout.fillWidth: true
+        }
 
         LabCard {
-            Layout.fillWidth: true; Layout.preferredHeight: 205
+            Layout.fillWidth: true
             cardColor: root.palette.surface; borderColor: root.palette.border
             Text { text: "外观"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
-            RowLayout {
+            Flow {
                 width: parent.width
+                spacing: 8
                 Repeater {
                     model: [{id:"system", label:"跟随系统"}, {id:"light", label:"浅色"}, {id:"dark", label:"深色"}]
                     delegate: Button {
@@ -45,39 +79,70 @@ Flickable {
         }
 
         LabCard {
-            Layout.fillWidth: true; Layout.preferredHeight: 230
+            Layout.fillWidth: true
             cardColor: root.palette.surface; borderColor: root.palette.border
             Text { text: "本地数据"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
             Text { width: parent.width; text: "学习档案、答案和面试记录默认只保存在本机。应用不提供遥测、账号或云同步。"; color: root.palette.muted; wrapMode: Text.Wrap }
             Text { width: parent.width; text: "数据目录：" + app.dataDirectory; color: root.palette.text; elide: Text.ElideMiddle; font.pixelSize: 12 }
             Text { width: parent.width; text: "日志目录：" + app.logDirectory; color: root.palette.text; elide: Text.ElideMiddle; font.pixelSize: 12 }
-            RowLayout {
+            Flow {
+                width: parent.width
+                spacing: 8
                 Button { text: "打开数据目录"; onClicked: app.openDataDirectory() }
                 Button { text: "打开日志目录"; onClicked: app.openLogDirectory() }
-                Button { text: "刷新本地状态"; onClicked: app.refresh() }
+                Button {
+                    objectName: "refreshLocalState"
+                    text: "刷新本地状态"
+                    onClicked: {
+                        if (app.submissionDirty || app.coachStreaming || app.busy) {
+                            refreshWarningDialog.open()
+                        } else {
+                            app.refresh()
+                        }
+                    }
+                }
             }
         }
 
         LabCard {
-            Layout.fillWidth: true; Layout.preferredHeight: 190
+            Layout.fillWidth: true
             cardColor: root.palette.surface; borderColor: root.palette.border
             Text { text: "Codex 可执行文件"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
-            Text { width: parent.width; text: app.codexExecutable || "自动查找（PATH、Homebrew 和常见用户目录）"; color: root.palette.muted; elide: Text.ElideMiddle }
-            RowLayout {
+            Text {
+                width: parent.width
+                text: app.codexExecutable || (Qt.platform.os === "osx"
+                      ? "自动查找（PATH、Homebrew 和常见用户目录）"
+                      : Qt.platform.os === "windows"
+                        ? "自动查找（PATH、npm 和常见用户目录）"
+                        : "自动查找（PATH 和常见用户目录）")
+                color: root.palette.muted
+                elide: Text.ElideMiddle
+            }
+            Flow {
+                width: parent.width
+                spacing: 8
                 Button { text: "选择 Codex"; onClicked: codexPicker.open() }
-                Button { text: "恢复自动查找"; enabled: !!app.codexExecutable; onClicked: app.clearCodexExecutable() }
+                // Keep this action available even on a fresh install.  The
+                // controller clears a stale manual path and starts the same
+                // asynchronous discovery used at launch, so a missing Codex
+                // is a retryable state rather than a dead control.
+                Button {
+                    objectName: "restoreCodexAutoDiscovery"
+                    text: app.codexExecutable ? "恢复自动查找" : "重新自动查找"
+                    onClicked: app.clearCodexExecutable()
+                }
             }
             Text { width: parent.width; text: "未检测到 Codex 不会影响本地训练或普通 LLM API。"; color: root.palette.muted; wrapMode: Text.Wrap }
         }
 
         LabCard {
-            Layout.fillWidth: true; Layout.preferredHeight: 130
+            Layout.fillWidth: true
             cardColor: root.palette.surface; borderColor: root.palette.border
             Text { text: "安全边界"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
             Text { width: parent.width; text: "本地 Grader 只用于运行你本人信任的代码，不是恶意代码安全沙箱。连接远程 AI 前请核对上下文预览。"; color: root.palette.muted; wrapMode: Text.Wrap }
         }
 
-        Text { text: "LLM Interview Lab v0.4.0-alpha.2 · 中文优先桌面体验"; color: root.palette.muted; font.pixelSize: 12 }
+        Text { text: "LLM Interview Lab v" + Qt.application.version + " · 中文优先桌面体验"; color: root.palette.muted; font.pixelSize: 12 }
     }
 
     FileDialog {
@@ -88,12 +153,53 @@ Flickable {
     }
 
     Dialog {
+        id: refreshWarningDialog
+        objectName: "refreshDirtyDraftDialog"
+        modal: true
+        anchors.centerIn: parent
+        width: Math.min(460, root.width - 48)
+        implicitHeight: 220
+        height: implicitHeight
+        title: "丢弃未保存编辑并刷新？"
+        standardButtons: Dialog.Cancel | Dialog.Ok
+        onAccepted: {
+            app.refresh()
+            refreshRequested = false
+        }
+        contentItem: ColumnLayout {
+            spacing: 8
+            Text {
+                Layout.fillWidth: true
+                text: (app.submissionDirty
+                       ? "当前题目有未保存的编辑。"
+                       : "")
+                      + (app.coachStreaming
+                         ? " Coach 正在生成回答。"
+                         : "")
+                      + (app.busy && !app.coachStreaming
+                         ? " 本地操作正在进行。"
+                         : "")
+                      + "刷新会重新读取磁盘快照，并停止未完成的本地操作；未保存内容可能丢失。请先保存或等待完成，或确认继续刷新。"
+                color: root.palette.text
+                wrapMode: Text.Wrap
+            }
+            Text {
+                Layout.fillWidth: true
+                text: "刷新不会修改课程或其他 Profile。"
+                color: root.palette.muted
+                font.pixelSize: 12
+                wrapMode: Text.Wrap
+            }
+        }
+    }
+
+    Dialog {
         id: migrationDialog
         visible: app.legacyMigrationAvailable
         modal: true
         title: "发现旧版桌面数据"
         anchors.centerIn: parent
-        width: 560
+        width: Math.min(560, root.width - 48)
         standardButtons: Dialog.NoButton
         contentItem: ColumnLayout {
             spacing: 14

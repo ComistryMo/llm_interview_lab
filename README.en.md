@@ -2,7 +2,7 @@
 
 [简体中文（规范版本）](README.md) | English
 
-> This is the English translation for v0.4.0-alpha.2. The Chinese documentation is canonical when wording differs.
+> This is the English translation for v0.4.0-alpha.3. The Chinese documentation is canonical when wording differs.
 
 A local-first, role-aware, AI-assisted interview workbench. It combines role skill maps, structured mock interviews, tested coding exercises, oral review, and spaced retention so that “I understand it” can become “I can implement and explain it independently.”
 
@@ -31,7 +31,7 @@ This is not a random question list, a one-pass mastery badge, or a way for AI to
 
 ## Download
 
-Release: [v0.4.0-alpha.2](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.2)
+Release: [v0.4.0-alpha.3](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3)
 
 | User | Artifact |
 |---|---|
@@ -39,7 +39,7 @@ Release: [v0.4.0-alpha.2](https://github.com/ComistryMo/llm_interview_lab/releas
 | Windows single file | `LLMInterviewLab-Windows-x64.exe` |
 | Apple Silicon Mac, macOS 12+ | `LLMInterviewLab-macOS-arm64.dmg` |
 | Apple Silicon automation/direct extraction | `LLMInterviewLab-macOS-arm64.app.zip` |
-| Intel Mac | No verified Alpha.2 artifact |
+| Intel Mac | No verified Alpha.3 artifact |
 | Developer or contributor | Source installation below |
 
 The macOS Alpha is ad-hoc signed, not signed with an Apple Developer ID, and not notarized. Verify `SHA256SUMS.txt`; see the canonical [macOS guide](docs/macos.md). The Windows Alpha is also unsigned; see the [Windows guide](docs/windows.md).
@@ -90,6 +90,30 @@ flowchart LR
 
 **Public tests passed does not mean mastered.** AI cannot create objective test results or grant mastery. Mock-interview scores remain separate from Practice evidence.
 
+### Research-backed interview knowledge
+
+The repository also ships a read-only knowledge layer. `eight_stock` cards
+contain equations, shapes, debugging prompts, and follow-ups;
+`experience_pattern` cards are scoped, confidence-labelled observations from
+public reports; and `coding_prompt` cards are original implementation
+contracts linked to Catalog problems (ready problems are runnable, while
+planned links are explicit future-practice pointers). They do not change the Grader,
+Practice events, or mastery state.
+
+```bash
+llm-lab knowledge list --kind eight_stock --priority P0 --limit 20
+llm-lab knowledge search "GRPO reward" --track post_training
+llm-lab knowledge show COD-PT-001
+llm-lab knowledge validate --with-catalog
+llm-lab doctor --knowledge
+```
+
+The bundle follows a clean-room link-and-paraphrase policy: papers and
+official documentation support technical claims, while public interview
+reports provide scoped question-pattern signals only. See the
+[source registry](references/interview-sources.json) and
+[research/refresh policy](docs/interview-content-research.md).
+
 ## Optional AI connections
 
 Choose one of three modes:
@@ -110,7 +134,7 @@ Only fields selected in Context Preview are sent. API keys are stored in Windows
 
 ## Status
 
-As of v0.4.0-alpha.2: **41 Ready**, **188 Planned**, **32 Oracle-validated**, **24 Retention-ready**, **0 Field-tested runs**, **70 skills**, **8 roles**, **24 interview blueprints**, and **24 fixed non-coding interview items**.
+As of v0.4.0-alpha.3: **45 Ready**, **184 Planned**, **33 Oracle-validated**, **24 Retention-ready**, **0 Field-tested runs**, **70 skills**, **8 roles**, **24 interview blueprints**, and **26 fixed non-coding interview items**.
 
 This is an Alpha. The Windows and macOS packages have automated build/smoke validation, but no real Field Run is claimed. Provider behavior varies by upstream service, and Apple Developer ID signing/notarization is not yet configured.
 

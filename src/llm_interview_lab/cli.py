@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
+from datetime import date, datetime
 import json
 import os
 from pathlib import Path
 import stat
 import subprocess
 import sys
-from typing import Sequence
+from typing import Any, Mapping, Sequence
 
 import yaml
 
@@ -54,6 +54,7 @@ from .interviews import (
     run_coding_test,
     start_interview,
 )
+from .knowledge import KnowledgeCard, KnowledgeCatalog, KnowledgeError, load_knowledge
 from .materials import MATERIAL_KINDS, MaterialError, add_material, get_material, list_materials
 from .role_interviews import RoleInterviewError
 from .roles import RoleCatalogError, load_role_catalog
@@ -138,8 +139,321 @@ def _difficulty_label(problem: Problem) -> str:
     )
 
 
-def _doctor(repo_root: Path) -> int:
+KNOWLEDGE_KINDS = ("eight_stock", "experience_pattern", "coding_prompt")
+KNOWLEDGE_PRIORITIES = ("P0", "P1", "P2", "P3")
+KNOWLEDGE_SENIORITIES = ("intern", "new_grad", "mid", "senior")
+
+
+def _knowledge_limit(value: str) -> int:
+    """Argparse validator for bounded knowledge result sets."""
+
+    try:
+        result = int(value)
+    except (TypeError, ValueError) as error:
+        raise argparse.ArgumentTypeError("limit must be a positive integer") from error
+    if result <= 0:
+        raise argparse.ArgumentTypeError("limit must be a positive integer")
+    return result
+
+
+def _jsonable(value: Any) -> Any:
+    """Convert catalog datatypes to deterministic JSON-safe values."""
+
+    if isinstance(value, Mapping):
+        return {str(key): _jsonable(item) for key, item in value.items()}
+    if isinstance(value, (tuple, list, set)):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    return value
+
+
+def _knowledge_card_summary(card: KnowledgeCard) -> dict[str, Any]:
+    """Return the compact, non-answer view used by list/search."""
+
+    summary: dict[str, Any] = {
+        "id": card.id,
+        "kind": card.kind,
+        "title": card.title,
+        "domain": card.domain,
+        "tracks": list(card.tracks),
+        "skills": list(card.skills),
+        "priority": card.priority,
+        "difficulty": dict(card.difficulty),
+        "seniority": list(card.seniority),
+        "related_problems": list(card.related_problems),
+        "reviewed_at": card.reviewed_at,
+    }
+    if card.one_liner:
+        summary["one_liner"] = card.one_liner
+    return summary
+
+
+def _knowledge_card_payload(
+    catalog: KnowledgeCatalog,
+    card: KnowledgeCard,
+) -> dict[str, Any]:
+    """Return a full card plus resolved source metadata for ``show --json``."""
+
+    raw = getattr(card, "raw", None)
+    if isinstance(raw, Mapping) and raw:
+        payload = _jsonable(raw)
+    else:
+        payload = _knowledge_card_summary(card)
+        payload.update(
+            {
+                "prompt": card.prompt,
+                "answer_outline": list(card.answer_outline),
+                "follow_ups": list(card.follow_ups),
+                "pitfalls": list(card.pitfalls),
+                "signals": list(card.signals),
+                "source_claims": [claim.as_dict() for claim in card.source_claims],
+            }
+        )
+    source_records: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for claim in card.source_claims:
+        if claim.source_id in seen:
+            continue
+        seen.add(claim.source_id)
+        source = catalog.sources.get(claim.source_id)
+        if source is None:
+            continue
+        source_raw = getattr(source, "raw", None)
+        if isinstance(source_raw, Mapping) and source_raw:
+            source_records.append(_jsonable(source_raw))
+        else:
+            source_records.append(
+                {
+                    "id": source.id,
+                    "kind": source.kind,
+                    "title": source.title,
+                    "locator": source.location,
+                    "source_version": source.source_version,
+                    "retrieved_at": source.retrieved_at,
+                    "license_or_usage": source.license_or_usage,
+                    "reliability": source.reliability,
+                }
+            )
+    payload["source_records"] = source_records
+    return payload
+
+
+def _knowledge_text(value: Any) -> list[str]:
+    """Flatten a public card value for text rendering/search."""
+
+    if isinstance(value, Mapping):
+        result: list[str] = []
+        for key, item in value.items():
+            result.append(str(key))
+            result.extend(_knowledge_text(item))
+        return result
+    if isinstance(value, (tuple, list)):
+        result: list[str] = []
+        for item in value:
+            result.extend(_knowledge_text(item))
+        return result
+    if isinstance(value, set):
+        result = []
+        for item in sorted(value, key=lambda item: str(item)):
+            result.extend(_knowledge_text(item))
+        return result
+    return [] if value is None else [str(value)]
+
+
+def _knowledge_matches(card: KnowledgeCard, query: str) -> bool:
+    terms = tuple(part.casefold() for part in query.split() if part)
+    if not terms:
+        return True
+    raw = getattr(card, "raw", None)
+    if isinstance(raw, Mapping) and raw:
+        haystack = " ".join(_knowledge_text(raw)).casefold()
+    else:
+        haystack = " ".join(
+            _knowledge_text(
+                {
+                    "id": card.id,
+                    "kind": card.kind,
+                    "title": card.title,
+                    "domain": card.domain,
+                    "tracks": card.tracks,
+                    "skills": card.skills,
+                    "prompt": card.prompt,
+                    "answer_outline": card.answer_outline,
+                    "follow_ups": card.follow_ups,
+                    "pitfalls": card.pitfalls,
+                }
+            )
+        ).casefold()
+    return all(term in haystack for term in terms)
+
+
+def _knowledge_lines(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (tuple, list)):
+        return [str(item) for item in value]
+    return [str(value)]
+
+
+def _print_knowledge_card(catalog: KnowledgeCatalog, card: KnowledgeCard) -> None:
+    print(f"{card.id} [{card.kind}] priority={card.priority}")
+    print(f"TITLE {card.title}")
+    print(f"DOMAIN {card.domain}")
+    print(f"TRACKS {', '.join(card.tracks) or 'none'}")
+    print(f"SKILLS {', '.join(card.skills) or 'none'}")
+    print(f"SENIORITY {', '.join(card.seniority) or 'none'}")
+    print("PROMPT")
+    print(card.prompt.rstrip())
+    if card.one_liner:
+        print("ONE-LINER")
+        print(card.one_liner.rstrip())
+    for label, value in (
+        ("CORE ANSWER", card.core_answer),
+        ("DERIVATION / EXAMPLE", card.derivation_or_example),
+        ("ANSWER OUTLINE", card.answer_outline),
+        ("FOLLOW-UPS", card.follow_ups),
+        ("PITFALLS", card.pitfalls),
+        ("SIGNALS", card.signals),
+        ("OBSERVED PATTERN", card.observed_pattern),
+        ("CANDIDATE PLAYBOOK", card.candidate_playbook),
+        ("DRILL PROMPT", card.drill_prompt),
+        ("SAMPLE / SCOPE", card.sample_size_or_scope),
+        ("CAVEAT", card.caveat),
+        ("PROVENANCE", card.provenance),
+        ("TEST FOCUS", card.test_focus),
+        ("EDGE CASES", card.edge_cases),
+        ("SOLUTION DIRECTION", card.solution_direction),
+    ):
+        lines = _knowledge_lines(value)
+        if not lines:
+            continue
+        print(label)
+        for line in lines:
+            print(f"  - {line}")
+    if card.coding_contract:
+        print("CODING CONTRACT")
+        for key, value in card.coding_contract.items():
+            print(f"  {key}: {value}")
+    if card.acceptance:
+        print("ACCEPTANCE")
+        for level, value in card.acceptance.items():
+            print(f"  {level}: {value}")
+    print("SOURCE CLAIMS")
+    for claim in card.source_claims:
+        print(f"  - {claim.source_id} [{claim.confidence}] {claim.claim}")
+    print(f"RELATED PROBLEMS {', '.join(card.related_problems) or 'none'}")
+    print(f"REVIEWED {card.reviewed_at}")
+    if card.source_claims:
+        print("SOURCE RECORDS")
+        seen: set[str] = set()
+        for claim in card.source_claims:
+            if claim.source_id in seen:
+                continue
+            seen.add(claim.source_id)
+            source = catalog.sources.get(claim.source_id)
+            if source is None:
+                continue
+            location = source.location or "(no public locator)"
+            print(f"  - {source.id}: {source.title} ({location})")
+
+
+def _knowledge_command(repo_root: Path, args: argparse.Namespace) -> int:
+    """Dispatch the read-only public knowledge commands."""
+
+    curriculum = None
+    role_id = getattr(args, "role", None)
+    if getattr(args, "with_catalog", False) or role_id:
+        curriculum = load_catalog(repo_root)
+    catalog = load_knowledge(repo_root, curriculum=curriculum)
+    command = args.knowledge_command
+    as_json = bool(getattr(args, "json", False)) or getattr(args, "format", "text") == "json"
+    if command == "validate":
+        result = {
+            "valid": True,
+            "schema_version": catalog.raw.get("schema_version"),
+            "reviewed_at": catalog.reviewed_at,
+            "cards": len(catalog.cards),
+            "sources": len(catalog.sources),
+            "content_policy": _jsonable(catalog.content_policy),
+            "curriculum_checked": curriculum is not None,
+        }
+        if as_json:
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        else:
+            print(
+                f"KNOWLEDGE VALID: {result['cards']} cards / {result['sources']} sources; "
+                f"reviewed {result['reviewed_at']}"
+            )
+            print(
+                "CURRICULUM REFERENCES: "
+                + ("checked" if curriculum is not None else "not checked")
+            )
+        return 0
+
+    filters = {
+        "kind": getattr(args, "kind", None),
+        "track": getattr(args, "track", None),
+        "skill": getattr(args, "skill", None),
+        "seniority": getattr(args, "seniority", None),
+        "priority": getattr(args, "priority", None),
+    }
+    cards = catalog.select(**filters)
+    if role_id:
+        role_catalog = load_role_catalog(repo_root, curriculum=curriculum)
+        role = role_catalog.resolve_role(role_id)
+        role_tracks = set(role.required_tracks)
+        role_skills = set(role.skill_weights)
+        explicit_skill = filters["skill"]
+        cards = tuple(
+            card
+            for card in cards
+            if (
+                role_tracks.intersection(card.tracks)
+                or role_skills.intersection(card.skills)
+                or (explicit_skill is not None and explicit_skill in card.skills)
+            )
+        )
+    if command == "search":
+        positional = getattr(args, "query", None)
+        option = getattr(args, "query_option", None)
+        if positional and option and positional != option:
+            raise CliError("knowledge search query was supplied twice with different values")
+        query = option if option is not None else (positional or "")
+        cards = tuple(card for card in cards if _knowledge_matches(card, query))
+    if getattr(args, "limit", None) is not None:
+        cards = cards[: args.limit]
+    if command == "list" or command == "search":
+        if as_json:
+            print(
+                json.dumps(
+                    [_knowledge_card_summary(card) for card in cards],
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+        else:
+            heading = "KNOWLEDGE CARDS" if command == "list" else "KNOWLEDGE SEARCH"
+            print(f"{heading}: {len(cards)}")
+            for card in cards:
+                print(
+                    f"{card.id} [{card.kind}] {card.priority} {card.title} "
+                    f"(domain={card.domain}; tracks={','.join(card.tracks) or 'none'})"
+                )
+        return 0
+    if command == "show":
+        card = catalog.get(args.card_id)
+        if as_json:
+            print(json.dumps(_knowledge_card_payload(catalog, card), ensure_ascii=False, indent=2))
+        else:
+            _print_knowledge_card(catalog, card)
+        return 0
+    raise CliError(f"unknown knowledge command: {command}")
+
+
+def _doctor(repo_root: Path, check_knowledge: bool = False) -> int:
     checks: list[tuple[str, bool, str]] = [("python", sys.version_info >= (3, 10), f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")]
+    catalog: Catalog | None = None
     try:
         catalog = load_catalog(repo_root)
     except CatalogError as error:
@@ -164,6 +478,20 @@ def _doctor(repo_root: Path) -> int:
                         f"{len(role_catalog.blueprints)} blueprints / {len(role_catalog.items)} fixed items",
                     )
                 )
+    if check_knowledge:
+        try:
+            knowledge = load_knowledge(repo_root, curriculum=catalog)
+        except KnowledgeError as error:
+            checks.append(("knowledge", False, str(error)))
+        else:
+            checks.append(
+                (
+                    "knowledge",
+                    True,
+                    f"{len(knowledge.cards)} cards / {len(knowledge.sources)} sources, "
+                    f"reviewed {knowledge.reviewed_at}, references checked={catalog is not None}",
+                )
+            )
     try:
         demo_data = yaml.safe_load((repo_root / "workspace/demo/profile.yaml").read_text(encoding="utf-8"))
         demo = validate_profile_data(demo_data, repo_root)
@@ -1079,13 +1407,65 @@ def _role_interview_create(repo_root: Path, args) -> int:
     return 0
 
 
+def _role_interview_prep(repo_root: Path, args) -> int:
+    """List source-linked knowledge cards for out-of-session preparation."""
+
+    value = ApplicationService(repo_root).interview_prep(
+        role_id=args.role,
+        interview_id=args.interview_id,
+        profile_id=args.profile,
+        seniority=args.seniority,
+        query=args.query,
+        kind=args.kind,
+        skill=args.skill,
+        priority=args.priority,
+        limit=args.limit,
+        include_answers=args.answers,
+    )
+    if args.json:
+        print(json.dumps(_jsonable(value), ensure_ascii=False, indent=2))
+        return 0
+    role = value["role"]
+    print(f"PREP {role['title']} / {role['seniority']}")
+    print(f"BLUEPRINT {value['blueprint_id'] or 'none'}")
+    print(
+        "QUESTION TYPES "
+        + (", ".join(value["question_types"]) or "none")
+    )
+    if value["session"] is not None:
+        session = value["session"]
+        print(
+            f"SESSION {session['interview_id']} / {session['status']} "
+            "(read-only preparation)"
+        )
+    print(f"CARDS {len(value['cards'])}")
+    for card in value["cards"]:
+        label = f"{card['id']} [{card['kind']}/{card['priority']}] {card['title']}"
+        print(label)
+        if args.answers and card.get("one_liner"):
+            print(f"  {card['one_liner']}")
+    return 0
+
+
 def _role_interview_current(repo_root: Path, args) -> int:
-    value = ApplicationService(repo_root).current_interview(args.profile, args.interview_id)
+    # ``interview_state`` is the read-only recovery view shared by active and
+    # paused sessions.  The mutation-oriented current_interview API remains
+    # active-only, so using it here made a paused interview look broken.
+    value = ApplicationService(repo_root).interview_state(args.profile, args.interview_id)
     if args.json:
         print(json.dumps(value, ensure_ascii=False, indent=2))
         return 0
+    if value.get("status") == "paused":
+        print("STATUS paused (read-only)")
+        print(f"REMAINING {value['remaining_seconds']} seconds")
+        print(
+            f"RESUME llm-lab interview role-resume {args.interview_id} "
+            f"--profile {args.profile}"
+        )
+    else:
+        print(f"STATUS {value.get('status', 'active')}")
+        print(f"REMAINING {value['remaining_seconds']} seconds")
     question = value["question"]
-    print(f"REMAINING {value['remaining_seconds']} seconds")
     if question is None:
         print("QUESTION none; finish and score the interview")
         return 0
@@ -1132,10 +1512,123 @@ def _role_interview_score(repo_root: Path, args) -> int:
     return 0
 
 
+def _role_interview_pause(repo_root: Path, args) -> int:
+    session = ApplicationService(repo_root).pause_interview(args.profile, args.interview_id)
+    print(f"ROLE INTERVIEW {args.interview_id}: paused")
+    print(
+        f"NEXT llm-lab interview role-resume {args.interview_id} "
+        f"--profile {args.profile}"
+    )
+    return 0
+
+
+def _role_interview_resume(repo_root: Path, args) -> int:
+    session = ApplicationService(repo_root).resume_interview(args.profile, args.interview_id)
+    print(f"ROLE INTERVIEW {args.interview_id}: active")
+    print(
+        f"NEXT llm-lab interview role-current {args.interview_id} "
+        f"--profile {args.profile}"
+    )
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="llm-lab", description="Repository-local AI algorithm interview training")
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("doctor")
+    doctor = commands.add_parser("doctor", help="check repository and optional knowledge-catalog health")
+    doctor.add_argument(
+        "--knowledge",
+        "--check-knowledge",
+        "--with-knowledge",
+        dest="check_knowledge",
+        action="store_true",
+        help="also validate curriculum/interviews/knowledge.yaml and its Catalog references",
+    )
+    knowledge = commands.add_parser(
+        "knowledge", help="inspect the public, source-linked interview knowledge catalog"
+    )
+    knowledge_sub = knowledge.add_subparsers(
+        dest="knowledge_command", required=True
+    )
+
+    def add_knowledge_filters(command_parser: argparse.ArgumentParser) -> None:
+        command_parser.add_argument("--kind", choices=KNOWLEDGE_KINDS)
+        command_parser.add_argument("--track")
+        command_parser.add_argument(
+            "--role",
+            help="include cards whose tracks or weighted skills support this role ID or alias",
+        )
+        command_parser.add_argument("--skill")
+        command_parser.add_argument("--seniority", choices=KNOWLEDGE_SENIORITIES)
+        command_parser.add_argument("--priority", choices=KNOWLEDGE_PRIORITIES)
+        command_parser.add_argument("--limit", type=_knowledge_limit)
+        command_parser.add_argument("--json", action="store_true")
+        command_parser.add_argument(
+            "--with-catalog",
+            "--check-catalog",
+            dest="with_catalog",
+            action="store_true",
+            help="also verify related_problems IDs against the Practice Catalog",
+        )
+        command_parser.add_argument(
+            "--format", choices=("text", "json"), default="text",
+            help="output format; --json is retained as a shorthand",
+        )
+
+    knowledge_list = knowledge_sub.add_parser(
+        "list", help="list cards in deterministic authored order"
+    )
+    add_knowledge_filters(knowledge_list)
+    knowledge_search = knowledge_sub.add_parser(
+        "search", help="search card text and apply optional exact filters"
+    )
+    knowledge_search.add_argument("query", nargs="?", help="case-insensitive terms (all must match)")
+    knowledge_search.add_argument(
+        "--query", dest="query_option", help="query supplied as an option for scripts"
+    )
+    add_knowledge_filters(knowledge_search)
+    knowledge_show = knowledge_sub.add_parser(
+        "show", help="show one card, its answer layers, and source metadata"
+    )
+    knowledge_show.add_argument("card_id")
+    knowledge_show.add_argument("--json", action="store_true")
+    knowledge_show.add_argument(
+        "--format", choices=("text", "json"), default="text",
+        help="output format; --json is retained as a shorthand",
+    )
+    knowledge_show.add_argument(
+        "--with-catalog",
+        "--check-catalog",
+        dest="with_catalog",
+        action="store_true",
+        help="also verify related_problems IDs against the Practice Catalog",
+    )
+    knowledge_validate = knowledge_sub.add_parser(
+        "validate", help="validate schema, source policy, and optional Catalog references"
+    )
+    validate_catalog = knowledge_validate.add_mutually_exclusive_group()
+    validate_catalog.add_argument(
+        "--with-catalog",
+        "--check-catalog",
+        dest="with_catalog",
+        action="store_true",
+        help="also load the Practice Catalog and verify related_problems IDs",
+    )
+    validate_catalog.add_argument(
+        "--schema-only",
+        "--no-catalog",
+        dest="with_catalog",
+        action="store_false",
+        help="skip related_problems checks and validate only schema/source policy",
+    )
+    knowledge_validate.set_defaults(with_catalog=False)
+    knowledge_validate.add_argument(
+        "--json", action="store_true"
+    )
+    knowledge_validate.add_argument(
+        "--format", choices=("text", "json"), default="text",
+        help="output format; --json is retained as a shorthand",
+    )
     quickstart = commands.add_parser("quickstart", help="create a Profile, select a role, and start one recommended task")
     quickstart.add_argument("--profile", default="default")
     quickstart.add_argument("--role")
@@ -1311,8 +1804,39 @@ def _build_parser() -> argparse.ArgumentParser:
     role_create.add_argument("--material", action="append", default=[])
     role_create.add_argument("--consent-materials", action="store_true")
     role_create.add_argument("--seed", type=int, default=0)
+    role_prep = interview_sub.add_parser(
+        "role-prep",
+        help="browse research-backed knowledge cards before or beside a role interview (read-only)",
+    )
+    prep_scope = role_prep.add_mutually_exclusive_group(required=True)
+    prep_scope.add_argument("--role", help="role ID or alias for generic preparation")
+    prep_scope.add_argument(
+        "--interview-id",
+        help="reuse one frozen role-interview header; no active question is read",
+    )
+    role_prep.add_argument(
+        "--profile",
+        default="default",
+        help="Profile owning --interview-id (ignored for --role)",
+    )
+    role_prep.add_argument("--seniority", choices=KNOWLEDGE_SENIORITIES)
+    role_prep.add_argument("--query", default=None, help="all whitespace terms must match")
+    role_prep.add_argument("--kind", choices=KNOWLEDGE_KINDS)
+    role_prep.add_argument("--skill", help="exact canonical skill ID")
+    role_prep.add_argument("--priority", choices=KNOWLEDGE_PRIORITIES)
+    role_prep.add_argument("--limit", type=_knowledge_limit, default=20)
+    role_prep.add_argument(
+        "--answers",
+        action="store_true",
+        help="include full clean-room answer layers and source records",
+    )
+    role_prep.add_argument("--json", action="store_true")
     role_start = interview_sub.add_parser("role-start")
     role_start.add_argument("interview_id"); role_start.add_argument("--profile", default="default")
+    role_pause = interview_sub.add_parser("role-pause")
+    role_pause.add_argument("interview_id"); role_pause.add_argument("--profile", default="default")
+    role_resume = interview_sub.add_parser("role-resume")
+    role_resume.add_argument("interview_id"); role_resume.add_argument("--profile", default="default")
     role_current = interview_sub.add_parser("role-current")
     role_current.add_argument("interview_id"); role_current.add_argument("--profile", default="default"); role_current.add_argument("--json", action="store_true")
     role_answer = interview_sub.add_parser("role-answer")
@@ -1320,7 +1844,7 @@ def _build_parser() -> argparse.ArgumentParser:
     role_test = interview_sub.add_parser("role-test")
     role_test.add_argument("interview_id"); role_test.add_argument("--profile", default="default")
     role_score = interview_sub.add_parser("role-score")
-    role_score.add_argument("interview_id"); role_score.add_argument("--profile", default="default"); role_score.add_argument("--question", required=True); role_score.add_argument("--scores-file", required=True); role_score.add_argument("--source", choices=("human", "ai", "self"), required=True); role_score.add_argument("--confidence", choices=("low", "medium", "high"), required=True); role_score.add_argument("--fatal-issue", action="append", default=[])
+    role_score.add_argument("interview_id"); role_score.add_argument("--profile", default="default"); role_score.add_argument("--question", required=True); role_score.add_argument("--scores-file", required=True); role_score.add_argument("--source", choices=("human", "ai", "self", "grader"), required=True); role_score.add_argument("--confidence", choices=("low", "medium", "high"), required=True); role_score.add_argument("--fatal-issue", action="append", default=[])
     role_score_evidence = role_score.add_mutually_exclusive_group(required=True)
     role_score_evidence.add_argument("--evidence"); role_score_evidence.add_argument("--evidence-file")
     role_finish = interview_sub.add_parser("role-finish")
@@ -1335,7 +1859,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         repo_root = find_repository_root()
         if args.command == "doctor":
-            return _doctor(repo_root)
+            return _doctor(repo_root, check_knowledge=args.check_knowledge)
+        if args.command == "knowledge":
+            return _knowledge_command(repo_root, args)
         if args.command == "quickstart":
             return _quickstart(repo_root, args)
         if args.command == "material":
@@ -1368,11 +1894,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.interview_command == "finish": return _interview_finish(repo_root, catalog, args.profile, args.interview_id, args.summary, args.summary_file, args.confirm_incomplete)
             if args.interview_command == "report": return _interview_report(repo_root, catalog, args.profile, args.interview_id, args.format)
             if args.interview_command == "role-create": return _role_interview_create(repo_root, args)
+            if args.interview_command == "role-prep": return _role_interview_prep(repo_root, args)
             if args.interview_command == "role-start":
                 session = ApplicationService(repo_root).start_interview(args.profile, args.interview_id)
                 print(f"ROLE INTERVIEW {session['interview_id']}: active")
                 print(f"NEXT llm-lab interview role-current {args.interview_id} --profile {args.profile}")
                 return 0
+            if args.interview_command == "role-pause": return _role_interview_pause(repo_root, args)
+            if args.interview_command == "role-resume": return _role_interview_resume(repo_root, args)
             if args.interview_command == "role-current": return _role_interview_current(repo_root, args)
             if args.interview_command == "role-answer": return _role_interview_answer(repo_root, args)
             if args.interview_command == "role-test":
@@ -1401,7 +1930,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "review": return _review(repo_root, args)
         if args.command == "retain": return _retain(repo_root, args.profile, problem, args.stage)
         raise CliError("unknown command")
-    except (ApplicationError, CatalogError, CliError, ContextError, EventError, GraderError, InterviewError, LifecycleError, MaterialError, RoleCatalogError, RoleInterviewError, SubmissionError, WorkspaceError) as error:
+    except (ApplicationError, CatalogError, CliError, ContextError, EventError, GraderError, InterviewError, KnowledgeError, LifecycleError, MaterialError, RoleCatalogError, RoleInterviewError, SubmissionError, WorkspaceError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
 

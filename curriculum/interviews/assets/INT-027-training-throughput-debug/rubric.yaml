@@ -1,0 +1,30 @@
+dimensions:
+  measurement:
+    weight: 0.30
+    anchors:
+      1: 只看平均 GPU 利用率或一个总 step 时间，没有 rank 级证据。
+      3: 分解 compute、通信和输入时间，但长尾、同步等待或时间对齐不完整。
+      5: 用统一时钟记录 per-rank 分布、长尾、goodput 和至少四段跨层时间线。
+  hypothesis_and_isolation:
+    weight: 0.30
+    anchors:
+      1: 直接调参或同时改多个组件，无法证伪根因。
+      3: 列出合理假设并安排实验，但优先级或对照组不清楚。
+      5: 从题设证据排序假设，为每项给出可证伪观测、单变量实验和时间盒。
+  remediation:
+    weight: 0.20
+    anchors:
+      1: 只增加硬件或牺牲批次/数据语义换取更快 step。
+      3: 修复可能的瓶颈并观察端到端结果，但忽略新瓶颈或运行风险。
+      5: 选择可回滚的跨层修复，明确资源、成本、straggler 和训练语义权衡。
+  validation:
+    weight: 0.20
+    anchors:
+      1: step 变快就宣布成功，没有正确性或稳定性检查。
+      3: 比较吞吐和 loss，但缺少尾延迟、可复现或回滚证据。
+      5: 同时验证 goodput、loss/样本顺序、稳定性、尾延迟、成本和回滚结果。
+fatal_issues:
+  - 在生产数据上进行不可逆实验
+  - 只依据平均指标排除 straggler
+  - 没有正确性护栏就改变批次或并行语义
+

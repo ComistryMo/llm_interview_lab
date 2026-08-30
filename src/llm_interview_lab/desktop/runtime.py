@@ -7,9 +7,12 @@ import logging
 from logging.handlers import RotatingFileHandler
 import os
 from pathlib import Path
+import re
 import shutil
 import sys
+import tempfile
 from datetime import datetime, timezone
+import platform
 from uuid import uuid4
 
 from llm_interview_lab import __version__
@@ -21,6 +24,138 @@ WORKSPACE_PUBLIC_DIRECTORIES = ("schema", "templates")
 PUBLIC_FILES = ("AGENTS.md", ".gitignore")
 STANDALONE_MARKER = ".llm-lab-standalone.json"
 MIGRATION_MARKER = ".llm-lab-desktop-migration.json"
+
+# Error messages can contain paths that are not one of the well-known roots
+# (for example a pytest temporary directory).  Keep bootstrap diagnostics
+# useful while replacing those paths before they reach a local log that a user
+# may attach to an issue.  The span intentionally accepts spaces (valid in
+# both Windows and POSIX filenames) and stops at common sentence delimiters.
+_ABSOLUTE_PATH_RE = re.compile(
+    r"(?<![\w])(?:[A-Za-z]:[\\/]|\\\\)[^<>\"'()\[\]{},;!?\r\n]+"
+    r"|(?<![:\w/])/(?:[^<>\"'()\[\]{},;!?\r\n]+)",
+)
+_PATH_TRAILING_PUNCTUATION = ".,;:!?)]}"
+
+
+def bootstrap_log_path() -> Path:
+    """Return a log path that is available before Qt or the repository starts."""
+
+    override = os.environ.get("LLM_LAB_BOOTSTRAP_LOG")
+    if override:
+        return Path(override).expanduser().resolve()
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA")
+        root = Path(base).expanduser() if base else Path.home() / "AppData" / "Local"
+    else:
+        root = Path(tempfile.gettempdir())
+    return (root / "LLMInterviewLab" / "logs" / "bootstrap.log").resolve()
+
+
+def _sanitized_bootstrap_message(error: BaseException) -> str:
+    message = " ".join(str(error).split())
+    private_roots = {
+        str(Path.home()),
+        str(Path.cwd()),
+        os.environ.get("LLM_LAB_DESKTOP_DATA_ROOT", ""),
+        os.environ.get("LLM_LAB_BUNDLE_ROOT", ""),
+    }
+    for value in sorted((item for item in private_roots if item), key=len, reverse=True):
+        message = message.replace(value, "<local-path>")
+
+    def replace_path(match: re.Match[str]) -> str:
+        value = match.group(0)
+        trailing = value[len(value.rstrip()) :]
+        value = value.rstrip()
+        while value and value[-1] in _PATH_TRAILING_PUNCTUATION:
+            trailing = value[-1] + trailing
+            value = value[:-1]
+        return "<local-path>" + trailing
+
+    message = _ABSOLUTE_PATH_RE.sub(replace_path, message)
+    return message[:400]
+
+
+def record_bootstrap_event(
+    startup_stage: str,
+    *,
+    error: BaseException | None = None,
+    runtime_assets_found: bool | None = None,
+    first_window_ms: int | None = None,
+) -> Path:
+    """Append a privacy-minimized startup event; logging failure never hides the UI."""
+
+    path = bootstrap_log_path()
+    build_commit = (
+        os.environ.get("LLM_LAB_BUILD_COMMIT")
+        or os.environ.get("GITHUB_SHA")
+        or "unknown"
+    )
+    # Keep diagnostics useful without putting a user's checkout or AppData
+    # path in a log that they may attach to an issue.
+    payload: dict[str, object] = {
+        "version": __version__,
+        "app_version": __version__,
+        "build_commit": build_commit[:40],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "startup_stage": startup_stage,
+        "executable_path": Path(sys.executable).name,
+        "app_data_path": "<app-data>",
+        "platform": sys.platform,
+        "python_runtime": platform.python_version(),
+        "exception_type": None,
+        "sanitized_exception": "",
+    }
+    if error is not None:
+        payload["exception_type"] = type(error).__name__
+        sanitized = _sanitized_bootstrap_message(error)
+        payload["message"] = sanitized
+        payload["sanitized_exception"] = sanitized
+    if runtime_assets_found is not None:
+        payload["runtime_assets_found"] = runtime_assets_found
+    if first_window_ms is not None:
+        payload["first_window_ms"] = first_window_ms
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8", newline="\n") as stream:
+            stream.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
+    except OSError:
+        pass
+    return path
+
+
+def runtime_assets_available() -> bool:
+    root = _bundle_root()
+    return all(
+        path.exists()
+        for path in (
+            root / "curriculum",
+            root / "coach",
+            root / "workspace" / "schema",
+            root / "workspace" / "templates",
+        )
+    )
+
+
+def show_startup_error(code: str, reason: str, log_path: Path) -> None:
+    """Show a native Windows error before Qt is available, with a CI-safe fallback."""
+
+    message = f"{reason}\n\n错误编号：{code}\n日志位置：{log_path}"
+    platform_name = os.environ.get("QT_QPA_PLATFORM", "").lower()
+    suppressed = os.environ.get("LLM_LAB_SUPPRESS_STARTUP_DIALOG") == "1"
+    if sys.platform == "win32" and platform_name not in {"offscreen", "minimal"} and not suppressed:
+        try:
+            import ctypes
+
+            ctypes.windll.user32.MessageBoxW(
+                None,
+                message,
+                "LLM Interview Lab 启动失败",
+                0x00000010,
+            )
+            return
+        except (AttributeError, OSError):
+            pass
+    print(f"错误：{message}", file=sys.stderr)
 
 
 def _bundle_root() -> Path:

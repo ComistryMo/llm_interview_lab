@@ -33,7 +33,7 @@ blueprints:
     rounds:
       - {type: coding, duration: 25, weight: 0.40, item_count: 1, skills: [skill.python_engineering.data_contracts]}
       - {type: system_design, duration: 20, weight: 0.35, item_count: 1, skills: [skill.agent_application.tool_calling, skill.system_design.reliability]}
-      - {type: debugging, duration: 15, weight: 0.25, item_count: 1, skills: [skill.agent_application.reliability]}
+      - {type: debugging, duration: 15, weight: 0.25, item_count: 1, skills: [skill.agent_application.reliability, skill.system_design.reliability]}
   - id: interview.applied_ai_engineer.new_grad
     role: applied_ai_engineer
     seniority: new_grad
@@ -41,7 +41,7 @@ blueprints:
     rounds:
       - {type: coding, duration: 30, weight: 0.40, item_count: 1, skills: [skill.agent_application.tool_calling]}
       - {type: system_design, duration: 25, weight: 0.35, item_count: 1, skills: [skill.agent_application.agent_loop, skill.system_design.reliability]}
-      - {type: debugging, duration: 20, weight: 0.25, item_count: 1, skills: [skill.agent_application.reliability]}
+      - {type: debugging, duration: 20, weight: 0.25, item_count: 1, skills: [skill.agent_application.reliability, skill.system_design.reliability]}
   - id: interview.applied_ai_engineer.mid
     role: applied_ai_engineer
     seniority: mid
@@ -50,7 +50,7 @@ blueprints:
       - {type: coding, duration: 30, weight: 0.30, item_count: 1, skills: [skill.agent_application.tool_calling]}
       - {type: system_design, duration: 30, weight: 0.30, item_count: 1, skills: [skill.agent_application.agent_loop, skill.system_design.reliability]}
       - {type: project_deep_dive, duration: 20, weight: 0.25, item_count: 1, skills: [skill.project_deep_dive.ownership]}
-      - {type: debugging, duration: 10, weight: 0.15, item_count: 1, skills: [skill.agent_application.reliability]}
+      - {type: debugging, duration: 10, weight: 0.15, item_count: 1, skills: [skill.agent_application.reliability, skill.system_design.reliability]}
 
   - id: interview.ai_agent_engineer.intern
     role: ai_agent_engineer
@@ -140,7 +140,7 @@ blueprints:
     seniority: new_grad
     duration_minutes: 75
     rounds:
-      - {type: coding, duration: 30, weight: 0.40, item_count: 1, skills: [skill.programming_algorithms.data_structures]}
+      - {type: coding, duration: 30, weight: 0.40, item_count: 1, skills: [skill.data_mlops.pipelines]}
       - {type: system_design, duration: 25, weight: 0.35, item_count: 1, skills: [skill.training_infra.distributed, skill.training_infra.scheduling]}
       - {type: debugging, duration: 20, weight: 0.25, item_count: 1, skills: [skill.training_infra.checkpointing, skill.training_infra.observability]}
   - id: interview.ai_infra_engineer.mid
@@ -148,7 +148,7 @@ blueprints:
     seniority: mid
     duration_minutes: 90
     rounds:
-      - {type: coding, duration: 25, weight: 0.25, item_count: 1, skills: [skill.programming_algorithms.graphs]}
+      - {type: coding, duration: 25, weight: 0.25, item_count: 1, skills: [skill.deep_learning.optimizers]}
       - {type: system_design, duration: 35, weight: 0.35, item_count: 1, skills: [skill.training_infra.distributed, skill.training_infra.scheduling]}
       - {type: debugging, duration: 15, weight: 0.20, item_count: 1, skills: [skill.training_infra.checkpointing, skill.training_infra.observability]}
       - {type: project_deep_dive, duration: 15, weight: 0.20, item_count: 1, skills: [skill.data_mlops.pipelines, skill.project_deep_dive.ownership]}
@@ -490,3 +490,37 @@ items:
     assets: {item_dir: curriculum/interviews/assets/INT-024-benchmark-safety-audit}
     validation: maintainer_reviewed
     sources: *original
+  - id: INT-025
+    title: 把用户反馈变成可审计的评测与数据飞轮
+    kind: evaluation_case
+    status: ready
+    roles: [ai_product_manager, ai_evaluation_data_safety_engineer]
+    seniority: [new_grad, mid]
+    difficulty: 3
+    duration_minutes: 30
+    skills: [skill.ai_product.metrics, skill.ai_product.delivery, skill.evaluation_safety.benchmarks, skill.data_mlops.pipelines]
+    assets: {item_dir: curriculum/interviews/assets/INT-025-feedback-evaluation}
+    validation: maintainer_reviewed
+    sources:
+      - {type: internal_original, title: "LLM Interview Lab original synthetic feedback-evaluation scenario and rubric"}
+      - {type: official_source, title: "Google PAIR: Data Collection and Evaluation", url: https://pair.withgoogle.com/guidebook-v2/chapter/data-collection/}
+      - {type: official_source, title: "Google PAIR: Feedback and Controls", url: https://pair.withgoogle.com/guidebook-v2/chapter/feedback-controls/}
+      - {type: official_docs, title: "OpenAI: Evaluation best practices", url: https://developers.openai.com/api/docs/guides/evaluation-best-practices}
+      - {type: official_source, title: "OpenAI: Product Manager, Core Models", url: https://openai.com/careers/product-manager-core-models-san-francisco/}
+  - id: INT-027
+    title: 训练吞吐下降的跨层瓶颈定位
+    kind: debugging
+    status: ready
+    roles: [ai_infra_engineer]
+    seniority: [new_grad, mid]
+    difficulty: 4
+    duration_minutes: 30
+    skills: [skill.training_infra.distributed, skill.training_infra.observability, skill.data_mlops.pipelines, skill.system_design.tradeoffs]
+    assets: {item_dir: curriculum/interviews/assets/INT-027-training-throughput-debug}
+    validation: maintainer_reviewed
+    sources:
+      - {type: internal_original, title: "LLM Interview Lab original synthetic training-throughput scenario and rubric"}
+      - {type: official_source, title: "OpenAI: Training Performance Engineer", url: https://openai.com/careers/training-performance-engineer-san-francisco/}
+      - {type: official_source, title: "Google Cloud: Goodput as a measure of ML productivity", url: https://cloud.google.com/blog/products/ai-machine-learning/goodput-metric-as-measure-of-ml-productivity}
+      - {type: official_source, title: "NVIDIA: Enhancing communication observability with NCCL Inspector", url: https://developer.nvidia.com/blog/enhancing-communication-observability-of-ai-workloads-with-nccl-inspector/}
+      - {type: official_source, title: "NVIDIA: Networking reliability and observability at scale with NCCL", url: https://developer.nvidia.com/blog/networking-reliability-and-observability-at-scale-with-nccl-2-24/}

@@ -74,6 +74,45 @@ problems:
       d7: Debug a mask, reduction, reference, or degenerate-reward variant.
     sources:
       - {type: paper, title: "SFT, DPO, and GRPO primary method definitions"}
+  - id: PT-005
+    title: Preference Pair Contract Validator
+    status: ready
+    domain: post_training
+    tracks: [post_training]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 5}
+    prerequisites:
+      - FND-002
+    skills: [post_training.preference_data, data_mlops.data_quality]
+    validation: {level: oracle, field_runs: 0, fingerprint: 51ed68444222f3ad7d1b82afea872948c3245c29bfc4eaeee050990c0898f802}
+    assets: {problem_dir: curriculum/problems/PT-005-preference-pair-validator}
+    interface: {language: python, framework: stdlib, symbol: validate_preference_pair}
+    constraints:
+      forbidden_apis: [trl, transformers.Trainer]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: property_only
+        target: explicit preference-pair invariants and deterministic ordered error codes
+        description: An ignored maintainer-only oracle (not committed with the public assets) checks strict input contracts, Unicode-equivalent responses, prompt leakage, truncation symmetry, metadata isolation, and stable reports.
+      oral_questions:
+        - Why must pair validity be checked before a DPO or reward-model objective is evaluated?
+        - Which failures should raise a contract error, and which should return a report with valid=false?
+        - What false positives can Unicode normalization and prompt-prefix leakage checks introduce?
+        - Why can asymmetric truncation change the meaning of a preference label?
+        - How would you represent annotator disagreement without treating response length as quality?
+    variant_axes: [text_normalization, response_length, truncation_flags, metadata_shape]
+    invariants: [strict_runtime_types, distinct_normalized_responses, prompt_boundary_integrity, symmetric_truncation, defensive_metadata_copy]
+    common_bugs: [raw_string_only, case_or_unicode_collision_missed, silent_truncation, prompt_leakage_ignored, metadata_aliasing, nondeterministic_error_order]
+    retention:
+      d2: No retention asset is included in this release; D+2 retention evidence and mastery are explicitly blocked until an independently authored tokenized-pair variant is available.
+      d7: No retention asset is included in this release; D+7 retention evidence and mastery are explicitly blocked while a leakage-debugging batch is planned.
+    sources:
+      - {type: paper, title: "Direct Preference Optimization: Your Language Model is Secretly a Reward Model", url: https://arxiv.org/abs/2305.18290}
+      - {type: paper, title: "Training language models to follow instructions with human feedback", url: https://arxiv.org/abs/2203.02155}
+      - {type: internal_original, title: "LLM Interview Lab synthetic preference-data contract"}
   - id: PT-006
     title: DPO Loss
     status: ready

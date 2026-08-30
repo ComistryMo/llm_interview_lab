@@ -342,14 +342,40 @@ problems:
     description: "Pad mixed text and image batches while preserving per-sample boundaries."
   - id: VLM-007
     title: "Multimodal Label Mask"
-    status: planned
+    status: ready
     domain: vlm
     tracks: ["vlm_algorithm","post_training"]
     tier: core
     difficulty: {concept: 3, coding: 4, debugging: 4}
     prerequisites: ["VLM-006","PT-001"]
-    problem_type: implementation
-    description: "Mask prompt, image, padding, and assistant spans correctly for SFT."
+    skills: [vlm.mask, vlm.collator, post_training.mask, loss.reduction]
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/VLM-007-multimodal-label-mask}
+    interface: {language: python, framework: pytorch, symbol: multimodal_sft_loss}
+    constraints:
+      forbidden_apis: [transformers.Trainer, trl]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+      memory_limit_mb: 512
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: shifted cross-entropy with explicit multimodal masks
+        description: "A transparent PyTorch reference checks values, mask precedence, shapes, gradients, and degenerate rows."
+      oral_questions:
+        - "Which logits and labels remain after the causal shift?"
+        - "Why must image masking override an assistant mask?"
+        - "How do attention, assistant, image, and padding masks differ?"
+        - "What should happen when a batch row has no valid target?"
+    variant_axes: [batch_size, sequence_length, image_density, mask_density, dtype]
+    invariants: [shape_alignment, image_mask_precedence, masked_positions_ignored, finite_loss]
+    common_bugs: [wrong_shift, image_labels_leak, invalid_ignore_index, empty_row_nan, input_mutation]
+    retention:
+      d2: Rebuild the shifted masked loss with a different batch layout and explicit valid-token counts.
+      d7: Diagnose a multimodal collator that misaligns image spans, labels, or devices.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room multimodal SFT exercise}
   - id: VLM-008
     title: "Multi-Image Input Packing"
     status: planned
@@ -440,16 +466,6 @@ problems:
     prerequisites: ["PT-003","OPT-012"]
     problem_type: integration
     description: "Train and evaluate an autoregressive model with masked supervision."
-  - id: PT-005
-    title: "Preference Pair Validator"
-    status: planned
-    domain: post_training
-    tracks: ["post_training"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["FND-002","FND-005"]
-    problem_type: implementation
-    description: "Validate chosen/rejected pairs and prevent identical or leaked responses."
   - id: PT-007
     title: "Reward Model Pairwise Loss"
     status: planned
@@ -522,14 +538,40 @@ problems:
     description: "Sample fixed-size completion groups with reproducible seeds."
   - id: PT-016
     title: "Invalid Completion Handling"
-    status: planned
+    status: ready
     domain: post_training
     tracks: ["post_training"]
     tier: core
     difficulty: {concept: 3, coding: 4, debugging: 4}
     prerequisites: ["PT-008","PT-015"]
-    problem_type: debugging
-    description: "Exclude or penalize invalid completions without corrupting group statistics."
+    skills: [post_training.reward, post_training.grpo, post_training.mask, statistics.robustness]
+    validation: {level: contract, field_runs: 0}
+    assets: {problem_dir: curriculum/problems/PT-016-invalid-completion-handling}
+    interface: {language: python, framework: pytorch, symbol: normalize_valid_group_rewards}
+    constraints:
+      forbidden_apis: [torch.nanmean, torch.nanstd]
+      time_limit_ms: 5000
+      output_limit_kb: 256
+      memory_limit_mb: 512
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: population statistics over valid completions only
+        description: "A transparent reference checks NaN sentinels, singleton/zero-variance groups, detached outputs, and dtype/device preservation."
+      oral_questions:
+        - "Why must invalid rewards be excluded rather than replaced by zero?"
+        - "When is population standard deviation preferable to an unbiased estimate?"
+        - "How should an all-invalid group be surfaced to the trainer?"
+        - "Why must verifier rewards be detached from the policy graph?"
+    variant_axes: [batch_size, group_size, valid_fraction, reward_dtype, reward_variance]
+    invariants: [invalid_values_do_not_poison_stats, zero_variance_is_finite, detached_advantage, input_immutable]
+    common_bugs: [nan_in_reduction, wrong_denominator, singleton_nan, reward_gradient_leak, mask_aliasing]
+    retention:
+      d2: Reimplement valid-group normalization using explicit counts and a separate validity report.
+      d7: Debug a GRPO batch with malformed completions, mixed precision, and zero-variance groups.
+    sources:
+      - {type: internal_original, title: LLM Interview Lab clean-room verifier reward exercise}
   - id: PT-017
     title: "Multi-Reward Composition"
     status: planned
@@ -580,4 +622,3 @@ problems:
     prerequisites: ["LOSS-015","PT-003"]
     problem_type: integration
     description: "Combine a parallel classification head with language modeling loss."
-

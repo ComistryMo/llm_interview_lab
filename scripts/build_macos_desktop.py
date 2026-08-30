@@ -15,7 +15,7 @@ import tempfile
 
 
 APP_NAME = "LLMInterviewLab"
-VERSION = "0.4.0-alpha.2"
+VERSION = "0.4.0-alpha.3"
 MINIMUM_MACOS = "12.0"
 
 
@@ -115,7 +115,7 @@ def main() -> int:
             "CFBundleDisplayName": "LLM Interview Lab",
             "CFBundleIdentifier": "io.github.comistrymo.llminterviewlab",
             "CFBundleShortVersionString": "0.4.0",
-            "CFBundleVersion": "2",
+            "CFBundleVersion": "3",
             "LSMinimumSystemVersion": MINIMUM_MACOS,
             "NSHighResolutionCapable": True,
             "LSMultipleInstancesProhibited": True,

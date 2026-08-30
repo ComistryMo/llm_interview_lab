@@ -8,6 +8,17 @@ Flickable {
     required property var app
     required property var palette
     contentWidth: width; contentHeight: content.implicitHeight + 50; clip: true
+    ScrollBar.vertical: ScrollBar {
+        width: 6
+        policy: ScrollBar.AlwaysOn
+        visible: root.contentHeight > root.height
+        contentItem: Rectangle {
+            implicitWidth: 5
+            radius: 3
+            color: root.palette.muted
+            opacity: 0.45
+        }
+    }
 
     ColumnLayout {
         id: content

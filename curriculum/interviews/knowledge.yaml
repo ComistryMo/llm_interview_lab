@@ -1,0 +1,2900 @@
+schema_version: 1
+reviewed_at: &reviewed_at "2026-08-30"
+content_policy:
+  mode: clean_room
+  attribution: link_only
+  no_verbatim: true
+  allowed_source_kinds:
+    - paper
+    - official_paper
+    - official_docs
+    - official_source
+    - benchmark
+    - course
+    - field_report
+    - secondary_curated
+    - internal_original
+
+# Method definitions come from primary papers or official documentation. Public
+# interview reports only support "this pattern was observed" claims. They are
+# never treated as a company's official or statistically representative bank.
+sources:
+  - id: attention-is-all-you-need
+    kind: official_paper
+    title: Attention Is All You Need
+    url: https://arxiv.org/abs/1706.03762
+    source_version: arXiv:1706.03762v7
+    published_or_updated: "2023-08-02"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for scaled dot-product attention, multi-head attention, masking, and the Transformer architecture.
+  - id: pytorch-sdpa
+    kind: official_docs
+    title: PyTorch scaled_dot_product_attention
+    url: https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html
+    source_version: stable documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: PyTorch
+    volatile: true
+    license_or_usage: Link and factual paraphrase only; API behavior must be rechecked before release.
+    license_risk: link_only
+    reliability: high
+    notes: Implementation oracle for shapes, causal behavior, dropout, and boolean/additive attention-mask semantics.
+  - id: rope-paper
+    kind: official_paper
+    title: RoFormer - Enhanced Transformer with Rotary Position Embedding
+    url: https://arxiv.org/abs/2104.09864
+    source_version: arXiv:2104.09864
+    published_or_updated: "2021-04-20"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for rotary position embeddings and their relative-position property.
+  - id: gqa-paper
+    kind: official_paper
+    title: GQA - Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints
+    url: https://arxiv.org/abs/2305.13245
+    source_version: arXiv:2305.13245
+    published_or_updated: "2023-05-22"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for the MHA/MQA/GQA continuum and grouped KV heads.
+  - id: hf-cache
+    kind: official_docs
+    title: Hugging Face Transformers cache explanation
+    url: https://huggingface.co/docs/transformers/cache_explanation
+    source_version: documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: Hugging Face
+    volatile: true
+    license_or_usage: Link and factual paraphrase only; version-sensitive behavior is marked.
+    license_risk: link_only
+    reliability: high
+    notes: Official explanation of KV-cache growth, cache positions, and decode behavior.
+  - id: hf-generation
+    kind: official_docs
+    title: Hugging Face Transformers generation strategies
+    url: https://huggingface.co/docs/transformers/generation_strategies
+    source_version: documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: Hugging Face
+    volatile: true
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: high
+    notes: Official reference for greedy, sampling, beam, constrained, and assisted decoding families.
+  - id: flashattention-paper
+    kind: official_paper
+    title: FlashAttention - Fast and Memory-Efficient Exact Attention with IO-Awareness
+    url: https://arxiv.org/abs/2205.14135
+    source_version: arXiv:2205.14135
+    published_or_updated: "2022-05-27"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for exact tiled attention and IO-aware complexity arguments.
+  - id: pagedattention-paper
+    kind: official_paper
+    title: Efficient Memory Management for Large Language Model Serving with PagedAttention
+    url: https://arxiv.org/abs/2309.06180
+    source_version: arXiv:2309.06180
+    published_or_updated: "2023-09-12"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for page-based KV-cache allocation and vLLM serving design.
+  - id: speculative-decoding-paper
+    kind: official_paper
+    title: Fast Inference from Transformers via Speculative Decoding
+    url: https://arxiv.org/abs/2211.17192
+    source_version: arXiv:2211.17192
+    published_or_updated: "2022-11-30"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for distribution-preserving draft-and-verify decoding.
+  - id: bpe-paper
+    kind: official_paper
+    title: Neural Machine Translation of Rare Words with Subword Units
+    url: https://arxiv.org/abs/1508.07909
+    source_version: arXiv:1508.07909
+    published_or_updated: "2015-08-31"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary reference for adapting byte-pair encoding to subword segmentation.
+  - id: hf-chat-templates
+    kind: official_docs
+    title: Hugging Face chat templates
+    url: https://huggingface.co/docs/transformers/chat_templating
+    source_version: documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: Hugging Face
+    volatile: true
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: high
+    notes: Official data-contract reference for role markers, control tokens, and assistant-generation prompts.
+  - id: pytorch-cross-entropy
+    kind: official_docs
+    title: PyTorch CrossEntropyLoss
+    url: https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
+    source_version: stable documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: PyTorch
+    volatile: true
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: high
+    notes: Official oracle for ignore_index, reductions, input shapes, and stable log-softmax plus NLL semantics.
+  - id: pytorch-amp
+    kind: official_docs
+    title: PyTorch Automatic Mixed Precision examples
+    url: https://docs.pytorch.org/docs/stable/notes/amp_examples.html
+    source_version: stable documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: PyTorch
+    volatile: true
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: high
+    notes: Official reference for autocast, gradient scaling, accumulation, and clipping order.
+  - id: pytorch-ddp
+    kind: official_docs
+    title: PyTorch DistributedDataParallel
+    url: https://docs.pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html
+    source_version: stable documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: PyTorch
+    volatile: true
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: high
+    notes: Official reference for replicated parameters, gradient synchronization, and process-local DDP use.
+  - id: deepspeed-zero-docs
+    kind: official_docs
+    title: DeepSpeed ZeRO tutorial
+    url: https://www.deepspeed.ai/tutorials/zero/
+    source_version: documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: Microsoft DeepSpeed
+    volatile: true
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: high
+    notes: Official summary of ZeRO optimizer-state, gradient, and parameter partitioning stages.
+  - id: activation-checkpoint-paper
+    kind: official_paper
+    title: Training Deep Nets with Sublinear Memory Cost
+    url: https://arxiv.org/abs/1604.06174
+    source_version: arXiv:1604.06174
+    published_or_updated: "2016-04-20"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary reference for trading recomputation for activation memory.
+  - id: switch-transformer-paper
+    kind: official_paper
+    title: Switch Transformers - Scaling to Trillion Parameter Models with Simple and Efficient Sparsity
+    url: https://arxiv.org/abs/2101.03961
+    source_version: arXiv:2101.03961
+    published_or_updated: "2021-01-11"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for sparse expert routing, capacity, and load-balancing considerations.
+  - id: dedup-paper
+    kind: official_paper
+    title: Deduplicating Training Data Makes Language Models Better
+    url: https://arxiv.org/abs/2107.06499
+    source_version: arXiv:2107.06499
+    published_or_updated: "2021-07-14"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary evidence that train/test and within-train duplication affect evaluation and memorization.
+  - id: lora-paper
+    kind: official_paper
+    title: LoRA - Low-Rank Adaptation of Large Language Models
+    url: https://arxiv.org/abs/2106.09685
+    source_version: arXiv:2106.09685
+    published_or_updated: "2021-06-17"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary definition of a frozen base weight plus trainable low-rank update.
+  - id: qlora-paper
+    kind: official_paper
+    title: QLoRA - Efficient Finetuning of Quantized LLMs
+    url: https://arxiv.org/abs/2305.14314
+    source_version: arXiv:2305.14314
+    published_or_updated: "2023-05-23"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for NF4, double quantization, and paged optimizers in QLoRA.
+  - id: instructgpt-220302155
+    kind: official_paper
+    title: Training language models to follow instructions with human feedback
+    url: https://arxiv.org/abs/2203.02155
+    source_version: arXiv:2203.02155
+    published_or_updated: "2022-03-04"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for the SFT, preference reward model, and PPO-style RLHF pipeline.
+  - id: ppo-paper
+    kind: official_paper
+    title: Proximal Policy Optimization Algorithms
+    url: https://arxiv.org/abs/1707.06347
+    source_version: arXiv:1707.06347
+    published_or_updated: "2017-07-20"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for clipped policy-ratio optimization.
+  - id: dpo-2305-18290
+    kind: official_paper
+    title: Direct Preference Optimization - Your Language Model is Secretly a Reward Model
+    url: https://arxiv.org/abs/2305.18290
+    source_version: arXiv:2305.18290
+    published_or_updated: "2023-05-29"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for the reference-policy log-ratio preference objective.
+  - id: deepseekmath-grpo-2402
+    kind: official_paper
+    title: DeepSeekMath - Pushing the Limits of Mathematical Reasoning in Open Language Models
+    url: https://arxiv.org/abs/2402.03300
+    source_version: arXiv:2402.03300
+    published_or_updated: "2024-02-05"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source introducing group relative policy optimization in this training setting.
+  - id: trl-official-docs
+    kind: official_docs
+    title: Hugging Face TRL documentation
+    url: https://huggingface.co/docs/trl/en/index
+    source_version: documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: Hugging Face
+    volatile: true
+    license_or_usage: Link and factual paraphrase only; trainer interfaces are version-sensitive.
+    license_risk: link_only
+    reliability: high
+    notes: Official implementation reference for SFT, DPO, reward modeling, PPO, and GRPO trainers.
+  - id: clip-paper
+    kind: official_paper
+    title: Learning Transferable Visual Models From Natural Language Supervision
+    url: https://arxiv.org/abs/2103.00020
+    source_version: arXiv:2103.00020
+    published_or_updated: "2021-02-26"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for contrastive image-text pretraining with a symmetric objective.
+  - id: blip2-paper
+    kind: official_paper
+    title: BLIP-2 - Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models
+    url: https://arxiv.org/abs/2301.12597
+    source_version: arXiv:2301.12597
+    published_or_updated: "2023-01-30"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for a Q-Former bridge between frozen vision and language models.
+  - id: llava-paper
+    kind: official_paper
+    title: Visual Instruction Tuning
+    url: https://arxiv.org/abs/2304.08485
+    source_version: arXiv:2304.08485
+    published_or_updated: "2023-04-17"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for connecting a vision encoder to an LLM and visual instruction tuning.
+  - id: hf-multimodal-chat
+    kind: official_docs
+    title: Hugging Face multimodal chat templates
+    url: https://huggingface.co/docs/transformers/chat_templating_multimodal
+    source_version: documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: Hugging Face
+    volatile: true
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: high
+    notes: Official data-contract reference for typed image/video/text message content and processors.
+  - id: mmmu-benchmark
+    kind: benchmark
+    title: MMMU - A Massive Multi-discipline Multimodal Understanding and Reasoning Benchmark
+    url: https://arxiv.org/abs/2311.16502
+    source_version: arXiv:2311.16502
+    published_or_updated: "2023-11-27"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only; no benchmark data is mirrored.
+    license_risk: link_only
+    reliability: high
+    notes: Benchmark reference for expert-level multi-discipline multimodal reasoning.
+  - id: ocrbench-benchmark
+    kind: benchmark
+    title: OCRBench - On the Hidden Mystery of OCR in Large Multimodal Models
+    url: https://arxiv.org/abs/2305.07895
+    source_version: arXiv:2305.07895
+    published_or_updated: "2023-05-13"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only; no benchmark data is mirrored.
+    license_risk: link_only
+    reliability: high
+    notes: Benchmark reference for text recognition and OCR-related multimodal abilities.
+  - id: videomme-benchmark
+    kind: benchmark
+    title: Video-MME - The First-Ever Comprehensive Evaluation Benchmark of Multi-modal LLMs in Video Analysis
+    url: https://arxiv.org/abs/2405.21075
+    source_version: arXiv:2405.21075
+    published_or_updated: "2024-05-31"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only; no benchmark data is mirrored.
+    license_risk: link_only
+    reliability: high
+    notes: Benchmark reference for short, medium, and long video understanding with different modalities.
+  - id: react-paper
+    kind: official_paper
+    title: ReAct - Synergizing Reasoning and Acting in Language Models
+    url: https://arxiv.org/abs/2210.03629
+    source_version: arXiv:2210.03629
+    published_or_updated: "2022-10-06"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for interleaving reasoning traces, actions, and observations.
+  - id: mcp-spec
+    kind: official_docs
+    title: Model Context Protocol specification
+    url: https://modelcontextprotocol.io/specification/2026-07-28
+    source_version: "2026-07-28"
+    published_or_updated: "2026-07-28"
+    retrieved_at: *reviewed_at
+    publisher: Model Context Protocol
+    volatile: true
+    license_or_usage: Link and factual paraphrase only; protocol revisions must be rechecked.
+    license_risk: link_only
+    reliability: high
+    notes: Current protocol reference for capabilities, messages, tools, resources, and security boundaries.
+  - id: shlab-llm-training-20260813
+    kind: official_source
+    title: 上海人工智能实验室大模型训练算法工程师岗位
+    url: https://www.shlab.org.cn/joinus/detail/7615234376275773734?mode=social
+    published_or_updated: "2026-08-13"
+    retrieved_at: *reviewed_at
+    publisher: 上海人工智能实验室
+    volatile: true
+    license_or_usage: Job requirements signal only; never represented as an interview transcript.
+    license_risk: link_and_paraphrase_only
+    reliability: high
+    notes: Official role signal for CPT/SFT/RLHF/DPO, data, distributed training, observability, and experiment design.
+  - id: shlab-agent-20260827
+    kind: official_source
+    title: 上海人工智能实验室智能体算法工程师岗位
+    url: https://www.shlab.org.cn/joinus/detail/7553291568346728758?mode=social
+    published_or_updated: "2026-08-27"
+    retrieved_at: *reviewed_at
+    publisher: 上海人工智能实验室
+    volatile: true
+    license_or_usage: Job requirements signal only; never represented as an interview transcript.
+    license_risk: link_and_paraphrase_only
+    reliability: high
+    notes: Official role signal for tool use, planning, context, execution, verification, recovery, and Agent evaluation.
+  - id: shlab-vlm-architecture-20260827
+    kind: official_source
+    title: 上海人工智能实验室多模态大模型算法工程师岗位
+    url: https://www.shlab.org.cn/joinus/detail/7678625307444742463?mode=social
+    published_or_updated: "2026-08-27"
+    retrieved_at: *reviewed_at
+    publisher: 上海人工智能实验室
+    volatile: true
+    license_or_usage: Job requirements signal only; never represented as an interview transcript.
+    license_risk: link_and_paraphrase_only
+    reliability: high
+    notes: Official role signal for multimodal architecture, synthetic data, filtering, evaluation, training, and serving stacks.
+  - id: shlab-llm-eval-intern-20260422
+    kind: official_source
+    title: 上海人工智能实验室大模型评测算法岗位
+    url: https://www.shlab.org.cn/joinus/detail/7631192202148088118?jobFunction=&jobType=&keyword=&location=&mode=campus&subject=
+    published_or_updated: "2026-04-22"
+    retrieved_at: *reviewed_at
+    publisher: 上海人工智能实验室
+    volatile: true
+    license_or_usage: Job requirements signal only; never represented as an interview transcript.
+    license_risk: link_and_paraphrase_only
+    reliability: high
+    notes: Official role signal for benchmark design, execution-based evaluation, LLM judge automation, and trajectory failure analysis.
+  - id: bytedance-rl-collection-922308
+    kind: field_report
+    title: 牛客公开帖子：字节大模型算法岗面试复盘
+    url: https://www.nowcoder.com/discuss/922308546966847488
+    observed_at: "2026-04-14"
+    retrieved_at: *reviewed_at
+    publisher: 牛客用户内容
+    volatile: true
+    license_or_usage: Pattern discovery only; paraphrase and link, never copy the question list or answers.
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal
+    notes: Reports project deep-dives, GRPO/PPO/DPO, attention, systems, and coding follow-ups; not a representative sample.
+  - id: alibaba-rl-collection-923309
+    kind: field_report
+    title: 牛客公开帖子：阿里大模型算法岗面试复盘
+    url: https://www.nowcoder.com/discuss/923309531445071872
+    observed_at: "2026-07-17"
+    retrieved_at: *reviewed_at
+    publisher: 牛客用户内容
+    volatile: true
+    license_or_usage: Pattern discovery only; paraphrase and link, never copy the question list or answers.
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal
+    notes: Reports SFT data, GRPO and reward design, attention/KV/GQA/serving, debugging, and short algorithm tasks.
+  - id: taotian-vlm-nowcoder-20250806
+    kind: field_report
+    title: 公开复盘：淘天多模态大模型面试
+    url: https://blog.csdn.net/2201_75499313/article/details/146128971
+    observed_at: "2025-03-09"
+    retrieved_at: *reviewed_at
+    publisher: CSDN user content
+    volatile: true
+    license_or_usage: Pattern discovery only; paraphrase with attribution and link.
+    license_risk: attribution_required
+    reliability: anecdotal
+    notes: Reports CLIP, LoRA, BLIP-2/Q-Former, LLaVA/Qwen-VL, MHA, preference optimization, and coding themes.
+  - id: agent-project-csdn-20260826
+    kind: field_report
+    title: 公开复盘：Agent 项目系统追问
+    url: https://blog.csdn.net/Python_cocola/article/details/160830767
+    observed_at: "2026-08-26"
+    retrieved_at: *reviewed_at
+    publisher: CSDN user content
+    volatile: true
+    license_or_usage: Pattern discovery only; paraphrase with attribution and link.
+    license_risk: attribution_required
+    reliability: anecdotal
+    notes: Reports Agent/RAG design, memory, tool schemas, retry/circuit breaking, serving, preference methods, and coding follow-ups.
+  - id: juejin-training-interviews-20260608
+    kind: field_report
+    title: 公开复盘：大模型训练岗位面试
+    url: https://juejin.cn/post/7648887289629179958
+    observed_at: "2026-06-08"
+    retrieved_at: *reviewed_at
+    publisher: 掘金用户内容
+    volatile: true
+    license_or_usage: Pattern discovery only; paraphrase and link.
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal
+    notes: Reports multi-GPU training, tokens and data, loss/NaN diagnosis, hallucination evaluation, and post-training/VLM/Agent depth.
+  - id: internal-clean-room
+    kind: internal_original
+    title: LLM Interview Lab clean-room authoring and public-test contract
+    retrieved_at: *reviewed_at
+    publisher: LLM Interview Lab
+    volatile: false
+    license_or_usage: Original repository-authored prompts, rubrics, and test contracts under the project license.
+    license_risk: apache-2.0
+    reliability: verified
+    notes: Supports original prompt wording, test boundaries, and links from knowledge cards to existing or planned Catalog problems.
+  - id: gspo-paper
+    kind: official_paper
+    title: Group Sequence Policy Optimization
+    url: https://arxiv.org/abs/2507.18071
+    source_version: arXiv:2507.18071
+    published_or_updated: "2025-07-24"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only; frontier method claims require version-aware review.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for sequence-level policy ratios and the distinction from token-level GRPO objectives.
+  - id: qwen3-report
+    kind: official_paper
+    title: Qwen3 Technical Report
+    url: https://arxiv.org/abs/2505.09388
+    source_version: arXiv:2505.09388v1
+    published_or_updated: "2025-05-14"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only; reported recipe is not a universal prescription.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary report used for cold-start/reasoning post-training, reward variants, and agent/tool trajectory discussion.
+  - id: seed-thinking-report
+    kind: official_paper
+    title: Seed-Thinking-v1.5 Technical Report
+    url: https://arxiv.org/abs/2504.13914
+    source_version: arXiv:2504.13914v2
+    published_or_updated: "2025-04-22"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only; reported systems are evidence, not a guarantee.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary report for verifiable/non-verifiable data, asynchronous rollout and systems-aware reasoning training.
+  - id: minimax-agent-posttrain
+    kind: official_source
+    title: MiniMax M2.1 Post-Training Experience and Insights for Agent Models
+    url: https://www.minimax.io/news/post-training-experience-and-insights-for-agent-models
+    source_version: page retrieved 2026-08-30
+    published_or_updated: "2026-01-22"
+    retrieved_at: *reviewed_at
+    publisher: MiniMax
+    volatile: true
+    license_or_usage: Link and factual paraphrase only; vendor-reported results are labeled as such.
+    license_risk: link_and_paraphrase_only
+    reliability: medium
+    notes: Official engineering report used for agentic data, verifier, rollout/learner decoupling, and cache/scheduling pattern discovery.
+  - id: vllm-official-docs
+    kind: official_docs
+    title: vLLM documentation
+    url: https://docs.vllm.ai/en/latest/
+    source_version: documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: vLLM project
+    volatile: true
+    license_or_usage: Link and factual paraphrase only; feature support is version/hardware dependent.
+    license_risk: link_only
+    reliability: high
+    notes: Official serving reference for scheduling, KV cache, prefix caching, quantization, and metrics.
+  - id: qwen2-vl-paper
+    kind: official_paper
+    title: "Qwen2-VL: Enhancing Vision-Language Model's Perception of the World at Any Resolution"
+    url: https://arxiv.org/abs/2409.12191
+    source_version: arXiv:2409.12191
+    published_or_updated: "2024-09-18"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for dynamic-resolution visual tokens and multimodal rotary position design.
+  - id: pope-paper
+    kind: official_paper
+    title: Evaluating Object Hallucination in Large Vision-Language Models
+    url: https://arxiv.org/abs/2305.10355
+    source_version: arXiv:2305.10355
+    published_or_updated: "2023-05-17"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only; benchmark data is not mirrored.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for POPE-style object-existence hallucination evaluation.
+  - id: dapo-paper
+    kind: official_paper
+    title: "DAPO: An Open-Source LLM Reinforcement Learning System at Scale"
+    url: https://arxiv.org/abs/2503.14476
+    source_version: arXiv:2503.14476
+    published_or_updated: "2025-03-18"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only; reported recipe is not a universal prescription.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for dynamic sampling, decoupled clipping, and long-CoT RL stability trade-offs.
+  - id: ipo-paper
+    kind: official_paper
+    title: "A General Theoretical Paradigm to Understand Learning from Human Preferences"
+    url: https://arxiv.org/abs/2310.12036
+    source_version: arXiv:2310.12036
+    published_or_updated: "2023-10-19"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for the general preference-optimization paradigm; the identity-specialized variant is commonly called IPO.
+  - id: kto-paper
+    kind: official_paper
+    title: "KTO: Model Alignment as Prospect Theoretic Optimization"
+    url: https://arxiv.org/abs/2402.01306
+    source_version: arXiv:2402.01306
+    published_or_updated: "2024-02-02"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for the KTO objective using binary desirable/undesirable feedback without requiring paired responses.
+  - id: rag-paper
+    kind: official_paper
+    title: Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks
+    url: https://arxiv.org/abs/2005.11401
+    source_version: arXiv:2005.11401
+    published_or_updated: "2020-05-22"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for combining parametric generation with non-parametric retrieval.
+  - id: anthropic-agent-evals
+    kind: official_source
+    title: Demystifying evals for AI agents
+    url: https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents
+    source_version: page retrieved 2026-08-30
+    published_or_updated: "2026-01-09"
+    retrieved_at: *reviewed_at
+    publisher: Anthropic
+    volatile: true
+    license_or_usage: Link and factual paraphrase only; examples are not copied.
+    license_risk: link_only
+    reliability: high
+    notes: Official guidance separating task, trial, grader, trace, trajectory, and outcome in Agent evaluation.
+  - id: vllm-metrics-docs
+    kind: official_docs
+    title: vLLM metrics design documentation
+    url: https://docs.vllm.ai/en/latest/design/metrics/
+    source_version: documentation retrieved 2026-08-30
+    retrieved_at: *reviewed_at
+    publisher: vLLM project
+    volatile: true
+    license_or_usage: Link and factual paraphrase only; metric names are version-sensitive.
+    license_risk: link_only
+    reliability: high
+    notes: Official reference for queue, token throughput, KV residency, TTFT, TPOT, and end-to-end serving metrics.
+  - id: awq-paper
+    kind: official_paper
+    title: "AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration"
+    url: https://arxiv.org/abs/2306.00978
+    source_version: arXiv:2306.00978
+    published_or_updated: "2023-06-01"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for activation-aware calibration and weight-only quantization trade-offs.
+  - id: gptq-paper
+    kind: official_paper
+    title: "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers"
+    url: https://arxiv.org/abs/2210.17323
+    source_version: arXiv:2210.17323
+    published_or_updated: "2022-10-31"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for approximate second-order post-training weight quantization.
+  - id: fp8-formats-paper
+    kind: official_paper
+    title: FP8 Formats for Deep Learning
+    url: https://arxiv.org/abs/2209.05433
+    source_version: arXiv:2209.05433
+    published_or_updated: "2022-09-12"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for FP8 format choices and numerical-range considerations.
+  - id: gae-paper
+    kind: official_paper
+    title: High-Dimensional Continuous Control Using Generalized Advantage Estimation
+    url: https://arxiv.org/abs/1506.02438
+    source_version: arXiv:1506.02438
+    published_or_updated: "2015-06-08"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for the bias-variance trade-off in generalized advantage estimation.
+  - id: prm-paper
+    kind: official_paper
+    title: Let's Verify Step by Step
+    url: https://arxiv.org/abs/2305.20050
+    source_version: arXiv:2305.20050
+    published_or_updated: "2023-05-31"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for process supervision and process reward modeling in reasoning.
+  - id: reward-overoptimization-paper
+    kind: official_paper
+    title: Scaling Laws for Reward Model Overoptimization
+    url: https://arxiv.org/abs/2210.10760
+    source_version: arXiv:2210.10760
+    published_or_updated: "2022-10-19"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only.
+    license_risk: link_only
+    reliability: verified
+    notes: Primary source for proxy-reward versus true-quality divergence and overoptimization diagnostics.
+  - id: contamination-survey
+    kind: official_paper
+    title: A Survey on Data Contamination in Language Models
+    url: https://arxiv.org/abs/2406.04244
+    source_version: arXiv:2406.04244
+    published_or_updated: "2024-06-06"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only; no benchmark data is mirrored.
+    license_risk: link_only
+    reliability: verified
+    notes: Survey source for direct, near-duplicate, semantic, and evaluation leakage categories.
+  - id: livebench-benchmark
+    kind: benchmark
+    title: "LiveBench: A Challenging, Contamination-Limited LLM Benchmark"
+    url: https://arxiv.org/abs/2406.19314
+    source_version: arXiv:2406.19314
+    published_or_updated: "2024-06-27"
+    retrieved_at: *reviewed_at
+    publisher: arXiv
+    volatile: false
+    license_or_usage: Link and factual paraphrase only; benchmark data is not mirrored.
+    license_risk: link_only
+    reliability: high
+    notes: Benchmark source for dynamic, contamination-resistant evaluation and task refresh discipline.
+
+cards:
+  - id: EGT-TRN-001
+    kind: eight_stock
+    title: "Scaled dot-product attention：shape、缩放与 mask"
+    domain: transformer
+    tracks: [llm_algorithm, vlm_algorithm, post_training, systems]
+    skills: [skill.llm_vlm.attention, skill.deep_learning.tensor_ops, skill.deep_learning.losses]
+    priority: P0
+    difficulty: {concept: 3, implementation: 4, debugging: 4}
+    seniority: &all_seniority [intern, new_grad, mid, senior]
+    prompt: "请从 Q/K/V 的 shape 推导 attention，并说明为什么除以 sqrt(d_k)、如何处理 causal/padding mask，以及全屏蔽行怎么办。"
+    one_liner: "先算 QKᵀ/sqrt(d_k)，再在 key 维做稳定 softmax；mask 的语义必须明确，输出形状回到 query 长度。"
+    core_answer:
+      - "Q[B,H,Lq,D]、K/V[B,H,Lk,D]，score[B,H,Lq,Lk]，output[B,H,Lq,D]；Lq 与 Lk 不必相等。"
+      - "缩放让 logits 方差不随 head dimension 增长，避免 softmax 饱和；实现用减最大值或稳定的 SDPA。"
+      - "causal mask 屏蔽未来 key，padding mask 屏蔽无效 key；必须写清 bool mask 是 allow 还是 block。"
+      - "全屏蔽 query 行不能产生 NaN：约定返回零/显式拒绝，并在数据契约和测试中固定。"
+    derivation_or_example: "给 B=1、H=1、Lq=2、Lk=3、D=2 的矩阵，标注每次 matmul、transpose 和 broadcast 后的 shape。"
+    answer_outline: ["列出 Q/K/V 与 score/output shape", "解释 sqrt(d_k) 与稳定 softmax", "区分 causal/padding/additive mask", "给出全屏蔽与梯度测试"]
+    acceptance:
+      L1: "能说出目标、四个核心 shape 与缩放原因。"
+      L2: "能写稳定公式并区分 causal、padding、additive mask。"
+      L3: "能处理矩形序列、全屏蔽行、极端 logits、dtype/device 和梯度。"
+    follow_ups: ["PyTorch SDPA 的 bool mask True 表示什么？", "为什么把 mask 加在 softmax 前？", "FlashAttention 如何保持同一数学结果？"]
+    pitfalls: ["在错误的维度 softmax", "漏掉 sqrt(d_k)", "把 query padding 与 key padding 混为一谈", "全 -inf 行直接 softmax 造成 NaN"]
+    signals: ["shape 与 mask 极性可在白板上自洽", "能给出数值稳定和退化输入的测试策略", "明确 framework 行为而不把经验当定律"]
+    source_claims:
+      - {claim_id: EGT-TRN-001-C1, source_id: attention-is-all-you-need, claim: "Transformer 使用缩放点积注意力和多头分解。", confidence: high, locator: "paper §3.2"}
+      - {claim_id: EGT-TRN-001-C2, source_id: pytorch-sdpa, claim: "PyTorch 提供带 causal 与 mask 语义的缩放点积注意力实现。", confidence: verified, locator: "API reference"}
+    related_problems: [ATT-002, ATT-004]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-TRN-002
+    kind: eight_stock
+    title: "MHA、MQA、GQA：质量与 KV 成本的取舍"
+    domain: transformer
+    tracks: [llm_algorithm, vlm_algorithm, systems, post_training]
+    skills: [skill.llm_vlm.attention, skill.inference_systems.kv_cache, skill.machine_learning_math.linear_algebra]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 4}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "比较 MHA、MQA、GQA 的 Q/K/V 头数、表达能力、KV-cache 显存和迁移检查点时的风险。"
+    one_liner: "Q 头可以多于 KV 头；共享 KV 减少缓存和带宽，但可能牺牲表达能力，必须在质量与吞吐上实测。"
+    core_answer:
+      - "MHA 的 q_heads=kv_heads；MQA 只有一组 KV；GQA 将多个 query heads 分组共享一个 KV head。"
+      - "KV cache 近似按 layers×batch×sequence×kv_heads×head_dim×2×dtype_bytes 增长。"
+      - "从 MHA checkpoint 转 GQA/MQA 需要定义 KV head 合并/初始化，不能只改配置字段。"
+      - "评估 perplexity/任务质量、长上下文退化、TTFT/TPOT、带宽和显存，而不是只看理论压缩。"
+    derivation_or_example: "给 32 个 query heads、8 个 KV heads、head_dim=128、8k tokens、BF16，比较 MHA 与 GQA 的单层缓存大小。"
+    answer_outline: ["画三种 head layout", "推导 KV cache bytes", "说明 checkpoint 转换", "列质量/延迟/带宽指标"]
+    acceptance:
+      L1: "能准确区分三种头布局。"
+      L2: "能写出 KV-cache 估算并解释广播维。"
+      L3: "能说明 checkpoint 转换、质量回归和 serving 指标。"
+    follow_ups: ["GQA 的 repeat_kv 如何避免错误 broadcast？", "MLA 与 GQA 的缓存对象有什么不同？", "为什么 decode 更受 KV 带宽影响？"]
+    pitfalls: ["把 MQA 说成没有 K/V", "用 q_heads 估算 GQA cache", "合并 KV head 时打乱 head 顺序", "只报参数量不报带宽"]
+    signals: ["能在 head 维度画出广播关系", "把算法选择落到可测 SLO", "指出迁移与回滚策略"]
+    source_claims:
+      - {claim_id: EGT-TRN-002-C1, source_id: gqa-paper, claim: "GQA 位于 MHA 与 MQA 之间，通过较少 KV 头降低推理成本。", confidence: high, locator: "paper abstract/§2"}
+      - {claim_id: EGT-TRN-002-C2, source_id: hf-cache, claim: "缓存状态的序列维度随生成上下文增长并需要 cache position 对齐。", confidence: high, locator: "cache explanation"}
+    related_problems: [ATT-005, ATT-006, ATT-009]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-TRN-003
+    kind: eight_stock
+    title: "Decoder-only 训练：shift-right、causal mask 与 loss mask"
+    domain: language_model_training
+    tracks: [llm_algorithm, post_training, vlm_algorithm]
+    skills: [skill.post_training_rl.sft, skill.deep_learning.losses, skill.llm_vlm.transformer]
+    priority: P0
+    difficulty: {concept: 3, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "给 logits[B,T,V] 和多轮对话 labels，说明 next-token shift、causal 可见性、padding/assistant-only label mask 的边界。"
+    one_liner: "用 logits[:, :-1] 预测 labels[:, 1:]，只对有效 assistant target 计 CE；attention mask 与 label mask 是两份不同契约。"
+    core_answer:
+      - "shift 后 logits 与 labels 的时间长度都是 T-1，目标 token 的 loss 不能看见自身或未来。"
+      - "padding、system/user、图像占位符通常设为 ignore_index（如 -100），但 attention 仍决定条件可见性。"
+      - "分母用有效 target token 数，并定义全 mask batch 的返回值/跳过策略。"
+      - "packing 必须用 block-diagonal 或边界 position/mask，防止样本之间泄漏。"
+    derivation_or_example: "用 [BOS,user,assistant,a,b,EOS] 标出每个 logits 位置实际监督的 token，展示左/右 padding 后的 mask。"
+    answer_outline: ["画 shift 对齐表", "拆 attention 与 label mask", "定义有效分母", "覆盖 packing/空样本"]
+    acceptance:
+      L1: "能说明 shift 与 assistant-only 的目的。"
+      L2: "能按索引写出 masked CE 和有效分母。"
+      L3: "能诊断双 shift、空答案、packing 泄漏和变长 batch。"
+    follow_ups: ["为什么把 user token 也计 loss 会改变行为？", "label mask 和 attention mask 能否共用？", "label smoothing 与 ignore_index 怎样交互？"]
+    pitfalls: ["BOS/EOS 偏移一位", "prompt token 误计入 loss", "padding 进入平均分母", "把全 mask 当作正常零损失却产生错误梯度"]
+    signals: ["能画出 token 对齐表", "能明确梯度只流向有效 target", "能给出可执行的 mask 单测"]
+    source_claims:
+      - {claim_id: EGT-TRN-003-C1, source_id: pytorch-cross-entropy, claim: "CrossEntropyLoss 支持 ignore_index、不同输入形状和可解释的 reduction。", confidence: high, locator: "API reference"}
+      - {claim_id: EGT-TRN-003-C2, source_id: hf-chat-templates, claim: "聊天模板决定角色控制 token 和 assistant generation 边界，不能脱离 tokenizer 处理。", confidence: high, locator: "chat templating docs"}
+    related_problems: [PT-001, PT-002, LOSS-014]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-TRN-004
+    kind: eight_stock
+    title: "RoPE、位置偏移与训练/推理 cache 一致性"
+    domain: transformer
+    tracks: [llm_algorithm, vlm_algorithm, systems]
+    skills: [skill.llm_vlm.transformer, skill.llm_vlm.attention, skill.inference_systems.kv_cache]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "解释 RoPE 如何作用于 q/k、为什么点积体现相对位置，以及增量 decode 使用 KV cache 时 position_ids/cache_position 如何保持一致。"
+    one_liner: "对 q、k 的偶奇维成对旋转并使用同一位置相位；缓存追加时位置必须与训练时的坐标约定一致。"
+    core_answer:
+      - "每两个通道构成一个二维旋转，位置 m 的相位与频率共同决定；v 通常不旋转。"
+      - "相同旋转结构使 q_m 与 k_n 的内积可表达相对位移，但具体频率/缩放是模型配置。"
+      - "prefill 与 decode 的位置不能都从 0 开始；cache_position、padding offset、packed sequence 要显式传递。"
+      - "奇数 head_dim、错位 q/k、重复应用 RoPE 或 cache 与 mask 不同坐标都会造成隐性退化。"
+    derivation_or_example: "写出二维向量在位置 0、1 的旋转矩阵，并验证位置 0 是恒等；再说明单 token decode 的 q 位置。"
+    answer_outline: ["写二维旋转公式", "解释相对位置性质", "对齐 prefill/decode 坐标", "列 cache 与维度边界"]
+    acceptance:
+      L1: "能解释旋转发生在 q/k 而非泛泛地说‘加位置编码’。"
+      L2: "能写偶奇维公式和位置索引。"
+      L3: "能定位 padding、cache offset、长上下文缩放的实现风险。"
+    follow_ups: ["ALiBi 与 RoPE 的外推差异？", "为什么 V 不需要同样旋转？", "多模态 M-RoPE 如何加入时间/高度/宽度轴？"]
+    pitfalls: ["把 RoPE 施加给 V", "sin/cos 维度交错顺序错", "prefill/decode position 重置", "奇数维静默截断"]
+    signals: ["公式、代码和 cache 坐标三者一致", "能用等价性测试比较 full 与 incremental forward", "识别模型特有缩放不是通用定律"]
+    source_claims:
+      - {claim_id: EGT-TRN-004-C1, source_id: rope-paper, claim: "RoPE 通过旋转 q/k 注入位置信息并利用相对位置结构。", confidence: high, locator: "paper §3"}
+      - {claim_id: EGT-TRN-004-C2, source_id: hf-cache, claim: "增量生成需要显式维护 cache position 以避免位置错位。", confidence: high, locator: "cache position section"}
+    related_problems: [ATT-007, ATT-009]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-TRN-005
+    kind: eight_stock
+    title: "Pre-LN、Post-LN 与 RMSNorm：稳定性如何回答"
+    domain: transformer_training
+    tracks: [llm_algorithm, post_training, systems]
+    skills: [skill.llm_vlm.transformer, skill.machine_learning_math.optimization, skill.deep_learning.autograd]
+    priority: P1
+    difficulty: {concept: 4, implementation: 3, debugging: 4}
+    seniority: [new_grad, mid, senior]
+    prompt: "比较 Post-LN、Pre-LN、RMSNorm 在深层 Transformer 的梯度路径、初始化和推理开销，并给出实验诊断。"
+    one_liner: "归一化位置改变残差与梯度路径；RMSNorm 去掉均值中心化，实际选择要用稳定性、质量和吞吐实验验证。"
+    core_answer:
+      - "Pre-LN 通常让残差主路径更直接、深层训练更易稳定；Post-LN 的梯度/初始化敏感性不同。"
+      - "RMSNorm 只按均方根缩放并保留可学习尺度，不等同于 LayerNorm。"
+      - "不能只背‘Pre-LN 一定更好’：比较 loss 曲线、梯度范数、最终质量和推理 kernel。"
+      - "换 norm 需要检查 checkpoint、epsilon、精度和 residual dtype。"
+    derivation_or_example: "画一个 block 的残差路径，标出 norm、attention、MLP 的前向和反向经过点。"
+    answer_outline: ["定义三种 norm/block 顺序", "追踪残差梯度", "比较 epsilon/精度", "设计稳定性与质量 ablation"]
+    acceptance:
+      L1: "能说清三者定义差异。"
+      L2: "能解释梯度路径与 epsilon/精度。"
+      L3: "能提出受控 ablation 而不把经验口号当结论。"
+    follow_ups: ["为什么 epsilon 过大或过小会影响训练？", "norm 是否应计入量化敏感层？", "如何用 gradient norm 排查深层不稳定？"]
+    pitfalls: ["把 RMSNorm 当无参数归一化", "忽略 residual scaling", "只比较早期 loss", "混淆训练稳定和推理速度"]
+    signals: ["有结构图和梯度证据", "知道配置迁移的兼容性风险", "能设计可复现实验"]
+    source_claims:
+      - {claim_id: EGT-TRN-005-C1, source_id: internal-clean-room, claim: "本卡要求用公开定义自行推导并通过实验比较，不把单一架构偏好当事实。", confidence: verified, locator: "project authoring policy"}
+    related_problems: [NNL-008, TNS-013]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-TRN-006
+    kind: eight_stock
+    title: "BPE、special tokens 与 chat template 的数据契约"
+    domain: tokenization
+    tracks: [llm_algorithm, vlm_algorithm, post_training, agent]
+    skills: [skill.llm_vlm.tokenization, skill.llm_vlm.multimodal_data, skill.data_mlops.data_quality]
+    priority: P0
+    difficulty: {concept: 3, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "从语料统计到线上 encode/decode，说明 BPE 合并、未知字节、special token 和 chat template 为什么必须作为一个版本化契约。"
+    one_liner: "BPE 用确定性的高频 pair 合并获得子词；special token 与模板控制边界，tokenizer、模型和数据必须锁定同一版本。"
+    core_answer:
+      - "训练阶段重复统计相邻 pair 并按确定性 tie-break 合并，直到词表预算；byte-level 方案可保证任意 UTF-8 输入可表示。"
+      - "special token 必须优先识别且不被普通合并拆分；未知 token/字节要有明确 fallback。"
+      - "chat template 决定 role/control token、generation prompt、assistant mask；改模板会改变训练分布。"
+      - "记录 tokenizer files、special-token IDs、template revision，并做 decode round-trip 与边界回归。"
+    derivation_or_example: "给一个小语料和 tie 频率，手算两轮 merge；再展示带 image placeholder 的模板序列。"
+    answer_outline: ["描述 pair merge 与 tie-break", "处理 special/unknown 字节", "把 template 当数据契约", "给 round-trip/版本测试"]
+    acceptance:
+      L1: "能解释 BPE 与模板边界。"
+      L2: "能写确定性合并和可逆性测试。"
+      L3: "能诊断 tokenizer/template 版本漂移、Unicode 和多模态占位符问题。"
+    follow_ups: ["为什么词表越大不一定更好？", "packing 时 special token 如何防跨样本泄漏？", "多模态 processor 怎样与 tokenizer 协同？"]
+    pitfalls: ["频率 tie 不确定导致不可复现", "special token 被拆分", "只按字符而非字节处理 Unicode", "训练和推理 template 不一致"]
+    signals: ["能给出可逆性和版本审计清单", "把数据格式视为模型接口", "区分发现题型的二手资料与事实来源"]
+    source_claims:
+      - {claim_id: EGT-TRN-006-C1, source_id: bpe-paper, claim: "BPE 通过迭代合并高频相邻符号学习子词单元。", confidence: high, locator: "paper §3"}
+      - {claim_id: EGT-TRN-006-C2, source_id: hf-chat-templates, claim: "聊天模板和 special tokens 是 tokenizer/模型输入契约的一部分。", confidence: high, locator: "chat template docs"}
+    related_problems: [TOK-001, TOK-002, TOK-003]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-TRN-007
+    kind: eight_stock
+    title: "预训练数据：质量、去重、污染与可追溯性"
+    domain: data_engineering
+    tracks: [llm_algorithm, vlm_algorithm, post_training, systems]
+    skills: [skill.data_mlops.data_quality, skill.data_mlops.reproducibility, skill.evaluation_safety.leakage]
+    priority: P0
+    difficulty: {concept: 4, implementation: 3, debugging: 4}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "loss 下降但下游/评测不升时，如何从数据质量、重复、污染、配比和切片实验定位？"
+    one_liner: "把数据当作可审计产品：来源/license、过滤、去重、切分和版本都要可追溯，并用独立切片验证收益。"
+    core_answer:
+      - "分离质量过滤、近重复去重、污染检测和配比采样；每步保留计数、哈希、来源和拒绝原因。"
+      - "train/test overlap 会夸大分数；污染审计需在 token/文档/语义层面定义规则和局限。"
+      - "loss 是代理信号，应按语言、长度、领域、难度、模态和来源做 slice 与多 seed。"
+      - "数据改动必须和 tokenizer、训练步数、评测 prompt 一起版本化，才能归因。"
+    derivation_or_example: "设计一个从原始网页到训练 shard 的 provenance 表，并给出 contamination 发现后的回滚实验。"
+    answer_outline: ["拆质量/去重/污染步骤", "定义 provenance 与版本", "按 slice 验证 loss/质量", "保留拒绝与回滚证据"]
+    acceptance:
+      L1: "能列出质量/重复/污染三类问题。"
+      L2: "能描述哈希、切分和版本字段。"
+      L3: "能提出独立 holdout、slice 和 rollback 方案。"
+    follow_ups: ["近重复阈值如何校准？", "多语言/长尾配比如何避免头部吞噬？", "合成数据怎样防 teacher 错误和模板泄漏？"]
+    pitfalls: ["把去重当简单 set", "只报总 token 数", "评测集被用于筛选", "没有拒绝样本和来源审计"]
+    signals: ["数据流程可重放", "指标与数据切片相互印证", "对污染结论给出置信边界"]
+    source_claims:
+      - {claim_id: EGT-TRN-007-C1, source_id: dedup-paper, claim: "训练数据重复会影响记忆与评测，去重是质量控制的一部分。", confidence: high, locator: "paper abstract"}
+      - {claim_id: EGT-TRN-007-C2, source_id: internal-clean-room, claim: "本项目要求来源、版本和许可元数据可审计，不镜像第三方数据。", confidence: verified, locator: "project authoring policy"}
+    related_problems: [FND-003, FND-012, FND-014]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-TRN-008
+    kind: eight_stock
+    title: "混合精度、梯度累积与有效 batch"
+    domain: training_systems
+    tracks: [llm_algorithm, post_training, systems]
+    skills: [skill.training_infra.observability, skill.deep_learning.autograd, skill.deep_learning.optimizers]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "解释 FP32/FP16/BF16、autocast、GradScaler、梯度累积和 variable-token loss 的关系，并列出 NaN 排障顺序。"
+    one_liner: "让 autocast 选择安全算子精度、用 scaler 防 FP16 下溢，并按有效 token 正确归一化累积梯度；监控才是稳定性证据。"
+    core_answer:
+      - "BF16 动态范围接近 FP32、精度较低；FP16 更易溢出/下溢，scaler 只解决部分梯度下溢。"
+      - "累积 N 个 microbatch 时 loss/梯度的缩放必须和有效 token 或样本权重一致，不能简单平均变长 batch。"
+      - "unscale 后再 clip，overflow 时跳过 step 并记录 scaler、grad norm、loss finite 和数据 batch。"
+      - "恢复训练要保存 optimizer/scheduler/scaler/RNG/sampler cursor，否则无法复现。"
+      - "activation checkpointing 以额外重算换取激活内存，必须把重算时间和随机算子语义纳入吞吐/复现评估。"
+    derivation_or_example: "给两个不同长度 microbatch，分别用 sample mean 与 token mean 计算有效 batch 梯度，比较差异。"
+    answer_outline: ["比较 dtype 与数值风险", "写累积/归一化顺序", "定义 overflow/clip 监控", "列 resume 状态"]
+    acceptance:
+      L1: "能区分三种 dtype 与 scaler 作用边界。"
+      L2: "能写出累积、unscale、clip、step 顺序。"
+      L3: "能提出 NaN/overflow、resume 和 variable-token 的监控方案。"
+    follow_ups: ["为什么 scaler 不能修复错误 mask？", "梯度累积何时等价于大 batch？", "bf16 下还需要 GradScaler 吗？"]
+    pitfalls: ["每个 microbatch 都 step", "clip 前未 unscale", "padding token 影响分母", "只保存模型权重不保存 scaler/RNG"]
+    signals: ["顺序和归一化写得清楚", "能把数值问题和数据问题分开", "可复现恢复证据完整"]
+    source_claims:
+      - {claim_id: EGT-TRN-008-C1, source_id: pytorch-amp, claim: "PyTorch AMP 文档规定 autocast、GradScaler、unscale/clip 和累积的组合边界。", confidence: high, locator: "AMP examples"}
+      - {claim_id: EGT-TRN-008-C2, source_id: internal-clean-room, claim: "恢复语义需要记录优化器、调度器、scaler、RNG 和采样器游标。", confidence: verified, locator: "project training contract"}
+      - {claim_id: EGT-TRN-008-C3, source_id: activation-checkpoint-paper, claim: "激活检查点通过重算换取次线性激活内存，收益需与额外计算和随机性约束一起衡量。", confidence: high, locator: "paper abstract/method"}
+    related_problems: [OPT-001, OPT-005, CAP-TRN-001]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-TRN-009
+    kind: eight_stock
+    title: "DDP、FSDP、ZeRO 与 DP/TP/PP 的账本"
+    domain: distributed_training
+    tracks: [systems, llm_algorithm, post_training]
+    skills: [skill.training_infra.distributed, skill.training_infra.checkpointing, skill.inference_systems.capacity]
+    priority: P0
+    difficulty: {concept: 4, implementation: 3, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "面对 7B/72B 训练预算，如何选择 DDP/FSDP/ZeRO 与 DP/TP/PP，并估算参数、梯度、optimizer、activation 和通信？"
+    one_liner: "先写内存对象和并行切分对象，再根据 world size、通信拓扑、序列长度和 checkpoint 需求选组合。"
+    core_answer:
+      - "DDP 复制参数并同步梯度；FSDP/ZeRO 分片参数、梯度和/或 optimizer state，阶段含义不能混淆。"
+      - "TP 切层内矩阵、PP 切层、DP 切 batch；组合后要说明 all-reduce/all-gather/reduce-scatter/pipeline bubble。"
+      - "理论账本只给数量级，需用峰值 profiler、通信时间和有效 tokens/s 交叉验证。"
+      - "分布式 checkpoint 要包含 shard metadata、optimizer/scheduler 和可迁移的 world-size 语义。"
+    derivation_or_example: "给参数 P、dtype、world size 和 AdamW 状态大小，列出 DDP、ZeRO-2、ZeRO-3 的每卡主要项。"
+    answer_outline: ["列内存对象与并行维", "比较切分/collective", "估算并用 profiler 校验", "说明 checkpoint 恢复"]
+    acceptance:
+      L1: "能画出并行维度和切分对象。"
+      L2: "能写出内存/通信量级。"
+      L3: "能给出 topology、故障恢复和测量计划。"
+    follow_ups: ["为什么 DDP 不省参数显存？", "TP/PP 如何 overlap 通信？", "改变 world size 恢复 checkpoint 的风险？"]
+    pitfalls: ["ZeRO stage 顺序说反", "漏 optimizer/master weights", "把 activation 当参数分片", "不声明 world size 和 dtype"]
+    signals: ["账本有假设和单位", "把理论与 profiler 对齐", "能解释失败恢复而不只背缩写"]
+    source_claims:
+      - {claim_id: EGT-TRN-009-C1, source_id: pytorch-ddp, claim: "DDP 在进程间同步梯度并保留各进程模型副本。", confidence: high, locator: "DDP docs"}
+      - {claim_id: EGT-TRN-009-C2, source_id: deepspeed-zero-docs, claim: "ZeRO 按阶段分片 optimizer state、gradient 和 parameter。", confidence: high, locator: "ZeRO tutorial"}
+      - {claim_id: EGT-TRN-009-C3, source_id: shlab-llm-training-20260813, claim: "官方训练算法岗位将分布式训练、数据、后训练和可观测性作为同一工程闭环。", confidence: high, locator: "job description"}
+    related_problems: [DST-001, DST-004, DST-007, DST-008]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-TRN-010
+    kind: eight_stock
+    title: "MoE 路由、capacity 与负载均衡"
+    domain: mixture_of_experts
+    tracks: [llm_algorithm, systems, post_training]
+    skills: [skill.llm_vlm.transformer, skill.training_infra.distributed, skill.training_infra.observability]
+    priority: P1
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [mid, senior]
+    prompt: "解释 sparse MoE 的 router/top-k/capacity/dispatch/combine，并说明负载不均、token drop 和 all-to-all 如何监控。"
+    one_liner: "每个 token 由 router 选少量专家，容量限制控制显存；质量、负载均衡和通信必须一起优化。"
+    core_answer:
+      - "router logits[T,E] 经过 top-k 得到 expert assignment；dispatch 后专家计算再按 gate 权重 combine。"
+      - "capacity overflow 要有确定的 drop/pad 策略，记录 token conservation、drop rate 和 expert load。"
+      - "auxiliary load-balancing loss 只是代理，不能掩盖热门专家质量或 all-to-all 热点。"
+      - "专家并行需按拓扑安排通信，checkpoint 要保存 router/专家布局与版本。"
+    derivation_or_example: "给 T=8、E=4、k=2、capacity=3 的 assignment，手算 overflow、dispatch 形状和 combine 权重。"
+    answer_outline: ["画 token→expert→token", "处理 top-k/capacity", "定义负载与通信指标", "设计 overflow/tie 测试"]
+    acceptance:
+      L1: "能描述 token→expert→token 的路径。"
+      L2: "能处理 top-k tie、capacity 和 gate。"
+      L3: "能提出负载/通信/质量三类监控与 ablation。"
+    follow_ups: ["top-1 与 top-2 的稳定性/成本？", "如何避免 router collapse？", "MoE active 参数与总参数如何分别报告？"]
+    pitfalls: ["capacity overflow 静默丢 token", "tie break 不确定", "combine 权重未归一化", "只看平均 load 不看 tail/all-to-all"]
+    signals: ["shape、容量和通信叙述一致", "能给出退化分布的测试", "对 active/total 参数口径清楚"]
+    source_claims:
+      - {claim_id: EGT-TRN-010-C1, source_id: switch-transformer-paper, claim: "稀疏专家路由通过容量与负载均衡约束扩展计算。", confidence: high, locator: "paper §§2–3"}
+      - {claim_id: EGT-TRN-010-C2, source_id: internal-clean-room, claim: "本卡的 dispatch/测试契约为项目原创，不复制第三方实现。", confidence: verified, locator: "project authoring policy"}
+    related_problems: [ATT-018, DST-006]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-INF-001
+    kind: eight_stock
+    title: "Temperature、top-k、top-p 与可复现采样"
+    domain: generation
+    tracks: [llm_algorithm, vlm_algorithm, post_training, systems]
+    skills: [skill.llm_vlm.generation, skill.llm_vlm.context_management, skill.inference_systems.serving]
+    priority: P0
+    difficulty: {concept: 3, implementation: 4, debugging: 4}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "从 logits 到下一个 token，说明 temperature、top-k、top-p、repetition penalty 的顺序、边界和随机种子语义。"
+    one_liner: "先按约定变换 logits，再做候选截断和归一化采样；温度、过滤顺序、seed、EOS 都是接口的一部分。"
+    core_answer:
+      - "temperature 改变分布尖锐度；top-k 保留固定数量，top-p 保留累计概率达到阈值的最小集合。"
+      - "过滤后必须重新归一化，k=1 应退化为 argmax；T≤0、p/k 越界、全 -inf 要显式报错或约定。"
+      - "repetition/presence penalty 的 token 计数和正负 logits 处理要符合选定实现，不能混用定义。"
+      - "使用独立 Generator/seed 保证可复现且不修改调用者 logits；记录 decoding config 才能比较实验。"
+    derivation_or_example: "给五个 logits，手算 T=0.5、top-k=2、top-p=0.8 的候选集合和归一化概率。"
+    answer_outline: ["区分温度与候选过滤", "写过滤后归一化", "固定异常/seed 语义", "设计统计与非变异性测试"]
+    acceptance:
+      L1: "能解释三种采样旋钮的直觉与边界。"
+      L2: "能写稳定过滤/归一化伪代码。"
+      L3: "能讨论顺序、随机性、EOS、质量/延迟和回归记录。"
+    follow_ups: ["top-k 与 top-p 的顺序是否可交换？", "为什么全 -inf 不能直接 multinomial？", "采样参数怎样进入线上 A/B 评测？"]
+    pitfalls: ["temperature=0 直接除零", "截断后未归一化", "原地修改 logits", "用全局 RNG 导致并发不可复现"]
+    signals: ["边界行为明确", "能区分分布变换与候选过滤", "实验记录包含完整 decoding config"]
+    source_claims:
+      - {claim_id: EGT-INF-001-C1, source_id: hf-generation, claim: "Transformers 将 greedy、sampling、beam 和 assisted decoding 作为明确生成策略配置。", confidence: high, locator: "generation strategies"}
+      - {claim_id: EGT-INF-001-C2, source_id: internal-clean-room, claim: "本项目将采样边界和非变异性写成原创手撕契约。", confidence: verified, locator: "project authoring policy"}
+    related_problems: [ATT-010, ATT-011]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-INF-002
+    kind: eight_stock
+    title: "FlashAttention、PagedAttention 与 continuous batching"
+    domain: inference_systems
+    tracks: [systems, llm_algorithm, vlm_algorithm, agent]
+    skills: [skill.inference_systems.kernels, skill.inference_systems.kv_cache, skill.inference_systems.serving]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "为什么 attention/serving 的瓶颈常在 IO、KV 读写和调度，而不只是 FLOPs？比较 FlashAttention 与 PagedAttention 的边界。"
+    one_liner: "FlashAttention 以 tiling 和在线 softmax 减少 HBM 往返并保持精确结果；PagedAttention 以 page 管 KV、配合动态批处理提高利用率。"
+    core_answer:
+      - "FlashAttention 不改变 attention 数学目标，分块维护 max/sum/output，降低 IO 和中间矩阵占用。"
+      - "PagedAttention 解决变长请求 KV 的碎片/共享/回收；它是 serving 内存管理，不等同于 kernel fusion。"
+      - "prefill 偏计算、decode 偏带宽/调度；continuous batching 需处理加入、完成、取消、公平和 token budget。"
+      - "分别报告 TTFT、TPOT、吞吐、p95/p99、显存碎片和 kernel 利用率。"
+    derivation_or_example: "画一次 block-wise online softmax 的 m/l/o 状态更新，再画请求逻辑 token 到物理 KV page 的映射。"
+    answer_outline: ["解释 online softmax/tiling", "区分 kernel 与 allocator", "描述请求调度状态", "列吞吐/尾延迟指标"]
+    acceptance:
+      L1: "能区分 kernel IO 优化与 KV allocator。"
+      L2: "能说出在线 softmax 与 page/block 的核心不变量。"
+      L3: "能提出调度、碎片、共享前缀和尾延迟测试。"
+    follow_ups: ["为什么 FlashAttention 仍是 O(L²) 计算？", "prefix cache 如何处理不同 adapter/位置？", "抢占和取消怎样避免泄漏或饥饿？"]
+    pitfalls: ["把 FlashAttention 说成降低理论复杂度", "把 PagedAttention 当磁盘分页", "只看平均吞吐", "忽略 page refcount/COW"]
+    signals: ["能够从硬件层次解释收益", "把请求生命周期写成状态机", "指标口径和负载假设完整"]
+    source_claims:
+      - {claim_id: EGT-INF-002-C1, source_id: flashattention-paper, claim: "FlashAttention 通过 IO-aware tiling 实现精确且更高效的 attention。", confidence: high, locator: "paper abstract/§2"}
+      - {claim_id: EGT-INF-002-C2, source_id: pagedattention-paper, claim: "PagedAttention 用块化 KV 管理降低碎片并支持高吞吐服务。", confidence: high, locator: "paper §§2–4"}
+    related_problems: [ATT-015, INF-003, INF-005]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-INF-003
+    kind: eight_stock
+    title: "Speculative decoding：接受-拒绝与收益边界"
+    domain: inference_systems
+    tracks: [systems, llm_algorithm]
+    skills: [skill.llm_vlm.generation, skill.inference_systems.kv_cache, skill.inference_systems.capacity]
+    priority: P1
+    difficulty: {concept: 4, implementation: 4, debugging: 4}
+    seniority: [mid, senior]
+    prompt: "draft model 一次提出多个 token 时，如何让 target model 验证并保持目标分布？什么时候反而没有收益？"
+    one_liner: "按 target/draft 概率接受候选，拒绝时从正残差重采样；收益由接受率、验证批量、KV 和调度开销共同决定。"
+    core_answer:
+      - "对第 i 个候选使用 min(1,p_i/q_i) 接受；拒绝后按 max(p_i-q_i,0) 归一化采样。"
+      - "target 一次前向验证 draft block，接受前缀后继续；EOS、tokenizer 对齐和 cache 回滚要有明确状态。"
+      - "正确性是分布层面的，不等于每次 token 都接受；greedy 与随机采样需分开讨论。"
+      - "小 draft 不够快、接受率低、batch 过大或 CPU 调度成为瓶颈时，端到端可能变慢。"
+    derivation_or_example: "对 p=[0.3,0.7]、q=[0.6,0.4] 计算接受率和拒绝残差，并说明 q=0 的处理。"
+    answer_outline: ["写 draft/target 分布", "给接受-拒绝公式", "说明 cache/EOS 边界", "分析 speedup 条件"]
+    acceptance:
+      L1: "能说出 draft→verify→continue 流程。"
+      L2: "能写接受概率和残差公式。"
+      L3: "能分析分布正确性、cache 回滚和端到端收益。"
+    follow_ups: ["draft/target tokenizer 不同怎么办？", "如何测 acceptance 与 TPOT 的关系？", "MTP、lookahead 与经典 speculative 有何边界？"]
+    pitfalls: ["只接受 argmax", "残差未归一化", "拒绝后 cache 未回滚", "把加速实验误报成质量提升"]
+    signals: ["公式和状态转移一致", "能提出蒙特卡洛分布测试", "收益分析包含系统开销"]
+    source_claims:
+      - {claim_id: EGT-INF-003-C1, source_id: speculative-decoding-paper, claim: "draft-and-verify 可在保持目标采样分布的条件下减少昂贵模型迭代次数。", confidence: high, locator: "paper algorithm"}
+    related_problems: [INF-007]
+    reviewed_at: *reviewed_at
+
+  - id: EGT-PT-001
+    kind: eight_stock
+    title: "SFT label mask：为什么通常只训练 assistant span"
+    domain: post_training
+    tracks: [post_training, llm_algorithm, vlm_algorithm, agent]
+    skills: [skill.post_training_rl.sft, skill.deep_learning.losses, skill.llm_vlm.multimodal_data]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "多轮对话做 SFT 时，如何构造 labels/attention mask，为什么 prompt 和 padding 通常不计 loss？"
+    one_liner: "序列仍按 causal attention 输入，但 labels 只保留 assistant target（其余设 ignore_index），并按有效 token 归一化。"
+    core_answer:
+      - "模板序列化后，用 logits[:, :-1] 对齐 labels[:, 1:]；assistant 多轮 span、EOS、tool result 是否计 loss 要先定契约。"
+      - "label mask 决定监督位置，attention mask 决定可见性；混用会造成复述、泄漏或全零梯度。"
+      - "padding/无效图像占位符通常是 -100；全 mask 样本要跳过或返回约定零值且不产生伪梯度。"
+      - "packing 时保留样本边界、position_ids 和 loss 权重，不能跨样本预测。"
+    derivation_or_example: "对 system/user/assistant/tool 四段 token 画 labels 与 attention 的两张独立掩码表，并算有效分母。"
+    answer_outline: ["定义序列化模板", "shift 与 mask 对齐", "有效 token reduction", "空/packing 边界"]
+    acceptance: {L1: "说明 assistant-only 目的", L2: "shift/mask/分母正确", L3: "多轮、tool、packing 和空样本可诊断"}
+    follow_ups: ["为什么把 user token 计 loss 会导致复述？", "tool call/result 应不应该计 loss？", "左 padding 与右 padding 如何统一？"]
+    pitfalls: ["label 与 attention mask 混用", "BOS/EOS 偏一位", "padding 进入平均分母", "全 mask 返回 NaN"]
+    signals: ["能打印每个 span 的监督状态", "能验证梯度只来自有效 target", "能说明模板版本化"]
+    source_claims:
+      - {claim_id: EGT-PT-001-C1, source_id: pytorch-cross-entropy, claim: "CrossEntropyLoss 的 ignore_index 和 reduction 可表达 masked token 监督。", confidence: high, locator: "API reference"}
+      - {claim_id: EGT-PT-001-C2, source_id: hf-chat-templates, claim: "聊天模板决定角色控制 token 与 assistant 边界。", confidence: high, locator: "chat templating docs"}
+    related_problems: [PT-001, PT-003]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-PT-002
+    kind: eight_stock
+    title: "Full fine-tuning、LoRA、QLoRA 的取舍"
+    domain: parameter_efficient_finetuning
+    tracks: [post_training, llm_algorithm, vlm_algorithm, systems]
+    skills: [skill.post_training_rl.sft, skill.inference_systems.quantization, skill.deep_learning.tensor_ops]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 4}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "比较全参微调、LoRA、adapter/prefix tuning 和 QLoRA，并给出模块选择、显存、部署与遗忘风险。"
+    one_liner: "全参容量最大但成本和遗忘风险高；LoRA 冻结基座学习低秩增量；QLoRA 再以低比特存储冻结权重，选择要靠消融。"
+    core_answer:
+      - "LoRA ΔW=(α/r)BA，A/B 是唯一训练参数；rank 决定容量，alpha/r 控制更新尺度，B=0 可保持初始函数。"
+      - "QLoRA 的 NF4/double quant/paged optimizer 针对冻结基座，计算通常在 BF16/FP16；量化权重并非直接更新。"
+      - "比较可训练参数、optimizer state、通信、推理延迟、多 adapter 服务和任务干扰，而非只看参数比例。"
+      - "保存 base、adapter、tokenizer/template、量化配置和版本；merge/unmerge 要幂等并做输出回归。"
+    derivation_or_example: "给 W[d_out,d_in]、rank r 和 batch x，写出未 merge 与 merge 后的前向式及参数量。"
+    answer_outline: ["写 ΔW 公式", "比较内存/质量/部署", "声明 target modules", "设计 merge 回归"]
+    acceptance: {L1: "说清三类方法", L2: "LoRA/QLoRA 公式和冻结边界正确", L3: "能处理量化误差、merge、adapter 服务与回归"}
+    follow_ups: ["为什么只注入 q/v 可能不够？", "rank/alpha/dropout 如何消融？", "量化模型为什么不能随便原地 merge？"]
+    pitfalls: ["把 LoRA 当剪枝", "忘记冻结 base", "alpha 当学习率", "只保存 adapter 丢 tokenizer/template"]
+    signals: ["能打印 trainable params", "能解释选择依据", "有 merge 前后数值和任务校验"]
+    source_claims:
+      - {claim_id: EGT-PT-002-C1, source_id: lora-paper, claim: "LoRA 冻结预训练权重并学习低秩增量矩阵。", confidence: high, locator: "paper abstract/§4"}
+      - {claim_id: EGT-PT-002-C2, source_id: qlora-paper, claim: "QLoRA 结合 NF4、double quantization 和 paged optimizer 以降低微调显存。", confidence: high, locator: "paper abstract/§3"}
+    related_problems: [PT-004, INF-013]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-PT-003
+    kind: eight_stock
+    title: "DPO：从 KL 约束到 preference loss"
+    domain: preference_optimization
+    tracks: [post_training, llm_algorithm, vlm_algorithm]
+    skills: [skill.post_training_rl.preference_data, skill.post_training_rl.policy_optimization, skill.machine_learning_math.probability]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "推导 DPO 的核心 loss，说明 chosen/rejected、reference、beta、长度偏差和梯度边界。"
+    one_liner: "用 policy 与 reference 的序列 log-ratio 差做二分类：-log σ(β[(Δlogπ)_chosen-(Δlogπ)_rejected])，无需显式 RM/PPO。"
+    core_answer:
+      - "对 prompt+response 做 causal forward，只聚合 response token 的 next-token logprob；chosen/rejected 与 reference 必须对齐。"
+      - "reference 通常 eval/no_grad；chosen 优于 rejected 的符号方向固定，beta 控制偏离 reference 的强度。"
+      - "sum 会偏短/长答案，mean 改变目标；按长度、margin、implicit reward 和 win-rate 分桶诊断。"
+      - "极端 margin 用 log-sigmoid/softplus 稳定，记录 tokenizer/template、截断和 mask 版本。"
+    derivation_or_example: "用 chosen 两 token、rejected 三 token 的 toy logits，逐步从 [B,T,V] gather 到标量 loss。"
+    answer_outline: ["对齐 response logprob", "构造 policy/reference margin", "代入稳定 loss", "讨论长度与 beta"]
+    acceptance: {L1: "说出 DPO 与 RLHF 区别", L2: "公式/shape/sign 正确", L3: "长度、ref 梯度和数据噪声可诊断"}
+    follow_ups: ["为什么 DPO 仍需要 reference？", "sum/mean 怎样影响长度偏差？", "DPO loss 下降但 win-rate 不升先查什么？"]
+    pitfalls: ["chosen/rejected 符号反了", "reference 反向传播", "double shift", "prompt token 计入 reward"]
+    signals: ["能写出每个 logprob 的 mask", "能解释 beta 而非把它当 lr", "有独立 preference 验证"]
+    source_claims:
+      - {claim_id: EGT-PT-003-C1, source_id: dpo-2305-18290, claim: "DPO 将 KL 约束的偏好优化化为 reference-relative 分类目标。", confidence: high, locator: "paper §3"}
+      - {claim_id: EGT-PT-003-C2, source_id: trl-official-docs, claim: "TRL 文档定义 DPO 数据字段和 trainer 实现边界。", confidence: high, locator: "DPOTrainer docs"}
+    related_problems: [PT-002, PT-006]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-PT-004
+    kind: eight_stock
+    title: "RLHF/PPO/GAE：模型、数据与梯度边界"
+    domain: reinforcement_learning_from_human_feedback
+    tracks: [post_training, llm_algorithm, agent]
+    skills: [skill.post_training_rl.policy_optimization, skill.post_training_rl.reward_modeling, skill.machine_learning_math.optimization]
+    priority: P0
+    difficulty: {concept: 5, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "完整讲一遍 InstructGPT 式 RLHF，并写出 PPO ratio/clipping、GAE、KL 和 old/reference policy 的梯度边界。"
+    one_liner: "SFT policy→偏好训练 RM→on-policy rollout + RM/KL reward→PPO 更新 policy；RM、reference、old logprob 通常冻结。"
+    core_answer:
+      - "区分 SFT data、preference pairs、on-policy rollouts；每条 rollout 记录 policy/version、mask、EOS 和 reward 来源。"
+      - "ratio=exp(logπθ-logπold)，clipped surrogate 按 advantage 更新；old logprob detach，KL reference 方向需固定。"
+      - "GAE 用 δ_t=r_t+γV_{t+1}(1-done)-V_t 递推，terminal/truncation 语义不同。"
+      - "监控 KL、clipfrac、entropy、value loss、reward-true gap、长度和独立质量，防 reward hacking。"
+    derivation_or_example: "给两步轨迹的 rewards/values/done，手算 δ 与 GAE，再比较 clip 在正/负 advantage 下的方向。"
+    answer_outline: ["三阶段数据流", "ratio/clip/GAE", "冻结与梯度边界", "稳定性与指标"]
+    acceptance: {L1: "说清 SFT/RM/PPO", L2: "ratio/GAE/熵/KL 正确", L3: "能处理 stale rollout、终止、reward hacking 和监控"}
+    follow_ups: ["为什么 PPO 比 DPO 贵且不稳定？", "terminal 与 truncation 如何区别？", "RM 过拟合/漂移如何发现？"]
+    pitfalls: ["把 RM 与 policy 共训", "old_logprob 未 detach", "clip 作用到错误对象", "padding token 更新"]
+    signals: ["能画四个模型/数据边界", "公式与实现索引一致", "有可操作排障顺序"]
+    source_claims:
+      - {claim_id: EGT-PT-004-C1, source_id: instructgpt-220302155, claim: "InstructGPT 采用 SFT、偏好 reward model 与 PPO 的分阶段流程。", confidence: high, locator: "paper §§2–3"}
+      - {claim_id: EGT-PT-004-C2, source_id: ppo-paper, claim: "PPO 使用 clipped policy-ratio surrogate 约束更新幅度。", confidence: high, locator: "paper §3"}
+    related_problems: [PT-009, PT-010, PT-011]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-PT-005
+    kind: eight_stock
+    title: "GRPO：组内相对优势与退化组"
+    domain: grouped_policy_optimization
+    tracks: [post_training, llm_algorithm, agent]
+    skills: [skill.post_training_rl.grpo, skill.post_training_rl.policy_optimization, skill.post_training_rl.verification]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "GRPO 为什么不需要 critic？如何组织 [prompt, group, token] 张量并处理 std=0、变长和无效答案？"
+    one_liner: "同一 prompt 采样 G 条 completion，以组内 reward 的均值/标准差构造相对 advantage，再做 PPO-style ratio/clipping。"
+    core_answer:
+      - "reshape rewards/response 为 [B,G,T]，只在同 prompt 的 G 维归一化，不能跨 prompt 混组。"
+      - "std≈0 时 advantage 置零或跳过并记录 zero-variance rate；EOS/truncation/invalid verifier 都有明确 mask/reward。"
+      - "仍需 old policy/reference KL、clip、token mask 和 rollout 版本；没有 critic 不代表没有 value-like baseline。"
+      - "记录 group size、reward std、clipfrac、KL、pass@k、长度和独立 verifier 指标。"
+    derivation_or_example: "G=4 时分别对 rewards=[1,1,1,1]、[1,0,0,0] 算均值、标准差和 advantage。"
+    answer_outline: ["定义 group 轴", "组内标准化", "token mask/clip", "零方差与监控"]
+    acceptance: {L1: "说明无需 critic", L2: "group advantage/shape 正确", L3: "能处理退化组、verifier 与成本"}
+    follow_ups: ["G 增大怎样影响方差/成本？", "全组失败应丢弃吗？", "GRPO 与 GSPO/DAPO 的序列/token ratio 差异？"]
+    pitfalls: ["按 batch 而非 prompt 分组", "std=0 NaN", "把 group mean 当 value net", "不同长度 mask 广播错"]
+    signals: ["能画 [B,G,T] 轴", "有零方差单测", "独立质量指标不被 reward 取代"]
+    source_claims:
+      - {claim_id: EGT-PT-005-C1, source_id: deepseekmath-grpo-2402, claim: "GRPO 使用同一 prompt 的多样本组内相对 reward 估计优势并省去 critic。", confidence: high, locator: "paper §4"}
+      - {claim_id: EGT-PT-005-C2, source_id: trl-official-docs, claim: "TRL GRPO trainer 暴露多 completion、reward 与 mask 配置。", confidence: high, locator: "GRPOTrainer docs"}
+    related_problems: [PT-014, PT-015]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-PT-006
+    kind: eight_stock
+    title: "Reward hacking、verifier 与 alignment tax"
+    domain: alignment_evaluation
+    tracks: [post_training, agent, vlm_algorithm]
+    skills: [skill.post_training_rl.verification, skill.evaluation_safety.safety_eval, skill.evaluation_safety.llm_judge]
+    priority: P1
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "模型 reward 上升但真实成功率下降时，如何定义 verifier、找 reward hacking，并评估 alignment tax？"
+    one_liner: "把代理 reward 与真实目标拆开，用可执行 oracle、独立 holdout、对抗样本和人工审计验证，不以单一分数闭环。"
+    core_answer:
+      - "代码用沙箱测试、数学用等价检查、工具用 schema/状态/副作用；开放任务需要多评审和拒答策略。"
+      - "区分 outcome/process reward，防止关键词、格式、冗长等捷径；记录 reward-true correlation 与越界率。"
+      - "对 base→SFT→DPO/GRPO 固定评测集和解码配置，分能力、风格、安全、拒答、长度、成本切片。"
+      - "发现 gap 时优先修 verifier/数据/停止条件并保留失败轨迹，而不是继续提高 reward 权重。"
+    derivation_or_example: "为工具调用轨迹定义状态机、合法转移、过程奖励和终局校验，列三个对抗样本。"
+    answer_outline: ["定义真实目标", "设计 verifier", "构造反例/审计", "报告能力与对齐代价"]
+    acceptance: {L1: "解释 reward hacking", L2: "给出可执行 verifier", L3: "覆盖攻击、校准、回滚和 alignment tax"}
+    follow_ups: ["verifier 被 prompt injection 怎么办？", "process reward 会鼓励冗长吗？", "LLM judge 如何校准位置/长度偏差？"]
+    pitfalls: ["只优化代理分数", "judge 置信度当真值", "没有独立 holdout", "忽略拒答和安全回退"]
+    signals: ["有正负例和执行 oracle", "能量化 gap", "能提出停止/回滚条件"]
+    source_claims:
+      - {claim_id: EGT-PT-006-C1, source_id: instructgpt-220302155, claim: "RLHF 的 reward 是代理目标，需与人类偏好和独立质量指标共同审计。", confidence: high, locator: "paper §§2–3"}
+      - {claim_id: EGT-PT-006-C2, source_id: shlab-llm-eval-intern-20260422, claim: "官方评测岗位强调执行式评测、轨迹失败分析和 judge 自动化。", confidence: high, locator: "job description"}
+    related_problems: [PT-016, PT-020, AGT-009]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EXP-001
+    kind: experience_pattern
+    title: "项目概览后连续下钻 how/why/evidence"
+    domain: interview_process
+    tracks: [llm_algorithm, vlm_algorithm, post_training, agent]
+    skills: [skill.project_deep_dive.experiments, skill.product_communication.storytelling]
+    priority: P0
+    difficulty: {concept: 3, implementation: 3, debugging: 4}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "请在 90 秒讲一个项目，并为每个决策提供可复现证据。"
+    one_liner: "准备目标→约束→基线→改动→消融→结果→失败→个人贡献的一条证据链。"
+    core_answer: ["数字绑定配置/对照", "区分个人实现与第三方组件", "准备失败复盘和下一实验", "能从系统指标下钻到 tensor/data"]
+    derivation_or_example: "把一个 VLM/后训练项目压成六格 evidence card，并为每格保留实验记录链接。"
+    answer_outline: ["目标与约束", "个人贡献", "基线与改动", "结果/失败/下一步"]
+    acceptance: {L1: "结构清楚且不夸大", L2: "数字有对照", L3: "能回答实现/失败/回滚证据"}
+    observed_pattern: "公开候选人报告和聚合案例常见先自我介绍/项目概览，再追问数据、训练、指标和实现细节。"
+    candidate_playbook: ["先结论和量化结果", "主动说 trade-off", "被追问时回到实验记录"]
+    drill_prompt: ["90 秒项目陈述 + 5 层 how/why 追问"]
+    sample_size_or_scope: "公开中文后训练/VLM/Agent 面经聚合，非代表性样本"
+    caveat: "仅为 anecdotal 观察，不代表任何公司固定流程或必考题。"
+    follow_ups: ["为什么选这个方法？", "如果指标没提升怎么办？", "怎样复现/回滚？"]
+    pitfalls: ["只说用过某框架", "说不清数据配比", "冒充团队成果"]
+    signals: ["量化 baseline", "个人 ownership 清晰", "能承认不确定性"]
+    source_claims:
+      - {claim_id: EXP-001-C1, source_id: bytedance-rl-collection-922308, claim: "公开复盘把项目数据、训练配置、RL 方法和结果作为连续追问主题。", confidence: anecdotal, locator: "公开帖子摘要"}
+      - {claim_id: EXP-001-C2, source_id: alibaba-rl-collection-923309, claim: "公开复盘将项目经历与数据/算法细节并列描述。", confidence: anecdotal, locator: "公开帖子摘要"}
+    related_problems: [PT-001, VLM-004, AGT-009]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EXP-002
+    kind: experience_pattern
+    title: "公式白板与可运行实现切换"
+    domain: interview_process
+    tracks: [llm_algorithm, post_training, systems]
+    skills: [skill.deep_learning.losses, skill.llm_vlm.attention, skill.post_training_rl.policy_optimization]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 4}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "把一个后训练/注意力方法从公式讲到 shape、伪代码和边界测试。"
+    one_liner: "所有 P0 方法准备公式→shape→伪代码→corner-case test 四联单。"
+    core_answer: ["定义符号和梯度边界", "reduction/mask 与代码一致", "给复杂度/显存量级", "手算正常和退化样例"]
+    derivation_or_example: "DPO margin、GRPO group advantage、causal MHA 各写十行伪代码并列最小测试。"
+    answer_outline: ["公式/假设", "张量 shape", "实现步骤", "测试/复杂度"]
+    acceptance: {L1: "定义目标和假设", L2: "公式/shape/伪代码一致", L3: "覆盖数值与退化边界"}
+    observed_pattern: "公开案例同时出现 LoRA/SFT/RLHF/DPO/GRPO 解释、MHA/mask 编程和复杂度问题。"
+    candidate_playbook: ["先定义 shape", "写稳定实现", "主动说 corner cases"]
+    drill_prompt: ["5 分钟推导 DPO/GRPO，5 分钟写 token logprob，再口述测试"]
+    sample_size_or_scope: "公开牛客/聚合面经中的后训练与 Transformer 案例，非代表性样本"
+    caveat: "不同团队可能使用白板、在线 IDE 或纯口述，形式不可预测。"
+    follow_ups: ["符号方向反了会怎样？", "空 mask/std=0 怎么办？", "如何写 property test？"]
+    pitfalls: ["只背结论", "公式和代码 reduction 不一致", "没有 happy-path 以外测试"]
+    signals: ["公式和代码同构", "能解释梯度/stop-gradient", "边界覆盖"]
+    source_claims:
+      - {claim_id: EXP-002-C1, source_id: bytedance-rl-collection-922308, claim: "公开复盘包含 DPO/GRPO/PPO 目标、优势和数据问题的公式型追问。", confidence: anecdotal, locator: "公开帖子摘要"}
+      - {claim_id: EXP-002-C2, source_id: taotian-vlm-nowcoder-20250806, claim: "公开多模态复盘同时提到 MHA/LoRA/对齐与手写实现。", confidence: anecdotal, locator: "公开帖子摘要"}
+    related_problems: [ATT-002, PT-006, PT-014]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EXP-003
+    kind: experience_pattern
+    title: "算法回答拉到显存/通信/硬件账本"
+    domain: interview_process
+    tracks: [systems, llm_algorithm]
+    skills: [skill.training_infra.distributed, skill.system_design.tradeoffs, skill.inference_systems.capacity]
+    priority: P0
+    difficulty: {concept: 4, implementation: 3, debugging: 4}
+    seniority: [new_grad, mid, senior]
+    prompt: "给定模型规模和 GPU 预算，口算内存、通信和部署取舍。"
+    one_liner: "任何方案都要拆参数、梯度、optimizer、activation、KV 和 collective 的成本。"
+    core_answer: ["先写 dtype/world size/seq 假设", "区分 DDP/FSDP/ZeRO/TP/PP 切分对象", "给数量级而非伪精确数字", "用 profiler/峰值显存验证账本"]
+    derivation_or_example: "估算 7B/72B BF16+AdamW 在不同 world size 和 ZeRO stage 下的主要内存项。"
+    answer_outline: ["工作负载假设", "memory bytes", "通信/拓扑", "SLO 与方案选择"]
+    acceptance: {L1: "假设和单位完整", L2: "内存/通信账本可复算", L3: "有 profiler、拓扑和恢复方案"}
+    observed_pattern: "公开 AI-Infra/LLM 面经常把 ZeRO、量化、KV cache、卡数和部署硬件作为后续追问。"
+    candidate_playbook: ["先列假设", "再估算数量级", "最后说明测量和误差"]
+    drill_prompt: ["72B/多卡预算：比较 ZeRO stage、TP/PP 与量化方案"]
+    sample_size_or_scope: "公开 AI-Infra/推理/训练面经，非代表性样本"
+    caveat: "具体卡数和数字是个案，不能直接迁移到生产。"
+    follow_ups: ["为什么 DDP 不省参数显存？", "通信怎么 overlap？", "MoE all-to-all 如何排障？"]
+    pitfalls: ["ZeRO stage 说反", "漏 optimizer states", "不声明 world size", "active/total MoE 混淆"]
+    signals: ["账本可复算", "能说 collective", "能联系真实 profiler"]
+    source_claims:
+      - {claim_id: EXP-003-C1, source_id: alibaba-rl-collection-923309, claim: "公开阿里复盘把显存、KV/GQA、serving 与算法追问连在一起。", confidence: anecdotal, locator: "公开帖子摘要"}
+      - {claim_id: EXP-003-C2, source_id: juejin-training-interviews-20260608, claim: "公开训练岗复盘强调多 GPU、loss/数据排障与并行系统。", confidence: anecdotal, locator: "公开帖子摘要"}
+    related_problems: [DST-001, DST-004, INF-002]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EXP-004
+    kind: experience_pattern
+    title: "多模态岗位把架构、数据和评测连成闭环"
+    domain: interview_process
+    tracks: [vlm_algorithm, post_training]
+    skills: [skill.llm_vlm.vlm_architecture, skill.llm_vlm.multimodal_data, skill.evaluation_safety.benchmarks]
+    priority: P0
+    difficulty: {concept: 4, implementation: 3, debugging: 4}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "从图像输入讲到视觉 token、训练目标、数据质量和切片评测。"
+    one_liner: "不能只背模型名，要能从 image bytes 追到 token、loss、grounding 指标和失败样例。"
+    core_answer: ["说明 encoder/projector/LLM 的冻结与梯度", "解释图文/指令/OCR/grounding 数据质检", "评测拆 perception/reasoning/grounding/幻觉", "给一个视觉 badcase 和修复实验"]
+    derivation_or_example: "为文档 VLM 设计高分辨率、OCR、结构化输出的诊断集。"
+    answer_outline: ["架构 dataflow", "数据生产与清洗", "训练/后训练目标", "评测切片与失败"]
+    acceptance: {L1: "说清三模块职责", L2: "数据/目标/指标对应", L3: "有视觉 badcase 和修复实验"}
+    observed_pattern: "公开多模态报告常同时出现跨模态对齐、VLM 架构、数据集构建、评测困难和输出质量问题。"
+    candidate_playbook: ["先画 modality flow", "再报数据配比/清洗", "最后用切片指标证明改动"]
+    drill_prompt: ["8 分钟讲一个 VLM 从数据到评测的闭环"]
+    sample_size_or_scope: "公开 VLM/多模态岗位与候选人面经，非代表性样本"
+    caveat: "公开案例对岗位和地区分布不均，不能推断总体频率。"
+    follow_ups: ["为什么使用/弃用 Q-Former？", "动态分辨率如何控 token？", "视觉偏好如何做 DPO？"]
+    pitfalls: ["只讲语言 loss", "忽略 processor/template", "总分代替视觉诊断"]
+    signals: ["能追踪视觉 token", "有 data provenance", "有视觉错误 taxonomy"]
+    source_claims:
+      - {claim_id: EXP-004-C1, source_id: taotian-vlm-nowcoder-20250806, claim: "公开多模态复盘包含 CLIP/LoRA/BLIP-2/LLaVA 等架构与训练细节。", confidence: anecdotal, locator: "公开帖子摘要"}
+      - {claim_id: EXP-004-C2, source_id: shlab-vlm-architecture-20260827, claim: "官方岗位把多模态架构、数据生产、训练和评测作为端到端职责。", confidence: high, locator: "job description"}
+    related_problems: [VLM-001, VLM-004, VLM-013]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EXP-005
+    kind: experience_pattern
+    title: "Agent/RAG 偏系统权衡与失败恢复"
+    domain: interview_process
+    tracks: [agent, vlm_algorithm, systems]
+    skills: [skill.agent_application.agent_loop, skill.agent_application.reliability, skill.agent_application.evaluation]
+    priority: P1
+    difficulty: {concept: 4, implementation: 3, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "设计一个带检索/工具/子 Agent 的系统，并接受故障注入追问。"
+    one_liner: "回答 Agent 不止描述 prompt，要给状态机、SLO、重试/降级、trace 和任务级指标。"
+    core_answer: ["定义工具合同、状态、预算、停止条件", "区分召回/规划/工具/生成/验证错误", "非幂等操作用幂等键/补偿，异步结果带版本", "评估成功率、步骤、工具准确率、p95、成本、安全"]
+    derivation_or_example: "设计两个并行子 Agent 汇总冲突结果的 deterministic reducer，并标出超时和人工接管。"
+    answer_outline: ["状态与合同", "正常路径", "故障分类/恢复", "指标与安全"]
+    acceptance: {L1: "画出可终止 loop", L2: "工具/状态契约正确", L3: "恢复、观测、权限和成本完整"}
+    observed_pattern: "公开 Agent/RAG 案例常追问召回/rerank、子 Agent 错误、异步一致性、低延迟和评测。"
+    candidate_playbook: ["先画状态机", "主动列 failure taxonomy", "给一条 replay trace"]
+    drill_prompt: ["设计低延迟搜索 Agent，注入空召回、超时、恶意工具返回"]
+    sample_size_or_scope: "公开 Agent 项目面经与官方 Agent JD，非代表性样本"
+    caveat: "系统题高度依赖岗位职责和业务约束。"
+    follow_ups: ["如何防 prompt injection？", "何时转人工？", "增量知识库如何防漂移？"]
+    pitfalls: ["无限 retry/loop", "无超时熔断", "并发写共享 memory", "只报最终答案"]
+    signals: ["有明确 SLO", "考虑幂等和权限", "能 replay/回滚"]
+    source_claims:
+      - {claim_id: EXP-005-C1, source_id: agent-project-csdn-20260826, claim: "公开 Agent 项目复盘集中在多 Agent、memory/RAG、工具协议、异步可靠性和评估。", confidence: anecdotal, locator: "公开帖子摘要"}
+      - {claim_id: EXP-005-C2, source_id: shlab-agent-20260827, claim: "官方 Agent 岗位要求规划、工具、长上下文、验证和错误恢复。", confidence: high, locator: "job description"}
+    related_problems: [AGT-001, AGT-006, AGT-009]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EXP-006
+    kind: experience_pattern
+    title: "理论主线后接张量手撕或标准数据结构题"
+    domain: interview_process
+    tracks: [llm_algorithm, vlm_algorithm, post_training, systems]
+    skills: [skill.programming_algorithms.data_structures, skill.deep_learning.tensor_ops, skill.python_engineering.testing]
+    priority: P1
+    difficulty: {concept: 2, implementation: 4, debugging: 3}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "限时完成一个 MHA/mask 或数据结构题，并解释契约、复杂度和测试。"
+    one_liner: "按澄清契约→写 baseline→边界测试→复杂度→优化的节奏作答。"
+    core_answer: ["确认输入约束/返回值/异常", "边写边说不变量和复杂度", "覆盖空、单元素、重复、极值", "张量题额外检查 shape/dtype/device/mask/grad"]
+    derivation_or_example: "把 causal MHA 与一个滑窗/链表题各做一遍，并在最后给 property test。"
+    answer_outline: ["澄清契约", "实现与不变量", "测试/调试", "复杂度/替代方案"]
+    acceptance: {L1: "契约和边界明确", L2: "实现/复杂度正确", L3: "有张量或并发的深度诊断"}
+    observed_pattern: "公开案例在模型/项目讨论后安排 MHA、mask 或链表/数组/树等常规题。"
+    candidate_playbook: ["5 分钟澄清", "15 分钟实现", "5 分钟测试", "5 分钟复杂度"]
+    drill_prompt: ["随机抽 causal MHA/mask + LC easy/medium，限时 30 分钟录音复盘"]
+    sample_size_or_scope: "公开候选人面经与题库聚合，非代表性样本"
+    caveat: "具体题号不具预测性；请以契约和迁移能力为目标。"
+    follow_ups: ["如何优化复杂度？", "non-contiguous tensor 怎么办？", "如何避免 silent broadcast？"]
+    pitfalls: ["不问约束直接套模板", "漏空输入", "复杂度说错", "设备/维度 silent error"]
+    signals: ["测试先于优化", "沟通清晰", "能解释失败"]
+    source_claims:
+      - {claim_id: EXP-006-C1, source_id: alibaba-rl-collection-923309, claim: "公开阿里复盘同时记录注意力/系统问题与字符串、随机数等小型算法题。", confidence: anecdotal, locator: "公开帖子摘要"}
+      - {claim_id: EXP-006-C2, source_id: bytedance-rl-collection-922308, claim: "公开字节复盘包含模型推导、手写实现和数据结构/代码环节。", confidence: anecdotal, locator: "公开帖子摘要"}
+    related_problems: [ATT-004, ALG-016, ALG-017]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-VLM-001
+    kind: eight_stock
+    title: "CLIP/InfoNCE：双向对比学习的温度与负样本"
+    domain: multimodal_alignment
+    tracks: [vlm_algorithm, llm_algorithm, post_training]
+    skills: [skill.llm_vlm.vlm_architecture, skill.machine_learning_math.probability, skill.deep_learning.losses]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 4}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "给 N 对图文 embedding，推导 CLIP 风格 InfoNCE，说明归一化、温度、双向 CE 与 false negatives。"
+    one_liner: "归一化 image/text 向量后用相似度矩阵除以可学习温度，分别沿行/列做交叉熵，正配对是对角线。"
+    core_answer:
+      - "I,T∈R^{N×D} 先 L2 normalize，S=I Tᵀ/τ；labels=arange(N)，image→text 与 text→image 两个方向取平均。"
+      - "τ 控制分布尖锐度；过小会放大梯度/数值风险，过大区分度弱，需约束正值。"
+      - "batch 内其他样本是 negatives，重复 caption/相似图会造成 false negative，应做去重、hard-negative 和分桶分析。"
+      - "不要只看 contrastive loss；报告 retrieval Recall@K、跨域切片、温度和 embedding norm。"
+    derivation_or_example: "N=3 时写出 3×3 相似度矩阵、两向 loss 和一个重复配对的影响。"
+    answer_outline: ["normalize 与相似度矩阵", "温度/双向 CE", "负样本与 false negative", "检索指标/数值测试"]
+    acceptance: {L1: "说清正负配对", L2: "公式/轴和温度正确", L3: "能诊断重复、混合精度和 retrieval 回归"}
+    follow_ups: ["为什么要双向而非单向 CE？", "τ 是否应该每 batch 学习？", "多 GPU negatives 怎样保持 label 对齐？"]
+    pitfalls: ["未 normalize embedding", "softmax 轴错", "τ≤0", "把 batch 内相似样本都当独立负例"]
+    signals: ["能手算小矩阵", "能解释温度梯度", "指标不局限于 loss"]
+    source_claims:
+      - {claim_id: EGT-VLM-001-C1, source_id: clip-paper, claim: "CLIP 采用图文配对的对比目标学习可迁移视觉表示。", confidence: high, locator: "paper abstract/§2"}
+      - {claim_id: EGT-VLM-001-C2, source_id: pytorch-cross-entropy, claim: "双向对比目标可用两个方向的分类交叉熵表达并检查 reduction。", confidence: medium, locator: "API reference"}
+    related_problems: [LOSS-006, VLM-002]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-VLM-002
+    kind: eight_stock
+    title: "BLIP-2 Q-Former 与 LLaVA projector 的架构取舍"
+    domain: multimodal_architecture
+    tracks: [vlm_algorithm, llm_algorithm, post_training]
+    skills: [skill.llm_vlm.vlm_architecture, skill.llm_vlm.attention, skill.llm_vlm.multimodal_data]
+    priority: P0
+    difficulty: {concept: 4, implementation: 3, debugging: 4}
+    seniority: [new_grad, mid, senior]
+    prompt: "比较 BLIP-2 的 Q-Former 和 LLaVA 的线性/MLP connector：输入输出、参数与训练阶段、适用场景和失败模式。"
+    one_liner: "Q-Former 用可学习 query 与视觉特征交互压缩信息；LLaVA 以简单 projector 映射视觉 token，训练更直接但 token/表达取舍不同。"
+    core_answer:
+      - "BLIP-2 通过轻量 Q-Former 连接冻结视觉 encoder 与冻结 LLM，query 数固定可控。"
+      - "LLaVA 典型路径是 vision encoder→projector→LLM embedding，视觉指令 tuning 依赖图文占位符对齐。"
+      - "比较视觉信息瓶颈、训练稳定、显存/token 数、可扩展分辨率和下游任务，而非只背模型名。"
+      - "冻结/解冻策略、预训练数据和 connector 维度是主要 ablation；视觉 tower 输出与 tokenizer/template 要配套。"
+    derivation_or_example: "给 D_v=1024、D_llm=4096、N_patch=576、N_query=32，比较直接 projector 与 Q-Former 进入 LLM 的序列长度/参数账本。"
+    answer_outline: ["画两条 dataflow", "比较 token bottleneck", "说明训练/冻结阶段", "列质量/显存 ablation"]
+    acceptance: {L1: "说清 Q-Former/projector", L2: "shape/训练阶段正确", L3: "能从瓶颈、数据和评测做取舍"}
+    follow_ups: ["何时简单 MLP 反而更好？", "Q-Former query 数如何选？", "动态分辨率/视频会改变什么？"]
+    pitfalls: ["把 Q-Former 当 tokenizer", "混淆冻结 encoder 与 LLM", "忽略视觉 token 数", "只比较参数量"]
+    signals: ["架构图可落到 shape", "能提出公平 ablation", "说明失败样例和回归指标"]
+    source_claims:
+      - {claim_id: EGT-VLM-002-C1, source_id: blip2-paper, claim: "BLIP-2 使用轻量 Q-Former 桥接冻结视觉 encoder 和冻结 LLM。", confidence: high, locator: "paper abstract/§3"}
+      - {claim_id: EGT-VLM-002-C2, source_id: llava-paper, claim: "LLaVA 将视觉 encoder 特征映射到语言模型并进行视觉指令调优。", confidence: high, locator: "paper abstract/§2"}
+    related_problems: [VLM-002, VLM-003]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-VLM-003
+    kind: eight_stock
+    title: "多模态 placeholder、动态分辨率与 token budget"
+    domain: multimodal_data
+    tracks: [vlm_algorithm, post_training, systems]
+    skills: [skill.llm_vlm.multimodal_data, skill.llm_vlm.context_management, skill.inference_systems.capacity]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "多图/视频输入时，如何保证 placeholder、视觉 token、position、labels 和总上下文预算一致？"
+    one_liner: "processor 先确定每个媒体 item 的 grid/token 数，按顺序替换 placeholder，再生成 attention/label mask 并检查总预算。"
+    core_answer:
+      - "每样本建立 image/video item→视觉 embedding span 映射；placeholder 数量、顺序和 embedding 数必须相等。"
+      - "动态分辨率要有 patch/grid 选择和 max visual tokens；padding/截断不能切断媒体 span 或跨样本泄漏。"
+      - "position/rope 轴和 image metadata（尺寸、帧、时间）要随 batch 保存；chosen/rejected 共用视觉输入。"
+      - "labels 只监督目标文本，视觉 token/prompt/pad mask 明确；记录 token budget、丢弃原因和质量切片。"
+    derivation_or_example: "两图一段文字、不同 grid 大小的 batch，列 input span、attention、labels、position_ids 和剩余文本预算。"
+    answer_outline: ["建立媒体-span map", "处理动态 grid/padding", "生成 mask/position", "预算与一致性断言"]
+    acceptance: {L1: "说明 placeholder/embedding 对应", L2: "shape/mask/预算正确", L3: "能处理多图、视频、DPO 与截断回归"}
+    follow_ups: ["processor 二次套模板会怎样？", "高分辨率和长视频怎样公平采样？", "视觉 token 是否应该进入 CE？"]
+    pitfalls: ["placeholder 被 tokenizer 拆散", "多图顺序错位", "labels 长度与 logits 不等", "预算截断在媒体中间"]
+    signals: ["能给最小复现断言", "可视化 span/mask", "把 token budget 变成可测 SLO"]
+    source_claims:
+      - {claim_id: EGT-VLM-003-C1, source_id: hf-multimodal-chat, claim: "官方 multimodal chat template 使用结构化 image/video/text content，由 processor 统一预处理。", confidence: high, locator: "multimodal chat templates"}
+      - {claim_id: EGT-VLM-003-C2, source_id: shlab-vlm-architecture-20260827, claim: "官方岗位将多模态数据生产、混合、训练和评测视为一体化流程。", confidence: high, locator: "job description"}
+    related_problems: [VLM-004, VLM-005, VLM-006, VLM-007]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-VLM-004
+    kind: eight_stock
+    title: "多模态评测：OCR、空间/时间 grounding 与幻觉"
+    domain: multimodal_evaluation
+    tracks: [vlm_algorithm, post_training, agent]
+    skills: [skill.evaluation_safety.benchmarks, skill.evaluation_safety.llm_judge, skill.llm_vlm.context_management]
+    priority: P1
+    difficulty: {concept: 4, implementation: 3, debugging: 4}
+    seniority: [new_grad, mid, senior]
+    prompt: "为图像/视频模型设计分层评测，避免 OCR 高分掩盖空间推理、时序理解和幻觉问题。"
+    one_liner: "按感知、OCR/文档、空间/时间、知识推理、指令遵循和安全分桶，固定采样/提示/解码并报告切片。"
+    core_answer:
+      - "互补 benchmark 覆盖不同能力：MMMU/选择题、OCRBench/DocVQA、视频 benchmark 等，不能把单一总分当能力。"
+      - "报告 exact match/CER/IoU/temporal accuracy 与人工或 judge 校准；记录分辨率、帧采样、prompt、温度。"
+      - "切片按语言、长度、分辨率、模态质量、任务难度和污染风险；保留失败样例与置信区间。"
+      - "幻觉评测需独立证据/ground truth 和拒答策略，线上还要报 latency、成本和安全越权。"
+    derivation_or_example: "给 OCR 90%、空间 55%、视频时序 40% 的结果，设计三项最小消融和上线 gate。"
+    answer_outline: ["定义能力矩阵", "选择互补指标", "固定评测协议", "切片/失败/上线 gate"]
+    acceptance: {L1: "列出至少四类能力", L2: "指标与数据匹配", L3: "校准、污染、成本和回归完整"}
+    follow_ups: ["LLM judge 的位置/长度偏差？", "如何检测 benchmark contamination？", "视频帧数变化如何公平比较？"]
+    pitfalls: ["OCR 分数代替通用视觉", "只报平均分", "prompt/temperature 漂移", "没有人工抽检"]
+    signals: ["failure taxonomy 清晰", "协议可复现", "能给停止/回滚阈值"]
+    source_claims:
+      - {claim_id: EGT-VLM-004-C1, source_id: mmmu-benchmark, claim: "MMMU 面向多学科、多图类型的专家级多模态推理。", confidence: high, locator: "paper abstract"}
+      - {claim_id: EGT-VLM-004-C2, source_id: ocrbench-benchmark, claim: "OCRBench 覆盖文字识别、文档/场景 VQA、信息抽取等 OCR 能力。", confidence: high, locator: "paper abstract"}
+      - {claim_id: EGT-VLM-004-C3, source_id: videomme-benchmark, claim: "Video-MME 按视频时长和多种输入信息评估视频理解。", confidence: high, locator: "paper abstract"}
+    related_problems: [VLM-011, VLM-012, VLM-013, VLM-014]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-AGT-003
+    kind: eight_stock
+    title: "MCP/JSON tool contract、权限和 prompt injection"
+    domain: agent_runtime
+    tracks: [agent, systems, vlm_algorithm]
+    skills: [skill.agent_application.tool_calling, skill.agent_application.reliability, skill.system_design.reliability]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "一个 Agent 需要调用外部工具和资源时，如何设计 schema、权限、超时、重试和对抗 prompt injection 的边界？"
+    one_liner: "把工具当不可信 RPC：能力声明、参数 schema、授权/审计、幂等和超时都由宿主校验，模型文本不直接获得权限。"
+    core_answer:
+      - "工具输入/输出用结构化 schema，校验类型、范围、大小和敏感字段；未知字段/工具默认拒绝。"
+      - "将模型建议与执行授权分离，按用户/租户/会话授予最小权限，副作用操作需确认或沙箱。"
+      - "每次调用有 trace id、deadline、幂等键和结果版本；区分可重试错误、业务失败和安全拒绝。"
+      - "工具返回内容是 untrusted data，不能覆盖系统指令；做注入样本、越权、数据外泄和重放测试。"
+    derivation_or_example: "为 search、code_exec、write_ticket 三个工具写最小 schema 与状态机，标出授权和补偿点。"
+    answer_outline: ["声明工具能力", "校验参数/权限", "执行与失败恢复", "安全审计/回放"]
+    acceptance: {L1: "解释 typed tool contract", L2: "权限/状态/错误语义正确", L3: "覆盖注入、幂等、审计和回滚"}
+    follow_ups: ["MCP 与普通 function calling 的边界？", "工具返回恶意文本如何隔离？", "多租户共享 cache 怎样防串数据？"]
+    pitfalls: ["把模型输出当授权", "重试非幂等写操作", "没有 deadline/最大 payload", "把工具返回的指令当系统指令"]
+    signals: ["能画信任边界", "错误分类可执行", "安全和可观测性不是事后补丁"]
+    source_claims:
+      - {claim_id: EGT-AGT-003-C1, source_id: mcp-spec, claim: "MCP 以结构化消息、工具/资源能力和宿主边界连接模型与外部上下文。", confidence: high, locator: "2026-07-28 specification"}
+      - {claim_id: EGT-AGT-003-C2, source_id: shlab-agent-20260827, claim: "官方 Agent 岗位强调 function/tool calling、代码执行、验证与错误恢复。", confidence: high, locator: "job description"}
+    related_problems: [AGT-001, AGT-002, AGT-006]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-SYS-001
+    kind: eight_stock
+    title: "KV-cache 显存账本与连续批处理"
+    domain: serving_systems
+    tracks: [systems, llm_algorithm, vlm_algorithm, agent]
+    skills: [skill.inference_systems.kv_cache, skill.inference_systems.capacity, skill.inference_systems.serving]
+    priority: P0
+    difficulty: {concept: 4, implementation: 3, debugging: 4}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "给定 layers、KV heads、head_dim、dtype、并发请求和上下文长度，估算 KV 显存，并设计 continuous batching 的预算与公平性。"
+    one_liner: "缓存字节数随层数、序列 token、KV head 和 dtype 线性增长；调度要在 token budget、尾延迟、取消和碎片间取舍。"
+    core_answer:
+      - "近似 bytes=2×layers×batch×seq×kv_heads×head_dim×dtype_bytes；MHA/MQA/GQA 只改变 kv_heads。"
+      - "prefill 一次处理 prompt，decode 每轮追加 token；变长请求需要 page/block、prefix reuse 和回收策略。"
+      - "continuous batching 每轮动态加入/完成请求，限制总 active tokens，避免长请求饿死短请求或反之。"
+      - "测 TTFT、TPOT、tokens/s、p95/p99、cache hit、碎片、抢占和取消清理，而非只测平均吞吐。"
+    derivation_or_example: "32 layers、8 KV heads、128 dim、BF16、8k context、4 并发，分别算 MHA 与 GQA 的缓存大小。"
+    answer_outline: ["写 KV bytes 公式", "区分 prefill/decode", "设计 token-budget 调度", "列尾延迟/碎片指标"]
+    acceptance: {L1: "能口算缓存量级", L2: "batch/page/scheduling 语义正确", L3: "能处理公平、抢占、prefix 和回收"}
+    follow_ups: ["为什么 decode 常受 bandwidth 限制？", "prefix cache 命中条件？", "取消请求如何确保 page/refcount 清理？"]
+    pitfalls: ["KV 误写成 O(L²)", "用 q_heads 估 GQA", "只限制请求数不限制 token", "取消后 cache 泄漏"]
+    signals: ["单位和假设清楚", "能画请求生命周期", "指标覆盖质量/成本/尾延迟"]
+    source_claims:
+      - {claim_id: EGT-SYS-001-C1, source_id: hf-cache, claim: "官方 Transformers 文档将 KV cache 作为增量生成的显式状态并要求位置对齐。", confidence: high, locator: "cache explanation"}
+      - {claim_id: EGT-SYS-001-C2, source_id: pagedattention-paper, claim: "PagedAttention 通过块化 KV 管理和共享降低 serving 内存浪费。", confidence: high, locator: "paper §§2–4"}
+    related_problems: [INF-002, INF-003, INF-005]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-SYS-002
+    kind: eight_stock
+    title: "量化：PTQ/QAT、异常值和质量回归"
+    domain: quantization
+    tracks: [systems, llm_algorithm, vlm_algorithm, post_training]
+    skills: [skill.inference_systems.quantization, skill.inference_systems.kernels, skill.evaluation_safety.benchmarks]
+    priority: P1
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "如何在 INT8/INT4/FP8 等方案中做选择，并定位量化后 logits/视觉质量漂移？"
+    one_liner: "先按硬件和 SLO 选择权重/激活/KV 的量化粒度，再用代表性校准、敏感层保留和分层回归定位误差。"
+    core_answer:
+      - "PTQ 不更新模型、依赖校准；QAT 让训练适应量化；权重、激活、KV 可分别选择精度和粒度。"
+      - "scale/zero-point、per-tensor/per-channel/group、离群激活和累积误差决定质量，不能只比较 bit 数。"
+      - "校准集必须覆盖线上分布且不泄漏测试；报告 perplexity、任务/视觉 slice、latency、显存和能耗。"
+      - "按层/通道 dump 前后误差与异常值，保留敏感层高精度，必要时回滚或混合精度。"
+    derivation_or_example: "给一组权重 min/max 和 bit 数，手算 symmetric scale、饱和和反量化误差。"
+    answer_outline: ["区分 PTQ/QAT", "定义量化粒度", "定位 outlier/敏感层", "做任务与系统回归"]
+    acceptance: {L1: "说清量化目标", L2: "scale/校准/误差正确", L3: "能给分层诊断和回滚门槛"}
+    follow_ups: ["为什么激活 outlier 伤 INT8？", "KV cache 量化有哪些特殊风险？", "QLoRA 训练量化与线上 PTQ 有何不同？"]
+    pitfalls: ["把 QLoRA 当线上 PTQ", "只报压缩比", "校准集不代表线上", "忽略残差/累积误差"]
+    signals: ["硬件/SLO 假设明确", "误差可定位", "质量与性能共同验收"]
+    source_claims:
+      - {claim_id: EGT-SYS-002-C1, source_id: qlora-paper, claim: "QLoRA 将低比特冻结基座与高精度低秩适配器结合，训练与部署量化语义要区分。", confidence: high, locator: "paper §3"}
+      - {claim_id: EGT-SYS-002-C2, source_id: vllm-official-docs, claim: "serving 引擎的量化格式支持与性能随版本/硬件变化，必须记录配置并复测。", confidence: high, locator: "quantization docs"}
+    related_problems: [INF-008, INF-009, INF-010]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-DAT-001
+    kind: eight_stock
+    title: "loss 降了但质量不升：实验归因与 badcase"
+    domain: experiment_debugging
+    tracks: [llm_algorithm, vlm_algorithm, post_training, agent]
+    skills: [skill.data_mlops.experiments, skill.data_mlops.reproducibility, skill.evaluation_safety.benchmarks]
+    priority: P0
+    difficulty: {concept: 4, implementation: 3, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "训练 loss 持续下降但独立任务指标/线上体验不升甚至下降，给出排查顺序和最小实验。"
+    one_liner: "先确认数据/标签/评测契约，再按切片、校准、解码和系统成本拆代理指标与真实目标，保留可回滚证据。"
+    core_answer:
+      - "检查 train/valid leakage、label mask、tokenizer/template、数据重复/配比、loss reduction 和 checkpoint 选择。"
+      - "固定 prompt、解码、processor、模型 hash，按语言/长度/领域/模态/难度切片并做多 seed/置信区间。"
+      - "分析 failure taxonomy：知识缺失、格式复述、视觉幻觉、reward hacking、judge 偏差、长尾退化。"
+      - "用独立 holdout、人工抽检、执行式 verifier、线上 A/B 和停止/回滚阈值决定是否保留改动。"
+    derivation_or_example: "给总 loss 下降 20% 但 OCR/数学/安全切片相反的表格，写三项单因素 ablation 和决策门。"
+    answer_outline: ["验证数据/标签契约", "固定评测协议", "分桶定位 badcase", "设回滚/上线门槛"]
+    acceptance: {L1: "承认 loss 是代理", L2: "排查顺序可执行", L3: "有切片、统计、人工/线上和回滚证据"}
+    follow_ups: ["DPO loss 降而 win-rate 不升？", "如何检测污染和 judge 偏差？", "何时接受少量通用能力回退？"]
+    pitfalls: ["只调学习率", "换评测 prompt 后比较", "只看总分", "没有保存失败样例"]
+    signals: ["假设→实验→结论链完整", "能区分相关与因果", "把 badcase 转成下一轮数据/测试"]
+    source_claims:
+      - {claim_id: EGT-DAT-001-C1, source_id: juejin-training-interviews-20260608, claim: "公开训练岗复盘强调 loss/NaN、数据、评测和 badcase 的联合排障。", confidence: anecdotal, locator: "公开帖子摘要"}
+      - {claim_id: EGT-DAT-001-C2, source_id: shlab-llm-eval-intern-20260422, claim: "官方评测岗位要求自动化指标、执行式评测和轨迹成功/失败分析。", confidence: high, locator: "job description"}
+    related_problems: [FND-003, PT-016, VLM-013]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-ATT-001
+    kind: coding_prompt
+    title: "手撕 scaled dot-product attention：shape、mask 与稳定 softmax"
+    domain: attention_kernel
+    tracks: [ai_foundation, llm_algorithm, systems]
+    skills: [skill.deep_learning.tensor_ops, skill.llm_vlm.attention, skill.deep_learning.autograd]
+    priority: P0
+    difficulty: {concept: 3, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "在不调用 MultiheadAttention 的前提下实现 batched scaled dot-product attention，并说明布尔 mask 与加性 mask 的语义。"
+    one_liner: "先把 QKᵀ 的维度和缩放写对，再在 softmax 前应用屏蔽；数值稳定性、全屏蔽行和梯度是验收重点。"
+    core_answer:
+      - "输入可约定 Q[B,H,Tq,D]、K/V[B,H,Tk,D]；scores=QKᵀ/sqrt(D)，输出 softmax(scores+mask)V，结果为 [B,H,Tq,D]。"
+      - "布尔 mask 必须明确 True 是允许还是屏蔽；屏蔽位置加负无穷（或 dtype 可表示的极小值），不能在 softmax 后随意乘零。"
+      - "用减去行最大值的 log-sum-exp 形式避免溢出，并规定全屏蔽行的输出/梯度策略。"
+    derivation_or_example: "B=2,H=4,Tq=3,Tk=5,D=8 时逐步写出 transpose、广播和 causal 上三角 mask 的形状。"
+    answer_outline: ["声明张量契约", "写缩放与转置", "定义 mask 极性", "处理稳定性与边界"]
+    acceptance: {L1: "能说清输入输出和缩放", L2: "shape/mask/softmax 正确", L3: "覆盖 dtype、全屏蔽行、梯度与复杂度"}
+    coding_contract:
+      input: "Q、K、V 为同 dtype 的四维张量 [B,H,T,D]，另有可选 bool 或 additive mask [B,1|H,Tq,Tk]。"
+      output: "返回与 V 同 dtype、形状 [B,H,Tq,D] 的 attention 输出；不得原地改写输入。"
+      constraints: "只用 PyTorch 张量算子；时间 O(B·H·Tq·Tk)，显式检查不兼容 shape；mask 语义写入 docstring。"
+      symbol: scaled_attention
+      framework: pytorch
+    test_focus: ["非方阵 Tq/Tk", "bool 与 additive mask", "fp16/bf16 数值稳定", "反向梯度和输入不变"]
+    edge_cases: ["Tq=1", "Tk=0 应明确报错", "整行被 mask", "D=1 或非 2 的幂"]
+    solution_direction: ["einsum 或 matmul 后 transpose(-2,-1)", "softmax 前统一 mask 极性", "用 float 累加并按需要 cast 回输入 dtype"]
+    follow_ups: ["为什么缩放因子是 sqrt(D)？", "FlashAttention 如何避免 materialize 整个 scores？", "causal mask 在增量 decode 时如何缩短？"]
+    pitfalls: ["把 [B,H,T,D] 当成 [B,T,H,D]", "mask 加在 softmax 后", "直接用 -1e9 导致 fp16 溢出或全屏蔽 NaN", "误用 dropout 导致评测不确定"]
+    signals: ["先声明 shape 和 mask 极性", "能解释稳定 softmax", "测试包含非方阵和梯度"]
+    source_claims:
+      - {claim_id: COD-ATT-001-C1, source_id: attention-is-all-you-need, claim: "缩放点积注意力和多头张量分解依据原始 Transformer 定义。", confidence: high, locator: "§3.2.1"}
+      - {claim_id: COD-ATT-001-C2, source_id: pytorch-sdpa, claim: "PyTorch 官方接口记录 causal 与布尔/加性 attention mask 的实现语义。", confidence: high, locator: "function documentation"}
+    related_problems: [ATT-002, ATT-004]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-ATT-002
+    kind: coding_prompt
+    title: "手撕 MHA/MQA/GQA 的 QKV 投影与 grouped KV 广播"
+    domain: attention_architecture
+    tracks: [llm_algorithm, systems]
+    skills: [skill.llm_vlm.attention, skill.deep_learning.tensor_ops]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 4}
+    seniority: [new_grad, mid, senior]
+    prompt: "实现一个支持 MHA、MQA、GQA 的 attention 前向，给定 query heads 与 KV heads 检查整除关系并避免错误复制。"
+    one_liner: "MHA 的 KV heads 等于 Q heads，MQA 为 1，GQA 为其因子；共享 KV 只改变 K/V 头数，不改变 Q 的头数和输出宽度。"
+    core_answer:
+      - "令 q_heads=hq、kv_heads=hk、group=hq/hk；只有 hq%hk==0 时才能把每个 KV head 映射到 group 个 query heads。"
+      - "投影后分别 reshape [B,T,hq,D] 与 [B,T,hk,D]，沿 head 维按组索引/expand K,V；expand 不应产生不必要的物理复制。"
+      - "参数、KV cache 和带宽随 hk 降低，但 QKᵀ 的 query 头计算仍由 hq 决定；需以端到端 latency/质量验证收益。"
+    derivation_or_example: "hq=16,hk=4,D=128 时画出每个 KV head 服务 4 个 Q head；hq=10,hk=4 应在入口拒绝。"
+    answer_outline: ["定义三种模式", "检查整除", "写 reshape/映射", "分析参数与 cache 代价"]
+    acceptance: {L1: "区分 MHA/MQA/GQA", L2: "head 映射与 shape 正确", L3: "说明 expand/contiguous、cache 和质量权衡"}
+    coding_contract:
+      input: "x[B,T,E]、q_heads、kv_heads、head_dim；E=q_heads*head_dim，kv_heads 为 q_heads 的正因子。"
+      output: "返回 q、k、v，形状分别为 [B,q_heads,T,D]、[B,kv_heads,T,D]、[B,kv_heads,T,D]，以及可选 grouped view。"
+      constraints: "不静默复制 KV；非法 head 配置抛出 ValueError；支持 batch 与 T=1。"
+      symbol: project_qkv_heads
+      framework: pytorch
+    test_focus: ["MHA/MQA/GQA 三模式", "非法整除", "非 contiguous 输入", "KV 内存估算"]
+    edge_cases: ["kv_heads=1", "q_heads=kv_heads", "head_dim=1", "E 与 heads 不匹配"]
+    solution_direction: ["linear 后 view/transpose", "用 reshape 或 index_select 建立组映射", "只在 kernel/下游需要时 contiguous"]
+    follow_ups: ["为什么 GQA 常改善 decode 而不一定改善 prefill？", "MQA 的质量代价如何测？", "KV cache 采用 paged block 时 head 映射放在哪里？"]
+    pitfalls: ["把 hk 当成 hq 输出头数", "重复 materialize K/V 造成显存爆炸", "未检查 hq%hk", "transpose 后直接 view"]
+    signals: ["能从 shape 推导参数量和 cache", "明确 view/expand/contiguous 取舍", "给出非法输入测试"]
+    source_claims:
+      - {claim_id: COD-ATT-002-C1, source_id: gqa-paper, claim: "GQA 通过少于 query heads 的 grouped KV heads 在 MHA 与 MQA 间折中。", confidence: high, locator: "abstract and §§2–3"}
+      - {claim_id: COD-ATT-002-C2, source_id: attention-is-all-you-need, claim: "多头注意力的投影与拼接维度遵循 Transformer 定义。", confidence: high, locator: "§3.2.2"}
+    related_problems: [ATT-005, ATT-006, ATT-009]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-ATT-003
+    kind: coding_prompt
+    title: "手撕 causal LM 的 shift-right 与 assistant loss mask"
+    domain: language_modeling
+    tracks: [llm_algorithm, post_training]
+    skills: [skill.deep_learning.losses, skill.llm_vlm.tokenization, skill.python_engineering.data_contracts]
+    priority: P0
+    difficulty: {concept: 3, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "给定带 system/user/assistant 段标记的 token ids 和标签 mask，构造 next-token labels，确保只在目标 token 上计算交叉熵。"
+    one_liner: "logits[:, :-1] 对齐 labels[:, 1:]；非监督位置填 ignore_index，并明确 padding、EOS 和 assistant 边界。"
+    core_answer:
+      - "shift 后 logits 与 labels 长度都为 T-1，不能将未 shift 的 logits 与自身 labels 比较。"
+      - "把 prompt、padding 或不应训练的 token 设为 ignore_index；有效 token 数为零时要定义返回值或报错。"
+      - "先固定 chat template/特殊 token，再检查 label mask 与 tokenizer 版本；平均 loss 应按有效 token 而非 batch 数解释。"
+    derivation_or_example: "序列 [BOS,user,a,b,assistant,c,EOS] 中只训练 c/EOS 时，列出 shift 后每一列的监督标记。"
+    answer_outline: ["画 token 对齐", "构造 ignore mask", "定义 reduction", "验证 template/padding"]
+    acceptance: {L1: "shift 方向正确", L2: "ignore_index 与有效计数正确", L3: "覆盖空监督、packed batch、EOS 和不变性"}
+    coding_contract:
+      input: "logits[B,T,V]、input_ids[B,T]、train_mask[B,T] bool；padding 位置可由 mask 标记。"
+      output: "返回标量 masked cross-entropy 和 labels[B,T-1]；输入不得被原地修改。"
+      constraints: "使用 ignore_index=-100；空有效 token 必须抛出 ValueError 或返回显式 NaN 策略，不能静默除零。"
+      symbol: masked_causal_lm_loss
+      framework: pytorch
+    test_focus: ["shift 对齐", "padding/assistant mask", "ignore_index reduction", "全 mask 与梯度"]
+    edge_cases: ["T=1", "只有一个有效 token", "全为 padding", "EOS 是否监督的显式配置"]
+    solution_direction: ["labels=input_ids[:,1:] 的副本", "mask=mask[:,1:] 后 masked_fill", "用 reduction='sum' / 有效计数得到可解释平均"]
+    follow_ups: ["为什么把 prompt loss 设为 0 可能损害格式能力？", "packed sequences 怎样避免跨样本泄漏？", "SFT 与 preference loss 的 mask 有何不同？"]
+    pitfalls: ["把 labels 向右 shift", "mask 没有同步 shift", "平均时除以 T 而非有效 token 数", "原地改写共享 input_ids"]
+    signals: ["能画出每个时间步的监督对象", "明确空监督策略", "会固定 tokenizer/template 版本"]
+    source_claims:
+      - {claim_id: COD-ATT-003-C1, source_id: pytorch-cross-entropy, claim: "CrossEntropyLoss 的 ignore_index、shape 与 reduction 定义支持 masked token loss。", confidence: high, locator: "API parameters"}
+      - {claim_id: COD-ATT-003-C2, source_id: hf-chat-templates, claim: "官方 chat template 文档把角色控制 token 视为训练/生成数据契约。", confidence: high, locator: "chat templates guide"}
+    related_problems: [PT-001, PT-002, LOSS-014]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-ATT-004
+    kind: coding_prompt
+    title: "手撕 RoPE：偶/奇维旋转与增量 cache position"
+    domain: positional_encoding
+    tracks: [llm_algorithm, systems]
+    skills: [skill.llm_vlm.attention, skill.deep_learning.tensor_ops]
+    priority: P1
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "实现可批量应用的 rotary position embedding，并让 prefill 与带 cache 的 decode 使用一致的位置索引。"
+    one_liner: "RoPE 对每对通道施加位置相关二维旋转；cache decode 必须从 past 长度开始编号，而不是每步从零重算。"
+    core_answer:
+      - "将最后维拆成偶/奇对，按 cos/sin 旋转；频率表的 shape 要能广播到 [B,H,T,D]。"
+      - "位置 ids 是绝对 cache position，prefill 为 0..T-1，decode 从 past_len 递增；padding/左填充需要显式 position ids。"
+      - "缓存 cos/sin 时记录最大长度、dtype/device 和缩放版本，超长外推不能默认为质量不变。"
+    derivation_or_example: "D=4、position=1 时写出两对通道的旋转矩阵；past_len=7 的单 token decode 应取 position 7。"
+    answer_outline: ["写二维旋转", "安排频率/广播", "对齐 cache position", "测 prefill/decode 等价"]
+    acceptance: {L1: "说清 RoPE 作用", L2: "旋转和 shape 正确", L3: "cache/左 padding/dtype/长上下文边界正确"}
+    coding_contract:
+      input: "x[B,H,T,D]，D 为偶数；position_ids[B,T] 与 base/theta；可选已缓存 cos/sin。"
+      output: "返回同 shape/dtype/device 的旋转张量，不改变 x；相同 position 的逐 token 与批量结果一致。"
+      constraints: "只实现旋转，不隐式截断 position；非法奇数 D 或越界 cache 明确报错。"
+      symbol: apply_rope
+      framework: pytorch
+    test_focus: ["偶奇通道", "批量与单步等价", "cache position", "dtype/device 与非 contiguous"]
+    edge_cases: ["T=0", "D=2", "past_len 超过表长", "左 padding 的非连续 position"]
+    solution_direction: ["构造 inv_freq 与 position 外积", "interleave cos/sin 广播", "把 position_ids 作为显式输入而非隐式 range"]
+    follow_ups: ["RoPE 为何能表达相对位置信息？", "NTK/YaRN 等长上下文改动影响哪一层？", "KV cache 中应缓存旋转前还是旋转后 K？"]
+    pitfalls: ["奇偶维配对错位", "decode 每步从 0 开始", "cos/sin 在 CPU 或 fp32 导致隐式搬运", "超长位置静默 modulo"]
+    signals: ["用小维度手算验证", "prefill/decode 对齐有测试", "能区分实现事实与外推策略"]
+    source_claims:
+      - {claim_id: COD-ATT-004-C1, source_id: rope-paper, claim: "RoPE 通过旋转 query/key 使内积携带相对位置信息。", confidence: high, locator: "§2"}
+      - {claim_id: COD-ATT-004-C2, source_id: hf-cache, claim: "增量生成需要显式 cache position 与 past 长度对齐。", confidence: high, locator: "cache explanation"}
+    related_problems: [ATT-007, ATT-009]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-INF-001
+    kind: coding_prompt
+    title: "手撕 temperature/top-k/top-p 采样与可复现 RNG"
+    domain: decoding
+    tracks: [llm_algorithm, systems, agent]
+    skills: [skill.llm_vlm.generation, skill.machine_learning_math.probability, skill.python_engineering.testing]
+    priority: P0
+    difficulty: {concept: 3, implementation: 4, debugging: 4}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "实现单步 logits 采样，按顺序处理 temperature、top-k、top-p，并允许传入独立随机生成器。"
+    one_liner: "temperature 改变分布平滑度，top-k 保留固定候选数，top-p 保留累计质量；过滤后要重新归一化并稳定处理全零概率。"
+    core_answer:
+      - "对 logits 除以正 temperature 后排序；top-k 取最大 k，top-p 按降序累计概率并保留达到阈值的最小集合。"
+      - "被过滤 logits 设为 -inf，再 softmax/归一化；top-p 的边界 token 是否包含必须固定并测试。"
+      - "greedy/temperature=0、NaN/Inf、空候选和 generator seed 都是显式契约，不能依赖设备默认 RNG。"
+    derivation_or_example: "对 5 个 logits 手算 top-k=3、top-p=0.8 的保留集合，说明排序前后 token id 如何还原。"
+    answer_outline: ["定义参数边界", "温度与排序", "top-k/top-p mask", "归一化与 RNG"]
+    acceptance: {L1: "能解释三个旋钮", L2: "过滤顺序/概率正确", L3: "可复现、边界和 device/dtype 正确"}
+    coding_contract:
+      input: "logits[V]、temperature>=0、可选 top_k、top_p∈(0,1]、torch.Generator。"
+      output: "返回一个合法 token id；相同 logits/参数/generator 状态得到可复现结果。"
+      constraints: "不修改 logits；temperature=0 走 argmax；非法 NaN、负 k、越界 p 抛出 ValueError。"
+      symbol: sample_token
+      framework: pytorch
+    test_focus: ["temperature=0", "k=1/V", "p=1 与极小 p", "固定 generator 与概率和"]
+    edge_cases: ["V=1", "logits 含 Inf", "top_k 大于 V", "过滤后仅一个 token"]
+    solution_direction: ["先 clone/cast logits", "top-k 后对排序概率做 cumulative", "multinomial 使用显式 generator 并回到原 id"]
+    follow_ups: ["为什么 top-p 与 temperature 顺序会改变结果？", "beam search 和 sampling 的目标有什么不同？", "线上如何记录采样配置以便 replay？"]
+    pitfalls: ["在 softmax 后按 logits 阈值", "top-p 没有保留首个超过阈值 token", "temperature=0 仍除零", "使用全局 RNG 造成不可复现"]
+    signals: ["参数契约清楚", "能解释边界 token", "有 deterministic replay 测试"]
+    source_claims:
+      - {claim_id: COD-INF-001-C1, source_id: hf-generation, claim: "官方生成策略文档区分 greedy、sampling、beam 与 assisted 等解码家族。", confidence: high, locator: "generation strategies"}
+      - {claim_id: COD-INF-001-C2, source_id: internal-clean-room, claim: "本题是基于公开方法的原创练习契约，不复制任何面经原题措辞。", confidence: high, locator: "clean-room policy"}
+    related_problems: [ATT-010, ATT-011]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-INF-002
+    kind: coding_prompt
+    title: "手撕 KV cache 预算器与 token-budget 调度"
+    domain: serving_memory
+    tracks: [systems, llm_algorithm]
+    skills: [skill.inference_systems.kv_cache, skill.inference_systems.capacity, skill.python_engineering.data_contracts]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "实现一个纯函数，估算不同 KV head 配置的缓存字节数，并从请求队列中选择不超过 token budget 的 batch。"
+    one_liner: "缓存预算要按 layers×序列 token×KV heads×head_dim×每元素字节×K/V 两份计算；调度预算限制 token 而非请求数。"
+    core_answer:
+      - "单请求近似 bytes=2·L·T·Hkv·D·dtype_bytes；batch/并发和每个请求的实际序列长度再求和。"
+      - "选择策略必须定义 prefill/decode token 估计、优先级、年龄、公平性和取消回收；超预算请求应可解释地跳过。"
+      - "Paged/block allocator 让碎片和共享前缀可测量；估算器不是实际 allocator，需在系统测试中校准。"
+    derivation_or_example: "L=32、T=8192、Hkv=8、D=128、bf16 时算单请求 MiB，再比较 MHA 的 Hkv=32。"
+    answer_outline: ["写 bytes 公式", "处理变长请求", "实现 token budget", "列碎片/公平指标"]
+    acceptance: {L1: "公式量级正确", L2: "batch 选择不超预算", L3: "覆盖 GQA、空队列、优先级和整数溢出"}
+    coding_contract:
+      input: "layers、kv_heads、head_dim、dtype_bytes，以及按 arrival/priority/seq_tokens 描述的请求列表。"
+      output: "返回总 bytes 和按稳定顺序选出的请求 id；总估算 token 不得超过 budget。"
+      constraints: "纯 Python/标准库；拒绝负数和未知 dtype；不修改输入列表或请求字典。"
+      symbol: plan_kv_batch
+      framework: stdlib
+    test_focus: ["MHA/MQA/GQA 数值", "变长 batch", "budget 恰好相等", "输入不变与稳定 tie-break"]
+    edge_cases: ["空请求", "单请求超预算", "budget=0", "极大整数与无效 dtype"]
+    solution_direction: ["用整数 bytes 计算", "先过滤已取消/非法请求", "按 priority、arrival、id 稳定选择并累计 token"]
+    follow_ups: ["continuous batching 如何兼顾 TTFT 与 TPOT？", "prefix cache 命中如何改变预算？", "取消请求的 block/refcount 如何回收？"]
+    pitfalls: ["漏乘 K/V 两份", "用 q_heads 估 GQA", "只限制请求数", "浮点 MiB 舍入导致超预算"]
+    signals: ["单位和整数边界明确", "调度策略可解释", "区分估算模型与真实 allocator"]
+    source_claims:
+      - {claim_id: COD-INF-002-C1, source_id: hf-cache, claim: "增量生成中的 KV cache 随已处理 token 保留键和值，并需位置对齐。", confidence: high, locator: "cache explanation"}
+      - {claim_id: COD-INF-002-C2, source_id: pagedattention-paper, claim: "块化 KV 管理是降低 serving 内存碎片的核心设计。", confidence: high, locator: "paper §§2–4"}
+    related_problems: [INF-002, INF-003, INF-005]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-PT-001
+    kind: coding_prompt
+    title: "手撕 DPO token-level log-prob 对齐"
+    domain: preference_optimization
+    tracks: [post_training, llm_algorithm]
+    skills: [skill.post_training_rl.policy_optimization, skill.deep_learning.losses, skill.deep_learning.autograd]
+    priority: P0
+    difficulty: {concept: 5, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "给定 chosen/rejected 的 policy 与 reference token log-prob 及有效 mask，实现长度安全的 DPO loss，并返回 per-example diagnostics。"
+    one_liner: "DPO 比较 chosen/rejected 的 policy-reference 相对 log-ratio；先按 token mask 聚合，再用 -log sigmoid(beta·(chosen_margin-rejected_margin))。"
+    core_answer:
+      - "每个序列的 log-ratio 是 sum(mask*(policy_logp-reference_logp))，不可把 padding 或 prompt token 混入。"
+      - "margin=chosen_ratio-rejected_ratio，loss=softplus(-beta*margin)；beta、reduction 和空有效 token 策略需显式。"
+      - "policy log-prob 必须来自对应 shifted logits；reference 通常 stop-gradient，诊断应记录 chosen/rejected margin 与 win fraction。"
+    derivation_or_example: "两条答案各 3 个有效 token，给出四个 log-prob 差值，手算序列 ratio、margin 和 beta=0.1 的 loss。"
+    answer_outline: ["对齐 token 与 mask", "聚合 policy/reference ratio", "写 sigmoid/softplus 目标", "检查梯度与诊断"]
+    acceptance: {L1: "公式符号不反", L2: "mask/shift/reduction 正确", L3: "覆盖长度、beta、数值稳定与 reference 梯度"}
+    coding_contract:
+      input: "policy_logp/ref_logp/chosen_mask/rejected_mask 为 [B,T] 浮点/布尔张量，beta>0。"
+      output: "返回标量 loss 与每样本 chosen_ratio、rejected_ratio、margin；不修改输入。"
+      constraints: "使用稳定 softplus；mask 有效计数为零时明确报错；reference 分支不产生梯度。"
+      symbol: dpo_loss
+      framework: pytorch
+    test_focus: ["符号与手算值", "不同长度 mask", "beta 极小/较大", "reference 无梯度"]
+    edge_cases: ["chosen/rejected 长度不同", "全 prompt mask", "B=1", "logp 含极小值"]
+    solution_direction: ["先 masked sum 得到 per-example ratio", "用 F.softplus(-beta*margin)", "对 reference 输入 detach 或在调用方 no_grad"]
+    follow_ups: ["DPO 与 PPO 的 on/off-policy 假设差异？", "为什么 token-level 与 sequence-level reduction 会改变偏好？", "如何诊断 DPO loss 降但 win-rate 不升？"]
+    pitfalls: ["chosen/rejected 符号颠倒", "把 reference ratio 加而非减", "对 padding 做 mean", "reference 意外回传梯度"]
+    signals: ["能从 log-prob 推导目标", "报告 per-example 而非只报均值", "指出数据/template 对齐风险"]
+    source_claims:
+      - {claim_id: COD-PT-001-C1, source_id: dpo-2305-18290, claim: "DPO 将偏好优化写成 policy/reference 相对 log-ratio 的分类式目标。", confidence: high, locator: "§3"}
+      - {claim_id: COD-PT-001-C2, source_id: pytorch-cross-entropy, claim: "稳定的 log-prob 与 mask reduction 可借鉴 PyTorch 官方损失接口语义。", confidence: medium, locator: "API reduction"}
+    related_problems: [PT-002, PT-006]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-PT-002
+    kind: coding_prompt
+    title: "手撕 GRPO group advantage 与零方差保护"
+    domain: reinforcement_learning
+    tracks: [post_training, llm_algorithm, agent]
+    skills: [skill.post_training_rl.grpo, skill.machine_learning_math.statistics, skill.post_training_rl.reward_modeling]
+    priority: P0
+    difficulty: {concept: 5, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "给定每个 prompt 的多条 rollout reward，计算组内标准化 advantage，并处理组内 reward 全相同、缺失或异常的情况。"
+    one_liner: "GRPO 用同一 prompt 的 group reward 做相对基线；标准差接近零时不能制造巨大 advantage，应记录并降权/跳过该组。"
+    core_answer:
+      - "对每组 reward 求 mean/std，advantage=(r-mean)/(std+epsilon) 或按实现约定归一化；组边界绝不能跨 prompt 混合。"
+      - "全零方差表示 verifier 没有区分度，不是模型一定学会；应统计 zero-variance rate、有效组数和 reward 分桶。"
+      - "异常 reward、截断轨迹和 stale rollout 需在数据契约中标记；训练前后监控 entropy、KL/clip、成功率和长度偏差。"
+    derivation_or_example: "两个 prompt 各 4 个 reward，手算一组有差异、一组全相同的 advantage，并说明 batch reduction。"
+    answer_outline: ["按 prompt 分组", "定义均值/方差", "保护退化组", "输出质量诊断"]
+    acceptance: {L1: "知道相对优势来源", L2: "分组/归一化正确", L3: "零方差、异常、stale 与监控闭环完整"}
+    coding_contract:
+      input: "rewards[B,G]、有效 rollout mask[B,G]、epsilon>0；每行对应一个 prompt。"
+      output: "返回 advantages[B,G]、valid_group[B] 和 zero_variance_rate；无效位置为 0。"
+      constraints: "纯张量实现；有效样本少于 2 或方差低于阈值的组标为无效，不产生 NaN。"
+      symbol: group_advantage
+      framework: pytorch
+    test_focus: ["组内标准化", "全相同 reward", "部分无效 rollout", "无 NaN/梯度边界"]
+    edge_cases: ["G=1", "整行无效", "极大/极小 reward", "epsilon=0 的非法配置"]
+    solution_direction: ["沿 G 维 masked mean/variance", "用 where 保护 std", "返回显式有效组 mask 供 loss 跳过"]
+    follow_ups: ["GRPO 与 PPO 的 critic/baseline 差异？", "reward hacking 如何被 group normalization 掩盖？", "异步 rollout 的 stale policy 怎样监控？"]
+    pitfalls: ["跨 prompt 归一化", "std=0 直接除零", "把无效 reward 当 0 参与均值", "只看平均 reward"]
+    signals: ["能解释统计量与训练信号关系", "把退化组转成可观测指标", "给出最小 ablation"]
+    source_claims:
+      - {claim_id: COD-PT-002-C1, source_id: deepseekmath-grpo-2402, claim: "GRPO 使用同一问题多样本的相对奖励来构造更新信号并减少 critic 负担。", confidence: high, locator: "§3"}
+      - {claim_id: COD-PT-002-C2, source_id: internal-clean-room, claim: "零方差保护与测试契约为原创工程练习设计。", confidence: high, locator: "clean-room policy"}
+    related_problems: [PT-014, PT-015]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-PT-003
+    kind: coding_prompt
+    title: "手撕 LoRA 线性层与 adapter merge"
+    domain: parameter_efficient_tuning
+    tracks: [post_training, llm_algorithm, systems]
+    skills: [skill.post_training_rl.policy_optimization, skill.deep_learning.neural_layers, skill.inference_systems.quantization]
+    priority: P1
+    difficulty: {concept: 4, implementation: 4, debugging: 4}
+    seniority: [new_grad, mid, senior]
+    prompt: "实现冻结基座线性层加低秩 adapter 的前向，并提供无损（在允许数值误差内）的权重合并/拆分。"
+    one_liner: "LoRA 将增量写成 scale·B·A，冻结 W 只训练 A/B；merge 后 W'=W+scale·B·A，推理可消除额外分支。"
+    core_answer:
+      - "若 W[out,in]，A[r,in]、B[out,r]；输出 xWᵀ + alpha/r·(xAᵀ)Bᵀ，基座梯度关闭而 adapter 保持可训练。"
+      - "merge/unmerge 必须幂等、记录 dtype/device 和是否已合并；重复 merge 会累计增量。"
+      - "量化基座上 merge 可能引入舍入误差，应保留高精度 master 或明确只在推理副本合并。"
+    derivation_or_example: "in=3,out=2,r=1 的小矩阵手算一次前向和 merge 前后差异。"
+    answer_outline: ["标注矩阵方向", "写低秩增量", "实现 merge 状态机", "测梯度与误差"]
+    acceptance: {L1: "解释低秩假设", L2: "shape/scale/冻结正确", L3: "merge 幂等、量化误差和 state_dict 完整"}
+    coding_contract:
+      input: "base Linear(in_features,out_features,bias 可选)、rank>0、alpha、x[...,in_features]。"
+      output: "返回 adapter 前向结果；merge() 后输出与未 merge 在容差内一致，unmerge() 可恢复。"
+      constraints: "使用 PyTorch；禁止重复累计 merge；base 参数 requires_grad=False，A/B 可训练。"
+      symbol: LoRALinear
+      framework: pytorch
+    test_focus: ["shape/bias", "基座冻结", "merge-unmerge round trip", "重复 merge 与 dtype"]
+    edge_cases: ["rank=1", "alpha=0", "bias=None", "空 batch"]
+    solution_direction: ["用两个 Linear/Parameter 计算增量", "记录 merged bool", "merge 前后 clone master weight 并用 allclose 验证"]
+    follow_ups: ["QLoRA 的 4-bit 基座和 LoRA 精度边界？", "为什么低 rank 可能欠拟合？", "多 adapter 路由如何限制显存与延迟？"]
+    pitfalls: ["A/B 方向写反", "忘记 alpha/r", "merge 调两次", "误把 base requires_grad 打开"]
+    signals: ["矩阵维度可手算", "状态与数值误差有测试", "能解释训练/部署边界"]
+    source_claims:
+      - {claim_id: COD-PT-003-C1, source_id: lora-paper, claim: "LoRA 通过冻结预训练权重并注入低秩可训练矩阵减少更新参数。", confidence: high, locator: "§4"}
+      - {claim_id: COD-PT-003-C2, source_id: qlora-paper, claim: "QLoRA 将低比特冻结基座与高精度 adapter 组合，量化误差需单独评估。", confidence: high, locator: "§3"}
+    related_problems: [PT-004, INF-013]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-VLM-001
+    kind: coding_prompt
+    title: "手撕 CLIP 对比学习 logits 与双向 InfoNCE"
+    domain: multimodal_alignment
+    tracks: [vlm_algorithm, post_training]
+    skills: [skill.llm_vlm.vlm_architecture, skill.deep_learning.losses, skill.machine_learning_math.probability]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 4}
+    seniority: [new_grad, mid, senior]
+    prompt: "给定 image/text embedding batch，实现归一化后的双向对比 logits、temperature 参数和对角正样本损失。"
+    one_liner: "先 L2 normalize，再算 image→text 与 text→image 相似度矩阵；标签是 batch 内对角索引，temperature 要可学习且为正。"
+    core_answer:
+      - "logits=exp(logit_scale)·image_norm·text_normᵀ；对角为正样本，分别对行和列做交叉熵再取平均。"
+      - "batch 内重复 caption/image 会造成假负样本，应在数据契约或多正样本损失中处理。"
+      - "监控 temperature、embedding norm、检索 Recall@K 和跨域切片；只看 loss 不能证明 grounding。"
+    derivation_or_example: "B=3 的相似度矩阵中手算两个方向的 target=[0,1,2]，说明为什么要双向。"
+    answer_outline: ["归一化与相似度", "构造对角标签", "双向 CE", "重复样本与检索指标"]
+    acceptance: {L1: "说清正负配对", L2: "logits/label/loss 正确", L3: "覆盖 temperature、重复样本、数值和检索评测"}
+    coding_contract:
+      input: "image_emb[B,D]、text_emb[B,D]、logit_scale 标量参数。"
+      output: "返回 image_to_text_logits[B,B]、text_to_image_logits[B,B] 和标量 loss。"
+      constraints: "不原地归一化；支持 B=1；logit_scale 用 exp 后限制溢出。"
+      symbol: clip_contrastive_loss
+      framework: pytorch
+    test_focus: ["对角标签", "双向对称性", "B=1", "梯度与 temperature"]
+    edge_cases: ["重复文本", "零向量 embedding", "B=0", "极大 logit_scale"]
+    solution_direction: ["F.normalize(...,dim=-1)", "matmul 与 transpose", "F.cross_entropy(logits, arange(B)) 双向平均"]
+    follow_ups: ["为什么 batch size 影响对比学习？", "hard negative 与 false negative 如何取舍？", "CLIP 对 VLM 的视觉 token 机制有哪些局限？"]
+    pitfalls: ["忘记 normalize", "只算一个方向", "label 用全局样本 id", "zero vector 产生 NaN"]
+    signals: ["能从矩阵解释 loss", "测试 B=1/重复样本", "把训练目标和检索指标分开"]
+    source_claims:
+      - {claim_id: COD-VLM-001-C1, source_id: clip-paper, claim: "CLIP 以大规模图文配对的双向对比目标对齐图像与文本表示。", confidence: high, locator: "§2"}
+      - {claim_id: COD-VLM-001-C2, source_id: pytorch-cross-entropy, claim: "对角配对可用稳定的分类交叉熵实现。", confidence: medium, locator: "API"}
+    related_problems: [LOSS-006, VLM-002]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-VLM-002
+    kind: coding_prompt
+    title: "手撕多模态 collator：视觉占位符与 batch 对齐"
+    domain: multimodal_data
+    tracks: [vlm_algorithm, post_training, agent]
+    skills: [skill.llm_vlm.multimodal_data, skill.llm_vlm.tokenization, skill.python_engineering.data_contracts]
+    priority: P0
+    difficulty: {concept: 4, implementation: 5, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "实现一个 collator，将每条样本的文本 token、图像 patch 特征占位符和 labels pad 成 batch，并返回可验证的 image-to-token 映射。"
+    one_liner: "视觉特征插入位置必须与 placeholder 数量、attention mask 和 labels 同步；动态分辨率不能靠静默截断修复。"
+    core_answer:
+      - "先由 processor/tokenizer 固定特殊 token 和 patch 数，再构造 input_ids、pixel_values、attention_mask、labels 的共同契约。"
+      - "视觉占位符通常不直接预测，labels 对应位置设 ignore_index；每条样本的图像数量/patch 数必须可追踪。"
+      - "batch padding、左/右 padding、图像缺失、超长文本和混合分辨率都要在 collator 层报出可诊断错误。"
+    derivation_or_example: "两条样本分别含 1 张 4 patch 图和 2 张 2 patch 图，列出拼接后 placeholder span 与 labels mask。"
+    answer_outline: ["定义 processor 输出", "插入 placeholder", "pad 与 labels mask", "校验映射与异常"]
+    acceptance: {L1: "能说明文本/视觉两条流", L2: "batch shape 与 mask 对齐", L3: "动态 patch、缺图、超长和可重放元数据完整"}
+    coding_contract:
+      input: "样本列表，每项含 input_ids、pixel_values 列表、placeholder_positions 或 processor metadata。"
+      output: "字典 batch：padded input_ids/labels/attention_mask、pixel_values、image_spans、sample_ids。"
+      constraints: "不修改原样本；placeholder 数与 image_spans 严格相等；非法样本抛出带 sample_id 的 ValueError。"
+      symbol: multimodal_collate
+      framework: pytorch
+    test_focus: ["变长文本", "变 patch 数", "labels ignore mask", "缺图/多图和输入不变"]
+    edge_cases: ["空文本", "无图文本样本", "超长截断", "左 padding 与 batch=1"]
+    solution_direction: ["先逐样本构造规范化记录", "统一 pad 后 stack 视觉张量或保留 list+offset", "最后做 span/label 一致性断言"]
+    follow_ups: ["BLIP-2 的 query bridge 与 LLaVA projector 有何差异？", "动态分辨率如何影响位置编码和吞吐？", "多模态数据泄漏如何检测？"]
+    pitfalls: ["只 pad input_ids 没 pad labels", "placeholder 与 patch 数错一位", "把 padding label 设成真实 token", "静默丢弃坏样本"]
+    signals: ["能把 processor 当版本化契约", "异常包含 sample_id", "有 span 可视化/断言"]
+    source_claims:
+      - {claim_id: COD-VLM-002-C1, source_id: hf-multimodal-chat, claim: "官方多模态 chat template 文档要求按内容块组织文本与图像输入并保持 processor 契约。", confidence: high, locator: "multimodal chat templates"}
+      - {claim_id: COD-VLM-002-C2, source_id: llava-paper, claim: "LLaVA 类架构通过视觉投影将视觉表示接入语言模型上下文。", confidence: high, locator: "§2"}
+    related_problems: [VLM-004, VLM-006, VLM-007]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-EVAL-001
+    kind: coding_prompt
+    title: "手撕评测聚合：分桶指标、置信区间与回归门禁"
+    domain: evaluation
+    tracks: [llm_algorithm, vlm_algorithm, post_training, agent, systems]
+    skills: [skill.evaluation_safety.benchmarks, skill.machine_learning_math.statistics, skill.data_mlops.experiments]
+    priority: P1
+    difficulty: {concept: 4, implementation: 3, debugging: 4}
+    seniority: [new_grad, mid, senior]
+    prompt: "给定带 task/domain/length 标签的逐样本结果，实现 macro/micro 聚合、bootstrap 置信区间和相对 baseline 的发布判定。"
+    one_liner: "先按预注册切片聚合，再给总体与关键切片的不确定性；门禁同时检查提升、回退、样本量和统计/业务阈值。"
+    core_answer:
+      - "micro 按样本汇总，macro 先按 slice 求分再平均；两者不能混用来掩盖长尾回退。"
+      - "bootstrap 或适合指标的区间要固定 seed/重采样单位；配对样本优先使用 paired bootstrap。"
+      - "发布判定写成可审计规则：总体提升、关键 slice 不低于回退阈值、成本/延迟 SLO 通过、样本和污染检查通过。"
+    derivation_or_example: "两个 slice 样本量 90/10、准确率 0.8/0.2，比较 micro 与 macro，并给出 baseline 回退门。"
+    answer_outline: ["固定 slice schema", "实现 macro/micro", "估计不确定性", "输出 release gate"]
+    acceptance: {L1: "区分 macro/micro", L2: "聚合和区间正确", L3: "覆盖小样本、配对、污染、成本和回滚规则"}
+    coding_contract:
+      input: "逐样本记录 {id, slice, score, baseline_score, latency_ms}，以及阈值配置。"
+      output: "返回总体/切片 metrics、区间和 passed/reasons；输入记录顺序不影响结果。"
+      constraints: "标准库实现可运行的 deterministic bootstrap；拒绝缺失 slice/非有限 score；不修改输入。"
+      symbol: evaluate_release_gate
+      framework: stdlib
+    test_focus: ["macro/micro 差异", "空/小 slice", "固定 seed", "关键回退门与顺序不变"]
+    edge_cases: ["单样本 slice", "全分数相同", "baseline 缺失", "延迟 SLO 恰好边界"]
+    solution_direction: ["先 canonical sort 样本", "按 slice 聚合并记录 n", "paired bootstrap 与显式 reasons 列表"]
+    follow_ups: ["LLM-as-a-Judge 如何校准与抽检？", "Golden set 污染怎样影响置信区间？", "Agent 评测为什么还要记录 trace/process/risk？"]
+    pitfalls: ["只报总平均", "随机 bootstrap 无 seed", "小 slice 被宏平均掩盖", "把统计显著当作线上收益"]
+    signals: ["规则可审计", "不确定性和样本量显式", "能把 badcase 回流为新 slice/测试"]
+    source_claims:
+      - {claim_id: COD-EVAL-001-C1, source_id: shlab-llm-eval-intern-20260422, claim: "官方评测岗位描述强调自动化指标、执行式评测和轨迹成功/失败分析。", confidence: high, locator: "job description"}
+      - {claim_id: COD-EVAL-001-C2, source_id: mmmu-benchmark, claim: "多模态 benchmark 需要固定数据/任务协议，分数不能脱离切片与设置解释。", confidence: high, locator: "benchmark protocol"}
+    related_problems: [FND-003, PT-016, VLM-013]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-ALG-001
+    kind: coding_prompt
+    title: "手撕 LRU 缓存：O(1) 读写与容量边界"
+    domain: data_structures
+    tracks: [ai_foundation, systems, agent]
+    skills: [skill.programming_algorithms.caching, skill.python_engineering.data_contracts, skill.python_engineering.testing]
+    priority: P0
+    difficulty: {concept: 2, implementation: 3, debugging: 4}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "实现线程外语义下的 LRU get/put，要求均摊 O(1)，并说明容量为零、更新已有 key 与淘汰顺序。"
+    one_liner: "哈希表定位节点、双向链表维护新旧顺序；get 和更新都移到头部，超容量从尾部淘汰。"
+    core_answer:
+      - "节点同时存在 map 和链表；哨兵 head/tail 简化空表/单节点边界，所有链接更新保持双向一致。"
+      - "put 已有 key 只更新 value 并移动到头部；capacity=0 不保留元素，负容量直接拒绝。"
+      - "若用于 KV/prefix cache，还需加入字节预算、引用计数、并发锁和取消回收，不能把普通 LRU 当完整 serving allocator。"
+    derivation_or_example: "capacity=2，依次 put(a),put(b),get(a),put(c)，列出链表顺序和被淘汰 key。"
+    answer_outline: ["选 map+双链表", "定义移动/删除", "处理容量边界", "给复杂度与测试"]
+    acceptance: {L1: "结构与淘汰规则正确", L2: "所有操作均摊 O(1)", L3: "覆盖重复 key、容量零、非变异和扩展并发边界"}
+    coding_contract:
+      input: "capacity 非负整数；put(key,value)、get(key) API，key 可哈希。"
+      output: "get 返回 value 或 None；put 返回 None；内部顺序可通过只读 keys_mru_to_lru 查看。"
+      constraints: "标准库实现；不得使用 OrderedDict 代替核心结构；输入 key/value 不被修改。"
+      symbol: LRUCache
+      framework: stdlib
+    test_focus: ["O(1) 结构不变量", "更新/淘汰顺序", "capacity=0", "重复操作与输入不变"]
+    edge_cases: ["空 key", "value=None", "capacity=1", "未命中 get 不改变顺序"]
+    solution_direction: ["哨兵双链表", "map[key]=node", "_remove/_add_front 两个原子 helper"]
+    follow_ups: ["TTL/LFU 与 LRU 如何组合？", "KV cache 的 page refcount 为什么不能只靠 LRU？", "多线程 get/put 的锁粒度怎么选？"]
+    pitfalls: ["删除节点后 map 残留", "get 未更新 MRU", "容量检查在插入后漏淘汰", "用 list 导致 O(n)"]
+    signals: ["先写不变量", "能证明复杂度", "会把算法缓存与 serving 资源回收区分开"]
+    source_claims:
+      - {claim_id: COD-ALG-001-C1, source_id: pagedattention-paper, claim: "serving KV 管理还需处理块、共享和回收，普通键值 LRU 只是练习抽象。", confidence: medium, locator: "paper §§2–4"}
+      - {claim_id: COD-ALG-001-C2, source_id: internal-clean-room, claim: "题面与测试契约为本项目原创改写，不复制公开题单原文。", confidence: high, locator: "clean-room policy"}
+    related_problems: [ALG-016, ALG-017]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-AGT-001
+    kind: coding_prompt
+    title: "手撕带上限的工具调用重试与 trace 记录"
+    domain: agent_reliability
+    tracks: [agent, systems, post_training]
+    skills: [skill.agent_application.tool_calling, skill.agent_application.reliability, skill.python_engineering.exceptions]
+    priority: P1
+    difficulty: {concept: 3, implementation: 4, debugging: 4}
+    seniority: [new_grad, mid, senior]
+    prompt: "实现一个不执行未知工具的 orchestration helper：校验 schema/权限，按可重试错误指数退避，并记录可 replay 的 trace。"
+    one_liner: "工具调用的可靠性来自 schema、权限、超时、幂等键和有上限的重试；每次尝试都要留下不含秘密的结构化 trace。"
+    core_answer:
+      - "先验证工具名、参数 schema 和 caller scope，再执行；未知字段、越权或非幂等操作不能盲目重试。"
+      - "重试只针对明确的瞬时错误，指数退避加 jitter 且有最大次数/总时限；结果要区分最终失败与中途重试。"
+      - "trace 至少含 run/tool/attempt id、输入摘要、状态、耗时、错误类别和 policy decision，敏感值做 hash/脱敏。"
+    derivation_or_example: "一次 timeout、一次 429、一次 schema error 的序列，判断哪些重试并写出 trace 事件顺序。"
+    answer_outline: ["校验与授权", "分类错误", "实现 bounded retry", "设计脱敏 trace/replay"]
+    acceptance: {L1: "能说清工具边界", L2: "重试判定/退避正确", L3: "覆盖幂等、超时、权限、trace 和回放"}
+    coding_contract:
+      input: "工具注册表（schema、权限、idempotent）、请求、fake executor、最大 attempts/总 deadline。"
+      output: "返回最终结果或 typed error，以及按时间排序的 JSON trace；未知工具不得执行。"
+      constraints: "标准库；sleep 使用可注入 clock；trace 不得包含原始 secret；总 attempts/时间严格受限。"
+      symbol: run_tool_with_trace
+      framework: stdlib
+    test_focus: ["schema/权限拒绝", "瞬时与永久错误", "attempt/deadline 上限", "trace 脱敏与 deterministic clock"]
+    edge_cases: ["attempts=0", "deadline 已过", "非幂等工具", "executor 返回超大错误"]
+    solution_direction: ["注册表先查权限", "错误分类器+注入 clock/backoff", "每次尝试 append immutable event"]
+    follow_ups: ["MCP tool schema 与 transport error 如何分层？", "Agent loop 如何防止工具结果 prompt injection？", "异步并发工具调用怎样保证 trace 顺序和取消？"]
+    pitfalls: ["把所有异常都重试", "重试非幂等写操作", "日志泄露 token", "没有总 deadline 导致 fan-out 无限增长"]
+    signals: ["安全策略先于执行", "错误分类有证据", "trace 可回放且不含秘密"]
+    source_claims:
+      - {claim_id: COD-AGT-001-C1, source_id: mcp-spec, claim: "MCP 规范把工具描述、调用和错误作为可互操作的协议边界，客户端仍需实施权限策略。", confidence: high, locator: "Tools and security sections"}
+      - {claim_id: COD-AGT-001-C2, source_id: react-paper, claim: "ReAct 将推理与行动交错，轨迹记录可用于检查行动是否支持目标。", confidence: high, locator: "§2"}
+    related_problems: [AGT-001, AGT-002, AGT-006]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-AGT-004
+    kind: eight_stock
+    title: "Agent 状态、规划与长期记忆：可终止 loop 的契约"
+    domain: agent_planning
+    tracks: [agent, systems, vlm_algorithm, post_training]
+    skills: [skill.agent_application.agent_loop, skill.agent_application.state_memory, skill.agent_application.planning, skill.agent_application.reliability, skill.agent_application.evaluation]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "设计一个会规划、调用工具并跨轮记忆的 Agent：如何建模状态、何时重规划、哪些内容写入记忆，以及怎样保证 loop 可终止、可回放、可评测？"
+    one_liner: "把 Agent 视为有预算的状态机：计划、观察、工具结果和记忆写入都要有版本、权限、停止条件与可回放 trace。"
+    core_answer:
+      - "显式状态至少包含 goal、plan/version、当前 step、observation/tool result、剩余 token/time/tool budget、权限和 stop_reason；模型文本不是隐式状态机。"
+      - "规划与执行分离，按新证据或失败类型触发有限次 re-plan；设置最大步数、总时限、重复动作检测和人工接管，禁止无界 self-loop。"
+      - "区分 working memory、episodic trajectory 和 semantic memory；写入前做 schema/敏感信息/来源校验，检索结果带 provenance、置信度、TTL 或版本。"
+      - "工具返回是不可信 observation，不能直接覆盖系统指令或长期记忆；副作用操作使用幂等键，所有转移记录 trace 以支持 replay。"
+      - "评测同时看任务成功率、步骤数、重规划/恢复率、记忆 precision/recall、工具错误率、p95 延迟、成本和越权率。"
+    derivation_or_example: "对‘查订单→搜索政策→政策冲突→重新规划→请求用户确认’画状态转移，标出每次 memory read/write、预算扣减、失败原因和最终停止条件。"
+    answer_outline: ["定义 typed state 与信任边界", "规划/执行/重规划状态机", "记忆分层与写入策略", "预算、回放和任务级评测"]
+    acceptance: {L1: "能画出有停止条件的 Agent loop 并区分 plan、observation、memory。", L2: "能说明重规划触发、记忆 provenance、权限和幂等契约。", L3: "能用故障注入、replay trace 和任务级指标验证恢复与成本。"}
+    follow_ups: ["短期 working memory 与长期 semantic memory 如何分工？", "什么时候应该重规划而不是重试同一个工具？", "如何检测重复动作、记忆污染和跨租户串读？", "多 Agent 共享记忆时怎样处理版本冲突与权限？"]
+    pitfalls: ["把 prompt history 当作完整 memory 设计", "没有最大步数/总 deadline 导致无限循环", "未经校验把工具返回写入长期记忆", "只看最终成功率而忽略步骤、成本和越权"]
+    signals: ["状态字段和转移条件可执行", "能主动给出 replay/failure trace", "把记忆质量、可靠性、安全和成本一起量化"]
+    source_claims:
+      - {claim_id: EGT-AGT-004-C1, source_id: react-paper, claim: "ReAct 将推理、行动和环境观察交错组织，轨迹状态是 Agent 行为分析的基本单位。", confidence: high, locator: "paper §2"}
+      - {claim_id: EGT-AGT-004-C2, source_id: shlab-agent-20260827, claim: "官方 Agent 岗位信号覆盖规划、工具调用、上下文/记忆、验证与错误恢复。", confidence: high, locator: "job description"}
+      - {claim_id: EGT-AGT-004-C3, source_id: minimax-agent-posttrain, claim: "Agent 后训练经验强调轨迹数据、verifier、rollout/learner 边界和调度成本。", confidence: medium, locator: "engineering report"}
+    related_problems: [AGT-001, AGT-006, AGT-009]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-PT-007
+    kind: eight_stock
+    title: "偏好数据与 Reward Model：噪声、长度偏差与校准"
+    domain: preference_data_and_reward_modeling
+    tracks: [post_training, llm_algorithm, vlm_algorithm, agent]
+    skills: [skill.post_training_rl.preference_data, skill.post_training_rl.reward_modeling, skill.post_training_rl.verification, skill.data_mlops.data_quality, skill.evaluation_safety.benchmarks]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "给一批 chosen/rejected 偏好对和一个 reward model，说明如何构造数据、训练与校准 RM，并诊断 reward 上升但真实质量下降。"
+    one_liner: "偏好数据是后训练的监督契约：先保证 pair 语义、标注一致性和切分无泄漏，再用校准 RM 与独立 outcome/verifier 证明 reward 真的代表目标。"
+    core_answer:
+      - "每个 pair 固定同一 prompt，chosen/rejected 的差异应对应目标偏好；去重、过滤截断/无效回答，保留 tie、标注者分歧、来源和版本。"
+      - "典型 RM 用 Bradley–Terry/logistic pairwise loss：-log σ(r(chosen)-r(rejected))；按 prompt/source 分组切分，报告 pair accuracy/AUC、margin 分布和校准误差。"
+      - "检查长度、verbosity、位置、模板和 reward scale 偏差；对长度、领域、语言、难度和模型版本做切片，不能用总分掩盖捷径。"
+      - "接入 DPO/PPO/GRPO 时锁定 tokenizer/template、response mask、reference/RM 版本和 rollout freshness；无效 completion 与 zero-variance group 有明确策略。"
+      - "用独立人评、执行式 verifier、holdout win-rate/成功率和 adversarial counterexample 评估 reward-true gap，必要时修数据/verifier 或回滚。"
+    derivation_or_example: "给三组偏好对，其中一组 chosen 更长但人评无差异，手算 pairwise loss 和长度分桶，并提出去重、重标注、校准和停止门槛。"
+    answer_outline: ["定义 pair 与 provenance 契约", "推导 RM pairwise objective", "排查长度/标注/泄漏偏差", "用独立 outcome 验证并设回滚门"]
+    acceptance: {L1: "能说明 chosen/rejected、RM 与 DPO/PPO 的边界。", L2: "能写出 pairwise loss、切分和校准指标。", L3: "能定位 reward-true gap、设计反例/独立 verifier 并给出回滚条件。"}
+    follow_ups: ["RM pair accuracy 很高但 win-rate 不升，优先查哪些切片？", "tie/分歧标签应删除、合并还是建模？", "如何区分长度偏差、模板泄漏和真正能力提升？", "视觉偏好数据如何处理图像质量、OCR 和多模态 hallucination？"]
+    pitfalls: ["随机按 response 切分造成同 prompt 泄漏", "把 reward 分数当作真实质量或概率", "忽略长度/位置/格式捷径", "RM、reference、tokenizer 版本漂移却继续训练"]
+    signals: ["数据字段、mask 和版本可审计", "能报告 calibration/reward-true gap", "会用独立人评或执行 oracle 约束代理目标"]
+    source_claims:
+      - {claim_id: EGT-PT-007-C1, source_id: instructgpt-220302155, claim: "InstructGPT 将示范数据、偏好数据、reward model 和 PPO 作为分阶段管线，偏好数据质量决定代理目标边界。", confidence: high, locator: "paper §§2–3"}
+      - {claim_id: EGT-PT-007-C2, source_id: dpo-2305-18290, claim: "DPO 直接使用 chosen/rejected 与 reference-relative log-ratio 优化偏好，数据对齐和长度处理会改变目标。", confidence: high, locator: "paper §3"}
+      - {claim_id: EGT-PT-007-C3, source_id: trl-official-docs, claim: "TRL 官方文档明确 preference、reward modeling、DPO/PPO/GRPO trainer 的数据字段和实现边界。", confidence: high, locator: "trainer documentation"}
+    related_problems: [PT-002, PT-006, PT-016, PT-018, PT-020]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-VLM-005
+    kind: eight_stock
+    title: "动态分辨率、视觉 token 预算与视频时间轴"
+    domain: multimodal_data
+    tracks: [vlm_algorithm, systems, llm_algorithm]
+    skills: [skill.llm_vlm.multimodal_data, skill.llm_vlm.context_management, skill.llm_vlm.vlm_architecture, skill.data_mlops.reproducibility]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "给定图像/视频尺寸、patch 或 merge 规则、帧采样策略和上下文上限，如何估算视觉 token、显存与延迟，并保证 processor、placeholder、时间位置和截断一致？"
+    one_liner: "先把每个媒体 item 的 grid、帧时间和 token 数写入数据契约，再在预算内联合选择分辨率/采样/压缩；任何截断都必须可审计且不切断媒体 span。"
+    core_answer:
+      - "图像 patch 数可近似为 ceil(H/P)×ceil(W/P)，视频还要乘有效帧/temporal tubelet；实际数量受动态 resize、merge、分隔 token 和 processor 取整影响。"
+      - "placeholder 数量、视觉 embedding span、image/video grid metadata 和多轴 position id 必须按样本顺序一一对应；先做 golden text-only/image-only/interleaved case。"
+      - "按任务选择预算策略：OCR/细粒度任务优先保留空间细节，长视频优先分层采样/窗口摘要；同时报告 token、峰值显存、TTFT/TPOT 和质量切片。"
+      - "时间 id 使用真实采样时间或明确 stride 单调生成；padding、丢帧、字幕和音频不能静默复用旧位置。"
+    derivation_or_example: "对 H=1080、W=1920、P=14、空间 merge=2、T=16 帧和 max_visual_tokens=4096，给出粗略 token 上界、超预算方案及需要记录的 grid/time 字段。"
+    answer_outline: ["列出媒体到 token 的 shape 契约", "推导空间/时间预算", "设计任务条件下的采样与截断", "用 golden case 和切片指标验证"]
+    acceptance:
+      L1: "能估算单图与视频 token，并指出公式只是近似。"
+      L2: "能对齐 placeholder、grid、position、labels 和预算。"
+      L3: "能用长尾成本、时间反事实和版本锁定解释质量回归。"
+    follow_ups: ["奇数尺寸、letterbox 和 2×2 merge 后如何排查 off-by-one？", "为什么同样的像素数在不同 processor 版本可能得到不同 token 数？", "打乱视频帧后分数不降，如何证明模型真的使用时间证据？", "长视频采用全局低 fps 加局部高 fps 时怎样做公平消融？"]
+    pitfalls: ["只按像素数估算而漏掉帧数、LLM KV 和分隔 token", "在媒体 span 中间截断导致 placeholder/embedding 错位", "把帧序号当真实时间戳或重采样后复用旧 time id", "只报平均准确率而不报 token、显存和长尾延迟"]
+    signals: ["能把视觉数据流写成可断言的 shape/metadata 契约", "先按任务定义预算而不是盲目压缩", "能给出时间反事实和版本复现方案"]
+    source_claims:
+      - {claim_id: EGT-VLM-005-C1, source_id: qwen2-vl-paper, claim: "Qwen2-VL 将动态分辨率视觉 token 与多轴位置设计结合，视觉序列长度由输入与处理规则共同决定。", confidence: high, locator: "paper abstract/architecture"}
+      - {claim_id: EGT-VLM-005-C2, source_id: hf-multimodal-chat, claim: "Hugging Face 多模态模板以结构化 image/video/text content 和 processor 统一预处理契约。", confidence: high, locator: "multimodal chat templates"}
+      - {claim_id: EGT-VLM-005-C3, source_id: videomme-benchmark, claim: "Video-MME 按视频时长和输入信息评估视频理解，提示帧采样和协议必须固定。", confidence: high, locator: "benchmark description"}
+    related_problems: [VLM-004, VLM-007]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-VLM-006
+    kind: eight_stock
+    title: "OCR、文档结构与坐标 grounding 的误差闭环"
+    domain: multimodal_evaluation
+    tracks: [vlm_algorithm, systems, post_training]
+    skills: [skill.llm_vlm.vlm_architecture, skill.llm_vlm.multimodal_data, skill.evaluation_safety.benchmarks, skill.data_mlops.data_quality]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "比较 OCR-augmented、OCR-free 和级联文档系统，如何定义坐标/结构化输出契约，并把字符、版面、字段和回查错误分别定位？"
+    one_liner: "把 OCR 文本、视觉版面、坐标和结构化 schema 当成不同证据层；每层单独评测，再用原图回查关键字段，不能用一个总分掩盖错误。"
+    core_answer:
+      - "OCR-augmented 便于检索和审计但会把识别/版面错误传给生成器；OCR-free 保留视觉关系却承担更高 token、解码和长文本成本；生产常用召回—精读—校验级联。"
+      - "坐标必须固定参考系、顺序、归一化范围、取整、越界和旋转框规则；例如归一化后要能无歧义反变换到原图。"
+      - "指标分开报告字符/字段准确率、结构树一致性、IoU/中心误差、引用证据和拒答率；按文字密度、语言、分辨率、表格/图表切片。"
+      - "对高价值字段执行原图 overlay、schema parser 和置信度阈值回查；跨块重复、阅读顺序、表格合并和扫描倾斜都要有最小反例。"
+    derivation_or_example: "给一页含表格、旋转文字和两列布局的文档，设计三路 baseline、坐标归一化公式、错误 taxonomy 以及上线前的字段级 gate。"
+    answer_outline: ["定义三种架构的数据流", "固定坐标与 schema 契约", "选择互补指标和切片", "设计回查/拒答/回滚"]
+    acceptance:
+      L1: "能说清 OCR、版面和生成之间的错误级联。"
+      L2: "能写出坐标变换、结构校验和字段级指标。"
+      L3: "能用原图证据、反例切片和成本延迟做部署取舍。"
+    follow_ups: ["为什么表格字符全对仍可能结构全错？", "高分辨率切片如何避免跨块重复和阅读顺序错位？", "如何用镜像/旋转/property test 检查坐标变换？", "证据不足时 OCR/VLM 应该拒答还是请求更高分辨率？"]
+    pitfalls: ["把 OCRBench 或字符准确率当作通用文档理解", "坐标参考系和 resize/letterbox 规则未版本化", "只在生成文本上打分而不回查原图", "级联系统没有区分召回失败、解析失败和 schema 失败"]
+    signals: ["能把视觉错误拆成可观测层级", "指标与任务证据一一对应", "能设计字段级回查与安全拒答"]
+    source_claims:
+      - {claim_id: EGT-VLM-006-C1, source_id: ocrbench-benchmark, claim: "OCRBench 覆盖文字识别、文档/场景问答与信息抽取等 OCR 相关能力，不能替代其他视觉切片。", confidence: high, locator: "paper abstract"}
+      - {claim_id: EGT-VLM-006-C2, source_id: qwen2-vl-paper, claim: "动态视觉 token 与多模态位置/分辨率处理会影响文档和细粒度感知的输入契约。", confidence: high, locator: "paper architecture"}
+      - {claim_id: EGT-VLM-006-C3, source_id: shlab-vlm-architecture-20260827, claim: "官方多模态岗位将数据生产、过滤、训练和评测视为端到端流程。", confidence: high, locator: "job description"}
+    related_problems: [VLM-004, VLM-005, VLM-007]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-VLM-007
+    kind: eight_stock
+    title: "多模态 hallucination：反事实评测、校准与偏好对齐"
+    domain: multimodal_evaluation
+    tracks: [vlm_algorithm, post_training, agent]
+    skills: [skill.evaluation_safety.benchmarks, skill.evaluation_safety.llm_judge, skill.evaluation_safety.safety_eval, skill.post_training_rl.verification]
+    priority: P0
+    difficulty: {concept: 4, implementation: 3, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "如何区分 object、attribute、relation/temporal 和 knowledge hallucination，并设计反事实样本、拒答策略和多模态偏好对齐的发布门禁？"
+    one_liner: "先让答案绑定可见证据，再分别测存在性、属性、关系和时间错误；偏好训练要同时约束有用性、事实性、拒答率和延迟。"
+    core_answer:
+      - "POPE 类对象存在性测试、属性/关系反事实和视频时间扰动对应不同错误；不要把语言流畅度或单一 VQA 分数当作 groundedness。"
+      - "LLM judge 需固定版本、提示和证据格式，用人工子集、交换候选顺序和长度匹配校准位置/verbosity/自偏好。"
+      - "缓解可从 hard negative、区域/OCR/检索证据、引用框/时间戳、拒答和片段级偏好反馈组合；每种手段都要测过度拒答和成本。"
+      - "线上 gate 至少拆 factual precision/recall、groundedness、abstention、safety、p95 latency 和 token cost，并保留失败样例可回放。"
+    derivation_or_example: "构造同一张图的存在/不存在、颜色交换和关系交换三类样本，计算 precision/recall/F1，比较‘流畅但无证据’与‘可靠拒答’的 Pareto。"
+    answer_outline: ["建立 hallucination taxonomy", "设计反事实与证据标注", "校准 judge/拒答", "设置质量—安全—成本 gate"]
+    acceptance:
+      L1: "能区分至少三类视觉幻觉和相应数据。"
+      L2: "能给出反事实、人工校准和拒答指标。"
+      L3: "能分析偏好对齐副作用并提出回滚门槛。"
+    follow_ups: ["为什么只优化语言偏好可能让视觉幻觉更严重？", "对象存在性测试与开放式 grounding 如何互补？", "如何检测 judge 的位置、长度和语言偏差？", "拒答率提升多少才算可靠性提升而非能力退化？"]
+    pitfalls: ["把模型自信或回答长度当作视觉证据", "只报平均 hallucination 分数而不分对象/属性/关系", "用未校准的 LLM judge 作为唯一真值", "为降低幻觉牺牲所有可用回答却没有 utility/latency gate"]
+    signals: ["错误 taxonomy 与数据干预对应", "会做证据可视化和反事实测试", "能把安全、事实性、拒答和成本放在同一发布决策"]
+    source_claims:
+      - {claim_id: EGT-VLM-007-C1, source_id: pope-paper, claim: "POPE 通过不同负样本构造评估视觉语言模型的对象存在性幻觉。", confidence: high, locator: "paper abstract/method"}
+      - {claim_id: EGT-VLM-007-C2, source_id: mmmu-benchmark, claim: "MMMU 覆盖多学科多模态推理，适合作为能力切片而非幻觉唯一指标。", confidence: high, locator: "benchmark description"}
+      - {claim_id: EGT-VLM-007-C3, source_id: shlab-llm-eval-intern-20260422, claim: "官方评测岗位强调 benchmark、执行式评测、LLM judge 自动化与失败轨迹分析。", confidence: high, locator: "job description"}
+    related_problems: [VLM-013, VLM-014, PT-016]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-PT-008
+    kind: eight_stock
+    title: "SFT packing、chat template 与训练—推理一致性"
+    domain: language_model_training
+    tracks: [post_training, llm_algorithm, vlm_algorithm]
+    skills: [skill.post_training_rl.sft, skill.llm_vlm.tokenization, skill.llm_vlm.multimodal_data, skill.deep_learning.losses, skill.data_mlops.reproducibility]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "给多轮对话、packing 和多模态样本，如何保证 chat template、causal visibility、assistant-only loss、EOS 与训练/推理 tokenizer 完全一致？"
+    one_liner: "attention mask 决定可见性，loss mask 决定监督；packing 必须隔离 segment，训练和生成必须锁定同一 template/tokenizer/EOS 契约。"
+    core_answer:
+      - "logits[:, :-1] 对齐 labels[:, 1:]；只对 assistant/completion 的有效 target 计算 CE，prompt、tool result、padding 和媒体占位符通常为 ignore。"
+      - "packing 需要 segment id、边界 position reset 或 block-diagonal causal mask，不能让后一个样本读取前一个样本；有效 token 分母要明确。"
+      - "add_generation_prompt、BOS/EOS、padding side、预分词 labels 和截断策略都可能改变 token 边界；将 config/template revision 写入样本和 checkpoint。"
+      - "至少做 text-only、空回答、interleaved image、跨段 attention、全 mask 行和 full-vs-incremental logits 对照。"
+    derivation_or_example: "对 [system,user,assistant,a,b,EOS] 与第二个 packed 样本画 shift、segment、attention、label mask，并计算有效 token 平均 loss。"
+    answer_outline: ["画 token/label 对齐", "区分三种 mask", "说明 packing 隔离与版本契约", "列最小一致性测试"]
+    acceptance:
+      L1: "能说明 shift 和 assistant-only loss。"
+      L2: "能写出 packing 的隔离 mask 与有效分母。"
+      L3: "能定位 template/EOS/processor 漂移并设计回归实验。"
+    follow_ups: ["completion-only 与 assistant-only loss 的数据前提有什么不同？", "全 batch labels=-100 应该返回什么而不是 NaN？", "VLM 截断时怎样保证媒体 span 不被切断？", "为什么训练 loss 下降但生成出现角色 token 或重复 EOS？"]
+    pitfalls: ["只 shift 一侧导致 off-by-one", "把 attention_mask 当成 loss_mask", "packing 无边界隔离造成样本泄漏", "训练/推理 chat template 或 EOS 不同却比较 checkpoint"]
+    signals: ["能在纸上画出每个 target 的来源", "把数据契约写成可执行断言", "先锁版本再解释质量回归"]
+    source_claims:
+      - {claim_id: EGT-PT-008-C1, source_id: trl-official-docs, claim: "TRL 官方训练器区分 SFT 数据格式、packing 和 completion/assistant 监督边界，API 需按版本核对。", confidence: high, locator: "SFT trainer documentation"}
+      - {claim_id: EGT-PT-008-C2, source_id: hf-chat-templates, claim: "聊天模板决定角色控制 token、EOS 与生成边界，不能脱离 tokenizer 独立处理。", confidence: high, locator: "chat templating docs"}
+      - {claim_id: EGT-PT-008-C3, source_id: pytorch-cross-entropy, claim: "CrossEntropyLoss 的 ignore_index、shape 和 reduction 直接影响 masked token loss。", confidence: high, locator: "API reference"}
+    related_problems: [PT-001, PT-002, VLM-007]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-PT-009
+    kind: eight_stock
+    title: "DAPO、GSPO 与 stale rollout：长 CoT RL 的稳定性"
+    domain: post_training_stability
+    tracks: [post_training, llm_algorithm, systems, agent]
+    skills: [skill.post_training_rl.grpo, skill.post_training_rl.policy_optimization, skill.post_training_rl.verification, skill.training_infra.observability, skill.data_mlops.reproducibility]
+    priority: P1
+    difficulty: {concept: 5, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "比较 GRPO、DAPO 和 GSPO 在长推理、MoE 和异步 rollout 下的 ratio/reduction 粒度，如何监控 stale policy、熵坍塌和有效样本？"
+    one_liner: "DAPO 是围绕长 CoT 的采样、截断和 clipping recipe；GSPO 将重要性比率提升到序列粒度；两者都必须用版本、ratio、KL、长度和有效样本日志验证。"
+    core_answer:
+      - "GRPO 常用 group-relative reward/advantage；DAPO 的 dynamic sampling、decoupled clipping、有效 token 归一化和 overlong 处理各对应不同稳定性问题。"
+      - "GSPO 先对有效 completion token 的 log-ratio 求平均再取 exp，得到 sequence-level ratio；不能把 token ratios 直接相乘而忽略长度。"
+      - "rollout/learner 解耦时记录 policy version、tokenizer/template、平均与分位 stale KL、ratio、等待时间、过滤/补采样成本。"
+      - "监控 entropy、clip fraction、zero-variance/all-correct/all-wrong group、completion length、verifier success 和 hidden eval，避免吞吐掩盖 off-policy 偏差。"
+    derivation_or_example: "对两条长度分别为 2、8 的 completion 写出 token-level ratio、exp(mean(log ratio)) 和 raw product，说明三种 reduction 的偏差。"
+    answer_outline: ["统一 B/G/T 记号", "比较 ratio/reward/reduction 粒度", "画 rollout—learner 版本边界", "给稳定性监控和回滚 gate"]
+    acceptance:
+      L1: "能说清 GRPO/DAPO/GSPO 的粒度差异。"
+      L2: "能手算 sequence ratio、mask 和 stale 指标。"
+      L3: "能设计动态采样/截断/异步的消融与回滚条件。"
+    follow_ups: ["Clip-Higher 为什么可能缓解 entropy collapse，何时会增加风险？", "Dynamic Sampling 改变了什么训练分布，如何估计选择偏差？", "全对/全错 group 如何处理而不悄悄改变全局权重？", "如何区分 verifier 变差、policy stale 和 kernel/logit 不一致？"]
+    pitfalls: ["把 token denominator、sequence ratio 和 sample mean 混为一谈", "用 raw product 代替 geometric mean 造成长度偏差", "过滤样本后跨 rank 不一致却不记录补采样", "只看 rollout tok/s，不看 stale KL、hidden quality 和安全"]
+    signals: ["公式、shape、mask 与日志字段一致", "能用 toy batch 证伪 reduction", "把系统吞吐与训练有效性分开衡量"]
+    source_claims:
+      - {claim_id: EGT-PT-009-C1, source_id: deepseekmath-grpo-2402, claim: "GRPO 以同一 prompt 的 group reward 构造相对优势，避免显式 critic 的部分成本。", confidence: high, locator: "paper method"}
+      - {claim_id: EGT-PT-009-C2, source_id: dapo-paper, claim: "DAPO 讨论 dynamic sampling、decoupled clipping、长 CoT 截断与熵/稳定性权衡。", confidence: high, locator: "paper abstract/method"}
+      - {claim_id: EGT-PT-009-C3, source_id: gspo-paper, claim: "GSPO 使用 sequence-level likelihood ratio 讨论长序列和 MoE RL 的稳定性/效率。", confidence: high, locator: "paper method"}
+      - {claim_id: EGT-PT-009-C4, source_id: minimax-agent-posttrain, claim: "公开工程报告强调 rollout/learner 解耦、verifier、窗口调度和缓存成本，属于实现经验而非普遍保证。", confidence: medium, locator: "engineering report"}
+      - {claim_id: EGT-PT-009-C5, source_id: qwen3-report, claim: "Qwen3 技术报告讨论冷启动、可验证奖励与推理训练配方，具体收益依赖数据和评测协议。", confidence: high, locator: "technical report"}
+      - {claim_id: EGT-PT-009-C6, source_id: seed-thinking-report, claim: "Seed-Thinking 报告强调可验证/不可验证数据、异步 rollout 和系统感知的训练闭环。", confidence: high, locator: "technical report"}
+      - {claim_id: EGT-PT-009-C7, source_id: gae-paper, claim: "GAE 用参数化估计在偏差与方差间取舍，语言模型 token credit 仍需明确奖励和终止假设。", confidence: high, locator: "paper method"}
+    related_problems: [PT-014, PT-015, PT-016]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-AGT-005
+    kind: eight_stock
+    title: "RAG 证据链：混合召回、rerank、引用与可靠拒答"
+    domain: agent_retrieval
+    tracks: [agent, llm_algorithm, systems]
+    skills: [skill.agent_application.state_memory, skill.agent_application.reliability, skill.llm_vlm.context_management, skill.evaluation_safety.benchmarks, skill.data_mlops.data_quality]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "设计一个需要引用证据的 RAG Agent：如何组合 BM25/dense/hybrid、rerank 和 context packing，并在证据不足或文档含恶意指令时可靠退出？"
+    one_liner: "把 retrieval、evidence selection、generation 和 citation verification 分层；相似度不是事实真值，证据不足时宁可 typed abstain。"
+    core_answer:
+      - "先按任务定义 chunk 粒度、时间/租户过滤和版本；可用 BM25 召回词面、dense 召回语义，再用 reranker/去重和多样性选择上下文。"
+      - "同时报告 Recall@K、MRR/nDCG、citation precision/recall、groundedness、abstention、检索 p95 和端到端成本；召回高但答案错要检查 context packing 与 generator。"
+      - "引用必须指向支持结论的 chunk/page/span，保留 provenance、时间和 index revision；表格/代码跨块需有结构化切片或父文档回查。"
+      - "检索文本是不可信数据，不能覆盖系统策略；检测间接 prompt injection、过期文档、跨租户串读和低分证据，并定义 typed no-evidence 状态。"
+    derivation_or_example: "给 6 个 BM25/dense 候选及其分数、时间版本和租户，手算一个 RRF/去重排序，设计 citation verifier 与无证据拒答分支。"
+    answer_outline: ["定义索引和证据契约", "说明召回—rerank—packing", "分开 retrieval/generation 指标", "设计注入/过期/无证据故障"]
+    acceptance:
+      L1: "能区分召回、排序、生成和引用正确性。"
+      L2: "能写出混合排序、版本过滤和拒答条件。"
+      L3: "能用 trace 归因错误并处理安全/多租户边界。"
+    follow_ups: ["召回率很高但答案仍错，先查 reranker、context 还是 generator？", "什么时候 BM25、dense、hybrid 或图检索更合适？", "chunk size/overlap/top-k 如何用验证集而非直觉选择？", "文档中的指令如何与证据事实隔离？"]
+    pitfalls: ["把 embedding 相似度当作事实正确性", "只报 answer score 不报 retrieval/citation 指标", "没有文档版本、时间和租户过滤", "把检索文本直接拼进高优先级指令或长期记忆"]
+    signals: ["能画证据到回答的 provenance 链", "会在无证据时停止而不是编造", "把安全、版本和成本纳入 RAG 指标"]
+    source_claims:
+      - {claim_id: EGT-AGT-005-C1, source_id: rag-paper, claim: "RAG 将参数化生成与非参数检索结合，检索库和生成器是可分别诊断的组件。", confidence: high, locator: "paper abstract/method"}
+      - {claim_id: EGT-AGT-005-C2, source_id: hf-multimodal-chat, claim: "结构化 content/processor 契约可用于统一文本、图像和视频证据块的顺序与元数据。", confidence: medium, locator: "multimodal chat templates"}
+      - {claim_id: EGT-AGT-005-C3, source_id: mcp-spec, claim: "外部资源和工具通过结构化协议连接模型与宿主，宿主仍需实施信任边界和权限策略。", confidence: high, locator: "resources/tools and security"}
+    related_problems: [AGT-001, AGT-002, AGT-009]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-AGT-006
+    kind: eight_stock
+    title: "Agent 评测：trace、outcome、pass^k 与安全发布门禁"
+    domain: agent_evaluation
+    tracks: [agent, systems, post_training]
+    skills: [skill.agent_application.evaluation, skill.agent_application.reliability, skill.evaluation_safety.benchmarks, skill.evaluation_safety.llm_judge, skill.evaluation_safety.safety_eval]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "为会调用工具的 Agent 设计可回放评测：如何分别计分最终 outcome、trajectory、工具/schema、安全和成本，并用多 trial 设置发布门禁？"
+    one_liner: "一次最终答对不等于可靠；固定 task/trial/grader/environment 版本，记录完整 trace，用 outcome、过程、安全、成本和 p95 gate 共同决定发布。"
+    core_answer:
+      - "trace 至少记录 run/step/tool/attempt、输入摘要、schema 校验、授权决策、环境状态、结果、耗时、重试和终止原因，敏感值脱敏且可 replay。"
+      - "outcome 评任务状态，trajectory 评步骤/工具顺序，safety 评越权/注入，effectiveness 评用户目标；这些维度不能互相替代。"
+      - "多 trial 用于估计环境/工具随机故障；pass@k（至少一次成功）和 pass^k（每次都成功）适合不同风险决策，必须报告 k、预算和置信区间。"
+      - "LLM judge 用人工锚点、候选交换、长度匹配和版本锁定校准；代码 grader、环境断言和人工复核按可验证性分工。"
+    derivation_or_example: "给 5 次相同任务的 trace，其中一次最终答对但越权、一次工具超时后恢复，计算 outcome/safety/pass@k/pass^k 并给出 release gate。"
+    answer_outline: ["定义 trace schema 与信任边界", "拆 outcome/trajectory/safety 指标", "解释多 trial 统计", "设置可回滚发布门"]
+    acceptance:
+      L1: "能区分最终结果与行为过程。"
+      L2: "能设计 trace、grader 和多 trial 指标。"
+      L3: "能处理 judge 偏差、环境随机性、安全违规和成本门禁。"
+    follow_ups: ["最终答案正确但轨迹越权，overall score 如何防止掩盖？", "pass@k 与 pass^k 分别适合探索性和高风险任务的什么决策？", "如何检测 judge 的位置、长度和自偏好？", "工具失败、模型失败和环境 reset 失败怎样在 trace 中归因？"]
+    pitfalls: ["只评最后一句或只跑一次", "把 benchmark leaderboard 当生产 SLO", "不固定 harness/env/tool/judge revision", "为了平均分放宽安全违规和成本阈值"]
+    signals: ["trace 可回放且不泄露秘密", "指标能定位而非只排序", "发布门同时覆盖质量、安全、成本和尾延迟"]
+    source_claims:
+      - {claim_id: EGT-AGT-006-C1, source_id: anthropic-agent-evals, claim: "Anthropic 官方指南将 Agent eval 拆为 task、trial、grader、assertion，并区分 transcript/trajectory/outcome。", confidence: high, locator: "engineering article"}
+      - {claim_id: EGT-AGT-006-C2, source_id: shlab-llm-eval-intern-20260422, claim: "官方评测岗位强调 Agent benchmark、执行式评测、LLM judge 自动化和轨迹失败分析。", confidence: high, locator: "job description"}
+      - {claim_id: EGT-AGT-006-C3, source_id: mcp-spec, claim: "工具/资源协议边界不等于业务授权，宿主仍需记录和执行安全策略。", confidence: high, locator: "security sections"}
+    related_problems: [AGT-006, AGT-009, AGT-010]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-INF-004
+    kind: eight_stock
+    title: "Prefill/Decode、continuous batching 与 TTFT/TPOT SLO"
+    domain: serving_systems
+    tracks: [systems, llm_algorithm, agent, vlm_algorithm]
+    skills: [skill.inference_systems.serving, skill.inference_systems.capacity, skill.inference_systems.kv_cache, skill.training_infra.observability, skill.system_design.requirements]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "一个在线 LLM/VLM 服务同时面对长 prompt 和短请求，如何拆 prefill/decode、设计 continuous batching/chunked prefill，并用 TTFT、ITL/TPOT、p99 和成本做调度决策？"
+    one_liner: "prefill 受 prompt 计算和大批量吞吐影响，decode 受 KV 带宽与每步公平性影响；调度器必须显式管理 token/KV 预算、队列和尾延迟。"
+    core_answer:
+      - "prefill 一次处理输入上下文，decode 逐 token 追加 KV；两阶段共用 GPU 但资源瓶颈不同，不能只用平均 tok/s 衡量。"
+      - "连续批处理让新请求在已有 decode 迭代间加入；chunked prefill 可缓解长 prompt 阻塞 decode，但会改变 TTFT、ITL、吞吐和公平性。"
+      - "记录 queue/admission time、TTFT、ITL/TPOT、E2E、prompt/generation tokens/s、KV 使用率、抢占/重算、p50/p95/p99 和 cost per success。"
+      - "SLO 先定义 workload/QPS/长度分布和优先级，再选择 FIFO、token budget、round-robin、deadline、prefix reuse 或 preemption；每个策略要有回放和容量上界。"
+    derivation_or_example: "给 2 个长 prompt 和 8 个短请求，在每步 prefill=128、decode=8、KV 容量固定的条件下画队列，预测一个调度策略对 TTFT/ITL 的影响。"
+    answer_outline: ["拆两阶段计算与状态", "写 token/KV 预算", "定义延迟与吞吐指标", "用 trace/负载切片选择策略"]
+    acceptance:
+      L1: "能区分 prefill、decode、TTFT 和 TPOT/ITL。"
+      L2: "能说明连续批处理、chunked prefill 和 KV 容量的耦合。"
+      L3: "能从 p99、公平、抢占、成本和 workload 设计发布 gate。"
+    follow_ups: ["为什么 decode 往往更受显存带宽而非 FLOPs 限制？", "长 prompt flood 时如何避免 decode starvation？", "chunked prefill 的 chunk size 如何用目标 SLO 选择？", "prefix cache 命中后 TTFT、KV ownership 和多租户隔离怎样变化？"]
+    pitfalls: ["只报平均 tokens/s，不报 TTFT/ITL p99", "把 active request 数当作 KV token 容量", "新 admission 同步 decode 导致边界不可复现", "抢占/取消后未释放 KV 或没有 trace 原因"]
+    signals: ["能把系统设计写成可回放状态机", "指标带明确分位数和 workload", "能解释公平性与吞吐的取舍"]
+    source_claims:
+      - {claim_id: EGT-INF-004-C1, source_id: vllm-official-docs, claim: "vLLM 官方文档覆盖调度、KV/prefix cache、量化和服务指标，具体支持随版本和硬件变化。", confidence: high, locator: "documentation index"}
+      - {claim_id: EGT-INF-004-C2, source_id: vllm-metrics-docs, claim: "官方指标设计区分队列、prompt/generation 吞吐、KV residency、TTFT、TPOT 和端到端延迟。", confidence: high, locator: "metrics design documentation"}
+      - {claim_id: EGT-INF-004-C3, source_id: pagedattention-paper, claim: "PagedAttention 以页/块管理 KV cache，服务调度需同时考虑碎片和访问布局。", confidence: high, locator: "paper abstract/method"}
+    related_problems: [INF-002, INF-003, ATT-009]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-PT-010
+    kind: eight_stock
+    title: "DPO、IPO、KTO：偏好数据契约与目标函数选择"
+    domain: preference_optimization
+    tracks: [post_training, llm_algorithm, vlm_algorithm]
+    skills: [skill.post_training_rl.preference_data, skill.post_training_rl.policy_optimization, skill.post_training_rl.reward_modeling, skill.deep_learning.losses, skill.llm_vlm.multimodal_data]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "比较 DPO、IPO 和 KTO 的反馈形式、reference 约束、长度处理和适用场景，并设计能发现符号/梯度/数据泄漏错误的最小实验。"
+    one_liner: "DPO 是 paired preference 的 reference-relative log-ratio 目标，IPO 是其理论框架中的 identity 特例，KTO 可用非配对二元反馈；数据和 reduction 先于超参。"
+    core_answer:
+      - "DPO 对同一 prompt 的 chosen/rejected 比较 policy/reference 的 completion log-prob 差；reference 通常冻结且不反传。"
+      - "IPO 用不同的偏好优化目标缓解近确定偏好下的过拟合风险；不要把论文正式名称、简称和实现默认值混为一谈。"
+      - "KTO 只需 desirable/undesirable 标记，不要求成对 response；类别不平衡、baseline/reference 和权重必须校准。"
+      - "sum、per-sequence mean、per-token mean 会产生不同长度偏差；VLM 还要保证 chosen/rejected 共用完整媒体特征、template 和截断策略。"
+    derivation_or_example: "给一个 chosen/rejected pair 的 policy/reference log-prob，手算 DPO margin；再给一正一负的 KTO 样本，说明 label、beta 和梯度方向。"
+    answer_outline: ["定义反馈数据和 reference", "写 DPO/IPO/KTO 目标边界", "对齐 token/mask/长度", "用 toy gradient 和分桶指标验收"]
+    acceptance:
+      L1: "能区分 paired 与 unpaired preference。"
+      L2: "能写出 DPO log-ratio、说明 IPO/KTO 的假设和 reduction。"
+      L3: "能诊断 reference 漂移、长度偏差、标签噪声和 VLM 截断。"
+    follow_ups: ["DPO 的 partition function 为什么可以消去？", "近确定偏好、tie 和标签分歧时如何选择 IPO/KTO/重标注？", "reference 误加载但 loss 仍下降，如何通过日志和 held-out win-rate 发现？", "视觉偏好数据如何区分图像质量、OCR 错误和语言风格偏好？"]
+    pitfalls: ["chosen/rejected 顺序或 ratio 符号反了", "reference 反传或把 prompt token 计入 response logp", "用随机 response 切分造成同 prompt 泄漏", "只看平均 margin 不看长度、语言、领域和媒体质量切片"]
+    signals: ["能从数据契约推到公式和梯度", "会明确 reduction/版本前提", "能用独立人评或执行结果验证偏好目标"]
+    source_claims:
+      - {claim_id: EGT-PT-010-C1, source_id: dpo-2305-18290, claim: "DPO 使用 chosen/rejected 与 reference-relative log-ratio 构造偏好分类目标。", confidence: high, locator: "paper §3"}
+      - {claim_id: EGT-PT-010-C2, source_id: ipo-paper, claim: "该理论框架包含常被称为 IPO 的 identity 偏好优化特例，用于讨论偏好过拟合。", confidence: high, locator: "paper objective"}
+      - {claim_id: EGT-PT-010-C3, source_id: kto-paper, claim: "KTO 以 desirable/undesirable 二元反馈构造不要求成对回答的对齐目标。", confidence: high, locator: "paper abstract/method"}
+      - {claim_id: EGT-PT-010-C4, source_id: trl-official-docs, claim: "TRL 官方文档提供 preference trainer 的数据字段和实现接口，具体默认值随版本变化。", confidence: high, locator: "preference trainer documentation"}
+    related_problems: [PT-002, PT-006, PT-016]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-PT-011
+    kind: eight_stock
+    title: "ORM、PRM、reward hacking 与污染感知发布门禁"
+    domain: reward_and_evaluation_integrity
+    tracks: [post_training, agent, systems, vlm_algorithm]
+    skills: [skill.post_training_rl.reward_modeling, skill.post_training_rl.verification, skill.evaluation_safety.leakage, skill.evaluation_safety.benchmarks, skill.data_mlops.data_quality]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [intern, new_grad, mid, senior]
+    prompt: "一个模型的 proxy reward 上升但真实成功率下降，如何区分 ORM/PRM、verifier、数据污染、优化和评测协议问题，并设计可回滚的发布门禁？"
+    one_liner: "proxy reward 只是代理信号；结果级 ORM、过程级 PRM 和规则 verifier 各有覆盖边界，必须用 hidden/动态集、污染审计、安全和成本共同约束。"
+    core_answer:
+      - "ORM 给整条回答分数，PRM 给步骤级信号，规则/执行 verifier 可解释但可能覆盖窄或被 parser/环境漏洞攻击；保留分项分数和失败原因。"
+      - "reward hacking 常利用长度、格式、关键词、工具重试或 judge 偏差；按长度、语言、领域、难度、模型版本和 adversarial slice 分析 reward-true gap。"
+      - "污染审计至少覆盖 exact、near-duplicate、semantic、公开反馈和 Agent trace 泄漏；记录 hash/manifest、时间切分、私有/动态样本和抽检证据。"
+      - "发布 gate 同时检查 hidden quality/outcome、safety、污染、置信区间、p95 延迟、token/成本和可复现版本；任何关键 gate 失败即停止或回滚。"
+    derivation_or_example: "构造关键词 proxy reward 与 hidden verifier，让 best-of-N 找到高 proxy/低真实质量样本；画 reward、长度、重复率和 hidden success 曲线。"
+    answer_outline: ["拆代理目标和真实目标", "定位 ORM/PRM/verifier/data/eval 层", "设计污染与对抗切片", "写质量—安全—成本回滚 gate"]
+    acceptance:
+      L1: "能解释 ORM、PRM 和 verifier 的边界。"
+      L2: "能给出 reward-true gap、污染和统计指标。"
+      L3: "能提出反例、独立 oracle、版本锁定和发布回滚条件。"
+    follow_ups: ["RM pair accuracy 很高但线上 win-rate 不升，先查哪些切片？", "如何校准 LLM judge 的位置、长度和自偏好？", "为什么 exact-match 去重不足以证明 benchmark 没污染？", "verifier 被格式漏洞绕过时，如何区分模型能力、解析器和环境故障？"]
+    pitfalls: ["把 reward 分数当真实质量或概率", "只看公开 leaderboard/平均分而忽略 hidden、动态和 adversarial 集", "把 verifier 当绝对真值而不审计 parser/环境", "把质量、安全、成本和延迟压成未经校准的单一标量"]
+    signals: ["能画失败归因树", "会同时保存 proxy/true/长度/安全/成本证据", "发布门可执行且失败可回滚"]
+    source_claims:
+      - {claim_id: EGT-PT-011-C1, source_id: instructgpt-220302155, claim: "InstructGPT 展示示范、偏好、reward model 和 PPO 的分阶段管线，代理目标需要独立质量校验。", confidence: high, locator: "paper §§2–3"}
+      - {claim_id: EGT-PT-011-C2, source_id: prm-paper, claim: "过程监督/过程奖励模型提供比结果级分数更细的步骤级反馈，但仍需验证覆盖和偏差。", confidence: high, locator: "paper abstract/method"}
+      - {claim_id: EGT-PT-011-C3, source_id: reward-overoptimization-paper, claim: "代理 reward 过度优化可能与真实质量分离，应监控 reward-true gap 和模型/采样规模。", confidence: high, locator: "paper findings"}
+      - {claim_id: EGT-PT-011-C4, source_id: dedup-paper, claim: "训练数据重复会影响记忆、泛化和评测解释，去重与切分需作为实验变量。", confidence: high, locator: "paper findings"}
+      - {claim_id: EGT-PT-011-C5, source_id: contamination-survey, claim: "数据污染包含直接、近重复、语义和评测泄漏等类别，单一 exact match 检查不充分。", confidence: high, locator: "survey taxonomy"}
+      - {claim_id: EGT-PT-011-C6, source_id: livebench-benchmark, claim: "动态/刷新评测可降低静态 benchmark 被记忆的风险，但仍需固定协议和报告版本。", confidence: high, locator: "benchmark description"}
+    related_problems: [PT-016, PT-018, PT-020]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: EGT-INF-005
+    kind: eight_stock
+    title: "AWQ、GPTQ、FP8 与并行部署的质量—性能账本"
+    domain: inference_optimization
+    tracks: [systems, llm_algorithm, vlm_algorithm]
+    skills: [skill.inference_systems.quantization, skill.inference_systems.capacity, skill.inference_systems.kernels, skill.training_infra.distributed, skill.data_mlops.reproducibility]
+    priority: P1
+    difficulty: {concept: 5, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "如何在 W4A16、W8A8/FP8 与 TP/PP/DP/EP 之间做部署选型，并证明位宽下降真的改善了质量、显存、尾延迟和成本？"
+    one_liner: "量化只改变部分存储/计算路径；校准分布、kernel 支持、通信和累加精度决定端到端结果，必须做质量—显存—p99—成本 Pareto。"
+    core_answer:
+      - "AWQ 侧重激活感知的权重保护，GPTQ 以近似二阶误差最小化做后训练量化；两者都依赖校准数据和硬件 kernel，不能只看 bit 数。"
+      - "FP8/W8A8 还涉及 scale、动态范围、outlier、累加精度和硬件支持；W4A16 可能主要省权重显存而不一定减少 decode 带宽/端到端延迟。"
+      - "TP 主要切层内矩阵并有 collective，PP 引入 pipeline bubble，DP 复制模型处理请求/样本，EP/MoE 需要 all-to-all 和负载均衡；通信可能吞掉量化收益。"
+      - "锁定 checkpoint、calibration、tokenizer/template、driver/kernel 和 batch/workload，报告任务切片、KV/权重显存、TTFT/TPOT、p99、吞吐、错误率和 cost per success。"
+    derivation_or_example: "给一个线性层权重、激活 scale、TP=2 的 toy 账本，比较 W4A16 与 FP8 的存储/通信项，并列出 kernel fallback 的诊断顺序。"
+    answer_outline: ["区分权重/激活/累加精度", "比较量化算法和校准", "画 TP/PP/DP/EP 通信", "用 Pareto 与回归 gate 验证"]
+    acceptance:
+      L1: "能说明 AWQ/GPTQ/FP8 的对象和限制。"
+      L2: "能估算显存、通信和 kernel 路径。"
+      L3: "能设计跨硬件、质量切片、尾延迟和回滚实验。"
+    follow_ups: ["什么时候 W4A16 只省显存却不提速？", "校准集分布漂移如何被发现和修复？", "TP/PP/EP 的通信与故障域怎样影响 batch 和 MoE？", "如何证明低精度误差来自量化而不是 tokenizer、采样或 kernel fallback？"]
+    pitfalls: ["把位宽下降直接等同端到端加速", "忽略 scale/packing/dequant/累加精度", "用单卡 benchmark 推断多卡通信", "未锁硬件/驱动/版本就比较 p99 或质量"]
+    signals: ["能列出完整显存和通信账本", "会先检查实际 kernel/profile", "用 Pareto 和 hidden regression 而不是单点分数决策"]
+    source_claims:
+      - {claim_id: EGT-INF-005-C1, source_id: awq-paper, claim: "AWQ 通过激活感知保护重要权重通道，量化效果依赖校准分布和实现路径。", confidence: high, locator: "paper abstract/method"}
+      - {claim_id: EGT-INF-005-C2, source_id: gptq-paper, claim: "GPTQ 使用近似二阶信息进行后训练权重量化，误差与层/校准数据相关。", confidence: high, locator: "paper abstract/method"}
+      - {claim_id: EGT-INF-005-C3, source_id: fp8-formats-paper, claim: "FP8 格式选择涉及数值范围、精度和硬件实现约束，不能只以位宽比较。", confidence: high, locator: "paper format analysis"}
+      - {claim_id: EGT-INF-005-C4, source_id: vllm-official-docs, claim: "vLLM 官方文档列出量化与硬件支持边界，部署行为需按版本复核。", confidence: high, locator: "quantization documentation"}
+    related_problems: [INF-008, INF-009, INF-010]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-VLM-003
+    kind: coding_prompt
+    title: "手撕多模态 SFT 的 placeholder、image mask 与 shifted CE"
+    domain: multimodal_training
+    tracks: [vlm_algorithm, post_training, llm_algorithm]
+    skills: [skill.llm_vlm.multimodal_data, skill.deep_learning.losses, skill.deep_learning.tensor_ops, skill.post_training_rl.sft, skill.python_engineering.testing]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "实现支持 text/image/interleaved batch 的多模态 SFT loss：只监督有效 assistant token，image mask 优先，并对 shift、shape、dtype/device 和退化行 fail fast。"
+    one_liner: "先构造 labels = input_ids 的有效副本，再按 logits[:, :-1] 对 labels[:, 1:] 做 masked CE；视觉占位符永远不是语言监督目标。"
+    core_answer:
+      - "有效 target = attention_mask & assistant_mask & ~image_mask；image mask 覆盖 malformed assistant 标记，padding/ignore 位置不进入分母。"
+      - "对每行先检查 shifted 后至少一个有效 target，再用稳定 log_softmax/gather 计算 CE；梯度只应流经 logits。"
+      - "输入 ID、mask 和 logits 的 shape/device/dtype、ignore_index 可表示范围及非有限 logits 都应在任何部分计算前校验。"
+    derivation_or_example: "B=1、L=6、V=5，给出一行含 image placeholder、user、assistant、EOS 的四个 mask，手算 labels、shift 和 loss 分母。"
+    answer_outline: ["定义四路 mask 交集", "构造 fresh labels", "执行 causal shift 与稳定 CE", "验证梯度/非变异/空行"]
+    acceptance: {L1: "能写出有效 target 条件", L2: "shift、mask、reduction 数值正确", L3: "覆盖 image precedence、设备、非有限值和每行空目标"}
+    coding_contract:
+      input: "logits[B,L,V]、input_ids[B,L]、attention/assistant/image boolean masks[B,L]，以及 integer ignore_index。"
+      output: "返回 (loss, fresh labels[B,L])；loss 为有效 shifted target 的均值，labels 非有效位置为 ignore_index。"
+      constraints: "PyTorch；不调用 Trainer/TRL；不修改 caller tensor；拒绝错 shape/device/dtype、非有限 logits 和 shifted 后空行。"
+      symbol: multimodal_sft_loss
+      framework: pytorch
+    test_focus: ["image mask precedence", "causal shift", "per-row valid target", "ignore_index and dtype/device", "logits gradient and input immutability"]
+    edge_cases: ["image position marked assistant", "all prompt/image/pad row", "placeholder id outside vocabulary", "non-contiguous masks", "half/bfloat16 logits"]
+    solution_direction: ["先校验并 clone labels", "用布尔交集构造 valid shifted mask", "log_softmax+gather 后按有效 token 计数", "对每行空目标显式报错"]
+    follow_ups: ["为什么 attention mask 不能直接当 loss mask？", "视觉特征数量与 placeholder 不一致应在哪一层报错？", "全 batch labels=-100 时训练器应该跳过、报错还是返回零？"]
+    pitfalls: ["只 shift logits 或 labels 一侧", "把 image/prompt token 计入 CE", "先 mean 再乘 mask 导致 padding 改变权重", "labels 复用 input_ids 导致 caller 被改写"]
+    signals: ["能写出 index-level 对齐表", "能解释梯度与分母", "测试覆盖 malformed multimodal metadata"]
+    source_claims:
+      - {claim_id: COD-VLM-003-C1, source_id: hf-multimodal-chat, claim: "多模态模板以结构化 image/video/text content 产生需对齐的处理元数据。", confidence: high, locator: "multimodal chat templates"}
+      - {claim_id: COD-VLM-003-C2, source_id: pytorch-cross-entropy, claim: "CrossEntropyLoss 的 ignore_index、shape 和 reduction 可作为 masked CE 的实现核对点。", confidence: high, locator: "API reference"}
+      - {claim_id: COD-VLM-003-C3, source_id: llava-paper, claim: "视觉指令调优将视觉特征映射进语言模型并只对目标语言输出进行训练契约设计。", confidence: high, locator: "paper method"}
+    related_problems: [VLM-007, PT-001]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-PT-004
+    kind: coding_prompt
+    title: "手撕无效 completion 过滤与 GRPO group advantage"
+    domain: post_training_rewards
+    tracks: [post_training, llm_algorithm, agent]
+    skills: [skill.post_training_rl.grpo, skill.post_training_rl.verification, skill.post_training_rl.reward_modeling, skill.machine_learning_math.statistics, skill.deep_learning.autograd]
+    priority: P0
+    difficulty: {concept: 4, implementation: 4, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "实现按 valid_mask 过滤 verifier reward，使用 valid completion 的 population mean/std 计算 GRPO advantage，并安全处理 NaN sentinel、singleton、zero-variance 和 all-invalid group。"
+    one_liner: "无效 completion 不参与统计且 advantage 为零；统计前用 mask 选出有限 reward，输出 detached，并把全无效 group 作为可观测数据问题。"
+    core_answer:
+      - "每行 mean=sum(valid reward)/count(valid)，population variance 用 count 分母；valid count<2 或 std≤eps 时优势为零但保留有效性报告。"
+      - "invalid slot 可以是 NaN/Inf 但必须先屏蔽；valid reward 必须有限；不要把 invalid 静默替换成 0 影响 baseline。"
+      - "reward/advantage 是 verifier metadata，返回结果 detach；下游 policy loss 仍需用 kept_mask 和 completion token mask。"
+    derivation_or_example: "B=1,G=4，reward=[1, NaN, 3, 1]、valid=[1,0,1,1]，手算 mean、population std 和三个有效 advantage。"
+    answer_outline: ["验证 shape/dtype/finite 契约", "按 mask 计算 count/mean/std", "处理零方差/全无效", "断开梯度并返回 fresh mask"]
+    acceptance: {L1: "能解释为何 invalid 不等于零 reward", L2: "population 统计和 mask 正确", L3: "覆盖 mixed precision、NaN、梯度 detach 和全无效计数"}
+    coding_contract:
+      input: "rewards[B,G] floating tensor、valid_mask[B,G] boolean tensor、eps>0。"
+      output: "返回 detached advantages[B,G] 与 fresh kept_mask[B,G]；invalid/退化位置 advantage=0。"
+      constraints: "PyTorch；不修改输入；用稳定 accumulation dtype；整个 batch 无有效 completion 时抛 ValueError。"
+      symbol: normalize_valid_group_rewards
+      framework: pytorch
+    test_focus: ["masked mean/std", "NaN invalid sentinel", "singleton and zero variance", "all-invalid batch", "detach and dtype/device preservation"]
+    edge_cases: ["valid reward Inf", "mixed float16/bfloat16", "eps boundary", "one valid among many invalid", "valid_mask aliasing"]
+    solution_direction: ["先校验 bool mask/shape", "用 where/finite safe values 计算 counts", "只在 count>=2 且 std>eps 处归一化", "最后 detach 并 clone mask"]
+    follow_ups: ["为什么 unbiased=True 在 group size=1 时会产生 NaN？", "全无效 group 应过滤、补采样还是降权？", "如何把 sequence-level advantage 广播到 completion token 而不污染 prompt？"]
+    pitfalls: ["nanmean 后仍把 invalid 位置带回输出", "把 invalid reward 设零改变 baseline", "std=0 直接除法产生 NaN", "让 verifier reward 梯度流入 policy"]
+    signals: ["能把统计分母说清楚", "会记录 invalid/zero-variance 比例", "知道 reward contract 与 policy gradient 的边界"]
+    source_claims:
+      - {claim_id: COD-PT-004-C1, source_id: deepseekmath-grpo-2402, claim: "GRPO 使用 group-relative reward/advantage，group 统计的 mask 和尺度直接影响更新。", confidence: high, locator: "paper method"}
+      - {claim_id: COD-PT-004-C2, source_id: dapo-paper, claim: "长 CoT RL recipe 需要显式处理 dynamic sampling、有效 token 和退化样本。", confidence: high, locator: "paper method"}
+      - {claim_id: COD-PT-004-C3, source_id: trl-official-docs, claim: "官方 trainer 文档定义 reward/response 字段和实现边界，具体 API 需按版本核对。", confidence: high, locator: "GRPO trainer documentation"}
+    related_problems: [PT-014, PT-015, PT-016]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at
+
+  - id: COD-INF-003
+    kind: coding_prompt
+    title: "手撕 continuous batching 的 prefill/decode 调度器"
+    domain: serving_scheduling
+    tracks: [systems, llm_algorithm, agent]
+    skills: [skill.inference_systems.serving, skill.inference_systems.capacity, skill.inference_systems.kv_cache, skill.training_infra.scheduling, skill.python_engineering.testing]
+    priority: P0
+    difficulty: {concept: 4, implementation: 5, debugging: 5}
+    seniority: [new_grad, mid, senior]
+    prompt: "实现纯标准库的连续批处理控制面：FIFO admission 按 prefill token 预算入队，active request 以持久 round-robin 每步 decode 一个 token，并在完成/取消/过期时释放 KV 容量。"
+    one_liner: "prefill 和 decode 是两个显式阶段；用 token/KV 容量而非请求数 admission，用持久 round-robin 防止小 decode budget 下的饥饿。"
+    core_answer:
+      - "队列请求按 prompt_tokens 检查剩余 prefill budget 与 resident KV capacity，遇到首个不适配请求停止而不偷偷跳过。"
+      - "新 admission 本步不 decode；active order 持久轮转，每个 request 每步最多一个 token，自动完成后立即释放 resident token。"
+      - "deadline 在新 step 开始时先过期，cancel/finish/expire 的状态和容量释放互斥且可审计；snapshot 必须返回 detached records。"
+    derivation_or_example: "max_active=10、prefill=6、decode=2，依次提交 prompt=[3,2,5]，画三步 admitted/decoded/active_tokens 和 round-robin 顺序。"
+    answer_outline: ["建模 queued/active/terminal 状态", "实现 FIFO admission", "实现公平 decode 与释放", "覆盖 deadline/cancel/snapshot"]
+    acceptance: {L1: "能说明两阶段和容量语义", L2: "FIFO/round-robin/终止状态正确", L3: "能处理 head-of-line、deadline 边界和不可变快照"}
+    coding_contract:
+      input: "正整数 max_active_tokens/max_prefill_tokens/max_decode_tokens，以及 request_id、prompt_tokens、max_new_tokens、absolute deadline。"
+      output: "step 返回 admitted/decoded/completed/expired、阶段 token 数、active/queued snapshots；属性返回稳定 tuple。"
+      constraints: "标准库；无线程/网络/睡眠；拒绝 bool 冒充整数；不暴露或修改内部队列。"
+      symbol: ContinuousBatchScheduler
+      framework: stdlib
+    test_focus: ["FIFO head-of-line", "prefill/decode separation", "persistent round-robin", "capacity release", "deadline/cancel/finish", "detached snapshot"]
+    edge_cases: ["zero phase budget", "prompt at capacity boundary", "completion on first decode", "deadline equal to current step", "duplicate terminal id"]
+    solution_direction: ["用 dict 保存全生命周期记录", "pending deque + active deque", "step 先 expire 再 admission 再 decode", "删除终止项时同步容量和轮转游标"]
+    follow_ups: ["为什么生产系统有时会牺牲 FIFO 做 skip/priority admission？", "chunked prefill 如何改变 TTFT、ITL 和公平性？", "真实 GPU scheduler 还需处理哪些取消竞态、租户和 prefix-cache ownership？"]
+    pitfalls: ["把新 admission 同步 decode", "用 active request 数替代 KV token", "decode cursor 每步重置导致 starvation", "终止后忘记释放容量或允许 ID 重用"]
+    signals: ["状态转移和预算可画可测", "能解释公平与吞吐权衡", "快照/trace 不泄露可变内部状态"]
+    source_claims:
+      - {claim_id: COD-INF-003-C1, source_id: vllm-official-docs, claim: "vLLM 官方文档将调度、KV cache 和 batching 作为服务控制面的联合约束。", confidence: high, locator: "serving documentation"}
+      - {claim_id: COD-INF-003-C2, source_id: vllm-metrics-docs, claim: "队列、抢占、KV residency、TTFT/TPOT 等指标可用于验证调度器而非只看平均吞吐。", confidence: high, locator: "metrics design documentation"}
+      - {claim_id: COD-INF-003-C3, source_id: pagedattention-paper, claim: "PagedAttention 通过块化 KV 管理降低碎片，调度需显式考虑容量和释放。", confidence: high, locator: "paper method"}
+    related_problems: [INF-003, INF-002, ATT-009]
+    provenance: synthesized_clean_room
+    reviewed_at: *reviewed_at

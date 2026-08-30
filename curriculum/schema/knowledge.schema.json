@@ -1,0 +1,352 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ComistryMo/llm_interview_lab/curriculum/schema/knowledge.schema.json",
+  "title": "LLM Interview Lab research-backed interview knowledge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "reviewed_at", "content_policy", "sources", "cards"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "reviewed_at": {"$ref": "#/$defs/date_or_datetime"},
+    "content_policy": {"$ref": "#/$defs/content_policy"},
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/source"}
+    },
+    "cards": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/card"}
+    }
+  },
+  "$defs": {
+    "date_or_datetime": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T.+$"
+        }
+      ]
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]*$",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "card_id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_-]{1,63}$"
+    },
+    "source_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{1,127}$"
+    },
+    "source_kind": {
+      "type": "string",
+      "enum": [
+        "paper",
+        "official_paper",
+        "official_docs",
+        "official_source",
+        "benchmark",
+        "course",
+        "field_report",
+        "secondary_curated",
+        "internal_original"
+      ]
+    },
+    "license_risk": {
+      "type": "string",
+      "enum": [
+        "link_only",
+        "link_and_paraphrase_only",
+        "attribution_required",
+        "mit",
+        "apache-2.0",
+        "cc-by-4.0",
+        "no_redistribution",
+        "unknown"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "title", "retrieved_at", "license_or_usage", "reliability"],
+      "properties": {
+        "id": {"$ref": "#/$defs/source_id"},
+        "kind": {"$ref": "#/$defs/source_kind"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 300},
+        "locator": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2000
+        },
+        "source_version": {"type": "string", "minLength": 1, "maxLength": 200},
+        "published_or_updated": {"$ref": "#/$defs/date_or_datetime"},
+        "observed_at": {"$ref": "#/$defs/date_or_datetime"},
+        "accessed_at": {"$ref": "#/$defs/date_or_datetime"},
+        "retrieved_at": {"$ref": "#/$defs/date_or_datetime"},
+        "publisher": {"type": "string", "minLength": 1, "maxLength": 200},
+        "volatile": {"type": "boolean"},
+        "license_or_usage": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "license_risk": {"$ref": "#/$defs/license_risk"},
+        "reliability": {
+          "oneOf": [
+            {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$", "maxLength": 64},
+            {"type": "number", "minimum": 0, "maximum": 1}
+          ]
+        },
+        "notes": {"type": "string", "minLength": 1, "maxLength": 2000}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"kind": {"const": "internal_original"}},
+            "required": ["kind"]
+          },
+          "then": {},
+          "else": {
+            "anyOf": [
+              {"required": ["locator"]},
+              {"required": ["url"]}
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {"volatile": {"const": true}},
+            "required": ["volatile"]
+          },
+          "then": {
+            "anyOf": [
+              {"required": ["source_version"]},
+              {"required": ["published_or_updated"]},
+              {"required": ["observed_at"]}
+            ]
+          }
+        }
+      ]
+    },
+    "content_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "attribution", "no_verbatim", "allowed_source_kinds"],
+      "properties": {
+        "mode": {"const": "clean_room"},
+        "attribution": {"const": "link_only"},
+        "no_verbatim": {"const": true},
+        "allowed_source_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/source_kind"}
+        }
+      }
+    },
+    "difficulty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["concept", "implementation", "debugging"],
+      "properties": {
+        "concept": {"type": "integer", "minimum": 1, "maximum": 5},
+        "implementation": {"type": "integer", "minimum": 1, "maximum": 5},
+        "debugging": {"type": "integer", "minimum": 1, "maximum": 5}
+      }
+    },
+    "source_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "claim", "confidence"],
+      "properties": {
+        "claim_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{1,127}$"},
+        "source_id": {"$ref": "#/$defs/source_id"},
+        "claim": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "locator": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "confidence": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$",
+          "maxLength": 64
+        }
+      }
+    },
+    "text_or_list": {
+      "oneOf": [
+        {"type": "string", "minLength": 1, "maxLength": 8000},
+        {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 2000}
+        }
+      ]
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "patternProperties": {
+        "^L[1-4]$": {"$ref": "#/$defs/text_or_list"}
+      },
+      "propertyNames": {"pattern": "^L[1-4]$"}
+    },
+    "coding_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input", "output", "constraints"],
+      "properties": {
+        "input": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "output": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "constraints": {"type": "string", "minLength": 1, "maxLength": 3000},
+        "symbol": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+        "framework": {"type": "string", "enum": ["stdlib", "pytorch", "agnostic"]}
+      }
+    },
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "kind", "title", "domain", "tracks", "skills", "priority",
+        "difficulty", "seniority", "prompt", "answer_outline", "follow_ups",
+        "pitfalls", "signals", "source_claims", "related_problems", "reviewed_at"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/card_id"},
+        "kind": {"enum": ["eight_stock", "experience_pattern", "coding_prompt"]},
+        "title": {"type": "string", "minLength": 1, "maxLength": 300},
+        "domain": {"$ref": "#/$defs/slug"},
+        "tracks": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/slug"}
+        },
+        "skills": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/slug"}
+        },
+        "priority": {"enum": ["P0", "P1", "P2", "P3"]},
+        "difficulty": {"$ref": "#/$defs/difficulty"},
+        "seniority": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["intern", "new_grad", "mid", "senior"]}
+        },
+        "prompt": {"type": "string", "minLength": 1, "maxLength": 6000},
+        "one_liner": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "core_answer": {"$ref": "#/$defs/text_or_list"},
+        "derivation_or_example": {"$ref": "#/$defs/text_or_list"},
+        "answer_outline": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 2000}
+        },
+        "acceptance": {"$ref": "#/$defs/acceptance"},
+        "follow_ups": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 2000}
+        },
+        "pitfalls": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 2000}
+        },
+        "signals": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 2000}
+        },
+        "observed_pattern": {"$ref": "#/$defs/text_or_list"},
+        "candidate_playbook": {"$ref": "#/$defs/text_or_list"},
+        "drill_prompt": {"$ref": "#/$defs/text_or_list"},
+        "sample_size_or_scope": {"$ref": "#/$defs/text_or_list"},
+        "caveat": {"$ref": "#/$defs/text_or_list"},
+        "provenance": {"$ref": "#/$defs/text_or_list"},
+        "coding_contract": {"$ref": "#/$defs/coding_contract"},
+        "test_focus": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 2000}
+        },
+        "edge_cases": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 2000}
+        },
+        "solution_direction": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 2000}
+        },
+        "source_claims": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/source_claim"}
+        },
+        "related_problems": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(?:[A-Z]+|CAP-[A-Z]+)-[0-9]{3}$"
+          }
+        },
+        "reviewed_at": {"$ref": "#/$defs/date_or_datetime"}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"kind": {"const": "experience_pattern"}},
+            "required": ["kind"]
+          },
+          "then": {
+            "required": [
+              "observed_pattern", "candidate_playbook", "drill_prompt",
+              "sample_size_or_scope", "caveat", "provenance"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {"kind": {"const": "coding_prompt"}},
+            "required": ["kind"]
+          },
+          "then": {
+            "required": [
+              "coding_contract", "test_focus", "edge_cases",
+              "solution_direction"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {"priority": {"enum": ["P0", "P1"]}},
+            "required": ["priority"]
+          },
+          "then": {
+            "required": ["one_liner", "core_answer", "derivation_or_example"],
+            "properties": {
+              "follow_ups": {"minItems": 2},
+              "pitfalls": {"minItems": 2}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

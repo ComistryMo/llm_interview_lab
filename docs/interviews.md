@@ -87,6 +87,39 @@ llm-lab interview finish INTERVIEW_ID --profile default --confirm-incomplete
 
 实际参数以 `llm-lab interview --help` 为准。桌面版会用表单完成同一流程，不要求记 ID。
 
+## 研究型面试知识库
+
+固定面试蓝图与研究型知识卡是两个层次。蓝图冻结本场问题和计时；知识库用于在场外浏览、复习和准备追问，不会自动写入 Profile，也不会改变 Practice 的解锁或 `mastered` 状态。
+
+```bash
+llm-lab knowledge list --kind experience_pattern --priority P0
+llm-lab knowledge search "KV cache" --track systems --limit 10
+llm-lab knowledge show COD-INF-002
+llm-lab knowledge validate --with-catalog
+```
+
+如需将知识卡与目标岗位的面试准备并排浏览，可使用只读的 role-prep
+入口。它只读取岗位元数据，或读取指定 role interview 的冻结头部；不会
+读取活动题面、推进 clock、写入 Profile，也不会改变蓝图或评分证据：
+
+```bash
+llm-lab interview role-prep --role post_training_engineer \
+  --seniority new_grad --kind eight_stock --priority P0 --limit 12
+
+llm-lab interview role-prep --interview-id role-interview-0001 \
+  --profile default --kind coding_prompt --json
+```
+
+`--kind` 可选 `eight_stock`、`experience_pattern` 或 `coding_prompt`；
+需要完整答案层时显式加 `--answers`。活动面试仍只能通过
+`role-current` 暴露当前题目。`--seniority senior` 可以只做知识筛选；
+当前冻结面试蓝图覆盖 intern/new_grad/mid，因此该组合会显示
+`BLUEPRINT none`，不代表活动面试缺失。
+
+`show` 会同时展示一分钟答案、核心要点、推导/例子、追问、常见坑、手撕题的 input/output/constraints/test-focus，以及每个 claim 对应的来源记录。`list/search` 只返回摘要，适合脚本或桌面列表；`--json` 或 `--format json` 输出稳定的机器可读结构。
+
+来源和版权边界见 [`docs/interview-content-research.md`](interview-content-research.md) 与 [`references/interview-sources.json`](../references/interview-sources.json)。公开面经只用于“哪些题型在这些报告中出现过”的范围化信号，不能推断任何公司的必考题；个人材料仍遵循本地保存和逐场授权规则。
+
 ## 把真实面试问题留档
 
 只记录你有权保存、已脱敏的题目和个人复盘。不要复制面试平台的受版权保护原文或公司内部材料。留档用于私人复盘，不会自动进入公共固定题库；公共化仍需 Schema、Rubric、版权、重复度、真实验证与 Maintainer Review。
