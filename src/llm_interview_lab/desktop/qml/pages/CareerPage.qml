@@ -47,7 +47,15 @@ Flickable {
         width: parent.width - 56
         spacing: 16
 
-        Text { text: "本地求职材料"; color: root.palette.text; font.pixelSize: 24; font.bold: true }
+        // Main.qml already identifies this route.  Keep the page heading
+        // focused on the user's next action instead of repeating it.
+        Text {
+            objectName: "careerRouteContext"
+            text: "管理本地求职材料"
+            color: root.palette.text
+            font.pixelSize: 16
+            font.bold: true
+        }
         Text {
             Layout.fillWidth: true
             text: "简历、求职意向、项目、论文、比赛、真实面试问题和岗位 JD 保存在 Git 忽略的学习档案中。文件存在不代表 AI 可以读取。"

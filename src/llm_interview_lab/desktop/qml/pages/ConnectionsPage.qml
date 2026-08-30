@@ -25,7 +25,15 @@ Flickable {
         id: content
         x: 28; y: 24; width: parent.width - 56; spacing: 16
 
-        Text { text: "AI 连接（可选）"; color: root.palette.text; font.pixelSize: 24; font.bold: true }
+        // Main.qml owns the route title; use this smaller line for the
+        // actionable context and keep the optional nature visible.
+        Text {
+            objectName: "connectionsRouteContext"
+            text: "本地优先，按需连接 AI"
+            color: root.palette.text
+            font.pixelSize: 16
+            font.bold: true
+        }
         Text { text: "不连接 AI 也能完成固定课程、公开测试、间隔复测和手动模拟面试。远程请求只发送你在上下文预览中确认的内容。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
 
         GridLayout {
