@@ -1588,12 +1588,13 @@ class AppController(QObject):
                 prompt=pending["follow_up"],
                 answer=answer,
             )
-            followup_id = (
-                updated.get("followups", [])[-1].get("followup_id")
-                if updated.get("followups")
-                and isinstance(updated["followups"][-1], Mapping)
-                else None
-            )
+            followup_ids = [
+                item.get("followup_id")
+                for item in updated.get("followups", [])
+                if isinstance(item, Mapping)
+                and item.get("parent_question_id") == pending["question_id"]
+                and item.get("followup_id")
+            ]
             self.service.score_interview(
                 profile_id,
                 pending["interview_id"],
@@ -1603,7 +1604,7 @@ class AppController(QObject):
                 source="ai",
                 confidence=pending["confidence"],
                 fatal_issues=pending["fatal_issues"],
-                followup_ids=[followup_id] if followup_id else (),
+                followup_ids=followup_ids,
             )
             interview_id = pending["interview_id"]
             self._pending_ai_assessment = None

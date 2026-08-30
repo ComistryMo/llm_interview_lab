@@ -906,8 +906,8 @@ def record_role_assessment(
     source: str,
     confidence: str,
     fatal_issues: Iterable[str] = (),
-    followup_ids: Iterable[str] = (),
     now: datetime | None = None,
+    followup_ids: Iterable[str] = (),
 ) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
     if session["status"] != "active":
@@ -939,11 +939,14 @@ def record_role_assessment(
     if unknown:
         raise RoleInterviewError("assessment contains an unknown fatal issue")
     linked_followups = tuple(dict.fromkeys(followup_ids))
-    followup_by_id = {
-        item["followup_id"]: item
-        for item in session.get("followups", [])
-        if isinstance(item, Mapping)
-    }
+    followup_by_id = {}
+    for item in session.get("followups", []):
+        if not isinstance(item, Mapping):
+            continue
+        followup_id = item.get("followup_id")
+        parent_question_id = item.get("parent_question_id")
+        if followup_id and parent_question_id:
+            followup_by_id[followup_id] = item
     if any(
         followup_id not in followup_by_id
         or followup_by_id[followup_id]["parent_question_id"] != question_id
