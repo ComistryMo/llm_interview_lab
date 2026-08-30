@@ -89,7 +89,16 @@ Item {
             Layout.fillWidth: true
             ColumnLayout {
                 Layout.fillWidth: true
-                Text { text: "刷题训练"; color: root.palette.text; font.pixelSize: 24; font.bold: true }
+                // Main.qml already owns the page title.  Keep this row focused
+                // on the learning context so the shell and page do not repeat
+                // the same large heading.
+                Text {
+                    objectName: "learnRouteContext"
+                    text: "按课程前置逐题推进"
+                    color: root.palette.text
+                    font.pixelSize: 16
+                    font.bold: true
+                }
                 Text { text: "只展示当前真实可用的题目；前置关系由课程 DAG 决定。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
             }
             ComboBox {
