@@ -136,6 +136,42 @@ def _decode_ai_assessment(
     return value
 
 
+def _codex_terminal_outcome(params: Mapping[str, Any]) -> tuple[str, str]:
+    """Normalize App Server terminal metadata without treating failure as success.
+
+    Some App Server versions report an interrupted/failed turn through the
+    ``turn/completed`` notification and put the actual status under a nested
+    ``turn`` object. Older adapters omit the field entirely, in which case
+    the notification itself is the only success signal. Unknown explicit
+    statuses fail closed so the UI never labels an unverified response as a
+    completed answer or scorecard.
+    """
+
+    nested = params.get("turn")
+    turn = nested if isinstance(nested, Mapping) else {}
+    raw_status = turn.get("status") or params.get("status")
+    raw_error = turn.get("error") or params.get("error") or params.get("message")
+    if isinstance(raw_error, Mapping):
+        raw_error = (
+            raw_error.get("message")
+            or raw_error.get("detail")
+            or raw_error.get("code")
+            or ""
+        )
+    status = str(raw_status or "").strip().lower()
+    detail = str(raw_error or "").strip()
+    success_statuses = {"completed", "complete", "success", "succeeded"}
+    if status in {"interrupted", "aborted", "cancelled", "canceled"}:
+        return "cancelled", detail or "Codex 回答已停止，未生成完整结果。"
+    if status in {"failed", "error", "errored"}:
+        return "error", detail or "Codex 回答失败，请检查连接后重试。"
+    if detail and status not in success_statuses:
+        return "error", detail
+    if status and status not in success_statuses:
+        return "error", f"Codex 返回未完成状态（{status}），请重试。"
+    return "completed", ""
+
+
 def _demo_dashboard() -> dict[str, Any]:
     return {
         "profile_id": "demo",
@@ -332,6 +368,13 @@ class AppController(QObject):
         self._codex_start_ready = False
         self._codex_start_response_turn_id = ""
         self._codex_unscoped_allowed = False
+        # The event pump and the ``turn/start`` response are delivered through
+        # separate queued signals. A concrete ``turn/started``/delta/terminal
+        # event can therefore reach the Controller a few moments before the
+        # response callback binds its id. Keep only those bounded, explicitly
+        # identified events until the callback can prove the id belongs to the
+        # current operation; id-less events are discarded fail-closed.
+        self._codex_early_events: list[CodexEvent] = []
         self._codex_cancel_pending_operation = ""
         self._codex_cancel_pending_kind = ""
         self._codex_drain_waiting_start = False
@@ -3005,6 +3048,7 @@ class AppController(QObject):
         # completed/stopped turn so a late id-less chunk cannot enter a new
         # transcript.
         self._codex_unscoped_allowed = False
+        self._codex_early_events.clear()
         if kind == "coach":
             self._codex_coach_turn_id = f"pending:{operation_id}"
         else:
@@ -3030,6 +3074,34 @@ class AppController(QObject):
         self._codex_unscoped_allowed = False
         self._codex_active_generation = 0
         self._codex_turn_id = None
+        self._codex_early_events.clear()
+
+    def _queue_codex_early_event(self, event: Any, event_turn: Any) -> None:
+        """Hold a bounded concrete event until ``turn/start`` is correlated."""
+
+        if not event_turn or not isinstance(event, CodexEvent):
+            return
+        # A malicious/noisy server must not grow memory while a start request
+        # is unresolved. Events beyond the bound are safer to drop than to
+        # replay against an unrelated session.
+        if len(self._codex_early_events) < 128:
+            self._codex_early_events.append(event)
+
+    def _replay_codex_early_events(self, turn_id: str) -> None:
+        """Replay only events matching the id returned by this start request."""
+
+        pending = self._codex_early_events
+        self._codex_early_events = []
+        if not turn_id:
+            return
+        for event in pending:
+            params = event.params if isinstance(event.params, Mapping) else {}
+            event_turn = params.get("turnId") or params.get("turn_id")
+            nested_turn = params.get("turn")
+            if not event_turn and isinstance(nested_turn, Mapping):
+                event_turn = nested_turn.get("id")
+            if str(event_turn or "") == str(turn_id):
+                self._handle_codex_event(event)
 
     def _invalidate_codex_transport(self, reason: str) -> None:
         """Fail closed when the shared stream cannot identify a turn.
@@ -3188,6 +3260,7 @@ class AppController(QObject):
             else None
         )
         if error:
+            self._codex_early_events.clear()
             if self._codex_cancel_pending_operation == operation_id:
                 self._release_pending_codex_cancel(operation_id, None)
             elif active == identity:
@@ -3212,17 +3285,22 @@ class AppController(QObject):
                 if turn_id and (not current or str(current).startswith("pending:") or str(current) == turn_id):
                     self._codex_coach_turn_id = turn_id
                 elif turn_id and current != turn_id:
+                    self._codex_early_events.clear()
                     return
             else:
                 current = self._codex_interview_turn_id
                 if turn_id and (not current or str(current).startswith("pending:") or str(current) == turn_id):
                     self._codex_interview_turn_id = turn_id
                 elif turn_id and current != turn_id:
+                    self._codex_early_events.clear()
                     return
             if turn_id:
                 self._codex_turn_id = turn_id
                 self._codex_turn_started = True
                 self._codex_unscoped_allowed = False
+            # Replay only events carrying the exact id returned by this
+            # request. Any buffered marker from an older turn is discarded.
+            self._replay_codex_early_events(turn_id or "")
             return
 
         # Stop may have cleared the live identity while ``turn/start`` was in
@@ -4318,8 +4396,10 @@ class AppController(QObject):
                 if (
                     not self._codex_start_ready
                     or not self._codex_start_response_turn_id
-                    or str(event_turn) != str(self._codex_start_response_turn_id)
                 ):
+                    self._queue_codex_early_event(event, event_turn)
+                    return
+                if str(event_turn) != str(self._codex_start_response_turn_id):
                     return
                 if active_kind == "coach":
                     self._codex_coach_turn_id = str(event_turn)
@@ -4363,8 +4443,10 @@ class AppController(QObject):
             if (
                 not self._codex_start_ready
                 or not self._codex_start_response_turn_id
-                or str(event_turn) != str(self._codex_start_response_turn_id)
             ):
+                self._queue_codex_early_event(event, event_turn)
+                return
+            if str(event_turn) != str(self._codex_start_response_turn_id):
                 return
             if active_kind == "coach":
                 self._codex_coach_turn_id = str(event_turn)
@@ -4390,14 +4472,36 @@ class AppController(QObject):
                 # of truth and the user must still approve the actual request.
                 self._codex_diff = (self._codex_diff + delta)[-100_000:]
         elif method == "turn/completed":
-            self._ai_status = text("status.codex_ready")
+            outcome, detail = _codex_terminal_outcome(params)
+            # A transport can stay healthy even when one turn is interrupted
+            # or rejected. Keep the connection status truthful while making
+            # the individual Coach/Interview result explicitly recoverable.
+            self._ai_status = text(
+                "status.codex_ready"
+                if outcome == "completed"
+                else "status.codex_connected"
+            )
             self.aiStateChanged.emit()
             if self._codex_coach_identity is not None:
                 identity = self._codex_coach_identity
-                self._coach_turn_finished(identity, {"cancelled": False})
+                if outcome == "completed":
+                    self._coach_turn_finished(identity, {"cancelled": False})
+                elif outcome == "cancelled":
+                    self._coach_turn_finished(
+                        identity,
+                        {
+                            "cancelled": True,
+                            "error": detail,
+                        },
+                    )
+                else:
+                    self._coach_turn_finished(identity, {"error": detail})
             elif self._codex_interview_identity is not None:
                 identity = self._codex_interview_identity
-                self._finish_codex_interview_assessment(identity)
+                if outcome == "completed":
+                    self._finish_codex_interview_assessment(identity)
+                else:
+                    self._finish_codex_interview_assessment(identity, error=detail)
             self._finish_codex_event_gate()
         elif method in {"turn/failed", "turn/aborted", "turn/cancelled"}:
             if self._codex_coach_identity is not None:

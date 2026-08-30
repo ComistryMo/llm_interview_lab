@@ -18,7 +18,11 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtCore import QCoreApplication, QSettings
 from PySide6.QtTest import QTest
 
-from llm_interview_lab.desktop.controller import AppController, _decode_ai_assessment
+from llm_interview_lab.desktop.controller import (
+    AppController,
+    _codex_terminal_outcome,
+    _decode_ai_assessment,
+)
 from llm_interview_lab.desktop.runtime import prepare_desktop_repository
 from llm_interview_lab.pytest_plugin import (
     ENV_SUBMISSION,
@@ -175,6 +179,25 @@ def test_controller_rehydrates_question_scoped_coding_grader_revision(
     assert controller.interview["coding_test_current"] is True
     assert controller.interview["phase"] == "assessment"
     controller.shutdown()
+
+
+@pytest.mark.parametrize(
+    ("params", "expected"),
+    [
+        ({"turn": {"status": "completed"}}, ("completed", "")),
+        (
+            {"turn": {"status": "failed", "error": {"message": "quota"}}},
+            ("error", "quota"),
+        ),
+        (
+            {"status": "interrupted"},
+            ("cancelled", "Codex 回答已停止，未生成完整结果。"),
+        ),
+        ({"status": "future_status"}, ("error", "Codex 返回未完成状态（future_status），请重试。")),
+    ],
+)
+def test_codex_terminal_metadata_never_masks_a_failed_turn(params, expected) -> None:
+    assert _codex_terminal_outcome(params) == expected
 
 
 def test_demo_controller_exposes_every_page_and_keeps_demo_settings_deterministic(
