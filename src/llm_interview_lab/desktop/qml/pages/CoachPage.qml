@@ -106,8 +106,8 @@ Item {
                     id: contextColumn
                     width: contextScroll.availableWidth
                     spacing: 10
-                    Text { width: parent.width; text: "上下文预览"; color: root.palette.text; font.pixelSize: 19; font.bold: true }
-                    Text { width: parent.width; text: "只有勾选且可见的内容会发送给远程 AI；应用不会自动附加整个个人工作区。"; color: root.palette.muted; wrapMode: Text.Wrap }
+                    Text { width: parent.width; text: "上下文预览（只读）"; color: root.palette.text; font.pixelSize: 19; font.bold: true }
+                    Text { width: parent.width; text: "只有你在上方选择、并在清单中标为“将发送”的内容会发送给远程 AI；应用不会自动附加整个个人工作区。"; color: root.palette.muted; wrapMode: Text.Wrap }
                     ComboBox {
                         id: mode; width: parent.width
                         model: [{id:"coach", label:"教练"}, {id:"teacher", label:"讲解"}, {id:"reviewer", label:"审查"}]
@@ -139,7 +139,10 @@ Item {
                         delegate: RowLayout {
                             required property var modelData
                             width: contextColumn.width
-                            CheckBox { checked: modelData.selected; enabled: false }
+                            StatusPill {
+                                text: modelData.selected ? "将发送" : "不发送"
+                                tone: modelData.selected ? root.palette.accent : root.palette.muted
+                            }
                             Text { text: modelData.label; color: root.palette.text; Layout.fillWidth: true; wrapMode: Text.Wrap }
                             StatusPill { visible: modelData.sensitive; text: "敏感内容"; tone: root.palette.warning }
                         }

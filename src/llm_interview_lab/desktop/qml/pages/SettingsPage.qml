@@ -28,7 +28,16 @@ Flickable {
         x: 30; y: 28; width: parent.width - 60; spacing: 16
 
         Text { text: "设置"; color: root.palette.text; font.pixelSize: 24; font.bold: true }
-        Text { text: "调整显示、查看本地数据，并在 Finder 启动无法继承 PATH 时指定 Codex。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+        Text {
+            text: Qt.platform.os === "osx"
+                  ? "调整显示、查看本地数据，并在 Finder 启动无法继承 PATH 时指定 Codex。"
+                  : Qt.platform.os === "windows"
+                    ? "调整显示、查看本地数据，并在 Windows 无法自动找到 Codex 时指定可执行文件。"
+                    : "调整显示、查看本地数据，并在应用无法从 PATH 找到 Codex 时指定可执行文件。"
+            color: root.palette.muted
+            wrapMode: Text.Wrap
+            Layout.fillWidth: true
+        }
 
         LabCard {
             Layout.fillWidth: true; Layout.preferredHeight: 205
@@ -73,7 +82,16 @@ Flickable {
             Layout.fillWidth: true; Layout.preferredHeight: 190
             cardColor: root.palette.surface; borderColor: root.palette.border
             Text { text: "Codex 可执行文件"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
-            Text { width: parent.width; text: app.codexExecutable || "自动查找（PATH、Homebrew 和常见用户目录）"; color: root.palette.muted; elide: Text.ElideMiddle }
+            Text {
+                width: parent.width
+                text: app.codexExecutable || (Qt.platform.os === "osx"
+                      ? "自动查找（PATH、Homebrew 和常见用户目录）"
+                      : Qt.platform.os === "windows"
+                        ? "自动查找（PATH、npm 和常见用户目录）"
+                        : "自动查找（PATH 和常见用户目录）")
+                color: root.palette.muted
+                elide: Text.ElideMiddle
+            }
             RowLayout {
                 Button { text: "选择 Codex"; onClicked: codexPicker.open() }
                 Button { text: "恢复自动查找"; enabled: !!app.codexExecutable; onClicked: app.clearCodexExecutable() }
