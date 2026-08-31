@@ -1,4 +1,4 @@
-"""Render the original SVG into Windows and macOS build-time icon assets."""
+"""Render the canonical PNG into Windows and macOS build-time icon assets."""
 
 from __future__ import annotations
 
@@ -13,17 +13,18 @@ SIZES = (16, 32, 64, 128, 256, 512, 1024)
 
 def render_png(source: Path, destination: Path, size: int) -> None:
     from PySide6.QtCore import Qt
-    from PySide6.QtGui import QImage, QPainter
-    from PySide6.QtSvg import QSvgRenderer
+    from PySide6.QtGui import QImage
 
-    renderer = QSvgRenderer(str(source))
-    if not renderer.isValid():
-        raise RuntimeError("app icon SVG is invalid")
-    image = QImage(size, size, QImage.Format_ARGB32)
-    image.fill(Qt.transparent)
-    painter = QPainter(image)
-    renderer.render(painter)
-    painter.end()
+    image = QImage(str(source))
+    if image.isNull() or image.width() != image.height():
+        raise RuntimeError("app icon PNG must be a valid square image")
+    if image.width() != size:
+        image = image.scaled(
+            size,
+            size,
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
     destination.parent.mkdir(parents=True, exist_ok=True)
     if not image.save(str(destination), "PNG"):
         raise RuntimeError(f"could not write {destination.name}")
@@ -35,7 +36,7 @@ def main() -> int:
     parser.add_argument("--macos", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
-    source = root / "src/llm_interview_lab/desktop/resources/app-icon.svg"
+    source = root / "src/llm_interview_lab/desktop/resources/app-icon.png"
     output = args.output.resolve()
     render_png(source, output / "app-icon-1024.png", 1024)
     render_png(source, output / "app-icon-256.png", 256)

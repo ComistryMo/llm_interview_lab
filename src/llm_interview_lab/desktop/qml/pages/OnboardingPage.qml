@@ -198,7 +198,7 @@ Rectangle {
                 Image {
                     Layout.preferredWidth: 68
                     Layout.preferredHeight: 68
-                    source: "../../resources/app-icon.svg"
+                    source: "../../resources/app-icon.png"
                     sourceSize.width: 136
                     sourceSize.height: 136
                     fillMode: Image.PreserveAspectFit
@@ -295,7 +295,7 @@ Rectangle {
                         visible: !root.wideLayout
                         Layout.preferredWidth: visible ? 40 : 0
                         Layout.preferredHeight: visible ? 40 : 0
-                        source: "../../resources/app-icon.svg"
+                        source: "../../resources/app-icon.png"
                         sourceSize.width: 80
                         sourceSize.height: 80
                         fillMode: Image.PreserveAspectFit

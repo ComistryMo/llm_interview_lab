@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/llm_interview_lab/desktop/resources/app-icon.png" width="112" height="112" alt="LLM Interview Lab Quiet Forge 项目图标">
+</p>
+
 # LLM Interview Lab
 
 [简体中文](README.md) | [English](README.en.md)

@@ -30,7 +30,7 @@
 
 ## 图标与截图
 
-应用图标由本项目原创，源文件位于 `src/llm_interview_lab/desktop/resources/app-icon.svg`。README 截图来自本项目真实 GUI，不复制第三方项目图片、Logo 或布局素材。
+应用图标是项目维护者提供并授权用于本项目的 Quiet Forge 品牌资产，规范源文件位于 `src/llm_interview_lab/desktop/resources/app-icon.png`。README 截图来自本项目真实 GUI，不复制第三方项目图片、Logo 或布局素材。
 
 ## 构建审计
 

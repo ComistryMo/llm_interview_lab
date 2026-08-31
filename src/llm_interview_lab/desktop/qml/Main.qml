@@ -252,7 +252,7 @@ ApplicationWindow {
                     Layout.alignment: window.layoutMode === "wide"
                                       ? Qt.AlignLeft : Qt.AlignHCenter
                     Image {
-                        source: Qt.resolvedUrl("../resources/app-icon.svg")
+                        source: Qt.resolvedUrl("../resources/app-icon.png")
                         sourceSize.width: 34
                         sourceSize.height: 34
                         Layout.preferredWidth: 34

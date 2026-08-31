@@ -227,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
     record_bootstrap_event("runtime_assets", runtime_assets_found=assets_found)
     try:
         from PySide6.QtCore import QTimer, QUrl, QObject
-        from PySide6.QtGui import QFontDatabase
+        from PySide6.QtGui import QFontDatabase, QIcon
         from PySide6.QtWidgets import QApplication
         from PySide6.QtQml import QQmlApplicationEngine
         from PySide6.QtQuick import QQuickWindow
@@ -256,6 +256,9 @@ def main(argv: list[str] | None = None) -> int:
     app.setOrganizationName("ComistryMo")
     app.setOrganizationDomain("comistrymo.github.io")
     app.setApplicationVersion(__version__)
+    app_icon = QIcon(str(Path(__file__).parent / "resources/app-icon.png"))
+    if not app_icon.isNull():
+        app.setWindowIcon(app_icon)
     # Raw QML Text items do not inherit ApplicationWindow.font reliably.
     # Select an installed platform CJK UI family once so Chinese copy keeps
     # working consistently across pages, dialogs and native screenshots.
