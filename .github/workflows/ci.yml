@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main, "refactor/**"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -201,3 +202,74 @@ jobs:
             dist/release-macos/LLMInterviewLab-macOS-arm64.dmg
             dist/release-macos/SHA256SUMS.txt
           if-no-files-found: error
+
+  publish-alpha3:
+    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.4.0-alpha.3'
+    name: Publish v0.4.0-alpha.3 Release
+    needs:
+      - repository-health
+      - cpu-pytorch-validation
+      - documentation
+      - desktop-windows
+      - desktop-macos-arm64
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+      - name: Download desktop artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          pattern: LLMInterviewLab-*
+          path: dist/downloads
+          merge-multiple: false
+      - name: Assemble release assets and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/release
+          windows_zip="$(find dist/downloads -type f -name 'LLMInterviewLab-Windows-x64-portable.zip' -print -quit)"
+          mac_zip="$(find dist/downloads -type f -name 'LLMInterviewLab-macOS-arm64.app.zip' -print -quit)"
+          mac_dmg="$(find dist/downloads -type f -name 'LLMInterviewLab-macOS-arm64.dmg' -print -quit)"
+          windows_sum="$(find dist/downloads -type f -name 'SHA256SUMS-Windows.txt' -print -quit)"
+          mac_sum="$(find dist/downloads -type f -name 'SHA256SUMS.txt' -print -quit)"
+          test -n "$windows_zip" && test -n "$mac_zip" && test -n "$mac_dmg"
+          test -n "$windows_sum" && test -n "$mac_sum"
+          cp "$windows_zip" dist/release/
+          cp "$mac_zip" dist/release/
+          cp "$mac_dmg" dist/release/
+          cp "$windows_sum" dist/release/SHA256SUMS-Windows.txt
+          cp "$mac_sum" dist/release/SHA256SUMS-macOS.txt
+          sha256sum \
+            dist/release/LLMInterviewLab-Windows-x64-portable.zip \
+            dist/release/LLMInterviewLab-macOS-arm64.app.zip \
+            dist/release/LLMInterviewLab-macOS-arm64.dmg \
+            | sed 's#dist/release/##' > dist/release/SHA256SUMS.txt
+          cat dist/release/SHA256SUMS.txt
+      - name: Create or refresh GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          assets=(
+            dist/release/LLMInterviewLab-Windows-x64-portable.zip
+            dist/release/LLMInterviewLab-macOS-arm64.app.zip
+            dist/release/LLMInterviewLab-macOS-arm64.dmg
+            dist/release/SHA256SUMS.txt
+            dist/release/SHA256SUMS-Windows.txt
+            dist/release/SHA256SUMS-macOS.txt
+          )
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber "${assets[@]}"
+          else
+            gh release create "$tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "v0.4.0-alpha.3 · 真实交互与可靠训练" \
+              --notes-file docs/release-notes-v0.4.0-alpha.3.md \
+              --prerelease \
+              "${assets[@]}"
+          fi

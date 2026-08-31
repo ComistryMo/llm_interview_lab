@@ -2,10 +2,10 @@
 
 ## 系统要求与下载
 
-> 发布状态：当前 `main` 是 Alpha.3 未发布源码候选，尚无公开 Alpha.3 Windows 包。最新公开桌面版仍是 [v0.4.0-alpha.2](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.2)。以下文件名描述 CI 候选构建，发布门禁通过前不可从 Release 下载。
+> 发布状态：当前公开桌面版为 [v0.4.0-alpha.3](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3)，Windows x64 standalone 包已通过构建、启动和隐私检查。
 
 - Windows 10 / 11 x64；
-- Alpha.3 候选产物为 `LLMInterviewLab-Windows-x64-portable.zip`；
+- Alpha.3 产物为 `LLMInterviewLab-Windows-x64-portable.zip`；
 - 对应校验清单为 `SHA256SUMS-Windows.txt`。
 
 Portable ZIP 是完整的 standalone 目录。请先完整解压，再双击
@@ -59,12 +59,12 @@ llm-lab-gui
 
 ## 发布前双击验收
 
-发布候选必须在 Windows 11 实机或 VM 上只构建一次并逐项确认：
+发布包必须在 Windows 11 实机或 VM 上只构建一次并逐项确认：
 
 1. 从普通英文路径解压并双击，五秒内出现窗口或明确加载反馈；
 2. 从含空格和中文的路径解压并双击；
 3. 断网并选择 No-AI，完成岗位选择后进入第一题或首页；
 4. 退出重启后，刚创建的学习档案仍然存在；
-5. 在候选副本中临时移走 `runtime_assets`，确认出现含错误编号和日志位置的原生错误框。
+5. 在发布包副本中临时移走 `runtime_assets`，确认出现含错误编号和日志位置的原生错误框。
 
 验收只使用虚构学习档案；结束后删除故障注入副本，不修改真实用户数据。

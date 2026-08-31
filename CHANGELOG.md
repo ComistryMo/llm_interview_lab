@@ -4,7 +4,9 @@
 
 ## [未发布]
 
-> 目标版本：`v0.4.0-alpha.3`。当前尚未创建对应 Tag 或 GitHub Release。
+暂无未发布变更。
+
+## [0.4.0-alpha.3] - 2026-08-31
 
 ### 新增
 
@@ -89,7 +91,8 @@
 
 - Stage 00 训练原型、Python 环境检查、限定 pytest 入口、隐私交接导出和初始开源治理。
 
-[未发布]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.2...HEAD
+[未发布]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.3...HEAD
+[0.4.0-alpha.3]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.2...v0.4.0-alpha.3
 [0.4.0-alpha.2]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.1...v0.4.0-alpha.2
 [0.4.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.3.0-alpha.1...v0.4.0-alpha.1
 [0.3.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.2.0-alpha.2...v0.3.0-alpha.1

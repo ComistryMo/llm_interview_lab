@@ -1,8 +1,8 @@
 # macOS 使用指南
 
-> 发布状态：当前 `main` 是 Alpha.3 未发布源码候选，尚无公开 Alpha.3 DMG 或 APP ZIP。最新公开桌面版仍是 [v0.4.0-alpha.2](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.2)。
+> 发布状态：当前公开桌面版为 [v0.4.0-alpha.3](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3)，提供经过 Apple Silicon CI 构建、启动和隐私检查的 DMG 与 APP ZIP。
 
-Alpha.3 候选构建配置会在固定 GitHub Apple Silicon Runner 上生成、检查架构并执行离屏启动验证；通过完整发布门禁后才会上传为公开版本。
+Alpha.3 构建在固定 GitHub Apple Silicon Runner 上生成、检查架构并执行离屏启动验证。
 
 ## 系统要求
 
@@ -21,11 +21,11 @@ Alpha.3 候选构建配置会在固定 GitHub Apple Silicon Runner 上生成、�
 | `LLMInterviewLab-macOS-arm64.app.zip` | 直接解压、自动化验证或 DMG 有问题时 |
 | `SHA256SUMS.txt` | 校验下载完整性 |
 
-Alpha.3 发布计划不提供 Intel x86_64 或 Universal2 Artifact。没有通过真实架构与启动验证的包不会仅靠重命名发布。
+Alpha.3 不提供 Intel x86_64 或 Universal2 Artifact。没有通过真实架构与启动验证的包不会仅靠重命名发布。
 
 ## DMG 安装
 
-候选正式发布后：
+发布后：
 
 1. 下载 DMG 与 `SHA256SUMS.txt`；
 2. 校验 SHA-256；
@@ -49,7 +49,7 @@ cat SHA256SUMS.txt
 
 ## 签名与公证
 
-Alpha.3 候选构建配置使用 ad-hoc signing：
+Alpha.3 发布构建使用 ad-hoc signing：
 
 - 未使用 Apple Developer ID；
 - 未经过 Apple Notarization；
