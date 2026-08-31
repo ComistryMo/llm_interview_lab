@@ -181,12 +181,12 @@
 ### 18. 三套视觉方向与新设计系统 — `ADAPT`
 
 - **Plan 要求：** 在批量重写 UI 前，以同一 Coding Workbench 内容制作 Graphite Blue、Obsidian Violet、Warm Frost 的深浅原型并选定方向。
-- **当前实现：** 已有 Quiet Forge `AppTheme.qml`、共用卡片/按钮组件和桌面截图脚本；尚无产品 V1 三方向原型。
+- **当前实现：** 已有 Quiet Forge `AppTheme.qml`、共用卡片/按钮组件和桌面截图脚本；Phase 0 已保留三方向六张合成原型，当前正式决策为 `VISUAL_DIRECTION_SELECTED_GRAPHITE_BLUE`。
 - **精确证据：** `src/llm_interview_lab/desktop/qml/components/AppTheme.qml`、`LabCard.qml`、`LabButton.qml`；`scripts/capture_desktop_screenshots.py`。
 - **可复用资产：** QML offscreen screenshot harness、主题 token、现有字体选择。
-- **冲突/风险：** 直接替换生产主题会在视觉方向未选定前扩大风险。
-- **最小迁移：** 本 Phase 只增加隔离 prototype route/harness 和六张截图；选定后再吸收 token。
-- **Plan Phase：** Phase 1。
+- **冲突/风险：** 原型是静态合成证据，不能冒充正式工作台；一次性替换全部 QML 会扩大跨平台风险。
+- **最小迁移：** Phase 2 只将 Graphite Blue 的冷中性表面、细分隔线、单一 CTA，以及 Warm Frost 的浅色长文本暖灰微差吸收到首用入口/设置/首题路径；Obsidian Violet 仅保留低饱和选中和 AI 辅助细节。
+- **Plan Phase：** Phase 1（方向冻结）→ Phase 2（局部正式页面适配）。
 
 ### 19. 证据化报告、导出和删除 — `ADAPT`
 

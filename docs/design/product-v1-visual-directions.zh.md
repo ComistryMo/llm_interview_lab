@@ -1,5 +1,7 @@
 # Product V1 编程工作台视觉方向
 
+> 决策状态：`VISUAL_DIRECTION_SELECTED_GRAPHITE_BLUE`。Graphite Blue 已冻结为生产主方向；本文件中的六张图仍是 Phase 0 合成原型和历史设计证据，不是正式业务页面。
+
 > Phase 0 原型评审稿。六张图使用同一份合成中文题面、代码和测试用例，生成于 `scripts/capture_product_v1_visual_directions.py`。原型只验证信息层级与视觉气质，不代表已实现的编辑器、Grader 或面试状态。
 
 ## 统一内容与边界
@@ -58,6 +60,14 @@
 - 从 Graphite Blue 采用冷中性表面、细分隔线、蓝色焦点环和单一主 CTA；
 - 从 Warm Frost 借用浅色长文本区域的暖灰微差，以及更克制的圆角和阴影；
 - 从 Obsidian Violet 只借用“低饱和紫蓝作为少量选中/品牌细节”的思路，不把紫色扩散到代码正文、错误和大面积背景。
+
+## 已冻结的生产规则（DEC-001）
+
+- 主体采用 Graphite Blue：冷中性表面、细分隔线、低饱和蓝色焦点环、单一主 CTA。
+- 浅色主题的长题面、知识解析、材料和报告区域吸收 Warm Frost 的暖灰微差；代码编辑器继续使用冷中性不透明实色。
+- Obsidian Violet 只用于极少量品牌细节、选中状态和 AI 辅助强调；不得用于代码正文、错误状态、长文本区域或高饱和渐变。
+- 磨砂只用于侧栏、顶部工具栏、Command Palette、Dialog、Toast 和少量浮层。题面、代码、测试结果、Transcript 和长文本必须保持不透明实色。
+- Phase 2 仅把规则应用到首用入口、设置、No-AI 锁定说明和首题路径的层级/布局修复；不会把原型静态状态接入正式业务。
 
 **不建议现在做：**
 

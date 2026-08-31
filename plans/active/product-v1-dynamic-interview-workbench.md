@@ -1,6 +1,7 @@
 # LLM Interview Lab 产品与开发总 Plan v1.0
 
-> 状态：产品决策已冻结，尚未转换为 Codex 执行 Prompt
+> 状态：VISUAL_DIRECTION_SELECTED_GRAPHITE_BLUE · Phase 2 实施中，等待 UAT
+> 本阶段终局：WAITING_FOR_PHASE2_UAT
 > 目标：在不浪费时间、不重复造轮子、不以“写了很多代码”冒充产品完成度的前提下，把现有 Alpha 迭代为高质量、本地优先、可个性化、可语音交互的 AI 面试训练工作台。
 > 建议落盘位置：`plans/active/product-v1-dynamic-interview-workbench.md`
 
@@ -913,6 +914,43 @@ QML 只读取结构化字段：
 ---
 
 ## Phase 2：基础可靠性和产品入口
+
+> 当前执行切片：Phase 2。终局状态为 `WAITING_FOR_PHASE2_UAT`；在 UAT 完成前不进入 Phase 3。
+
+### DEC-001：生产视觉方向冻结
+
+- 主方向：`Graphite Blue`，使用冷中性表面、细分隔线、低饱和蓝色焦点环和单一主 CTA。
+- 浅色长文本、知识解析、材料和报告区域吸收 `Warm Frost` 的暖灰微差；代码编辑器保持冷中性不透明实色。
+- `Obsidian Violet` 仅用于极少量品牌细节、选中状态和 AI 辅助强调，不进入代码正文、错误状态或长文本背景。
+- 磨砂只用于侧栏、顶部工具栏、Command Palette、Dialog、Toast 和少量浮层；题面、代码、测试结果、Transcript 和长文本使用不透明实色。
+- Phase 0 六张合成原型继续作为历史证据，不接入正式业务。Phase 2 只将上述 Token 规则用于首用入口、设置、面试锁定说明和首题路径的布局修复。
+
+### Phase 2 验收边界
+
+- 已实现/自动验证：Profile 恢复与切换的元数据入口、中文语言持久化、Codex 自动发现状态、No-AI 面试锁定说明、首题入口和重复操作门控。
+- 仍需 UAT：四种窗口尺寸的人工视觉确认、正式页面截图复核，以及 Windows/macOS 实机首用路径。
+- 明确不在本切片：动态面试状态机、统一 Coding Workbench、官方答案、本地 STT/TTS、课程和 Provider 架构扩展。
+
+### Phase 2 实施记录（2026-08-31）
+
+- `workspace.profile_summaries()` 只读取 Profile 元数据，设置页提供安全的档案切换；当前答案未保存、录音或异步请求进行中时，切换会被明确阻止。
+- 桌面启动按 QSettings 记住最后一次正常 Profile；缺失/损坏不会静默创建替代档案，而是显示恢复入口和错误编号。Profile 切换会清空并重新加载题目、材料、面试、Coach 与 AI 评估的内存快照。
+- 新增可持久化的 `zh-CN` / `en` UI 选择（中文默认），No-AI 面试显示真实锁定说明；Codex 探测在后台执行并使用代际令牌，发现的可执行文件可直接用于后续连接。
+- 首题打开和档案初始化失败均返回 `lastActionResult` 结构化结果；界面展示具体原因、下一步和操作编号，不再只发泛化 Toast。
+- 正式 QML 页面截图证据见 `docs/images/phase2/manifest.json`；全部为合成演示，不代表真实 Profile 或跨平台实机验收。
+
+#### 本切片已运行的定向验证
+
+```text
+tests/infrastructure/test_phase2_product_entry.py       8 passed
+tests/infrastructure/test_onboarding_completion_hotfix.py 16 passed
+tests/infrastructure/test_onboarding_qml_hotfix.py      16 passed
+tests/infrastructure/test_alpha3_truthful_ux.py         12 passed, 1 skipped
+tests/infrastructure/test_desktop_platform.py            4 passed, 1 skipped
+tests/infrastructure/test_desktop_design_system.py      17 passed
+```
+
+本切片未运行完整 pytest、RC CI、Windows/macOS 完整打包或真实设备 UAT；终局仍为 `WAITING_FOR_PHASE2_UAT`。
 
 ### 范围
 

@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "version": "0.4.0a3",
+  "source_commit": "fd5ca1c1897ff0d6b4d288ee37679fed02471b64",
+  "language": "zh-CN",
+  "synthetic": true,
+  "evidence_type": "formal-qml-demo",
+  "generated_at": "2026-08-31T20:24:00+08:00",
+  "notes": "Phase 2 formal-page evidence. No real Profile, submission, material, secret, Oracle, or private test is included.",
+  "screenshots": [
+    {
+      "path": "docs/images/phase2/onboarding-900x620-light.png",
+      "page": "onboarding",
+      "theme": "light",
+      "size": "900x620",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "ce7eba3340b712694c1cb146b572e0a0896207b417979e3a6ed7af4bb946daac",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/phase2/onboarding-1080x680-light.png",
+      "page": "onboarding",
+      "theme": "light",
+      "size": "1080x680",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "edd118835ae24c80f4557dedee5ec9f36640dd848ee66f670915d5ce541a48df",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/phase2/onboarding-1280x800-light.png",
+      "page": "onboarding",
+      "theme": "light",
+      "size": "1280x800",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "f15fd3f9f6f58ba86133b109093ee2d719a2a3fd8110f75a94598010ed56bb48",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/phase2/onboarding-1440x900-dark.png",
+      "page": "onboarding",
+      "theme": "dark",
+      "size": "1440x900",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "0dc828ccd1478b5dc6fc2ad1a3da491d8c26594dc1e94ee7b07eefcb15ee00aa",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/phase2/home-1280x800-light.png",
+      "page": "home",
+      "theme": "light",
+      "size": "1280x800",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "00ea0ddd51d96d425b89588b1e7b1e933d66fa8c62d8977a91b9bcab430dede7",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/phase2/home-1280x800-dark.png",
+      "page": "home",
+      "theme": "dark",
+      "size": "1280x800",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "c657565e005711b49fb03dc52e5fb8536bb38038d70351db8ddd8db538ee93f5",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/phase2/exercise-1280x800-light.png",
+      "page": "exercise",
+      "theme": "light",
+      "size": "1280x800",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "0d7407590aafaae6b0d13a65506ee77b7ce080c24a0c3ed02b0a50c5d21ecdec",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/phase2/exercise-1280x800-dark.png",
+      "page": "exercise",
+      "theme": "dark",
+      "size": "1280x800",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "276ff40c51999526b92ac43b9f2ac5f69fcaeeee2da0b0da737f56f34a510b2b",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/phase2/interview-1280x800-light.png",
+      "page": "interview",
+      "theme": "light",
+      "size": "1280x800",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "206b50242a6cbbc3814246dc30f504dce45838593bbe3c54fd7772800cffbf65",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/phase2/interview-1280x800-dark.png",
+      "page": "interview",
+      "theme": "dark",
+      "size": "1280x800",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "db8f90d24f6b6bd6081913bc27fd206784388ba2ce07f4623d45c436bebd2a6a",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/phase2/settings-1280x800-light.png",
+      "page": "settings",
+      "theme": "light",
+      "size": "1280x800",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "4142e34fcbc4544f9f060a4280e2b9871e451aeb83616074983f8f7464c2504e",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/phase2/settings-1280x800-dark.png",
+      "page": "settings",
+      "theme": "dark",
+      "size": "1280x800",
+      "font_scale": 1.0,
+      "motion_scale": 0.0,
+      "sha256": "41d6ef9a0d616dbbfbafae7bf48e5351ee4b25d38ae248635e1b1e3720731b58",
+      "synthetic": true
+    }
+  ]
+}
