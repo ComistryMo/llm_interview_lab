@@ -7,6 +7,9 @@ Item {
     id: root
     required property var app
     required property var palette
+    // The shared token object keeps primary actions visually consistent with
+    // the shell.  `palette` remains for legacy page colours.
+    property var theme: null
 
     property bool compactLayout: width < 980
     property bool wideLayout: width >= 1180
@@ -268,11 +271,12 @@ Item {
                         onClicked: root.createSession()
                     }
                 }
-                Button {
+                LabButton {
+                    theme: root.theme
+                    variant: "primary"
                     text: "新建 Coach 会话"
                     Layout.fillWidth: true
                     Layout.preferredHeight: 38
-                    highlighted: true
                     enabled: !app.coachStreaming
                     onClicked: root.createSession()
                 }
@@ -531,7 +535,8 @@ Item {
                     spacing: 8
                     ComboBox {
                         id: mode
-                        Layout.preferredWidth: 92
+                        Layout.preferredWidth: root.compactLayout ? 104 : 92
+                        Layout.minimumWidth: 88
                         model: [{id: "coach", label: "教练"}, {id: "teacher", label: "讲解"}, {id: "reviewer", label: "审查"}]
                         textRole: "label"
                         valueRole: "id"
@@ -544,6 +549,7 @@ Item {
                     ComboBox {
                         id: provider
                         Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         model: root.providerItems()
                         textRole: "display_name"
                         valueRole: "connection_id"
@@ -561,7 +567,8 @@ Item {
                     Button {
                         visible: root.codexSelected && app.codexAvailable
                                  && !String(app.aiStatus || "").match(/已连接|就绪|connected|ready/)
-                        text: "连接 Codex"
+                        text: root.compactLayout ? "连接" : "连接 Codex"
+                        Layout.minimumWidth: root.compactLayout ? 64 : 96
                         enabled: !app.coachStreaming
                         onClicked: app.connectCodex(mode.currentValue === "reviewer" ? "reviewer" : "coach")
                     }
@@ -575,6 +582,8 @@ Item {
                 Text {
                     objectName: "coachModelLabel"
                     Layout.fillWidth: true
+                    Layout.preferredHeight: 16
+                    Layout.minimumHeight: 16
                     visible: provider.currentIndex >= 0
                     text: {
                         var item = root.selectedProviderItem()
@@ -583,6 +592,7 @@ Item {
                     }
                     color: root.palette.muted
                     font.pixelSize: 11
+                    verticalAlignment: Text.AlignVCenter
                     elide: Text.ElideRight
                 }
 
@@ -599,17 +609,42 @@ Item {
                     id: prompt
                     objectName: "coachPrompt"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: root.compactLayout ? 76 : 92
+                    Layout.preferredHeight: root.compactLayout ? 84 : 96
                     enabled: !app.coachStreaming
-                    placeholderText: app.coachStreaming ? "正在生成回答……" : "输入问题；Enter 发送，Shift+Enter 换行"
+                    // Qt's native TextArea placeholder is positioned by the
+                    // platform style and can float above the border on
+                    // compact Windows layouts.  Keep the hint in our own
+                    // content area so it never collides with the model line.
+                    placeholderText: ""
                     wrapMode: Text.Wrap
                     color: root.palette.text
-                    padding: 12
+                    // Keep the hint vertically centred below the model line.
+                    // A single `padding` value leaves the native TextArea
+                    // baseline too close to the border on compact windows.
+                    leftPadding: 12
+                    rightPadding: 12
+                    topPadding: 16
+                    bottomPadding: 12
                     background: Rectangle {
                         color: root.palette.background
                         radius: 8
                         border.color: prompt.activeFocus ? root.palette.accent : root.palette.border
                         border.width: prompt.activeFocus ? 2 : 1
+                    }
+                    Text {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        anchors.topMargin: 16
+                        visible: prompt.text.length === 0
+                        text: app.coachStreaming ? "正在生成回答……" : "输入问题；Enter 发送，Shift+Enter 换行"
+                        color: root.palette.muted
+                        font: prompt.font
+                        wrapMode: Text.Wrap
+                        elide: Text.ElideRight
+                        maximumLineCount: 2
                     }
                     onTextChanged: if (!root.syncingDraft && root.activeSession.session_id) app.updateCoachDraft(text)
                     Keys.onPressed: function(event) {
@@ -625,9 +660,13 @@ Item {
                     Layout.fillWidth: true
                     Text {
                         Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         text: app.coachStreaming ? "正在接收流式回答 · 可随时停止" : root.providerStatusHint()
                         color: app.coachStreaming ? root.palette.accent : root.palette.muted
                         font.pixelSize: 11
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
                     }
                     Button {
                         visible: app.coachStreaming

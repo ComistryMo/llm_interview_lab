@@ -880,6 +880,30 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert 'font.family: "Cascadia Mono, Consolas, monospace"' not in interview
 
 
+def test_no_ai_interview_setup_explains_the_ai_boundary() -> None:
+    interview = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/InterviewPage.qml"
+    ).read_text(encoding="utf-8")
+    assert 'objectName: "noAiInterviewNotice"' in interview
+    assert "模拟面试需要 AI" in interview
+    assert "No-AI 模式仍可继续刷题、运行测试、复盘和间隔复测" in interview
+    assert 'objectName: "goToConnectionsFromInterview"' in interview
+    assert 'onClicked: app.navigate("connections")' in interview
+    # The legacy fallback controls remain in the file for compatibility, but
+    # the UI must not start a session while No-AI is selected.
+    assert 'aiMode.currentValue !== "disabled"' in interview
+
+
+def test_material_import_disables_ai_consent_for_opaque_files() -> None:
+    career = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/CareerPage.qml"
+    ).read_text(encoding="utf-8")
+    assert 'readonly property bool selectedOpaqueMaterial' in career
+    assert 'objectName: "materialAiCapabilityNotice"' in career
+    assert "PDF / DOCX 仅保存原文件" in career
+    assert "aiAccess.checked && !root.selectedOpaqueMaterial" in career
+
+
 @pytest.mark.parametrize("page", ["home", "learn", "exercise", "interview"])
 def test_truthful_desktop_pages_render_at_1080x680(
     page: str, tmp_path: Path

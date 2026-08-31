@@ -290,7 +290,8 @@ class AppController(QObject):
         self.repo_root = repo_root.resolve()
         self.service = service or ApplicationService(self.repo_root)
         self._demo_mode = demo_page is not None
-        self._profile_id = profile_id
+        requested_profile_id = str(profile_id or "default").strip() or "default"
+        self._profile_id = requested_profile_id
         self._profile_display_name = profile_id
         self._page = demo_page or "home"
         self._onboarding = False
@@ -347,6 +348,13 @@ class AppController(QObject):
         self._workers: set[Worker] = set()
         self._thread_pool = QThreadPool.globalInstance()
         self._settings = QSettings("ComistryMo", "LLMInterviewLab")
+        # A packaged desktop launch has no CLI argument with which to recover
+        # the last Profile.  Store only the safe internal id, scoped to this
+        # repository/data root, so a different checkout can never select a
+        # Profile merely because it used the same Qt settings namespace.
+        self._active_profile_key = self._active_profile_settings_key()
+        if not self._demo_mode:
+            self._profile_id = self._restore_active_profile_id(requested_profile_id)
         self._theme = str(self._settings.value("theme", "system"))
         self._font_scale = float(self._settings.value("fontScale", 1.0))
         if demo_page:
@@ -566,6 +574,17 @@ class AppController(QObject):
 
     @Property(str, notify=stateChanged)
     def profileId(self) -> str:
+        return self._profile_id
+
+    @Property(str, notify=stateChanged)
+    def activeProfileId(self) -> str:
+        """The Profile selected for this desktop process.
+
+        This is deliberately an alias of the controller's explicit Profile,
+        not a second state source.  It is useful to the shell when explaining
+        which local data will be opened after a restart.
+        """
+
         return self._profile_id
 
     @Property(str, notify=stateChanged)
@@ -965,6 +984,53 @@ class AppController(QObject):
             self._busy = value
             self.busyChanged.emit()
 
+    def _active_profile_settings_key(self) -> str:
+        """Return a stable, non-sensitive QSettings key for this data root."""
+
+        root_digest = hashlib.sha256(
+            str(self.repo_root).encode("utf-8", errors="replace")
+        ).hexdigest()[:16]
+        return f"profiles/{root_digest}/active_profile_id"
+
+    def _restore_active_profile_id(self, requested: str) -> str:
+        """Recover the last explicitly opened Profile without enumeration.
+
+        ``default`` is the only implicit request.  Explicit CLI/profile
+        selections always win, which keeps the public CLI deterministic and
+        prevents a stale desktop preference from opening another Profile.
+        """
+
+        if requested != "default":
+            return requested
+        candidate = str(self._settings.value(self._active_profile_key, "") or "").strip()
+        if not candidate:
+            return requested
+        try:
+            validate_profile_id(candidate)
+            path = profile_paths(self.repo_root, candidate).profile_file
+        except (TypeError, ValueError, WorkspaceError):
+            return requested
+        return candidate if path.is_file() else requested
+
+    def _persist_active_profile_id(self) -> None:
+        """Remember the current safe Profile for the next desktop launch."""
+
+        if self._demo_mode or not self._profile_id:
+            return
+        try:
+            validate_profile_id(self._profile_id)
+            self._settings.setValue(self._active_profile_key, self._profile_id)
+            # ``sync`` is intentionally limited to this small preference;
+            # Profile facts and learning events remain Workspace sources of
+            # truth and are never mirrored into QSettings.
+            self._settings.sync()
+        except (TypeError, ValueError, WorkspaceError):
+            # A preference failure must not block local training.  The next
+            # launch will simply fall back to the requested/default Profile.
+            logging.getLogger("llm_interview_lab.desktop").warning(
+                "active_profile_preference_unavailable error_type=preference"
+            )
+
     def _load_profile_state(self) -> None:
         self._cancel_coach_stream_for_reload()
         paths = profile_paths(self.repo_root, self._profile_id)
@@ -1038,6 +1104,7 @@ class AppController(QObject):
                 type(error).__name__,
             )
         self._onboarding = False
+        self._persist_active_profile_id()
 
     def _load_coach_state(self) -> None:
         """Load only the selected Profile's resumable Coach conversations."""

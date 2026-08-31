@@ -20,6 +20,8 @@ Thumbs.db
 .external/
 /workspace/profiles/*
 !/workspace/profiles/.gitkeep
+# Maintainer-only screenshots, probes, and validation reports stay local.
+/workspace/maintainer/
 private/
 data/private/
 state/local/

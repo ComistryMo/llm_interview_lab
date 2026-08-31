@@ -474,6 +474,22 @@ Item {
                     }
                     Text { visible: leftPanel.setupVisible; text: "面试官"; color: root.palette.muted; font.pixelSize: 12 }
                     ComboBox { visible: leftPanel.setupVisible; id: aiMode; width: parent.width; model: [{id:"disabled", label:"手动 / 无 AI"}, {id:"provider", label:"普通 LLM API"}, {id:"codex", label:"Codex"}]; textRole: "label"; valueRole: "id" }
+                    Text {
+                        objectName: "noAiInterviewNotice"
+                        width: parent.width
+                        visible: leftPanel.setupVisible && aiMode.currentValue === "disabled"
+                        text: "模拟面试需要 AI 才能根据回答追问并生成有证据的复盘。No-AI 模式仍可继续刷题、运行测试、复盘和间隔复测。"
+                        color: root.palette.warning
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 12
+                    }
+                    Button {
+                        objectName: "goToConnectionsFromInterview"
+                        width: parent.width
+                        visible: leftPanel.setupVisible && aiMode.currentValue === "disabled"
+                        text: "去 AI 连接"
+                        onClicked: app.navigate("connections")
+                    }
                     CheckBox {
                         id: useMaterial
                         width: parent.width
@@ -521,6 +537,7 @@ Item {
                         enabled: root.fallbackAvailable()
                                  && !!role.currentValue
                                  && !app.busy
+                                 && aiMode.currentValue !== "disabled"
                                  && (!useMaterial.checked || (material.currentIndex >= 0 && app.materials[material.currentIndex].ai_access && consent.checked))
                         onClicked: nonCodingInterviewDialog.open()
                     }
@@ -557,6 +574,7 @@ Item {
                         enabled: root.configuration.available !== false
                                  && !!role.currentValue
                                  && !app.busy
+                                 && aiMode.currentValue !== "disabled"
                                  && (!useMaterial.checked || (material.currentIndex >= 0 && app.materials[material.currentIndex].ai_access && consent.checked))
                         // Creating a session freezes the public question plan
                         // and starts the authoritative clock.  Require an
@@ -1298,6 +1316,14 @@ Item {
         title: "确认冻结本场面试？"
         standardButtons: Dialog.Cancel | Dialog.Ok
         onAccepted: {
+            // Keep the boundary authoritative even if a stale dialog remains
+            // open while the user changes the interviewer selector.  No-AI
+            // can run Practice, but must never create a faux interview
+            // session from the fixed fallback content.
+            if (aiMode.currentValue === "disabled") {
+                app.navigate("connections")
+                return
+            }
             if (useMaterial.checked)
                 app.createTailoredInterview(
                     role.currentValue,
@@ -1453,7 +1479,12 @@ Item {
                 text: "确认开始专项"
                 highlighted: true
                 enabled: !app.busy
+                         && aiMode.currentValue !== "disabled"
                 onClicked: {
+                    if (aiMode.currentValue === "disabled") {
+                        nonCodingInterviewDialog.close()
+                        return
+                    }
                     nonCodingInterviewDialog.close()
                     app.createNonCodingInterview(
                         role.currentValue,

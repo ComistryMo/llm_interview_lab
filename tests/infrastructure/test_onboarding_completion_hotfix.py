@@ -112,6 +112,34 @@ def test_clean_no_ai_onboarding_enters_first_problem_and_can_resume(
     controller.shutdown()
 
 
+def test_default_desktop_restart_restores_the_last_profile(
+    tmp_path: Path, qapp
+) -> None:
+    """A packaged-style launch with the implicit default id keeps its Profile."""
+
+    root = _repository(tmp_path)
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(
+        QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings")
+    )
+
+    first = AppController(root, profile_id="default")
+    assert first.completeOnboardingWithDisplayName(
+        "中文后训练准备", "post_training_engineer", "new_grad", "disabled", "{}"
+    )
+    created_id = first.profileId
+    assert created_id != "default"
+    assert first.profileDisplayName == "中文后训练准备"
+    first.shutdown()
+
+    reopened = AppController(root, profile_id="default")
+    assert reopened.profileId == created_id
+    assert reopened.activeProfileId == created_id
+    assert reopened.profileDisplayName == "中文后训练准备"
+    assert reopened.onboardingRequired is False
+    reopened.shutdown()
+
+
 @pytest.mark.parametrize(
     ("profile_id", "role_id", "seniority", "ai_mode", "assessment", "code"),
     [

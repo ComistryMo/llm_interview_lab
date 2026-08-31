@@ -265,7 +265,8 @@ def main(argv: list[str] | None = None) -> int:
     preferred_ui_fonts = (
         ("Microsoft YaHei UI", "Microsoft YaHei")
         if sys.platform == "win32"
-        else ("PingFang SC",) if sys.platform == "darwin" else ()
+        else ("PingFang SC",) if sys.platform == "darwin"
+        else ("Noto Sans SC", "Noto Sans CJK SC", "WenQuanYi Zen Hei")
     )
     installed_families = set(QFontDatabase.families())
     for family in preferred_ui_fonts:

@@ -41,11 +41,12 @@ ApplicationWindow {
     }
     property var colors: appTheme.legacyPalette
     // Prefer the platform's bundled CJK UI face when it is available.  The
-    // empty Linux value deliberately keeps Qt's normal fallback chain intact;
-    // forcing a font that is not installed is what turns Chinese copy into
-    // tofu on minimal CI images.
+    // Keep an installed CJK face explicit on Linux/offscreen builds.  If it is
+    // unavailable, Qt falls back to the platform default; the Python entry
+    // point makes the same best-effort choice for raw Qt controls.
     property string uiFontFamily: Qt.platform.os === "windows" ? "Microsoft YaHei UI"
-                                       : Qt.platform.os === "osx" ? "PingFang SC" : ""
+                                       : Qt.platform.os === "osx" ? "PingFang SC"
+                                       : "Noto Sans SC"
     readonly property string layoutMode: width < 1040 ? "compact"
                                          : width < 1400 ? "standard" : "wide"
     readonly property bool compactShell: layoutMode !== "wide"
@@ -577,7 +578,7 @@ ApplicationWindow {
                 }
                 ExercisePage { app: backend; palette: window.colors }
                 InterviewPage { app: backend; palette: window.colors }
-                CoachPage { app: backend; palette: window.colors }
+                CoachPage { app: backend; palette: window.colors; theme: appTheme }
                 ProgressPage { app: backend; palette: window.colors }
                 ConnectionsPage { app: backend; palette: window.colors }
                 SettingsPage { app: backend; palette: window.colors }

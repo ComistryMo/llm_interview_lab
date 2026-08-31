@@ -526,7 +526,11 @@ Flickable {
             visible: !root.activeInterview && !!app.recentInterview
                      && !!app.recentInterview.interview_id
             Layout.fillWidth: true
-            Layout.preferredHeight: root.compactLayout ? 90 : 82
+            // Keep enough vertical room for localized status/time strings at
+            // narrow widths.  A fixed 82px row clipped the second line and
+            // made the report action appear to overlap the interview summary.
+            Layout.preferredHeight: root.compactLayout ? 118 : 96
+            Layout.minimumHeight: root.compactLayout ? 118 : 96
             level: "base"
             padding: 14
 
@@ -535,6 +539,7 @@ Flickable {
                 spacing: 12
                 ColumnLayout {
                     Layout.fillWidth: true
+                    Layout.minimumWidth: 0
                     spacing: 2
                     LabText { theme: root.theme; text: "最近面试"; tone: "muted"; variant: "caption" }
                     LabText {
@@ -546,6 +551,9 @@ Flickable {
                                  || app.recentInterview.overall_score === null
                                  ? "尚未评分" : String(app.recentInterview.overall_score) + " / 100")
                         strong: true
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
                     }
                     LabText {
                         theme: root.theme
@@ -553,6 +561,9 @@ Flickable {
                         text: app.recentInterview.finished_at || "时间未记录"
                         tone: "muted"
                         variant: "caption"
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
                     }
                 }
                 LabButton {
@@ -561,6 +572,7 @@ Flickable {
                     text: "查看报告"
                     variant: "ghost"
                     compact: true
+                    Layout.minimumWidth: 72
                     onClicked: app.navigate("interview")
                 }
             }

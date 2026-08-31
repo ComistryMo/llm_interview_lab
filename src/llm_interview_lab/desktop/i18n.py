@@ -130,6 +130,10 @@ def friendly_error(error: BaseException | str) -> str:
         return "这道题还没有开始作答，请先点击“开始”后再运行测试。"
     if "submission could not be saved" in message:
         return "答案保存失败，请检查本地学习档案权限后重试。"
+    if "pdf and docx" in message or (
+        "opaque" in message and "ai_access" in message
+    ):
+        return "当前版本只保存 PDF / DOCX 原文件，不读取其中内容；如需授权 AI，请选择 UTF-8 文本材料。"
     if "缺少满足岗位、难度与技能要求" in message or "no eligible fixed item" in message:
         return "当前岗位、阶段和难度没有完整的固定面试题组合，请更换难度或岗位后重试。"
     if "retention is not due until" in message:

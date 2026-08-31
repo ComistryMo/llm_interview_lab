@@ -12,6 +12,16 @@ Flickable {
     contentWidth: width
     contentHeight: content.implicitHeight + 56
     clip: true
+    // PDF/DOCX are deliberately stored as opaque files by the current
+    // material contract.  Keep the consent control aligned with that
+    // capability before the user clicks the import action; the backend still
+    // remains the final authority and will reject an invalid request.
+    readonly property bool selectedOpaqueMaterial: {
+        var value = String(selectedPath.text || "").toLowerCase()
+        return value.endsWith(".pdf") || value.endsWith(".docx")
+    }
+    onSelectedOpaqueMaterialChanged: if (selectedOpaqueMaterial && aiAccess)
+        aiAccess.checked = false
     ScrollBar.vertical: ScrollBar {
         width: 6
         policy: ScrollBar.AlwaysOn
@@ -98,7 +108,22 @@ Flickable {
             }
             CheckBox {
                 id: aiAccess
-                text: "允许在单次明确授权后把这个 UTF-8 文本文件加入 AI 上下文"
+                objectName: "materialAiAccess"
+                enabled: selectedPath.text.length > 0
+                         && !root.selectedOpaqueMaterial
+                         && !app.busy
+                text: root.selectedOpaqueMaterial
+                      ? "PDF / DOCX 仅保存原文件，当前版本不会读取内容"
+                      : "允许在单次明确授权后把这个 UTF-8 文本文件加入 AI 上下文"
+            }
+            Text {
+                objectName: "materialAiCapabilityNotice"
+                visible: selectedPath.text.length > 0 && root.selectedOpaqueMaterial
+                Layout.fillWidth: true
+                text: "当前版本支持保存 PDF / DOCX，但不会提取或发送其中的内容。请选择 .md、.txt、.json、.yaml 或 .yml，才能授予 AI 逐场读取权限。"
+                color: root.palette.warning
+                font.pixelSize: 12
+                wrapMode: Text.Wrap
             }
             Flow {
                 width: parent.width
@@ -118,7 +143,7 @@ Flickable {
                         // Keep the form intact when validation, copying, or
                         // consent fails.  The controller returns a boolean so
                         // a failed import is immediately retryable.
-                        var added = app.addMaterial(filePicker.selectedFile.toString(), materialKind.currentValue || "other", materialTitle.text, aiAccess.checked)
+                        var added = app.addMaterial(filePicker.selectedFile.toString(), materialKind.currentValue || "other", materialTitle.text, aiAccess.checked && !root.selectedOpaqueMaterial)
                         if (added) {
                             materialTitle.text = ""
                             selectedPath.text = ""
@@ -197,6 +222,10 @@ Flickable {
         title: "选择一份求职材料"
         fileMode: FileDialog.OpenFile
         nameFilters: ["Supported files (*.md *.txt *.json *.yaml *.yml *.pdf *.docx)"]
-        onAccepted: selectedPath.text = selectedFile.toString()
+        onAccepted: {
+            selectedPath.text = selectedFile.toString()
+            // Do not carry a text-file consent into an opaque file selection.
+            aiAccess.checked = false
+        }
     }
 }
