@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "language": "zh-CN",
+  "prototype": "Product V1 Coding Workbench",
+  "source_commit": "fa0c10afb605ccbbd7143f8bac977392dccb03d8",
+  "generated_at": "2026-08-31T10:08:28.038193+00:00",
+  "viewport": "1280x800",
+  "screenshots": [
+    {
+      "path": "docs/images/product-v1/graphite-blue-light.png",
+      "width": 1280,
+      "height": 800,
+      "sha256": "eda8714cf4633ff1abb0c4de94f9d49b7ff0fd25312cb562dab8fd719c185781",
+      "direction": "graphite-blue",
+      "theme": "light",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/product-v1/graphite-blue-dark.png",
+      "width": 1280,
+      "height": 800,
+      "sha256": "d4f706e8ef2a4c95a1f1c09f24c6610b183ce0ce02c693c0c6fd619e07c84fc2",
+      "direction": "graphite-blue",
+      "theme": "dark",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/product-v1/obsidian-violet-light.png",
+      "width": 1280,
+      "height": 800,
+      "sha256": "3cc4f38243e5b5dd92fc657c0b2688f50616704e0fe439ab320a5fd7e0384bcf",
+      "direction": "obsidian-violet",
+      "theme": "light",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/product-v1/obsidian-violet-dark.png",
+      "width": 1280,
+      "height": 800,
+      "sha256": "7f3360bbdf1d347b92a39559e58f5f90e9b0429a52371d24097b0de013811722",
+      "direction": "obsidian-violet",
+      "theme": "dark",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/product-v1/warm-frost-light.png",
+      "width": 1280,
+      "height": 800,
+      "sha256": "f7b8c6e9480ecf380b4dcbe6fc94a38a816fa5fc8d10941e08ca594b6060ef2c",
+      "direction": "warm-frost",
+      "theme": "light",
+      "synthetic": true
+    },
+    {
+      "path": "docs/images/product-v1/warm-frost-dark.png",
+      "width": 1280,
+      "height": 800,
+      "sha256": "55dae5b4a6f1cd8b69e547d03bf4f772aae6ea3a0c89be98be6638d9dba3ac85",
+      "direction": "warm-frost",
+      "theme": "dark",
+      "synthetic": true
+    }
+  ]
+}
