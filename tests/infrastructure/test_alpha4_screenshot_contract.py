@@ -62,7 +62,10 @@ def test_screenshot_source_commit_is_resolvable_history_evidence() -> None:
         "src/llm_interview_lab/desktop/resources",
         "src/llm_interview_lab/desktop/main.py",
         "src/llm_interview_lab/desktop/controller.py",
+        "src/llm_interview_lab/desktop/i18n.py",
         "src/llm_interview_lab/application.py",
+        "src/llm_interview_lab/roles.py",
+        "curriculum/roles",
         "scripts/capture_desktop_screenshots.py",
     )
     changed = _git(
