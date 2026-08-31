@@ -2,103 +2,85 @@
 
 ## 基线
 
-- 代码与截图提交 HEAD：`e1536f2b61c39d833a86a9ff3d19464fa50a2c73`
-- 分支：`feature/real-user-iteration-20260831`
-- 基线来源：`v0.4.0-alpha.3` / `36db5ac3ba21580323a5116e356830badabcc0f4`
-- 工作树：已提交的改动之外干净；用户已有的未跟踪文件未读取、未修改。
-- Python：`3.11.9`（`py -3.11`）；系统 `python` 为 3.9.2，因此未用它运行项目测试。
-- 报告与计划随后以独立文档提交；最终分支 HEAD 以 `git rev-parse HEAD` 为准。
+- HEAD / branch / dirty state：`feature/real-user-iteration-20260831`；基线提交 `d52238f646aee5aa7cc85ce2ba740b272aaa9c5a`；本报告对应的最终提交以 `git rev-parse HEAD` 为准。
+- Python：`3.11.9`（统一使用 `py -3.11`）。
+- 既有唯一一次本地全量回归：`py -3.11 -m pytest -q` → **507 passed, 14 skipped in 834.32s**。本轮没有重复运行。
 
 ## 实际根因
 
-- 岗位选择：现有首用流程本身可以创建岗位，但桌面启动没有可靠记住上次显式选择的 Profile；同时 Linux/offscreen 的字体回退会让中文截图出现不可读字符。现在用按数据根目录隔离的 QSettings 只保存安全的内部 Profile ID，并为 Qt/Python 选择已安装的 CJK 字体。
-- 开始训练：创建 Profile 后首题打开与 onboarding 成功被耦合，首题资源异常时容易把用户留在首用页。现在保留 Profile 成功状态，首题失败回退首页并给出可操作提示；默认 Profile 重启时恢复上次有效 Profile。
-- 材料权限：PDF/DOCX 只能作为不透明原文件保存，旧界面仍可勾选 AI 读取。现在选择这类文件时提前禁用并解释 AI 权限，后端仍是最终校验者。
-- Coach/Home：Coach 新建会话按钮使用旧原生控件导致浅色主题对比不足；输入框原生 placeholder 与自定义提示重叠；紧凑首页的最近面试卡片文字被裁切。已分别改为主题按钮、自定义占位提示和可换行的卡片布局。
-- No-AI 面试：无 AI 模式此前仍暴露容易误解的启动入口。现在明确显示 No-AI 边界并提供前往 AI 连接的路径；未配置 AI 不会破坏本地训练。
-- Windows 无响应：本轮在当前环境没有可复现的 Windows Explorer 双击打包运行证据，也没有把旧的发布包重新宣称为已验证修复。现有源码级启动/打包契约通过，但真实 Windows 包验收仍是发布阻断项。
+- 首用材料边界此前只把 PDF/DOCX 当作不透明附件，无法在获得明确授权后提供可审计的文本上下文。
+- 个性化计划缺少“上下文预览 → Provider 生成 → 严格解码 → 用户确认 → 冻结”的完整链路，存在把模型输出直接当作面试事实的风险。
+- 语音回答没有真实的本地录音、授权转录和可编辑草稿通道；跨题/跨 Profile 状态隔离也需要显式身份键。
+- 连接状态曾可能由界面展示文案推断；这会把“已连接”文字误当作真实可用状态。
+- 材料卡片在缺少可选 `text_snapshot` 字段时会提前求值，导致 QML 页面/截图出现 TypeError。
+
+## Slice D
+
+- 已实现 PDF 文本提取（不做 OCR）和 DOCX 段落/表格提取；原文件仍保留在当前 ignored Profile，文本快照绑定源文件 SHA-256，源文件变更后授权失效。
+- 已实现受控个性化面试 Golden Path：`post_training_engineer + new_grad + medium`。计划上下文包含岗位蓝图、已审核知识主题和用户逐场授权的材料；Provider 只能返回非代码问题文字，Coding 题、Rubric、时长和题型仍由本地确定性代码决定。
+- 计划在写入前必须预览并显式确认；严格检查 JSON、问题数量、round/kind、标题/提示长度和整数位置，计划与上下文 SHA 一起冻结到当前 Profile。
+- 已实现真实 Qt Multimedia 本地录音：`录音 → 停止 → 选择连接并勾选授权 → OpenAI-compatible 转录 → 可编辑草稿`。转录失败不阻塞文字回答；音频不写入事件日志、普通配置或 Git。
+- 连接 `ready` 是控制器布尔字段，仅在测试成功后置为真；QML 不再解析“已连接”等展示字符串。
+- 切换 Profile、加载无面试 Profile 或切换问题时会清理录音、转录和待确认计划，防止状态串档。
+- 修复材料卡片对缺失快照字段的安全读取，避免后端为空 fixture 触发 QML TypeError。
 
 ## Luna Max 委派
 
-- Task：请求 Luna Max 对 UI、Profile 和 Windows 启动分别进行独立实现/审查。
-- 调用标识：多次调用均被服务端限流（HTTP 429）；另一次替代模型因容量不足失败。
-- 返回结果：没有可采纳的子 Agent patch 或报告。
-- Main Review：按同一任务边界由主控完成最小实现和逐文件审查；未伪造 Luna 输出，状态记为 `LUNA_DELEGATION_UNAVAILABLE`。
+- Task：分别请求子 Agent 审查 UI/Profile/Windows 与本轮 Slice D。
+- 调用标识：多次服务端返回 HTTP 429；一次替代模型因容量不足失败。
+- 返回结果：没有可采纳的 Patch 或独立报告。
+- Main Review：记录 `LUNA_DELEGATION_UNAVAILABLE`，由主控按同一边界完成实现和逐文件审查；未伪造子 Agent 结果，也未重复调用。
 
 ## 修改文件
 
-- `.gitignore`：忽略维护者本地截图和探针目录，不改变用户 Profile 规则。
-- `plans/active/real-user-iteration-20260831.md`：记录切片、测试预算和未满足的发布条件。
-- `src/llm_interview_lab/desktop/controller.py`：恢复/持久化当前 Profile ID，限定显式 Profile 优先，不枚举其他 Profile。
-- `src/llm_interview_lab/desktop/i18n.py`：为 PDF/DOCX 能力边界提供可执行中文提示。
-- `src/llm_interview_lab/desktop/main.py`：为 Linux 原生 Qt 控件选择可用 CJK 字体。
-- `src/llm_interview_lab/desktop/qml/Main.qml`：统一字体回退，并向 Coach 页传递主题对象。
-- `src/llm_interview_lab/desktop/qml/pages/CareerPage.qml`：在导入前展示 PDF/DOCX 的 AI 能力限制并防止错误授权。
-- `src/llm_interview_lab/desktop/qml/pages/CoachPage.qml`：统一主按钮主题、修复模型标签和输入框占位提示布局。
-- `src/llm_interview_lab/desktop/qml/pages/HomePage.qml`：修复紧凑宽度下最近面试卡片裁切。
-- `src/llm_interview_lab/desktop/qml/pages/InterviewPage.qml`：明确 No-AI 面试边界和 AI 连接入口。
-- `tests/infrastructure/test_desktop.py`：补充 Profile 恢复、材料能力和页面契约覆盖。
-- `tests/infrastructure/test_onboarding_completion_hotfix.py`：补充默认 Profile 重启恢复和 No-AI 首用路径。
-- `docs/images/*`、`docs/images/screenshot-manifest.json`：使用当前代码生成 64 格合成截图矩阵，标记 `synthetic: true`。
-- `REAL_USER_ITERATION_FINAL_ZH.md`：本报告。
+- `src/llm_interview_lab/materials.py`、`workspace/schema/material.schema.json`：材料文本快照、SHA 绑定、路径与 UTF-8 校验。
+- `src/llm_interview_lab/ai/context_builder.py`、`src/llm_interview_lab/ai/interview_planner.py`：最小上下文预览和 Provider 输出严格解码。
+- `src/llm_interview_lab/application.py`、`src/llm_interview_lab/role_interviews.py`、`workspace/schema/role-interview-session.schema.json`：预览/确认/冻结个性化面试计划，保留旧面试 API。
+- `src/llm_interview_lab/ai/transcription.py`、`src/llm_interview_lab/desktop/voice.py`、`src/llm_interview_lab/desktop/controller.py`：本地录音、显式远程授权、转录草稿和异步身份校验。
+- `src/llm_interview_lab/desktop/qml/pages/CareerPage.qml`、`InterviewPage.qml`、`desktop/i18n.py`：能力提示、计划预览、语音控件与可执行错误。
+- `tests/infrastructure/test_career_materials.py`、`test_role_interviews.py`、`test_transcription.py`、`test_voice.py`、`test_desktop.py`：快照、计划、严格字段、语音、Profile/异步隔离和 QML 契约。
+- `pyproject.toml`：加入 `pypdf` 运行依赖；README 与 `docs/ai-connections.md`、`docs/desktop-app.md`、`docs/interviews.md` 同步真实边界。
 
 ## 目标测试
 
-使用 Python 3.11 定向执行，未用系统 Python 3.9：
-
-- `py -3.11 -m pytest tests/infrastructure/test_onboarding_completion_hotfix.py -k "default_desktop_restart_restores_the_last_profile or clean_no_ai_onboarding" -q`：`2 passed`。
-- `py -3.11 -m pytest tests/infrastructure/test_onboarding_qml_hotfix.py -q`：`12 passed`。
-- `py -3.11 -m pytest tests/infrastructure/test_career_materials.py -q`：`20 passed, 3 skipped`。
-- `py -3.11 -m pytest tests/infrastructure/test_desktop.py -k "interview_setup_uses_profile_role_availability_and_real_report or no_ai_interview_setup_explains_the_ai_boundary or material_import_disables_ai_consent" -q`：`3 passed`。
-- `py -3.11 -m pytest tests/infrastructure/test_desktop.py -k "truthful_desktop_pages_render_at_1080x680" -q`：`4 passed`。
-- `py -3.11 -m pytest tests/infrastructure/test_desktop.py -k "truthful_desktop_pages_render_at_1080x680 or coach" -q`：`4 passed`。
-- `py -3.11 -m pytest tests/infrastructure/test_desktop_platform.py -q`：`4 passed, 1 skipped`。
-- `py -3.11 -m pytest tests/infrastructure/test_coach_sessions.py -q`：`5 passed`。
-- `py -3.11 -m pytest tests/infrastructure/test_chinese_docs.py -q`：`10 passed`。
-- `py -3.11 -m pytest tests/infrastructure/test_windows_startup_hotfix.py -q`：`9 passed`。
-- `py -3.11 -m pytest tests/infrastructure/test_alpha4_home_p1.py -q`：`4 passed`。
-- `py -3.11 -m pytest tests/infrastructure/test_alpha4_learn_p1.py -q`：`4 passed`。
-- `py -3.11 -m pytest tests/infrastructure/test_alpha3_truthful_ux.py -q`：`12 passed, 1 skipped`。
-- `py -3.11 -m pytest tests/infrastructure/test_alpha4_screenshot_contract.py -q`：`2 passed`。
-- `git diff --check`、目标 Python `py_compile`：通过。
-- 本轮唯一一次本地全量：`py -3.11 -m pytest -q` → **`507 passed, 14 skipped in 834.32s`**。
-
-截图证据：`py -3.11 scripts/capture_desktop_screenshots.py --theme all --delay-ms 250` 成功生成 64 格矩阵；人工查看 Windows QPA 的 onboarding、home、coach 截图，未见岗位卡片重叠、选中态消失或输入框文字碰撞。
+- `py -3.11 -m pytest tests/infrastructure/test_career_materials.py -q` → **25 passed, 3 skipped**。
+- `py -3.11 -m pytest tests/infrastructure/test_role_interviews.py -k "personalized_plan" -q` → **5 passed, 30 deselected**。
+- `py -3.11 -m pytest tests/infrastructure/test_desktop.py -k "personalized_plan or transcription" -q` → **4 passed, 29 deselected**。
+- `py -3.11 -m pytest tests/infrastructure/test_desktop.py -k "truthful_desktop_pages_render_at_1080x680" -q` → **4 passed, 29 deselected**。
+- `py -3.11 -m pytest tests/infrastructure/test_desktop.py -k "personalized_plan or transcription or connection or truthful_desktop_pages_render_at_1080x680" -q` → **9 passed, 24 deselected in 38.03s**。
+- `py -3.11 -m pytest tests/infrastructure/test_desktop.py -k "connection or demo_controller_never_persists" -q` → **1 passed, 32 deselected**。
+- `py -3.11 -m pytest tests/infrastructure/test_transcription.py tests/infrastructure/test_voice.py tests/infrastructure/test_role_interviews.py -q` → **40 passed**（在最后一轮小修复前完成；后续改动由上面的受影响用例覆盖）。
+- 相关模块 `py_compile` 和 `git diff --check` → 通过（QML 仅有换行格式提示，无空白错误）。
 
 ## 全量与 CI 预算
 
-- 本地全量只运行了一次，结果见上。
-- 本轮没有触发新的 RC CI，也没有重复整个 CI 矩阵；因此不能声称远端 CI 已验证本 patch。
-- 曾有一次错误的测试文件名命令返回“file not found”，没有进入测试收集；随后使用正确命令完成截图契约验证。
+- 本地全量严格只执行一次：`507 passed, 14 skipped`。
+- 本轮没有触发新的 RC CI，也没有重复整个 CI 矩阵；计划中的 RC 门禁仍未满足。
 
 ## 实机验收
 
-- macOS：未在本轮使用真实 Mac 设备或新打包产物验收；不能宣称 macOS 首用通过。
-- Windows：未取得本轮 standalone 包的 Explorer 双击、中文路径、空格路径、断网和损坏资源实机证据；不能宣称 Windows 双击问题已修复。
-- 当前可确认的是源码/测试环境中的 No-AI 页面、Profile 恢复、QML 页面和启动契约行为。
+- 本轮未取得 Windows standalone Explorer 双击、中文/空格路径、损坏资源错误框的实机证据。
+- 本轮未取得 macOS 打包产物、真实麦克风、Keychain 或远程付费 Provider 的平台验收证据。
+- 已验证源码测试环境中的 No-AI、Profile 隔离、QML 页面加载和异步结果身份检查。
 
 ## Artifact
 
-- 本轮没有生成或发布新的 Windows/macOS 安装包。
-- `docs/images/` 中的截图均为合成数据，Manifest 标记 `synthetic: true`；不含真实 Profile、答案、材料、Key、Oracle 或 Private Tests。
-- 因没有真实候选 Artifact，本报告不提供虚构的文件大小或 SHA-256。
+- 本轮没有生成或发布新的 Windows/macOS 安装包，因此不提供虚构的大小或 SHA-256。
+- 测试与源码变更未包含真实 Profile、材料正文、答案、Key、Oracle 或 Private Tests。
 
 ## Git / 远端
 
-- 功能分支已推送到 `origin/feature/real-user-iteration-20260831`。
-- 当前没有创建或合并 PR；没有权限凭据可用于 GitHub CLI 操作。
-- 未合并 `main`、未重写历史、未创建新 tag、未发布 Release。
+- 已提交两个逻辑提交：`7f0667d feat(interview): add consent-bound personalized plans and snapshots`、`7ef4c3a feat(interview): add profile-local voice answer flow`。
+- 分支：`feature/real-user-iteration-20260831`。推送、PR 创建和最终工作树状态以收尾命令输出为准；未合并 `main`、未重写历史、未创建 tag 或 Release。
 
 ## 剩余风险
 
-- `LUNA_DELEGATION_UNAVAILABLE`：本轮没有外部子 Agent 结果可交叉审查。
-- `BLOCKED_BY_MISSING_WINDOWS_RUNTIME`：缺少本轮 Windows standalone Explorer 双击验收。
-- `BLOCKED_BY_MISSING_MACOS_RUNTIME`：缺少本轮 macOS 打包/真实设备验收。
-- 语音转写 MVP 仍未实现；本轮未扩大范围。
-- 全量测试虽通过，但 QML 后端为空的既有 fixture 会打印 TypeError 警告；未改变其既有测试语义。
+- `LUNA_DELEGATION_UNAVAILABLE`：没有外部独立子 Agent 结果。
+- `BLOCKED_BY_MISSING_WINDOWS_RUNTIME`：缺少 Windows standalone Explorer 双击和失败弹框验收。
+- `BLOCKED_BY_MISSING_MACOS_RUNTIME`：缺少 macOS 构建/运行和真实 Keychain 验收。
+- 语音 MVP 已有源码级真实录音与可编辑转录路径，但尚未证明所有操作系统的麦克风权限、编解码器和远程服务兼容性。
+- 当前仅开放一个个性化 AI 面试配置；其他岗位和蓝图仍使用确定性固定流程。
 
 ## 最终裁决
 
-**PARTIAL — P0 源码与定向验证完成；发布/实机门禁未满足。**
-
-可以继续审查或推送当前功能分支，但在 RC CI、Windows standalone 双击和 macOS 产物验收完成前，不应合并 `main`、打新 tag 或发布 Release。
+**PARTIAL**：Slice D 的源码闭环和定向验证已完成；由于 RC CI、Windows/macOS 产物和实机验收尚未完成，本分支不满足合并 `main`、打 tag 或发布 Release 的条件。

@@ -22,7 +22,7 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 - OpenAI-compatible；
 - Ollama `/v1`。
 
-源码安装的统一 Provider 层还支持 Anthropic 与 Gemini。第一版不会加入 Embedding、图像生成、语音、RAG、MCP Runtime 或 Tool Marketplace。
+源码安装的统一 Provider 层还支持 Anthropic 与 Gemini。当前语音转录只走 OpenAI / OpenAI-compatible 的 `/audio/transcriptions` 接口；它是面试回答的可选草稿工具，不会自动提交或评分。Embedding、图像生成、RAG、MCP Runtime 与 Tool Marketplace 不在本版本范围内。
 
 ### 安装
 
@@ -42,6 +42,12 @@ Python 3.11 是统一 Provider 可选依赖的推荐版本。
 - Keyring 不可用：不会回退到明文文件，继续使用 No-AI。
 
 界面日志只记录经过清理的错误类别，不记录 Authorization Header、Key 或完整 Prompt。
+
+### 面试语音转录（可选）
+
+非代码面试回答可以先在本机录音，再由用户主动点击“转录到回答框”。录音默认保存在当前学习档案的面试目录；只有选择已测试的 OpenAI / OpenAI-compatible AI 服务并勾选本场远程授权后，音频才会发送。转录结果只是可编辑草稿，仍需检查、修改并点击“提交并锁定回答”。
+
+没有麦克风、转录服务不可用、网络中断或不愿发送音频时，直接使用文字回答即可。应用不会把音频写入 Profile YAML、事件日志或普通配置，也不会因为转录失败阻塞 No-AI 训练。
 
 ## 上下文预览
 
@@ -70,6 +76,8 @@ Python 3.11 是统一 Provider 可选依赖的推荐版本。
 4. 明确同意。
 
 文件变化会让旧 SHA 与授权失效。不得上传公司源码、内部数据、未公开指标、配置、日志、截图或保密文档。
+
+文本型 PDF 与 DOCX 在导入时可生成 SHA-256 绑定的只读文本快照（PDF 不做扫描件 OCR；DOCX 提取段落和表格）。只有快照存在且原文件 SHA 未变化时，才会出现在上下文预览中。无法提取的文件仍可仅保存在本机，但不能勾选 AI 使用。
 
 ## API Key
 
