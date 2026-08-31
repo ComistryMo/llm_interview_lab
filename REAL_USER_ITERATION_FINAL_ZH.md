@@ -2,7 +2,7 @@
 
 ## 基线
 
-- HEAD / branch / dirty state：`79db3fc301128ce509384b66fc2bade4f4147e51` / `feature/real-user-iteration-20260831` / 工作树干净；基线提交 `d52238f646aee5aa7cc85ce2ba740b272aaa9c5a`。
+- 代码集成提交：`79db3fc301128ce509384b66fc2bade4f4147e51`；最终交接时的 HEAD 以 `git rev-parse HEAD` 为准，分支为 `feature/real-user-iteration-20260831`，工作树应保持干净；基线提交 `d52238f646aee5aa7cc85ce2ba740b272aaa9c5a`。
 - Python：`3.11.9`（统一使用 `py -3.11`）。
 - 既有唯一一次本地全量回归：`py -3.11 -m pytest -q` → **507 passed, 14 skipped in 834.32s**。本轮没有重复运行。
 
