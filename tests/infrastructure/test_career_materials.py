@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import hashlib
+from io import BytesIO
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
@@ -18,6 +20,7 @@ from llm_interview_lab.materials import (
     get_material,
     list_materials,
     resolve_material_path,
+    resolve_material_text_path,
 )
 from llm_interview_lab.workspace import WorkspaceError, init_profile, profile_paths
 
@@ -174,8 +177,88 @@ def test_supported_text_formats_are_utf8_and_can_be_ai_readable(
     assert not record.opaque
 
 
+def _pdf_with_text(value: str) -> bytes:
+    from pypdf import PdfWriter
+    from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=612, height=792)
+    font = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+        }
+    )
+    page[NameObject("/Resources")] = DictionaryObject(
+        {
+            NameObject("/Font"): DictionaryObject(
+                {NameObject("/F1"): writer._add_object(font)}
+            )
+        }
+    )
+    stream = DecodedStreamObject()
+    stream.set_data(f"BT /F1 12 Tf 72 720 Td ({value}) Tj ET".encode("ascii"))
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    output = BytesIO()
+    writer.write(output)
+    return output.getvalue()
+
+
+def _docx_with_paragraph_and_table() -> bytes:
+    document = b'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:t>Project summary</w:t></w:r></w:p>
+    <w:tbl><w:tr>
+      <w:tc><w:p><w:r><w:t>Metric</w:t></w:r></w:p></w:tc>
+      <w:tc><w:p><w:r><w:t>Latency</w:t></w:r></w:p></w:tc>
+    </w:tr></w:tbl>
+  </w:body>
+</w:document>'''
+    output = BytesIO()
+    with ZipFile(output, "w", ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", "<Types/>")
+        archive.writestr("word/document.xml", document)
+    return output.getvalue()
+
+
+@pytest.mark.parametrize(
+    ("suffix", "content", "expected"),
+    [
+        (".pdf", _pdf_with_text("Resume evidence"), "Resume evidence"),
+        (".docx", _docx_with_paragraph_and_table(), "Project summary\n\nMetric\tLatency"),
+    ],
+)
+def test_pdf_and_docx_create_sha_bound_ai_text_snapshots(
+    tmp_path: Path,
+    suffix: str,
+    content: bytes,
+    expected: str,
+) -> None:
+    root = _workspace_repo(tmp_path)
+    init_profile(root, "learner-one")
+    source = tmp_path / f"attachment{suffix}"
+    source.write_bytes(content)
+
+    record = add_material(
+        root,
+        "learner-one",
+        source,
+        material_id=f"readable-{suffix[1:]}",
+        kind="research",
+        ai_access=True,
+    )
+    assert record.opaque
+    assert record.ai_access
+    assert record.text_snapshot_source_sha256 == record.sha256
+    snapshot = resolve_material_text_path(root, "learner-one", record)
+    assert snapshot.read_text(encoding="utf-8").strip() == expected
+    assert record.text_snapshot_sha256 == hashlib.sha256(snapshot.read_bytes()).hexdigest()
+
+
 @pytest.mark.parametrize("suffix", [".pdf", ".docx"])
-def test_pdf_and_docx_are_opaque_and_cannot_enable_ai_access(
+def test_unreadable_pdf_and_docx_remain_local_only_and_cannot_enable_ai_access(
     tmp_path: Path,
     suffix: str,
 ) -> None:
@@ -193,10 +276,11 @@ def test_pdf_and_docx_are_opaque_and_cannot_enable_ai_access(
     )
     assert record.opaque
     assert not record.ai_access
+    assert record.text_snapshot_relative_path is None
 
     second = tmp_path / f"second{suffix}"
     second.write_bytes(b"another opaque fixture")
-    with pytest.raises(MaterialError, match="opaque"):
+    with pytest.raises(MaterialError, match="PDF|DOCX"):
         add_material(
             root,
             "learner-one",
@@ -205,6 +289,52 @@ def test_pdf_and_docx_are_opaque_and_cannot_enable_ai_access(
             kind="research",
             ai_access=True,
         )
+
+
+@pytest.mark.parametrize(
+    ("suffix", "content"),
+    [
+        (".pdf", _pdf_with_text("Original PDF evidence")),
+        (".docx", _docx_with_paragraph_and_table()),
+    ],
+)
+def test_opaque_text_snapshot_invalidates_when_source_changes(
+    tmp_path: Path, suffix: str, content: bytes
+) -> None:
+    root = _workspace_repo(tmp_path)
+    init_profile(root, "learner-one")
+    source = tmp_path / f"attachment{suffix}"
+    source.write_bytes(content)
+    record = add_material(
+        root,
+        "learner-one",
+        source,
+        material_id=f"stale-{suffix[1:]}",
+        kind="resume",
+        ai_access=True,
+    )
+    stored = resolve_material_path(root, "learner-one", record)
+    stored.write_bytes(b"replaced source bytes")
+    with pytest.raises(MaterialError, match="does not match manifest"):
+        resolve_material_text_path(root, "learner-one", record)
+
+
+def test_local_only_opaque_material_does_not_duplicate_extracted_text(
+    tmp_path: Path,
+) -> None:
+    root = _workspace_repo(tmp_path)
+    init_profile(root, "learner-one")
+    source = tmp_path / "local-only.pdf"
+    source.write_bytes(_pdf_with_text("Private local evidence"))
+    record = add_material(
+        root,
+        "learner-one",
+        source,
+        material_id="local-only-pdf",
+        kind="resume",
+        ai_access=False,
+    )
+    assert record.text_snapshot_relative_path is None
 
 
 def test_invalid_utf8_unsupported_type_directory_and_oversize_are_rejected(

@@ -13,7 +13,12 @@ import pytest
 
 from llm_interview_lab.ai.context_builder import (
     ContextBuilderError,
+    build_role_interview_plan_context_preview,
     build_role_interview_context_preview,
+)
+from llm_interview_lab.ai.interview_planner import (
+    InterviewPlannerError,
+    decode_personalized_questions,
 )
 from llm_interview_lab.catalog import load_catalog
 from llm_interview_lab.application import ApplicationService
@@ -21,6 +26,7 @@ from llm_interview_lab.context import build_interview_context, serialize_context
 from llm_interview_lab.materials import add_material, resolve_material_path
 from llm_interview_lab.role_interviews import (
     RoleInterviewError,
+    _build_questions,
     create_role_interview,
     current_role_question,
     finish_role_interview,
@@ -32,6 +38,7 @@ from llm_interview_lab.role_interviews import (
     role_interview_report,
     start_role_interview,
     pause_role_interview,
+    preview_personalized_role_interview,
     resume_role_interview,
     role_interview_state,
 )
@@ -96,6 +103,197 @@ def _answer_and_score_all(root: Path, interview_id: str, *, profile: str = "lear
             source="human",
             confidence="high",
             now=T0 + timedelta(minutes=3),
+        )
+
+
+def test_personalized_plan_is_previewed_then_freezes_ai_questions_and_catalog_coding(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    source = tmp_path / "resume.md"
+    source.write_text(
+        "# Sanitized resume\n\nBuilt a toy preference-data validator; metrics need confirmation.\n",
+        encoding="utf-8",
+    )
+    material = add_material(
+        root,
+        "learner-one",
+        source,
+        material_id="resume-main",
+        kind="resume",
+        ai_access=True,
+    )
+    service = ApplicationService(root)
+    context = service.personalized_interview_context(
+        "learner-one",
+        role_id="post_training_engineer",
+        seniority="new_grad",
+        difficulty="medium",
+        material_ids=(material.id,),
+        consent_materials=True,
+    )
+    context_sha = hashlib.sha256(context.selected_text.encode("utf-8")).hexdigest()
+    knowledge_part = next(
+        part for part in context.parts if part.id == "knowledge_themes"
+    )
+    assert "EGT-TRN-" in knowledge_part.content
+    assert "answer_outline" not in knowledge_part.content
+    blueprint = service.roles.blueprint_for("post_training_engineer", "new_grad")
+    generated = decode_personalized_questions(
+        json.dumps(
+            {
+                "questions": [
+                    {
+                        "round_index": 1,
+                        "kind": "oral",
+                        "title": "偏好优化边界",
+                        "prompt": "请结合你明确确认过的经历，解释偏好优化中的 reference policy 与长度偏差；未知事实请先说明。",
+                    },
+                    {
+                        "round_index": 2,
+                        "kind": "evaluation_case",
+                        "title": "验证器评测设计",
+                        "prompt": "请为材料中的偏好数据验证器设计离线评测，并区分已知证据、假设与仍需确认的信息。",
+                    },
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        blueprint,
+    )
+
+    preview = preview_personalized_role_interview(
+        root,
+        "learner-one",
+        service.catalog,
+        service.roles,
+        role_id="post_training_engineer",
+        seniority="new_grad",
+        difficulty="medium",
+        generated_questions=generated,
+        plan_context_sha256=context_sha,
+        material_ids=(material.id,),
+        consent_materials=True,
+    )
+    assert list(profile_paths(root, "learner-one").interviews_root.iterdir()) == []
+    assert [question["source"]["kind"] for question in preview["questions"]] == [
+        "catalog_problem",
+        "ai_generated",
+        "ai_generated",
+    ]
+    assert preview["questions"][0]["source"]["id"] == "PT-005"
+    assert all(
+        question["source"].get("context_sha256") == context_sha
+        for question in preview["questions"][1:]
+    )
+
+    session = service.create_personalized_interview(
+        "learner-one",
+        role_id="post_training_engineer",
+        seniority="new_grad",
+        difficulty="medium",
+        generated_questions=generated,
+        plan_context_sha256=context_sha,
+        material_ids=(material.id,),
+        consent_materials=True,
+    )
+    assert session["plan_mode"] == "ai_generated"
+    assert session["plan_context_sha256"] == context_sha
+    assert session["material_refs"] == [
+        {
+            "id": material.id,
+            "sha256": material.sha256,
+            "kind": "resume",
+            "title": "resume",
+            "allowed_use": "role_interview",
+        }
+    ]
+    loaded = load_role_interview(root, "learner-one", session["interview_id"])
+    assert loaded["plan_fingerprint"] == session["plan_fingerprint"]
+
+
+def test_personalized_plan_rejects_malformed_provider_output_and_stale_material(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    source = tmp_path / "resume.md"
+    source.write_text("sanitized evidence", encoding="utf-8")
+    material = add_material(
+        root,
+        "learner-one",
+        source,
+        material_id="resume-main",
+        kind="resume",
+        ai_access=True,
+    )
+    service = ApplicationService(root)
+    blueprint = service.roles.blueprint_for("post_training_engineer", "new_grad")
+    with pytest.raises(InterviewPlannerError, match="不能|无效|需要|必须"):
+        decode_personalized_questions(
+            '{"questions":[{"round_index":0,"kind":"coding","title":"x","prompt":"generate a private coding task"}]}',
+            blueprint,
+        )
+
+    context = service.personalized_interview_context(
+        "learner-one",
+        role_id="post_training_engineer",
+        seniority="new_grad",
+        difficulty="medium",
+        material_ids=(material.id,),
+        consent_materials=True,
+    )
+    context_sha = hashlib.sha256(context.selected_text.encode("utf-8")).hexdigest()
+    generated = decode_personalized_questions(
+        json.dumps(
+            {
+                "questions": [
+                    {"round_index": 1, "kind": "oral", "title": "DPO", "prompt": "请解释材料相关工作中 DPO 的已知边界，并先确认材料没有说明的事实。"},
+                    {"round_index": 2, "kind": "evaluation_case", "title": "评测", "prompt": "请为已确认的工作设计可复现评测，并明确缺失证据与失败回退。"},
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        blueprint,
+    )
+    resolve_material_path(root, "learner-one", material).write_text(
+        "changed after consent", encoding="utf-8"
+    )
+    with pytest.raises(Exception, match="match|变化|changed|manifest"):
+        service.create_personalized_interview(
+            "learner-one",
+            role_id="post_training_engineer",
+            seniority="new_grad",
+            difficulty="medium",
+            generated_questions=generated,
+            plan_context_sha256=context_sha,
+            material_ids=(material.id,),
+            consent_materials=True,
+        )
+
+
+@pytest.mark.parametrize("bad_value", [True, "1", 1.0])
+def test_personalized_plan_positions_are_strict_integers(
+    tmp_path: Path, bad_value: object
+) -> None:
+    """Provider-controlled plan positions must not be coerced implicitly."""
+
+    root = _repository(tmp_path)
+    catalog, roles = _catalogs(root)
+    with pytest.raises(RoleInterviewError, match="position is invalid"):
+        _build_questions(
+            root,
+            catalog,
+            roles,
+            role_id="post_training_engineer",
+            seniority="new_grad",
+            difficulty="medium",
+            seed=0,
+            included_round_indices=set(),
+            torch_available=True,
+            generated_questions=[
+                {"round_index": bad_value, "item_index": 0},
+            ],
+            plan_context_sha256="a" * 64,
         )
 
 

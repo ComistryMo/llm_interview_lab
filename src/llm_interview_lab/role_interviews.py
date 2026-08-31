@@ -135,7 +135,12 @@ def _plan_value(session: Mapping[str, Any]) -> dict[str, Any]:
     # Alpha.3 fallback sessions freeze their reduced delivery contract too.
     # Preserve the exact legacy payload for existing/full sessions so their
     # already-persisted fingerprints remain valid without a migration.
-    for key in ("delivery_mode", "blueprint_coverage"):
+    for key in (
+        "delivery_mode",
+        "blueprint_coverage",
+        "plan_mode",
+        "plan_context_sha256",
+    ):
         if key in session:
             value[key] = session[key]
     return value
@@ -536,94 +541,59 @@ def _coding_question(
     }
 
 
-def create_role_interview(
+def _build_questions(
     repo_root: Path,
-    profile_id: str,
     catalog: Catalog,
     role_catalog: RoleCatalog,
     *,
     role_id: str,
-    seniority: str = "new_grad",
-    difficulty: str = "medium",
-    ai_mode: str = "disabled",
-    material_ids: Iterable[str] = (),
-    consent_materials: bool = False,
-    seed: int = 0,
-    delivery_mode: str = "full_blueprint",
-    now: datetime | None = None,
-) -> dict[str, Any]:
-    """Freeze one role blueprint without starting its clock."""
-
-    repo_root = repo_root.resolve()
-    paths = profile_paths(repo_root, profile_id)
-    load_profile(paths, repo_root)
-    ensure_profile_is_ignored(repo_root, profile_id)
-    if difficulty not in DIFFICULTY_BANDS:
-        raise RoleInterviewError("difficulty must be easy, medium, or hard")
-    if ai_mode not in {"disabled", "provider", "codex"}:
-        raise RoleInterviewError("AI mode must be disabled, provider, or codex")
-    if delivery_mode not in {"full_blueprint", "non_coding_fallback"}:
-        raise RoleInterviewError(
-            "delivery mode must be full_blueprint or non_coding_fallback"
-        )
-    if type(seed) is not int or isinstance(seed, bool) or seed < 0:
-        raise RoleInterviewError("seed must be a non-negative integer")
+    seniority: str,
+    difficulty: str,
+    seed: int,
+    included_round_indices: set[int] | None,
+    torch_available: bool,
+    generated_questions: Iterable[Mapping[str, Any]] | None = None,
+    plan_context_sha256: str | None = None,
+) -> list[dict[str, Any]]:
     role = role_catalog.resolve_role(role_id)
     blueprint = role_catalog.blueprint_for(role.id, seniority)
-    torch_available = importlib.util.find_spec("torch") is not None
-    availability = interview_preflight(
-        repo_root,
-        catalog,
-        role_catalog,
-        role_id=role.id,
-        seniority=seniority,
-        difficulty=difficulty,
-        torch_available=torch_available,
-    )
-    if delivery_mode == "full_blueprint":
-        if not availability["available"]:
-            raise RoleInterviewError(availability["user_message"])
-        included_round_indices = None
-    else:
-        fallback = availability["non_coding_fallback"]
-        if not fallback["available"]:
-            raise RoleInterviewError(
-                "non-coding fallback is unavailable for this role interview configuration"
-            )
-        included_round_indices = {
-            int(value["round_index"]) for value in fallback["included_rounds"]
-        }
-
-    selected_materials = tuple(dict.fromkeys(material_ids))
-    if selected_materials and not consent_materials:
-        raise RoleInterviewError("materials require explicit per-interview consent")
-    material_refs: list[dict[str, Any]] = []
-    for material_id in selected_materials:
+    generated = tuple(generated_questions or ())
+    if plan_context_sha256 is not None and not generated:
+        raise RoleInterviewError("AI interview plan must contain generated questions")
+    generated_by_position: dict[tuple[int, int], Mapping[str, Any]] = {}
+    for value in generated:
+        if not isinstance(value, Mapping):
+            raise RoleInterviewError("generated interview questions must be objects")
         try:
-            material = get_material(repo_root, profile_id, material_id)
-        except MaterialError as error:
-            raise RoleInterviewError(str(error)) from error
-        if not material.ai_access:
-            raise RoleInterviewError(f"material does not allow AI access: {material.id}")
-        material_refs.append(
-            {
-                "id": material.id,
-                "sha256": material.sha256,
-                "kind": material.kind,
-                "title": material.title,
-                "allowed_use": "role_interview",
-            }
-        )
+            raw_round_index = value["round_index"]
+            raw_item_index = value["item_index"]
+        except KeyError as error:
+            raise RoleInterviewError("generated interview question position is invalid") from error
+        # The position is part of the frozen plan identity.  Do not coerce
+        # strings, floats, or bools here: ``bool`` is an ``int`` subclass and
+        # accepting it would let malformed provider data address another
+        # question silently.
+        if type(raw_round_index) is not int or type(raw_item_index) is not int:
+            raise RoleInterviewError("generated interview question position is invalid")
+        position = (raw_round_index, raw_item_index)
+        if position in generated_by_position:
+            raise RoleInterviewError("generated interview question positions must be unique")
+        generated_by_position[position] = value
+    if generated:
+        if (
+            not isinstance(plan_context_sha256, str)
+            or len(plan_context_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in plan_context_sha256)
+        ):
+            raise RoleInterviewError("AI interview plan needs a valid context SHA-256")
 
     questions: list[dict[str, Any]] = []
+    used_generated: set[tuple[int, int]] = set()
     used_items: set[str] = set()
     used_problems: set[str] = set()
     number = 1
     for round_index, round_value in enumerate(blueprint.rounds):
-        if (
-            included_round_indices is not None
-            and round_index not in included_round_indices
-        ):
+        if included_round_indices is not None and round_index not in included_round_indices:
             continue
         each_timebox = max(1, round_value.duration // round_value.item_count)
         for item_index in range(round_value.item_count):
@@ -680,9 +650,83 @@ def create_role_interview(
                     timebox_minutes=each_timebox,
                     skills=matched_skills,
                 )
+                position = (round_index, item_index)
+                generated_value = generated_by_position.get(position)
+                if generated_value is not None:
+                    if generated_value.get("kind") != round_value.type:
+                        raise RoleInterviewError(
+                            "generated interview question kind does not match blueprint"
+                        )
+                    title = generated_value.get("title")
+                    prompt = generated_value.get("prompt")
+                    if not isinstance(title, str) or not 1 <= len(title.strip()) <= 120:
+                        raise RoleInterviewError("generated question title is invalid")
+                    if not isinstance(prompt, str) or not 10 <= len(prompt.strip()) <= 5000:
+                        raise RoleInterviewError("generated question prompt is invalid")
+                    rubric_sha256 = hashlib.sha256(
+                        item.rubric_path.read_bytes()
+                    ).hexdigest()
+                    generated_payload = {
+                        "title": title.strip(),
+                        "prompt": prompt.strip(),
+                        "context_sha256": plan_context_sha256,
+                        "rubric_id": item.id,
+                        "rubric_sha256": rubric_sha256,
+                    }
+                    question["title"] = generated_payload["title"]
+                    question["prompt"] = generated_payload["prompt"]
+                    question["source"] = {
+                        "kind": "ai_generated",
+                        "id": item.id,
+                        "sha256": hashlib.sha256(
+                            json.dumps(
+                                generated_payload,
+                                ensure_ascii=False,
+                                sort_keys=True,
+                                separators=(",", ":"),
+                            ).encode("utf-8")
+                        ).hexdigest(),
+                        "context_sha256": plan_context_sha256,
+                        "rubric_sha256": rubric_sha256,
+                    }
+                    used_generated.add(position)
             questions.append(question)
             number += 1
+    if generated and used_generated != set(generated_by_position):
+        raise RoleInterviewError(
+            "generated interview questions do not exactly cover the non-coding blueprint"
+        )
+    expected_generated = sum(
+        round_value.item_count
+        for round_index, round_value in enumerate(blueprint.rounds)
+        if round_value.type != "coding"
+        and (included_round_indices is None or round_index in included_round_indices)
+    )
+    if generated and len(used_generated) != expected_generated:
+        raise RoleInterviewError(
+            "generated interview plan is missing a non-coding blueprint question"
+        )
+    return questions
 
+
+def _create_session_from_plan(
+    repo_root: Path,
+    profile_id: str,
+    *,
+    role_id: str,
+    seniority: str,
+    difficulty: str,
+    blueprint_id: str,
+    duration_minutes: int,
+    ai_mode: str,
+    material_refs: list[dict[str, Any]],
+    questions: list[dict[str, Any]],
+    delivery_mode: str,
+    blueprint_coverage: Mapping[str, Any] | None,
+    plan_context_sha256: str | None,
+    now: datetime | None,
+) -> dict[str, Any]:
+    paths = profile_paths(repo_root, profile_id)
     paths.interviews_root.mkdir(exist_ok=True)
     interview_id = _next_id(paths.interviews_root)
     root = _session_root(repo_root, profile_id, interview_id)
@@ -696,15 +740,11 @@ def create_role_interview(
         "profile_id": profile_id,
         "status": "ready",
         "created_at": created_at,
-        "role_id": role.id,
+        "role_id": role_id,
         "seniority": seniority,
         "difficulty": difficulty,
-        "blueprint_id": blueprint.id,
-        "duration_minutes": (
-            blueprint.duration_minutes
-            if delivery_mode == "full_blueprint"
-            else int(availability["non_coding_fallback"]["duration_minutes"])
-        ),
+        "blueprint_id": blueprint_id,
+        "duration_minutes": duration_minutes,
         "ai_mode": ai_mode,
         "material_refs": material_refs,
         "questions": questions,
@@ -720,17 +760,12 @@ def create_role_interview(
         "timeline": [{"event": "created", "timestamp": created_at}],
         "result": None,
     }
-    if delivery_mode == "non_coding_fallback":
-        fallback = availability["non_coding_fallback"]
+    if delivery_mode == "non_coding_fallback" and blueprint_coverage is not None:
         session["delivery_mode"] = delivery_mode
-        session["blueprint_coverage"] = {
-            "full_blueprint": False,
-            "coverage_weight": fallback["coverage_weight"],
-            "included_round_indices": [
-                int(value["round_index"]) for value in fallback["included_rounds"]
-            ],
-            "omitted_rounds": fallback["omitted_rounds"],
-        }
+        session["blueprint_coverage"] = dict(blueprint_coverage)
+    if plan_context_sha256 is not None:
+        session["plan_mode"] = "ai_generated"
+        session["plan_context_sha256"] = plan_context_sha256
     try:
         _write_session(repo_root, root / "session.json", session)
     except Exception:
@@ -739,6 +774,235 @@ def create_role_interview(
         root.rmdir()
         raise
     return session
+
+
+def _material_references(
+    repo_root: Path,
+    profile_id: str,
+    material_ids: Iterable[str],
+    *,
+    consent_materials: bool,
+) -> list[dict[str, Any]]:
+    selected = tuple(dict.fromkeys(material_ids))
+    if selected and not consent_materials:
+        raise RoleInterviewError("materials require explicit per-interview consent")
+    references: list[dict[str, Any]] = []
+    for material_id in selected:
+        try:
+            material = get_material(repo_root, profile_id, material_id)
+        except MaterialError as error:
+            raise RoleInterviewError(str(error)) from error
+        if not material.ai_access:
+            raise RoleInterviewError(f"material does not allow AI access: {material.id}")
+        references.append(
+            {
+                "id": material.id,
+                "sha256": material.sha256,
+                "kind": material.kind,
+                "title": material.title,
+                "allowed_use": "role_interview",
+            }
+        )
+    return references
+
+
+def preview_personalized_role_interview(
+    repo_root: Path,
+    profile_id: str,
+    catalog: Catalog,
+    role_catalog: RoleCatalog,
+    *,
+    role_id: str,
+    seniority: str,
+    difficulty: str,
+    generated_questions: Iterable[Mapping[str, Any]],
+    plan_context_sha256: str,
+    material_ids: Iterable[str] = (),
+    consent_materials: bool = False,
+    seed: int = 0,
+) -> dict[str, Any]:
+    """Return a no-write preview for the first real personalized AI path."""
+
+    repo_root = repo_root.resolve()
+    paths = profile_paths(repo_root, profile_id)
+    load_profile(paths, repo_root)
+    ensure_profile_is_ignored(repo_root, profile_id)
+    if (role_id, seniority, difficulty) != (
+        "post_training_engineer",
+        "new_grad",
+        "medium",
+    ):
+        raise RoleInterviewError(
+            "Alpha 个性化面试当前仅开放后训练工程师 / 校招 / 标准难度"
+        )
+    if type(seed) is not int or isinstance(seed, bool) or seed < 0:
+        raise RoleInterviewError("seed must be a non-negative integer")
+    availability = interview_preflight(
+        repo_root,
+        catalog,
+        role_catalog,
+        role_id=role_id,
+        seniority=seniority,
+        difficulty=difficulty,
+    )
+    if not availability["available"]:
+        raise RoleInterviewError(availability["user_message"])
+    role = role_catalog.resolve_role(role_id)
+    blueprint = role_catalog.blueprint_for(role.id, seniority)
+    material_refs = _material_references(
+        repo_root,
+        profile_id,
+        material_ids,
+        consent_materials=consent_materials,
+    )
+    questions = _build_questions(
+        repo_root,
+        catalog,
+        role_catalog,
+        role_id=role.id,
+        seniority=seniority,
+        difficulty=difficulty,
+        seed=seed,
+        included_round_indices=None,
+        torch_available=importlib.util.find_spec("torch") is not None,
+        generated_questions=generated_questions,
+        plan_context_sha256=plan_context_sha256,
+    )
+    value = {
+        "plan_mode": "ai_generated",
+        "role_id": role.id,
+        "role_title": role.title,
+        "seniority": seniority,
+        "difficulty": difficulty,
+        "blueprint_id": blueprint.id,
+        "duration_minutes": blueprint.duration_minutes,
+        "material_refs": material_refs,
+        "questions": questions,
+        "plan_context_sha256": plan_context_sha256,
+    }
+    value["draft_fingerprint"] = hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+    ).hexdigest()
+    return value
+
+
+def create_role_interview(
+    repo_root: Path,
+    profile_id: str,
+    catalog: Catalog,
+    role_catalog: RoleCatalog,
+    *,
+    role_id: str,
+    seniority: str = "new_grad",
+    difficulty: str = "medium",
+    ai_mode: str = "disabled",
+    material_ids: Iterable[str] = (),
+    consent_materials: bool = False,
+    seed: int = 0,
+    delivery_mode: str = "full_blueprint",
+    generated_questions: Iterable[Mapping[str, Any]] | None = None,
+    plan_context_sha256: str | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Freeze one role blueprint without starting its clock."""
+
+    repo_root = repo_root.resolve()
+    paths = profile_paths(repo_root, profile_id)
+    load_profile(paths, repo_root)
+    ensure_profile_is_ignored(repo_root, profile_id)
+    if difficulty not in DIFFICULTY_BANDS:
+        raise RoleInterviewError("difficulty must be easy, medium, or hard")
+    if ai_mode not in {"disabled", "provider", "codex"}:
+        raise RoleInterviewError("AI mode must be disabled, provider, or codex")
+    if delivery_mode not in {"full_blueprint", "non_coding_fallback"}:
+        raise RoleInterviewError(
+            "delivery mode must be full_blueprint or non_coding_fallback"
+        )
+    if type(seed) is not int or isinstance(seed, bool) or seed < 0:
+        raise RoleInterviewError("seed must be a non-negative integer")
+    if generated_questions is not None and ai_mode == "disabled":
+        raise RoleInterviewError("AI-generated plans require an enabled AI mode")
+    role = role_catalog.resolve_role(role_id)
+    blueprint = role_catalog.blueprint_for(role.id, seniority)
+    torch_available = importlib.util.find_spec("torch") is not None
+    availability = interview_preflight(
+        repo_root,
+        catalog,
+        role_catalog,
+        role_id=role.id,
+        seniority=seniority,
+        difficulty=difficulty,
+        torch_available=torch_available,
+    )
+    if delivery_mode == "full_blueprint":
+        if not availability["available"]:
+            raise RoleInterviewError(availability["user_message"])
+        included_round_indices = None
+    else:
+        fallback = availability["non_coding_fallback"]
+        if not fallback["available"]:
+            raise RoleInterviewError(
+                "non-coding fallback is unavailable for this role interview configuration"
+            )
+        included_round_indices = {
+            int(value["round_index"]) for value in fallback["included_rounds"]
+        }
+
+    material_refs = _material_references(
+        repo_root,
+        profile_id,
+        material_ids,
+        consent_materials=consent_materials,
+    )
+
+    questions = _build_questions(
+        repo_root,
+        catalog,
+        role_catalog,
+        role_id=role.id,
+        seniority=seniority,
+        difficulty=difficulty,
+        seed=seed,
+        included_round_indices=included_round_indices,
+        torch_available=torch_available,
+        generated_questions=generated_questions,
+        plan_context_sha256=plan_context_sha256,
+    )
+    blueprint_coverage: Mapping[str, Any] | None = None
+    if delivery_mode == "non_coding_fallback":
+        fallback = availability["non_coding_fallback"]
+        blueprint_coverage = {
+            "full_blueprint": False,
+            "coverage_weight": fallback["coverage_weight"],
+            "included_round_indices": [
+                int(value["round_index"]) for value in fallback["included_rounds"]
+            ],
+            "omitted_rounds": fallback["omitted_rounds"],
+        }
+    return _create_session_from_plan(
+        repo_root,
+        profile_id,
+        role_id=role.id,
+        seniority=seniority,
+        difficulty=difficulty,
+        blueprint_id=blueprint.id,
+        duration_minutes=(
+            blueprint.duration_minutes
+            if delivery_mode == "full_blueprint"
+            else int(availability["non_coding_fallback"]["duration_minutes"])
+        ),
+        ai_mode=ai_mode,
+        material_refs=material_refs,
+        questions=questions,
+        delivery_mode=delivery_mode,
+        blueprint_coverage=blueprint_coverage,
+        plan_context_sha256=(
+            plan_context_sha256 if generated_questions is not None else None
+        ),
+        now=now,
+    )
 
 
 def load_role_interview(

@@ -23,6 +23,8 @@
     "blueprint_id": {"type": "string", "pattern": "^interview\\."},
     "duration_minutes": {"type": "integer", "minimum": 1, "maximum": 150},
     "ai_mode": {"enum": ["disabled", "provider", "codex"]},
+    "plan_mode": {"enum": ["ai_generated"]},
+    "plan_context_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "delivery_mode": {"enum": ["full_blueprint", "non_coding_fallback"]},
     "blueprint_coverage": {
       "type": "object",
@@ -117,6 +119,14 @@
   "allOf": [
     {
       "if": {
+        "required": ["plan_mode"],
+        "properties": {"plan_mode": {"const": "ai_generated"}}
+      },
+      "then": {"required": ["plan_context_sha256"]},
+      "else": {"not": {"required": ["plan_context_sha256"]}}
+    },
+    {
+      "if": {
         "required": ["delivery_mode"],
         "properties": {"delivery_mode": {"const": "non_coding_fallback"}}
       },
@@ -138,10 +148,18 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "id", "sha256"],
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"const": "ai_generated"}}},
+          "then": {"required": ["context_sha256", "rubric_sha256"]}
+        }
+      ],
       "properties": {
-        "kind": {"enum": ["fixed_item", "catalog_problem"]},
+        "kind": {"enum": ["fixed_item", "catalog_problem", "ai_generated"]},
         "id": {"type": "string"},
-        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "context_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "rubric_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
       }
     },
     "rubric_dimension": {

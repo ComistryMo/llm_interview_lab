@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 from dataclasses import asdict, replace
 from datetime import datetime
+import hashlib
 import importlib.util
 import os
 from pathlib import Path
@@ -22,6 +23,7 @@ from .grader import GraderResult, run_public_tests
 from .knowledge import KnowledgeCard, KnowledgeCatalog, KnowledgeError, load_knowledge
 from .lifecycle import ReviewInput, ReviewResult, record_review
 from .materials import add_material, list_materials
+from .ai.context_builder import build_role_interview_plan_context_preview
 from .role_interviews import (
     RoleInterviewError,
     create_role_interview,
@@ -38,6 +40,7 @@ from .role_interviews import (
     run_role_coding_test,
     start_role_interview,
     pause_role_interview,
+    preview_personalized_role_interview,
     resume_role_interview,
     role_interview_state,
 )
@@ -1258,6 +1261,154 @@ class ApplicationService:
             seed=seed,
             delivery_mode=delivery_mode,
         )
+
+    def personalized_interview_context(
+        self,
+        profile_id: str,
+        *,
+        role_id: str,
+        seniority: str,
+        difficulty: str,
+        material_ids: Iterable[str] = (),
+        consent_materials: bool = False,
+    ):
+        """Return the exact context a provider would receive for planning."""
+
+        # Select a small, role-scoped set of reviewed knowledge themes locally.
+        # The provider sees prompts/follow-ups only; answer layers remain out
+        # of the planning context to keep token use and leakage risk bounded.
+        prep = self.interview_prep(
+            role_id=role_id,
+            seniority=seniority,
+            kind="eight_stock",
+            limit=6,
+            include_answers=False,
+        )
+        knowledge_cards: list[Mapping[str, Any]] = []
+        knowledge = self.knowledge_catalog()
+        for summary in prep.get("cards", []):
+            if not isinstance(summary, Mapping):
+                continue
+            card_id = summary.get("id")
+            if not isinstance(card_id, str):
+                continue
+            card = knowledge.cards.get(card_id)
+            if card is None:
+                continue
+            knowledge_cards.append(
+                {
+                    "id": card.id,
+                    "kind": card.kind,
+                    "title": card.title,
+                    "skills": list(card.skills),
+                    "prompt": card.prompt,
+                    "follow_ups": list(card.follow_ups),
+                }
+            )
+        return build_role_interview_plan_context_preview(
+            self.repo_root,
+            profile_id,
+            self.roles,
+            role_id=role_id,
+            seniority=seniority,
+            difficulty=difficulty,
+            material_ids=tuple(material_ids),
+            consent_materials=consent_materials,
+            knowledge_cards=tuple(knowledge_cards),
+        )
+
+    def preview_personalized_interview(
+        self,
+        profile_id: str,
+        *,
+        role_id: str,
+        seniority: str,
+        difficulty: str,
+        generated_questions: Iterable[Mapping[str, Any]],
+        plan_context_sha256: str,
+        material_ids: Iterable[str] = (),
+        consent_materials: bool = False,
+        seed: int = 0,
+    ) -> dict[str, Any]:
+        return preview_personalized_role_interview(
+            self.repo_root,
+            profile_id,
+            self.catalog,
+            self.roles,
+            role_id=role_id,
+            seniority=seniority,
+            difficulty=difficulty,
+            generated_questions=generated_questions,
+            plan_context_sha256=plan_context_sha256,
+            material_ids=material_ids,
+            consent_materials=consent_materials,
+            seed=seed,
+        )
+
+    def create_personalized_interview(
+        self,
+        profile_id: str,
+        *,
+        role_id: str,
+        seniority: str,
+        difficulty: str,
+        generated_questions: Iterable[Mapping[str, Any]],
+        plan_context_sha256: str,
+        material_ids: Iterable[str] = (),
+        consent_materials: bool = False,
+        seed: int = 0,
+    ) -> dict[str, Any]:
+        generated_questions = tuple(generated_questions)
+        material_ids = tuple(material_ids)
+        context = self.personalized_interview_context(
+            profile_id,
+            role_id=role_id,
+            seniority=seniority,
+            difficulty=difficulty,
+            material_ids=material_ids,
+            consent_materials=consent_materials,
+        )
+        current_context_sha256 = hashlib.sha256(
+            context.selected_text.encode("utf-8")
+        ).hexdigest()
+        if current_context_sha256 != plan_context_sha256:
+            raise ApplicationError(
+                "面试材料或岗位上下文已变化；请重新生成并确认面试计划"
+            )
+        # Recompute and validate the same deterministic preview immediately
+        # before writing. This makes a stale material SHA or changed coding
+        # asset fail rather than silently altering the plan the user approved.
+        preview = self.preview_personalized_interview(
+            profile_id,
+            role_id=role_id,
+            seniority=seniority,
+            difficulty=difficulty,
+            generated_questions=generated_questions,
+            plan_context_sha256=plan_context_sha256,
+            material_ids=material_ids,
+            consent_materials=consent_materials,
+            seed=seed,
+        )
+        session = create_role_interview(
+            self.repo_root,
+            profile_id,
+            self.catalog,
+            self.roles,
+            role_id=role_id,
+            seniority=seniority,
+            difficulty=difficulty,
+            ai_mode="provider",
+            material_ids=material_ids,
+            consent_materials=consent_materials,
+            seed=seed,
+            generated_questions=generated_questions,
+            plan_context_sha256=plan_context_sha256,
+        )
+        if [question["source"] for question in session["questions"]] != [
+            question["source"] for question in preview["questions"]
+        ]:
+            raise ApplicationError("personalized interview plan changed before creation")
+        return session
 
     def interview_configuration(
         self, role_id: str, seniority: str, difficulty: str

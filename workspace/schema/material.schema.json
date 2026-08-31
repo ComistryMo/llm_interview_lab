@@ -29,15 +29,13 @@
       "allOf": [
         {
           "if": {
+            "required": ["relative_path", "ai_access"],
             "properties": {
-              "relative_path": {"pattern": "\\.(pdf|docx)$"}
+              "relative_path": {"pattern": "\\.(pdf|docx)$"},
+              "ai_access": {"const": true}
             }
           },
-          "then": {
-            "properties": {
-              "ai_access": {"const": false}
-            }
-          }
+          "then": {"required": ["text_snapshot"]}
         }
       ],
       "properties": {
@@ -89,7 +87,21 @@
             "maxLength": 64
           }
         },
-        "ai_access": {"type": "boolean"}
+        "ai_access": {"type": "boolean"},
+        "text_snapshot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["relative_path", "sha256", "source_sha256", "format"],
+          "properties": {
+            "relative_path": {
+              "type": "string",
+              "pattern": "^materials/text/[a-z][a-z0-9-]{0,63}\\.txt$"
+            },
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "format": {"enum": ["pdf_text", "docx_text"]}
+          }
+        }
       }
     }
   }

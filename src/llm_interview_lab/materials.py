@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+from io import BytesIO
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -11,6 +12,8 @@ import re
 import stat
 from typing import Any, Iterable, Mapping
 from uuid import uuid4
+from xml.etree import ElementTree
+from zipfile import BadZipFile, ZipFile
 
 from jsonschema import Draft202012Validator
 
@@ -24,6 +27,7 @@ from .workspace import (
 
 
 MAX_MATERIAL_BYTES = 20 * 1024 * 1024
+MAX_TEXT_SNAPSHOT_CHARS = 200_000
 MATERIAL_KINDS = frozenset(
     {
         "resume",
@@ -60,6 +64,10 @@ class MaterialRecord:
     title: str
     tags: tuple[str, ...]
     ai_access: bool
+    text_snapshot_relative_path: str | None = None
+    text_snapshot_sha256: str | None = None
+    text_snapshot_source_sha256: str | None = None
+    text_snapshot_format: str | None = None
 
     @property
     def opaque(self) -> bool:
@@ -68,7 +76,7 @@ class MaterialRecord:
         return PurePosixPath(self.relative_path).suffix in OPAQUE_SUFFIXES
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        value = {
             "id": self.id,
             "kind": self.kind,
             "relative_path": self.relative_path,
@@ -78,6 +86,14 @@ class MaterialRecord:
             "tags": list(self.tags),
             "ai_access": self.ai_access,
         }
+        if self.text_snapshot_relative_path is not None:
+            value["text_snapshot"] = {
+                "relative_path": self.text_snapshot_relative_path,
+                "sha256": self.text_snapshot_sha256,
+                "source_sha256": self.text_snapshot_source_sha256,
+                "format": self.text_snapshot_format,
+            }
+        return value
 
 
 def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -190,6 +206,9 @@ def _load_manifest(repo_root: Path, profile_id: str) -> dict[str, Any]:
 
 
 def _record(value: Mapping[str, Any]) -> MaterialRecord:
+    snapshot = value.get("text_snapshot")
+    if not isinstance(snapshot, Mapping):
+        snapshot = {}
     return MaterialRecord(
         id=str(value["id"]),
         kind=str(value["kind"]),
@@ -199,7 +218,100 @@ def _record(value: Mapping[str, Any]) -> MaterialRecord:
         title=str(value["title"]),
         tags=tuple(str(tag) for tag in value["tags"]),
         ai_access=bool(value["ai_access"]),
+        text_snapshot_relative_path=(
+            str(snapshot["relative_path"]) if snapshot.get("relative_path") else None
+        ),
+        text_snapshot_sha256=(
+            str(snapshot["sha256"]) if snapshot.get("sha256") else None
+        ),
+        text_snapshot_source_sha256=(
+            str(snapshot["source_sha256"]) if snapshot.get("source_sha256") else None
+        ),
+        text_snapshot_format=(
+            str(snapshot["format"]) if snapshot.get("format") else None
+        ),
     )
+
+
+def _normalize_extracted_text(value: str) -> str:
+    lines = [line.rstrip() for line in value.replace("\r\n", "\n").replace("\r", "\n").split("\n")]
+    normalized = "\n".join(lines).strip()
+    if not normalized:
+        raise MaterialError(
+            "未提取到可读文本；如果这是扫描 PDF，请先在本机完成 OCR，或仅作为本地附件保存"
+        )
+    if len(normalized) > MAX_TEXT_SNAPSHOT_CHARS:
+        raise MaterialError(
+            f"提取文本超过 {MAX_TEXT_SNAPSHOT_CHARS} 个字符；请先在本机裁剪或脱敏后再导入"
+        )
+    return normalized + "\n"
+
+
+def _extract_pdf_text(content: bytes) -> str:
+    try:
+        from pypdf import PdfReader
+    except ImportError as error:
+        raise MaterialError(
+            "PDF 文本提取组件不可用；请安装当前版本的完整桌面依赖，或先转为 UTF-8 文本"
+        ) from error
+    try:
+        reader = PdfReader(BytesIO(content), strict=False)
+        pages = [page.extract_text() or "" for page in reader.pages]
+    except Exception as error:
+        raise MaterialError("PDF 无法读取；请确认文件未加密且内容完整") from error
+    return _normalize_extracted_text("\n\n".join(pages))
+
+
+def _extract_docx_text(content: bytes) -> str:
+    namespace = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+
+    def paragraph_text(element: ElementTree.Element) -> str:
+        return "".join(
+            node.text or "" for node in element.iter(f"{namespace}t")
+        ).strip()
+
+    try:
+        with ZipFile(BytesIO(content)) as archive:
+            document = archive.read("word/document.xml")
+    except (BadZipFile, KeyError, OSError) as error:
+        raise MaterialError("DOCX 无法读取；请确认文件不是损坏或加密的文档") from error
+    try:
+        root = ElementTree.fromstring(document)
+    except ElementTree.ParseError as error:
+        raise MaterialError("DOCX 正文结构无效") from error
+    body = root.find(f"{namespace}body")
+    if body is None:
+        raise MaterialError("DOCX 不包含可读正文")
+    blocks: list[str] = []
+    for child in body:
+        if child.tag == f"{namespace}p":
+            text = paragraph_text(child)
+            if text:
+                blocks.append(text)
+        elif child.tag == f"{namespace}tbl":
+            rows: list[str] = []
+            for row in child.findall(f"{namespace}tr"):
+                cells = [
+                    " ".join(
+                        value
+                        for value in (paragraph_text(item) for item in cell.findall(f"{namespace}p"))
+                        if value
+                    )
+                    for cell in row.findall(f"{namespace}tc")
+                ]
+                if any(cells):
+                    rows.append("\t".join(cells))
+            if rows:
+                blocks.append("\n".join(rows))
+    return _normalize_extracted_text("\n\n".join(blocks))
+
+
+def _extract_text_snapshot(content: bytes, suffix: str) -> tuple[str, str]:
+    if suffix == ".pdf":
+        return _extract_pdf_text(content), "pdf_text"
+    if suffix == ".docx":
+        return _extract_docx_text(content), "docx_text"
+    raise MaterialError("this material format does not need a text snapshot")
 
 
 def _resolve_stored_path(repo_root: Path, profile_id: str, record: MaterialRecord) -> Path:
@@ -229,13 +341,54 @@ def _resolve_stored_path(repo_root: Path, profile_id: str, record: MaterialRecor
         raise MaterialError("stored material cannot be read") from error
     if len(content) != record.size_bytes or hashlib.sha256(content).hexdigest() != record.sha256:
         raise MaterialError(f"stored material content does not match manifest: {record.id}")
-    if record.ai_access:
-        if record.opaque:
-            raise MaterialError("opaque PDF and DOCX materials cannot enable ai_access")
+    if record.ai_access and not record.opaque:
         try:
             content.decode("utf-8")
         except UnicodeDecodeError as error:
             raise MaterialError("AI-readable text materials must be UTF-8") from error
+    if record.ai_access and record.opaque:
+        _resolve_text_snapshot_path(repo_root, profile_id, record)
+    return resolved
+
+
+def _resolve_text_snapshot_path(
+    repo_root: Path, profile_id: str, record: MaterialRecord
+) -> Path:
+    relative_path = record.text_snapshot_relative_path
+    if (
+        relative_path is None
+        or record.text_snapshot_sha256 is None
+        or record.text_snapshot_source_sha256 != record.sha256
+    ):
+        raise MaterialError(
+            "PDF / DOCX 没有与当前原文件 SHA 绑定的文本快照，不能授权给 AI"
+        )
+    pure = PurePosixPath(relative_path)
+    if (
+        pure.is_absolute()
+        or not pure.parts
+        or "\\" in relative_path
+        or any(part in {"", ".", ".."} for part in pure.parts)
+    ):
+        raise MaterialError("material text snapshot contains an unsafe relative path")
+    paths = profile_paths(repo_root, profile_id)
+    candidate = paths.root.joinpath(*pure.parts)
+    _safe_profile_path(repo_root, profile_id, candidate, must_exist=True)
+    _reject_linked_components(candidate)
+    try:
+        resolved = candidate.resolve(strict=True)
+        resolved.relative_to(paths.materials_root.resolve(strict=True))
+        content = resolved.read_bytes()
+    except (OSError, ValueError) as error:
+        raise MaterialError("material text snapshot is missing or outside this Profile") from error
+    if not resolved.is_file():
+        raise MaterialError("material text snapshot must be a regular file")
+    if hashlib.sha256(content).hexdigest() != record.text_snapshot_sha256:
+        raise MaterialError("material text snapshot does not match its manifest")
+    try:
+        content.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise MaterialError("material text snapshot must be UTF-8") from error
     return resolved
 
 
@@ -332,13 +485,18 @@ def add_material(
         raise MaterialError("material source cannot be read") from error
     if len(content) > MAX_MATERIAL_BYTES:
         raise MaterialError("material exceeds the 20 MiB size limit")
+    snapshot_text: str | None = None
+    snapshot_format: str | None = None
     if suffix in TEXT_SUFFIXES:
         try:
             content.decode("utf-8")
         except UnicodeDecodeError as error:
             raise MaterialError("AI-readable text materials must be UTF-8") from error
     elif ai_access:
-        raise MaterialError("PDF and DOCX materials are opaque and cannot enable ai_access")
+        try:
+            snapshot_text, snapshot_format = _extract_text_snapshot(content, suffix)
+        except MaterialError:
+            raise
 
     identifier = _validate_material_id(material_id or f"material-{uuid4().hex[:12]}")
     normalized_title = source.stem if title is None else title
@@ -371,15 +529,30 @@ def add_material(
     if destination.exists() or _is_obvious_link(destination):
         raise MaterialError("material destination already exists")
 
+    source_sha256 = hashlib.sha256(content).hexdigest()
+    snapshot_bytes = snapshot_text.encode("utf-8") if snapshot_text is not None else None
+    snapshot_relative_path = (
+        f"materials/text/{identifier}.txt" if snapshot_bytes is not None else None
+    )
     record = MaterialRecord(
         id=identifier,
         kind=kind,
         relative_path=relative_path,
-        sha256=hashlib.sha256(content).hexdigest(),
+        sha256=source_sha256,
         size_bytes=len(content),
         title=normalized_title,
         tags=normalized_tags,
         ai_access=ai_access,
+        text_snapshot_relative_path=snapshot_relative_path,
+        text_snapshot_sha256=(
+            hashlib.sha256(snapshot_bytes).hexdigest()
+            if snapshot_bytes is not None
+            else None
+        ),
+        text_snapshot_source_sha256=(
+            source_sha256 if snapshot_bytes is not None else None
+        ),
+        text_snapshot_format=snapshot_format,
     )
     updated = {
         "schema_version": 1,
@@ -389,15 +562,33 @@ def add_material(
         ),
     }
     _validate_manifest(repo_root, updated)
+    snapshot_destination = (
+        paths.root.joinpath(*PurePosixPath(snapshot_relative_path).parts)
+        if snapshot_relative_path is not None
+        else None
+    )
+    if snapshot_destination is not None:
+        _safe_profile_path(repo_root, profile_id, snapshot_destination)
+        if snapshot_destination.exists() or _is_obvious_link(snapshot_destination):
+            raise MaterialError("material text snapshot destination already exists")
     copied = False
+    snapshot_copied = False
     try:
         _atomic_write(destination, content)
         copied = True
+        if snapshot_destination is not None and snapshot_bytes is not None:
+            _atomic_write(snapshot_destination, snapshot_bytes)
+            snapshot_copied = True
         _atomic_write_manifest(_manifest_path(repo_root, profile_id), updated)
     except (OSError, MaterialError) as error:
         if copied:
             try:
                 destination.unlink()
+            except OSError:
+                pass
+        if snapshot_copied and snapshot_destination is not None:
+            try:
+                snapshot_destination.unlink()
             except OSError:
                 pass
         if isinstance(error, MaterialError):
@@ -442,3 +633,29 @@ def resolve_material_path(
     if isinstance(material, MaterialRecord) and canonical != material:
         raise MaterialError("material record is not current for this Profile")
     return _resolve_stored_path(repo_root, profile_id, canonical)
+
+
+def resolve_material_text_path(
+    repo_root: Path,
+    profile_id: str,
+    material: MaterialRecord | str,
+) -> Path:
+    """Resolve the exact UTF-8 text authorized for one material.
+
+    Text files are read directly. PDF/DOCX files use a read-only snapshot
+    whose manifest entry is bound to the original file SHA-256.
+    """
+
+    identifier = material.id if isinstance(material, MaterialRecord) else material
+    canonical = get_material(repo_root, profile_id, identifier)
+    if isinstance(material, MaterialRecord) and canonical != material:
+        raise MaterialError("material record is not current for this Profile")
+    if not canonical.ai_access:
+        raise MaterialError("material does not allow AI access")
+    # Validate the original file first. A snapshot is useful only while the
+    # source bytes still match the manifest SHA; otherwise an old extraction
+    # could be sent after the user replaced the PDF/DOCX in place.
+    stored = _resolve_stored_path(repo_root, profile_id, canonical)
+    if canonical.opaque:
+        return _resolve_text_snapshot_path(repo_root, profile_id, canonical)
+    return stored
