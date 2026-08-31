@@ -2,11 +2,12 @@
 
 ## 基线
 
-- HEAD：`e1536f2b61c39d833a86a9ff3d19464fa50a2c73`
+- 代码与截图提交 HEAD：`e1536f2b61c39d833a86a9ff3d19464fa50a2c73`
 - 分支：`feature/real-user-iteration-20260831`
 - 基线来源：`v0.4.0-alpha.3` / `36db5ac3ba21580323a5116e356830badabcc0f4`
 - 工作树：已提交的改动之外干净；用户已有的未跟踪文件未读取、未修改。
 - Python：`3.11.9`（`py -3.11`）；系统 `python` 为 3.9.2，因此未用它运行项目测试。
+- 报告与计划随后以独立文档提交；最终分支 HEAD 以 `git rev-parse HEAD` 为准。
 
 ## 实际根因
 
@@ -81,6 +82,12 @@
 - 本轮没有生成或发布新的 Windows/macOS 安装包。
 - `docs/images/` 中的截图均为合成数据，Manifest 标记 `synthetic: true`；不含真实 Profile、答案、材料、Key、Oracle 或 Private Tests。
 - 因没有真实候选 Artifact，本报告不提供虚构的文件大小或 SHA-256。
+
+## Git / 远端
+
+- 功能分支已推送到 `origin/feature/real-user-iteration-20260831`。
+- 当前没有创建或合并 PR；没有权限凭据可用于 GitHub CLI 操作。
+- 未合并 `main`、未重写历史、未创建新 tag、未发布 Release。
 
 ## 剩余风险
 
