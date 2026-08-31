@@ -45,6 +45,26 @@ def _han_count(value: str) -> int:
     return len(re.findall(r"[\u3400-\u4dbf\u4e00-\u9fff]", value))
 
 
+def _assert_chinese_concepts(
+    source: str,
+    *,
+    surface: str,
+    concepts: dict[str, tuple[str, ...]],
+) -> None:
+    """Check user-facing meaning without freezing one exact sentence.
+
+    Product copy should be free to become more natural while the durable Chinese
+    concepts and actions remain present.  The Han-character floor prevents an
+    English-only UI from satisfying the contract through object names or API calls.
+    """
+
+    assert _han_count(source) >= 20, f"{surface} is not Chinese-first"
+    for concept, alternatives in concepts.items():
+        assert any(value in source for value in alternatives), (
+            f"{surface} no longer communicates {concept}: {alternatives}"
+        )
+
+
 def _assert_exact_case(path: Path) -> None:
     current = REPO_ROOT
     for part in path.relative_to(REPO_ROOT).parts:
@@ -167,11 +187,29 @@ def test_readme_is_honest_about_unsigned_macos_and_no_sandbox() -> None:
 
 def test_gui_and_provider_user_terms_are_present() -> None:
     main = _read("src/llm_interview_lab/desktop/qml/Main.qml")
-    for label in ("首页", "刷题", "模拟面试", "AI 教练", "进度", "设置"):
-        assert label in main
+    _assert_chinese_concepts(
+        main,
+        surface="main navigation",
+        concepts={
+            "home": ("首页",),
+            "practice": ("刷题", "训练"),
+            "interview": ("模拟面试",),
+            "coach": ("AI 教练",),
+            "progress": ("进度",),
+            "settings": ("设置",),
+        },
+    )
     onboarding = _read("src/llm_interview_lab/desktop/qml/pages/OnboardingPage.qml")
-    for label in ("创建学习档案", "选择目标岗位", "首次使用默认 No-AI"):
-        assert label in onboarding
+    _assert_chinese_concepts(
+        onboarding,
+        surface="onboarding",
+        concepts={
+            "profile creation": ("创建你的学习档案", "创建学习档案"),
+            "role selection": ("选择目标岗位", "请选择一个目标岗位"),
+            "optional AI": ("No-AI", "暂不连接 AI", "无需 AI"),
+            "primary action": ("开始训练",),
+        },
+    )
     connections = _read(
         "src/llm_interview_lab/desktop/qml/pages/ConnectionsPage.qml"
     )

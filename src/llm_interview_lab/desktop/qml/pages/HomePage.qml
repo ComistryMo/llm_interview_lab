@@ -20,8 +20,16 @@ Flickable {
     readonly property bool resumableInterview: activeInterview && !expiredInterview
                                                 && (app.interview.resume_available === true
                                                     || app.interview.resume_available === undefined)
-    readonly property var currentPractice: app.dashboard.current || null
+    readonly property var currentPracticeCandidate: app.dashboard.current || null
+    readonly property var currentPractice: practiceActionable(currentPracticeCandidate)
+                                           ? currentPracticeCandidate : null
     readonly property var dueRetentions: app.dashboard.due_retention || []
+    readonly property int dueRetentionCount: app.dashboard.due_retention_count === undefined
+                                             ? dueRetentions.length
+                                             : app.dashboard.due_retention_count
+    readonly property int dueReviewCount: app.dashboard.due_review_count === undefined
+                                          ? (app.dashboard.due_review || []).length
+                                          : app.dashboard.due_review_count
     readonly property var actionableRetention: firstActionableRetention(dueRetentions)
     readonly property var firstUnlock: (app.dashboard.unlocks || []).length > 0
                                        ? app.dashboard.unlocks[0] : null
@@ -43,6 +51,12 @@ Flickable {
     readonly property color warningColor: theme ? theme.warning : palette.warning
     readonly property color dangerColor: theme ? theme.danger : palette.danger
     readonly property color successColor: theme ? theme.success : palette.success
+
+    function practiceActionable(item) {
+        if (!item)
+            return false
+        return ["not_started", "in_progress", "implemented"].indexOf(item.status) >= 0
+    }
 
     function firstActionableRetention(items) {
         for (var i = 0; i < items.length; ++i) {
@@ -361,15 +375,20 @@ Flickable {
 
             LabSurface {
                 id: evidenceRail
+                objectName: "homeEvidenceRail"
                 theme: root.theme
                 Layout.columnSpan: root.compactLayout ? 1 : 4
                 Layout.fillWidth: true
-                Layout.preferredHeight: root.compactLayout ? 186 : 272
+                Layout.preferredHeight: root.compactLayout
+                                        ? Math.max(210, evidenceContent.implicitHeight + padding * 2)
+                                        : 272
                 level: "base"
                 outlined: true
                 padding: root.compactLayout ? 18 : 20
 
                 ColumnLayout {
+                    id: evidenceContent
+                    objectName: "homeEvidenceContent"
                     anchors.fill: parent
                     spacing: 10
 
@@ -407,16 +426,16 @@ Flickable {
                         Item { Layout.fillWidth: true }
                         LabText {
                             theme: root.theme
-                            text: String(root.dueRetentions.length)
+                            text: String(root.dueRetentionCount)
                             strong: true
-                            tone: root.dueRetentions.length > 0 ? "warning" : "default"
+                            tone: root.dueRetentionCount > 0 ? "warning" : "default"
                         }
                     }
                     RowLayout {
                         Layout.fillWidth: true
                         LabText { theme: root.theme; text: "待复盘"; tone: "muted" }
                         Item { Layout.fillWidth: true }
-                        LabText { theme: root.theme; text: String((app.dashboard.due_review || []).length); strong: true }
+                        LabText { theme: root.theme; text: String(root.dueReviewCount); strong: true }
                     }
 
                     Item { Layout.fillHeight: true }

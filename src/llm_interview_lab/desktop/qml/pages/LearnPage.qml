@@ -325,6 +325,7 @@ Item {
                             delegate: Rectangle {
                                 id: problemRow
                                 required property var modelData
+                                objectName: "learnProblemRow-" + modelData.problem_id
                                 width: problemList.width
                                 height: Math.max(88, root.theme ? root.theme.scaledPx(88) : 88)
                                 radius: root.theme ? root.theme.radiusMedium : 9
@@ -406,6 +407,7 @@ Item {
                             spacing: root.theme ? root.theme.space3 : 12
 
                             LabButton {
+                                objectName: "learnCourseBackButton"
                                 theme: root.theme
                                 visible: root.drillDownLayout
                                 compact: true
@@ -540,6 +542,7 @@ Item {
                         onClicked: knowledgeQuery.clear()
                     }
                     LabButton {
+                        objectName: "knowledgeRetryButton"
                         theme: root.theme
                         compact: true
                         variant: "secondary"
@@ -574,6 +577,7 @@ Item {
                         visible: !root.drillDownLayout || !root.compactKnowledgeDetail
 
                         EmptyState {
+                            objectName: "knowledgeEmptyState"
                             anchors.centerIn: parent
                             width: Math.min(parent.width - 48, 400)
                             visible: !app.knowledgeLoaded || knowledgeList.count === 0
@@ -586,6 +590,7 @@ Item {
                         }
                         ListView {
                             id: knowledgeList
+                            objectName: "knowledgeCardList"
                             anchors.fill: parent
                             anchors.margins: root.theme ? root.theme.space2 : 8
                             clip: true
@@ -595,6 +600,7 @@ Item {
                             delegate: Rectangle {
                                 id: knowledgeRow
                                 required property var modelData
+                                objectName: "knowledgeRow-" + modelData.id
                                 width: knowledgeList.width
                                 height: Math.max(80, root.theme ? root.theme.scaledPx(80) : 80)
                                 radius: root.theme ? root.theme.radiusMedium : 9
@@ -655,6 +661,7 @@ Item {
                             anchors.fill: parent
                             spacing: root.theme ? root.theme.space3 : 12
                             LabButton {
+                                objectName: "knowledgeBackButton"
                                 theme: root.theme
                                 visible: root.drillDownLayout
                                 compact: true
@@ -672,12 +679,19 @@ Item {
                                 description: "查看 60 秒回答、追问、常见薄弱点和来源。"
                             }
                             ScrollView {
+                                id: knowledgeDetailScroll
+                                objectName: "knowledgeDetailScroll"
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 visible: !!app.knowledgeDetail && !!app.knowledgeDetail.title
                                 clip: true
+                                contentWidth: availableWidth
+                                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                                ScrollBar.vertical.policy: ScrollBar.AsNeeded
                                 ColumnLayout {
-                                    width: parent.width
+                                    id: knowledgeDetailContent
+                                    objectName: "knowledgeDetailContent"
+                                    width: knowledgeDetailScroll.availableWidth
                                     spacing: root.theme ? root.theme.space3 : 12
                                     property var detail: app.knowledgeDetail || ({})
                                     LabText {
@@ -736,13 +750,14 @@ Item {
                                     }
                                     LabDivider { Layout.fillWidth: true; theme: root.theme }
                                     LabText {
+                                        objectName: "knowledgeSourceText"
                                         theme: root.theme
                                         Layout.fillWidth: true
                                         visible: (parent.detail.source_records || []).length > 0
                                         text: "来源（链接与事实性转述）\n" + root.sourceText(parent.detail.source_records)
                                         tone: "muted"
                                         variant: "caption"
-                                        wrapMode: Text.Wrap
+                                        wrapMode: Text.WrapAnywhere
                                     }
                                 }
                             }

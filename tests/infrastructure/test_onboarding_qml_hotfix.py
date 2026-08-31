@@ -12,6 +12,9 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QT_QUICK_BACKEND", "software")
+# Match the production entry point.  Loading the same Material style keeps the
+# fixture from emitting native-style customization warnings that production lacks.
+os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Material")
 pytest.importorskip("PySide6")
 
 from PySide6.QtCore import QCoreApplication, QPoint, QPointF, QSettings, QUrl, Qt

@@ -31,6 +31,8 @@ jobs:
         python: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: ${{ matrix.python }}
@@ -49,6 +51,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.11"
@@ -65,12 +69,14 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.11"
           cache: pip
       - run: python -m pip install -r requirements.txt
-      - run: python -m pytest tests/infrastructure/test_chinese_docs.py tests/infrastructure/test_training_foundations_readme.py -q
+      - run: python -m pytest tests/infrastructure/test_chinese_docs.py tests/infrastructure/test_training_foundations_readme.py tests/infrastructure/test_alpha4_screenshot_contract.py -q
 
   desktop-windows:
     if: github.event_name != 'workflow_dispatch' || inputs.job == 'all' || inputs.job == 'desktop-windows'
@@ -83,6 +89,8 @@ jobs:
       QT_QUICK_BACKEND: software
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.11"
@@ -158,6 +166,8 @@ jobs:
       QT_QUICK_BACKEND: software
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
       - name: Report pinned runner architecture
         run: |
           sw_vers

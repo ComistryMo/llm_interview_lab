@@ -786,7 +786,9 @@ class ApplicationService:
                 if quest_id in self.catalog.quests
             ],
             "due_review": due_review[:3],
+            "due_review_count": len(due_review),
             "due_retention": due_retention[:3],
+            "due_retention_count": len(due_retention),
             "unlocks": [
                 {
                     "problem_id": problem.id,
