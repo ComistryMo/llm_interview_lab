@@ -199,6 +199,54 @@ def load_profile(paths: ProfilePaths, repo_root: Path) -> dict[str, Any]:
     return validated
 
 
+def profile_summaries(repo_root: Path) -> list[dict[str, Any]]:
+    """Return safe metadata for the Profile switcher.
+
+    The desktop shell only needs an id, display name and a small integrity
+    status.  It must not walk submissions, materials or event payloads while
+    populating a picker.  Invalid entries remain visible as ``corrupt`` so a
+    user gets an actionable message instead of an apparently missing Profile.
+    Symlinks/reparse points are never followed.
+    """
+
+    profiles_root = repo_root / "workspace/profiles"
+    if not profiles_root.is_dir() or _is_obvious_link(profiles_root):
+        raise WorkspaceError("workspace/profiles must be a regular, unlinked directory")
+    summaries: list[dict[str, Any]] = []
+    for child in sorted(profiles_root.iterdir(), key=lambda item: item.name.lower()):
+        if child.name == ".gitkeep":
+            continue
+        base = {
+            "profile_id": child.name,
+            "display_name": child.name,
+            "status": "corrupt",
+            "error_code": "PROFILE_CORRUPTED",
+            "role_id": "",
+            "seniority": "",
+        }
+        if _is_obvious_link(child) or not child.is_dir():
+            summaries.append(base)
+            continue
+        try:
+            validate_profile_id(child.name)
+            profile = load_profile(profile_paths(repo_root, child.name), repo_root)
+        except (OSError, UnicodeError, WorkspaceError, ValueError, TypeError):
+            summaries.append(base)
+            continue
+        preferences = profile.get("role_preferences", {})
+        summaries.append(
+            {
+                "profile_id": child.name,
+                "display_name": str(profile.get("display_name") or child.name),
+                "status": "ready",
+                "error_code": "",
+                "role_id": str(preferences.get("primary_role") or ""),
+                "seniority": str(preferences.get("seniority") or ""),
+            }
+        )
+    return summaries
+
+
 def _atomic_write_profile(
     repo_root: Path,
     profile_id: str,

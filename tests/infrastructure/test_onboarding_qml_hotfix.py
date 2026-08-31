@@ -179,6 +179,39 @@ def test_supported_small_window_uses_one_reliable_role_column(onboarding_scene) 
     assert all(card.width() > 0 and 92 <= card.height() <= 108 for card in cards)
 
 
+@pytest.mark.parametrize(
+    ("width", "height"),
+    [(900, 620), (1080, 680), (1280, 800), (1440, 900)],
+)
+def test_role_picker_and_primary_action_remain_visible_at_phase2_sizes(
+    onboarding_scene, width: int, height: int
+) -> None:
+    """The supported desktop sizes keep every role card geometrically sound.
+
+    This is intentionally a layout contract rather than a pixel snapshot: it
+    catches the original collapsed GridLayout while remaining stable across
+    platform font rasterizers.
+    """
+
+    _, window, page, _ = onboarding_scene
+    window.resize(width, height)
+    for _ in range(6):
+        QCoreApplication.processEvents()
+    grid = page.findChild(QQuickItem, "onboardingRoleGrid")
+    button = page.findChild(QQuickItem, "onboardingContinueButton")
+    summary = page.findChild(QQuickItem, "onboardingSelectionSummary")
+    assert grid is not None and button is not None and summary is not None
+    cards = _role_cards(onboarding_scene)
+    assert len(cards) == len(ROLE_IDS)
+    assert all(card.width() > 0 and card.height() > 0 for card in cards)
+    # The list may scroll on short windows, but its viewport and the selection
+    # summary/CTA must remain real, non-negative geometry.
+    assert grid.width() > 0 and grid.height() > 0
+    assert button.width() >= 112 and button.height() >= 40
+    assert summary.width() > 0 and summary.height() > 0
+    assert button.mapToItem(page, QPointF(0, button.height())).y() <= page.height()
+
+
 @pytest.mark.parametrize("index", [0, 3, 7])
 def test_clicking_first_fourth_and_eighth_roles_selects_id(onboarding_scene, index: int) -> None:
     _, window, page, _ = onboarding_scene

@@ -19,11 +19,56 @@ TEXT: dict[str, str] = {
     "status.ai_connected": "AI 已连接",
     "status.codex_connected": "Codex 已连接",
     "status.codex_ready": "Codex 就绪",
+    "status.codex_connecting": "Codex 连接中……",
+    "status.codex_switching": "Codex 工作流切换中……",
     "error.generic": "操作未完成。请检查输入后重试；本地训练仍可继续。",
     "error.provider": "AI 服务当前不可用。请检查网络、模型与密钥；你仍可继续本地训练和手动模拟面试。",
     "error.keyring": "系统密钥环不可用，未保存 API Key。你仍可使用无需 AI 的本地模式。",
     "error.codex_missing": "未检测到 Codex。请安装 Codex，或在设置中选择可执行文件；本地训练不受影响。",
     "error.codex_login": "Codex 尚未登录。请先完成登录；本地训练不受影响。",
+    "profile.not_found": "没有找到上次使用的学习档案。请从设置选择现有档案，或创建一个新档案。",
+    "profile.corrupted": "学习档案文件无法读取。请先备份数据目录，再修复或移除损坏文件。",
+    "profile.switch_unsaved": "当前题目有未保存修改。请先保存，或明确放弃修改后再切换档案。",
+    "profile.switch_busy": "当前操作尚未结束，请等待完成后再切换学习档案。",
+    "profile.not_ready": "这个学习档案当前不可用，请从设置选择其他档案。",
+    "codex.checking": "正在查找 Codex（PATH 和常见安装位置）……",
+    "codex.found": "已发现 Codex：",
+    "codex.missing": "未发现 Codex。你仍可使用 No-AI 本地训练；如需 AI 面试，请安装并登录 Codex，或点击“选择 Codex”指定可执行文件。也可以选择普通 LLM / Ollama。",
+}
+
+
+# English is intentionally a small, opt-in vocabulary.  Chinese remains the
+# canonical default; keeping the map here avoids introducing a translation
+# framework while allowing the setting to persist across launches.
+EN_TEXT: dict[str, str] = {
+    "nav.home": "Home",
+    "nav.career": "Career materials",
+    "nav.learn": "Practice",
+    "nav.interview": "Mock interview",
+    "nav.coach": "AI Coach",
+    "nav.progress": "Progress",
+    "nav.connections": "AI connections",
+    "nav.settings": "Settings",
+    "page.exercise": "Exercise workspace",
+    "status.ai_offline": "AI offline · Local features available",
+    "status.ai_connected": "AI connected",
+    "status.codex_connected": "Codex connected",
+    "status.codex_ready": "Codex ready",
+    "status.codex_connecting": "Connecting to Codex…",
+    "status.codex_switching": "Switching Codex workflow…",
+    "error.generic": "The operation could not be completed. Check the input and try again; local practice remains available.",
+    "error.provider": "The AI service is unavailable. Check the network, model, and key; local practice and manual interviews remain available.",
+    "error.keyring": "The system keyring is unavailable, so the API key was not saved. You can continue in No-AI mode.",
+    "error.codex_missing": "Codex was not found. Install it or choose its executable in Settings; local practice is unaffected.",
+    "error.codex_login": "Codex is not signed in. Complete sign-in first; local practice is unaffected.",
+    "profile.not_found": "The last-used learning profile was not found. Choose an existing profile in Settings or create a new one.",
+    "profile.corrupted": "The learning profile cannot be read. Back up the data directory, then repair or remove the damaged file.",
+    "profile.switch_unsaved": "The current exercise has unsaved changes. Save them, or explicitly discard them before switching profiles.",
+    "profile.switch_busy": "The current operation is still running. Wait for it to finish before switching profiles.",
+    "profile.not_ready": "This learning profile is not available. Choose another profile in Settings.",
+    "codex.checking": "Looking for Codex (PATH and common locations)…",
+    "codex.found": "Codex found: ",
+    "codex.missing": "Codex was not found. No-AI local practice is still available; install and sign in, or choose the Codex executable in Settings. You can also use an LLM / Ollama provider for AI interviews.",
 }
 
 
@@ -84,13 +129,31 @@ ONBOARDING_ERRORS: dict[str, str] = {
     "ONBOARDING_UNEXPECTED": "创建学习档案失败。详细原因已写入本地日志。",
 }
 
+EN_ONBOARDING_ERRORS: dict[str, str] = {
+    "PROFILE_ID_INVALID": "The profile ID must start with a lowercase letter and contain only lowercase letters, digits, or hyphens.",
+    "ROLE_REQUIRED": "Choose a target role before continuing.",
+    "ROLE_NOT_FOUND": "That role is no longer available. Return to the role step and choose another one.",
+    "SENIORITY_UNSUPPORTED": "This role does not support the selected career stage. Choose another stage.",
+    "ASSESSMENT_INVALID": "The self-assessment is invalid. Go back and correct it, or skip the assessment.",
+    "AI_MODE_INVALID": "The AI connection choice is invalid. Choose it again, or continue in No-AI mode.",
+    "WORKSPACE_NOT_WRITABLE": "The local learning directory cannot be written. Check its permissions and try again.",
+    "PROFILE_CORRUPTED": "The existing learning profile cannot be read. Open its data directory in Settings and inspect it first.",
+    "PUBLIC_ASSETS_MISSING": "Public curriculum assets are missing. Re-extract or download the desktop application again.",
+    "ONBOARDING_UNEXPECTED": "The learning profile could not be created. Details were written to the local log.",
+}
 
-def text(key: str, fallback: str = "") -> str:
-    return TEXT.get(key, fallback or key)
+
+def text(key: str, fallback: str = "", language: str = "zh-CN") -> str:
+    """Resolve one small UI string without changing the public call shape."""
+
+    table = EN_TEXT if language in {"en", "en-US", "en-GB"} else TEXT
+    return table.get(key, fallback or TEXT.get(key, key))
 
 
-def onboarding_error_text(code: str) -> str:
-    return ONBOARDING_ERRORS.get(code, ONBOARDING_ERRORS["ONBOARDING_UNEXPECTED"])
+def onboarding_error_text(code: str, language: str = "zh-CN") -> str:
+    table = EN_ONBOARDING_ERRORS if language in {"en", "en-US", "en-GB"} else ONBOARDING_ERRORS
+    fallback = "ONBOARDING_UNEXPECTED"
+    return table.get(code, table[fallback])
 
 
 def localize_role(card: dict[str, Any]) -> dict[str, Any]:

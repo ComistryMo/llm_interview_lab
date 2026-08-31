@@ -491,17 +491,47 @@ Item {
                         objectName: "noAiInterviewNotice"
                         width: parent.width
                         visible: leftPanel.setupVisible && aiMode.currentValue === "disabled"
-                        text: "模拟面试需要 AI 才能根据回答追问并生成有证据的复盘。No-AI 模式仍可继续刷题、运行测试、复盘和间隔复测。"
+                        text: "模拟面试需要 AI 才能进行真实追问和证据化复盘。No-AI 模式仍可继续刷题、运行测试、复盘和间隔复测；不会创建虚假的 Session、评分或报告。"
                         color: root.palette.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
                     }
-                    Button {
-                        objectName: "goToConnectionsFromInterview"
+                    LabCard {
+                        objectName: "noAiInterviewLockPanel"
                         width: parent.width
                         visible: leftPanel.setupVisible && aiMode.currentValue === "disabled"
-                        text: "去 AI 连接"
-                        onClicked: app.navigate("connections")
+                        padding: 12
+                        cardColor: root.palette.surfaceAlt
+                        borderColor: root.palette.border
+                        accentColor: root.palette.accent
+                        Text {
+                            width: parent.width
+                            text: "个性化模拟面试已锁定"
+                            color: root.palette.text
+                            font.bold: true
+                            wrapMode: Text.Wrap
+                        }
+                        Text {
+                            width: parent.width
+                            text: "接入普通 LLM、配置本地 Ollama 或连接 Codex 后，才能根据你的回答进行追问和证据化复盘。AI 连接不是刷题的前置条件。"
+                            color: root.palette.muted
+                            wrapMode: Text.Wrap
+                            font.pixelSize: 11
+                        }
+                        Flow {
+                            width: parent.width
+                            spacing: 6
+                            Button {
+                                objectName: "goToConnectionsFromInterview"
+                                text: "打开 AI 连接"
+                                onClicked: app.navigate("connections")
+                            }
+                            Button {
+                                objectName: "continueNoAiPractice"
+                                text: "继续刷题"
+                                onClicked: app.navigate("learn")
+                            }
+                        }
                     }
                     Text {
                         width: parent.width

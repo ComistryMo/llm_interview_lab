@@ -119,7 +119,7 @@ ApplicationWindow {
         var titles = {
             home: backend.uiText("nav.home"),
             learn: backend.uiText("nav.learn"),
-            exercise: "答题工作区",
+            exercise: backend.uiText("page.exercise"),
             interview: backend.uiText("nav.interview"),
             progress: backend.uiText("nav.progress"),
             career: backend.uiText("nav.career"),
@@ -331,7 +331,7 @@ ApplicationWindow {
                     model: [
                         {id: "home", label: backend.uiText("nav.home"), icon: "../resources/icons/home.svg"},
                         {id: "learn", label: backend.uiText("nav.learn"), icon: "../resources/icons/book-open.svg"},
-                        {id: "exercise", label: "答题工作区", icon: "../resources/icons/code.svg"},
+                        {id: "exercise", label: backend.uiText("page.exercise"), icon: "../resources/icons/code.svg"},
                         {id: "interview", label: backend.uiText("nav.interview"), icon: "../resources/icons/interview.svg"}
                     ]
                     delegate: navButtonDelegate
@@ -391,13 +391,17 @@ ApplicationWindow {
 
                 Item { Layout.fillHeight: true }
                 LabSurface {
+                    objectName: "sidebarProfileSwitcher"
                     theme: appTheme
                     visible: window.layoutMode === "wide"
                     level: "sunken"
                     outlined: false
                     padding: 0
+                    interactive: true
+                    accessibleName: "切换学习档案"
                     Layout.fillWidth: true
                     Layout.preferredHeight: 70
+                    onActivated: backend.navigate("settings")
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 12

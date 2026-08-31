@@ -76,6 +76,117 @@ Flickable {
                 Slider { from: 0.85; to: 1.4; value: app.fontScale; stepSize: 0.05; Layout.fillWidth: true; onMoved: app.setFontScale(value) }
                 Text { text: Math.round(app.fontScale * 100) + "%"; color: root.palette.muted }
             }
+            Text { text: "界面语言"; color: root.palette.text; font.bold: true }
+            Flow {
+                width: parent.width
+                spacing: 8
+                Repeater {
+                    model: [{id:"zh-CN", label:"简体中文"}, {id:"en", label:"English（实验性）"}]
+                    delegate: Button {
+                        required property var modelData
+                        text: modelData.label
+                        checkable: true
+                        checked: app.language === modelData.id
+                        onClicked: app.setLanguage(modelData.id)
+                    }
+                }
+            }
+            Text {
+                width: parent.width
+                text: app.language === "en"
+                      ? "语言选择会在下次启动时保留；题面内容仍以课程提供的语言为准。"
+                      : "简体中文是默认语言；选择会在下次启动时保留。"
+                color: root.palette.muted
+                wrapMode: Text.Wrap
+                font.pixelSize: 12
+            }
+        }
+
+        LabCard {
+            objectName: "profileSwitcherCard"
+            Layout.fillWidth: true
+            cardColor: root.palette.surface; borderColor: root.palette.border
+            Text { text: "学习档案"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
+            Text {
+                width: parent.width
+                text: "切换后，材料、作答、面试和进度都会从所选档案重新读取。"
+                color: root.palette.muted
+                wrapMode: Text.Wrap
+            }
+            RowLayout {
+                width: parent.width
+                spacing: 10
+                ComboBox {
+                    id: profilePicker
+                    objectName: "profileSwitcher"
+                    Layout.fillWidth: true
+                    enabled: !app.profileSwitchBusy && (app.profileOptions || []).length > 0
+                    model: app.profileOptions || []
+                    textRole: "display_name"
+                    valueRole: "profile_id"
+                    currentIndex: {
+                        var values = app.profileOptions || []
+                        for (var i = 0; i < values.length; ++i)
+                            if (values[i].profile_id === app.profileId)
+                                return i
+                        return -1
+                    }
+                    onActivated: {
+                        var selected = app.profileOptions[currentIndex] || {}
+                        if (selected.profile_id && !app.switchProfile(selected.profile_id)) {
+                            // A dirty editor or active request can reject a
+                            // switch synchronously. ComboBox interaction
+                            // temporarily owns currentIndex, so restore the
+                            // actual controller Profile instead of leaving a
+                            // misleading selection on screen.
+                            Qt.callLater(function() {
+                                var values = app.profileOptions || []
+                                for (var i = 0; i < values.length; ++i) {
+                                    if (values[i].profile_id === app.profileId) {
+                                        profilePicker.currentIndex = i
+                                        break
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                StatusPill {
+                    theme: null
+                    compact: true
+                    text: app.profileSwitchBusy ? "切换中" : "当前"
+                    tone: app.profileSwitchBusy ? root.palette.warning : root.palette.success
+                }
+            }
+            Text {
+                width: parent.width
+                visible: (app.profileOptions || []).length === 0
+                text: "当前没有可切换的学习档案。返回首次启动流程即可创建一个新的档案。"
+                color: root.palette.muted
+                wrapMode: Text.Wrap
+            }
+            Button {
+                objectName: "startProfileSetupFromSettings"
+                visible: (app.profileOptions || []).length === 0
+                text: "重新创建学习档案"
+                onClicked: app.retryProfileSetup()
+            }
+            Text {
+                objectName: "profileSwitcherError"
+                width: parent.width
+                visible: (app.profileSwitchError || app.profileRestoreError || "").length > 0
+                text: app.profileSwitchError || app.profileRestoreError
+                color: root.palette.danger
+                wrapMode: Text.Wrap
+            }
+            Text {
+                width: parent.width
+                visible: (app.profileRestoreErrorCode || "").length > 0
+                text: "错误编号：" + app.profileRestoreErrorCode + "。请先备份数据目录，再选择其他档案或重新创建。"
+                color: root.palette.muted
+                wrapMode: Text.Wrap
+                font.pixelSize: 12
+            }
         }
 
         LabCard {
@@ -110,13 +221,43 @@ Flickable {
             Text { text: "Codex 可执行文件"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
             Text {
                 width: parent.width
-                text: app.codexExecutable || (Qt.platform.os === "osx"
+                text: app.codexExecutableDisplay || (Qt.platform.os === "osx"
                       ? "自动查找（PATH、Homebrew 和常见用户目录）"
                       : Qt.platform.os === "windows"
                         ? "自动查找（PATH、npm 和常见用户目录）"
                         : "自动查找（PATH 和常见用户目录）")
                 color: root.palette.muted
                 elide: Text.ElideMiddle
+            }
+            RowLayout {
+                width: parent.width
+                spacing: 8
+                StatusPill {
+                    objectName: "codexDiscoveryStatus"
+                    compact: true
+                    text: app.codexProbeRunning ? "检查中"
+                          : app.codexDiscoveryState === "found" ? "已发现"
+                          : app.codexDiscoveryState === "missing" ? "未发现" : "未检查"
+                    tone: app.codexProbeRunning ? root.palette.warning
+                          : app.codexDiscoveryState === "found" ? root.palette.success
+                          : root.palette.muted
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: app.codexDiscoveryMessage || ""
+                    color: root.palette.muted
+                    wrapMode: Text.Wrap
+                    elide: Text.ElideRight
+                }
+            }
+            Text {
+                objectName: "codexDiscoveredPath"
+                width: parent.width
+                visible: app.codexDiscoveryState === "found" && (app.codexDiscoveredPath || "").length > 0
+                text: "来源：" + app.codexDiscoveredPath
+                color: root.palette.text
+                elide: Text.ElideMiddle
+                font.pixelSize: 12
             }
             Flow {
                 width: parent.width

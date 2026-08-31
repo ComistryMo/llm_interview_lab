@@ -222,7 +222,11 @@ def test_first_problem_failure_falls_back_to_home_after_profile_creation(
     assert profile_paths(controller.repo_root, "open-fallback").profile_file.is_file()
     assert not controller.onboardingRequired
     assert controller.currentPage == "home"
-    assert messages == ["学习档案已创建，但首题暂时无法打开。请从首页重新尝试。"]
+    assert messages == [
+        "学习档案已创建，但首题暂时无法打开。请从首页进入刷题训练重试；若仍失败，请打开日志目录。（错误编号：INTERNAL_ERROR）"
+    ]
+    assert controller.lastActionResult["error_code"] == "INTERNAL_ERROR"
+    assert controller.lastActionResult["recommended_action"]
     controller.shutdown()
 
 

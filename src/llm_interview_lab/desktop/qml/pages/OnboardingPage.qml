@@ -49,7 +49,8 @@ Rectangle {
     readonly property string displayedError: root.inlineError !== ""
                                                ? root.inlineError
                                                : ((app.onboardingError || "")
-                                                  || root.roleSelectionError)
+                                                   || (app.profileRestoreError || "")
+                                                   || root.roleSelectionError)
 
     color: theme ? theme.canvas : root.palette.background
     focus: visible
@@ -115,10 +116,12 @@ Rectangle {
         root.submitting = true
         Qt.callLater(function() {
             try {
-                app.completeOnboardingWithDisplayName(
+                var accepted = app.completeOnboardingWithDisplayName(
                     displayName, roleId, "new_grad", "disabled", "{}"
                 )
-            } finally {
+                if (!accepted && !app.onboardingBusy)
+                    root.submitting = false
+            } catch (error) {
                 root.submitting = false
             }
         })
@@ -156,6 +159,17 @@ Rectangle {
                 if (root.visible && roleGrid.visible && !root.selectedRole)
                     roleGrid.forceActiveFocus()
             })
+        }
+    }
+
+    Connections {
+        target: app
+        function onStateChanged() {
+            // Controller busy state is the terminal signal for the local
+            // submit gate. It also covers failures reported synchronously or
+            // by a future asynchronous implementation.
+            if (root.submitting && !app.onboardingBusy)
+                root.submitting = false
         }
     }
 
@@ -680,22 +694,61 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: visible
                                               ? Math.max(root.scaledPx(48),
-                                                         onboardingErrorText.implicitHeight + 20)
+                                                         onboardingErrorContent.implicitHeight + 20)
                                               : 0
                     radius: root.theme ? root.theme.radiusSmall : 8
                     color: root.theme ? root.theme.dangerSoft
                                       : Qt.rgba(0.776, 0.239, 0.310, 0.12)
                     border.color: root.palette.danger
 
-                    Text {
-                        id: onboardingErrorText
+                    ColumnLayout {
+                        id: onboardingErrorContent
                         anchors.fill: parent
                         anchors.margins: 10
-                        text: root.displayedError
-                        color: root.palette.danger
-                        font.pixelSize: root.scaledPx(12)
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
+                        spacing: 8
+                        Text {
+                            id: onboardingErrorText
+                            Layout.fillWidth: true
+                            text: root.displayedError
+                            color: root.palette.danger
+                            font.pixelSize: root.scaledPx(12)
+                            wrapMode: Text.WordWrap
+                        }
+                        Text {
+                            objectName: "onboardingErrorAction"
+                            Layout.fillWidth: true
+                            visible: !!app.lastActionResult
+                                     && (app.lastActionResult.recommended_action || "").length > 0
+                            text: "下一步：" + (app.lastActionResult.recommended_action || "")
+                            color: root.theme ? root.theme.text : root.palette.text
+                            font.pixelSize: root.scaledPx(12)
+                            wrapMode: Text.WordWrap
+                        }
+                        Text {
+                            objectName: "onboardingErrorCode"
+                            Layout.fillWidth: true
+                            visible: !!app.lastActionResult
+                                     && (app.lastActionResult.error_code || "").length > 0
+                            text: "错误编号：" + (app.lastActionResult.error_code || "")
+                            color: root.theme ? root.theme.subtle : root.palette.muted
+                            font.pixelSize: root.scaledPx(10)
+                            wrapMode: Text.WrapAnywhere
+                        }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            visible: (app.profileRestoreErrorCode || "").length > 0
+                            Button {
+                                objectName: "openProfileRecoveryButton"
+                                text: "打开设置切换档案"
+                                onClicked: app.openProfileRecovery()
+                            }
+                            Button {
+                                objectName: "retryProfileSetupButton"
+                                text: "重新创建档案"
+                                onClicked: app.retryProfileSetup()
+                            }
+                        }
                     }
                 }
 

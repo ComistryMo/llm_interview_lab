@@ -44,6 +44,7 @@ from ..workspace import (
     WorkspaceError,
     profile_id_for_display_name,
     profile_paths,
+    profile_summaries,
     load_profile,
     validate_profile_id,
 )
@@ -303,6 +304,22 @@ class AppController(QObject):
         self._onboarding_busy = False
         self._onboarding_error = ""
         self._onboarding_error_code = ""
+        # Profile recovery/switching is deliberately a small controller
+        # concern.  The Profile file and events remain the only durable facts;
+        # these fields only describe what the shell should show.
+        self._profile_restore_error = ""
+        self._profile_restore_error_code = ""
+        self._profile_switch_error = ""
+        self._profile_switch_busy = False
+        self._profile_options: list[dict[str, Any]] = []
+        self._last_action_result: dict[str, Any] = {
+            "success": False,
+            "error_code": "",
+            "user_message": "",
+            "technical_message": "",
+            "recommended_action": "",
+            "operation_id": "",
+        }
         self._onboarding_result: dict[str, Any] = {
             "success": False,
             "error_code": "",
@@ -362,6 +379,9 @@ class AppController(QObject):
         self._workers: set[Worker] = set()
         self._thread_pool = QThreadPool.globalInstance()
         self._settings = QSettings("ComistryMo", "LLMInterviewLab")
+        language = str(self._settings.value("language", "zh-CN") or "zh-CN")
+        self._language = language if language in {"zh-CN", "en"} else "zh-CN"
+        self._ai_status = text("status.ai_offline", language=self._language)
         # A packaged desktop launch has no CLI argument with which to recover
         # the last Profile.  Store only the safe internal id, scoped to this
         # repository/data root, so a different checkout can never select a
@@ -385,6 +405,13 @@ class AppController(QObject):
         )
         self._codex_available = False
         self._codex_probe_running = False
+        self._codex_discovery_state = "idle"
+        self._codex_discovery_message = text("codex.checking", language=self._language)
+        self._codex_discovered_path = ""
+        # Monotonic token fences a late PATH probe after the user changes or
+        # clears the configured executable.  A stale worker may finish, but
+        # it must not repaint the newer Settings state.
+        self._codex_probe_token = 0
         self._legacy_data_root = (
             None
             if self._demo_mode
@@ -456,6 +483,7 @@ class AppController(QObject):
         if demo_page:
             self._load_demo(demo_page)
         else:
+            self._refresh_profile_options()
             self.refresh()
             # Finder/Explorer startup must not synchronously scan PATH or
             # launch a subprocess from a QML property getter.
@@ -464,6 +492,18 @@ class AppController(QObject):
     def _load_demo(self, page: str) -> None:
         self._profile_id = "demo"
         self._profile_display_name = "演示学习档案"
+        self._profile_options = [
+            {
+                "profile_id": "demo",
+                "display_name": "演示学习档案",
+                "status": "ready",
+                "error_code": "",
+                "role_id": "applied_ai_engineer",
+                "seniority": "new_grad",
+            }
+        ]
+        self._codex_discovery_state = "not_checked"
+        self._codex_discovery_message = "合成演示不会探测本机 Codex。"
         self._onboarding = page == "onboarding"
         self._dashboard = _demo_dashboard()
         self._problems = [
@@ -604,6 +644,34 @@ class AppController(QObject):
     @Property(str, notify=stateChanged)
     def profileDisplayName(self) -> str:
         return self._profile_display_name
+
+    @Property("QVariantList", notify=stateChanged)
+    def profileOptions(self) -> list[dict[str, Any]]:
+        """Metadata-only entries used by the Settings profile switcher."""
+
+        return list(self._profile_options)
+
+    @Property(str, notify=stateChanged)
+    def profileRestoreError(self) -> str:
+        return self._profile_restore_error
+
+    @Property(str, notify=stateChanged)
+    def profileRestoreErrorCode(self) -> str:
+        return self._profile_restore_error_code
+
+    @Property(str, notify=stateChanged)
+    def profileSwitchError(self) -> str:
+        return self._profile_switch_error
+
+    @Property(bool, notify=stateChanged)
+    def profileSwitchBusy(self) -> bool:
+        return self._profile_switch_busy
+
+    @Property("QVariantMap", notify=stateChanged)
+    def lastActionResult(self) -> dict[str, Any]:
+        """Structured result for shell actions such as opening a problem."""
+
+        return dict(self._last_action_result)
 
     @Property(bool, notify=stateChanged)
     def onboardingRequired(self) -> bool:
@@ -812,6 +880,10 @@ class AppController(QObject):
     def theme(self) -> str:
         return self._theme
 
+    @Property(str, notify=stateChanged)
+    def language(self) -> str:
+        return self._language
+
     @Property(float, notify=stateChanged)
     def fontScale(self) -> float:
         return self._font_scale
@@ -836,6 +908,33 @@ class AppController(QObject):
     @Property(bool, notify=aiStateChanged)
     def codexAvailable(self) -> bool:
         return self._codex_available
+
+    @Property(str, notify=aiStateChanged)
+    def codexDiscoveryState(self) -> str:
+        return self._codex_discovery_state
+
+    @Property(str, notify=aiStateChanged)
+    def codexDiscoveryMessage(self) -> str:
+        return self._codex_discovery_message
+
+    @Property(str, notify=aiStateChanged)
+    def codexDiscoveredPath(self) -> str:
+        return self._safe_display_path(self._codex_discovered_path)
+
+    @Property(str, notify=aiStateChanged)
+    def codexExecutableDisplay(self) -> str:
+        """Return a privacy-safe location for the Settings page.
+
+        The raw executable path remains an internal launch setting.  User
+        visible diagnostics should not reveal a full home directory or a
+        checkout-specific path in screenshots/log exports.
+        """
+
+        return self._safe_display_path(self._codex_executable)
+
+    @Property(bool, notify=aiStateChanged)
+    def codexProbeRunning(self) -> bool:
+        return self._codex_probe_running
 
     @Property(str, notify=stateChanged)
     def dataDirectory(self) -> str:
@@ -863,7 +962,7 @@ class AppController(QObject):
 
     @Slot(str, result=str)
     def uiText(self, key: str) -> str:
-        return text(key)
+        return text(key, language=self._language)
 
     def _show_error(self, error: BaseException | str) -> None:
         self.toast.emit(friendly_error(error))
@@ -872,7 +971,7 @@ class AppController(QObject):
         self, code: str, stage: str, error: BaseException | None = None
     ) -> bool:
         self._onboarding_error_code = code
-        self._onboarding_error = onboarding_error_text(code)
+        self._onboarding_error = onboarding_error_text(code, self._language)
         error_type = type(error).__name__ if error is not None else "InputError"
         detail = ""
         if error is not None:
@@ -888,15 +987,37 @@ class AppController(QObject):
             error_type,
             detail,
         )
+        recommended_actions = {
+            "PROFILE_ID_INVALID": "请返回名称步骤修改档案名称后重试。",
+            "ROLE_REQUIRED": "请返回岗位步骤选择一个目标岗位。",
+            "ROLE_NOT_FOUND": "请返回岗位步骤重新选择可用岗位。",
+            "SENIORITY_UNSUPPORTED": "请返回岗位步骤选择受支持的求职阶段。",
+            "ASSESSMENT_INVALID": "请返回能力自评步骤修正内容，或选择跳过自评。",
+            "AI_MODE_INVALID": "请重新选择 AI 方式；也可以保持 No-AI 继续本地训练。",
+            "WORKSPACE_NOT_WRITABLE": "请检查本地数据目录权限，或在设置中选择可用档案。",
+            "PROFILE_CORRUPTED": "请先备份数据目录，再修复档案或切换到其他档案。",
+            "PUBLIC_ASSETS_MISSING": "请重新解压/安装应用，确认课程资源与程序位于同一目录。",
+        }
+        recommended_action = recommended_actions.get(
+            code, "请查看本地日志中的操作编号后重试；本地训练仍可继续。"
+        )
         self._onboarding_result = {
             "success": False,
             "error_code": code,
             "user_message": self._onboarding_error,
             "technical_message": detail,
-            "recommended_action": "请按提示修正后重试；如仍失败，请打开本地日志。",
+            "recommended_action": recommended_action,
             "operation_id": self._onboarding_result.get("operation_id") or uuid4().hex,
             "stage": stage,
         }
+        self._set_action_result(
+            success=False,
+            operation_id=self._onboarding_result["operation_id"],
+            error_code=code,
+            user_message=self._onboarding_error,
+            technical_message=detail,
+            recommended_action=self._onboarding_result["recommended_action"],
+        )
         self.stateChanged.emit()
         return False
 
@@ -1030,6 +1151,71 @@ class AppController(QObject):
         ).hexdigest()[:16]
         return f"profiles/{root_digest}/active_profile_id"
 
+    def _refresh_profile_options(self) -> None:
+        """Refresh the switcher from Profile metadata only."""
+
+        if self._demo_mode:
+            return
+        try:
+            self._profile_options = profile_summaries(self.repo_root)
+        except (OSError, WorkspaceError) as error:
+            self._profile_options = []
+            logging.getLogger("llm_interview_lab.desktop").warning(
+                "profile_list_unavailable error_type=%s", type(error).__name__
+            )
+
+    def _set_action_result(
+        self,
+        *,
+        success: bool,
+        operation_id: str | None = None,
+        error_code: str = "",
+        user_message: str = "",
+        technical_message: str = "",
+        recommended_action: str = "",
+    ) -> None:
+        self._last_action_result = {
+            "success": success,
+            "error_code": error_code,
+            "user_message": user_message,
+            "technical_message": technical_message,
+            "recommended_action": recommended_action,
+            "operation_id": operation_id or uuid4().hex,
+        }
+
+    def _set_profile_restore_error(self, code: str, detail: str = "") -> None:
+        self._profile_restore_error_code = code
+        if code == "PROFILE_NOT_FOUND":
+            self._profile_restore_error = text("profile.not_found", language=self._language)
+        elif code == "PROFILE_CORRUPTED":
+            self._profile_restore_error = text("profile.corrupted", language=self._language)
+        else:
+            self._profile_restore_error = detail or text("profile.not_ready", language=self._language)
+
+    @staticmethod
+    def _safe_display_path(value: str | Path | None) -> str:
+        """Abbreviate a local path before it reaches user-visible QML."""
+
+        if not value:
+            return ""
+        raw = str(value)
+        try:
+            home = str(Path.home())
+            if raw.casefold().startswith(home.casefold().rstrip("\\/") + os.sep):
+                return "~" + raw[len(home) :]
+            # Keep a useful source hint without exposing arbitrary parent
+            # folders (for example a username or a private checkout path).
+            path = Path(raw)
+            if len(path.parts) > 3:
+                return "…/" + "/".join(path.parts[-2:])
+        except (OSError, RuntimeError, TypeError, ValueError):
+            return Path(raw).name or "已配置"
+        return raw
+
+    def _clear_profile_errors(self) -> None:
+        self._profile_restore_error = ""
+        self._profile_restore_error_code = ""
+
     def _restore_active_profile_id(self, requested: str) -> str:
         """Recover the last explicitly opened Profile without enumeration.
 
@@ -1045,10 +1231,19 @@ class AppController(QObject):
             return requested
         try:
             validate_profile_id(candidate)
-            path = profile_paths(self.repo_root, candidate).profile_file
+            paths = profile_paths(self.repo_root, candidate)
         except (TypeError, ValueError, WorkspaceError):
+            self._set_profile_restore_error("PROFILE_NOT_FOUND")
             return requested
-        return candidate if path.is_file() else requested
+        if not paths.profile_file.is_file():
+            self._set_profile_restore_error("PROFILE_NOT_FOUND")
+            return requested
+        try:
+            load_profile(paths, self.repo_root)
+        except (OSError, UnicodeError, WorkspaceError, ValueError, TypeError) as error:
+            self._set_profile_restore_error("PROFILE_CORRUPTED", str(error))
+            return requested
+        return candidate
 
     def _persist_active_profile_id(self) -> None:
         """Remember the current safe Profile for the next desktop launch."""
@@ -1071,6 +1266,10 @@ class AppController(QObject):
 
     def _load_profile_state(self) -> None:
         self._cancel_coach_stream_for_reload()
+        # AI assessments are bound to a specific Profile/interview question.
+        # Clear the in-memory candidate before loading another snapshot so a
+        # pending follow-up can never be consumed by the next Profile.
+        self._pending_ai_assessment = None
         paths = profile_paths(self.repo_root, self._profile_id)
         profile = load_profile(paths, self.repo_root)
         self._profile_display_name = profile.get("display_name", self._profile_id)
@@ -1151,6 +1350,8 @@ class AppController(QObject):
                 type(error).__name__,
             )
         self._onboarding = False
+        self._clear_profile_errors()
+        self._refresh_profile_options()
         self._persist_active_profile_id()
 
     def _load_coach_state(self) -> None:
@@ -1416,9 +1617,42 @@ class AppController(QObject):
         # newly missing Profile.
         self._interview_plan_request = None
         self._interview_plan_preview = {}
-        path = profile_paths(self.repo_root, self._profile_id).profile_file
+        try:
+            path = profile_paths(self.repo_root, self._profile_id).profile_file
+        except (TypeError, ValueError, WorkspaceError) as error:
+            self._onboarding = True
+            self._set_profile_restore_error("PROFILE_NOT_FOUND", str(error))
+            self._set_action_result(
+                success=False,
+                error_code="PROFILE_NOT_FOUND",
+                user_message=self._profile_restore_error,
+                recommended_action="请在设置中选择一个现有档案，或重新创建学习档案。",
+            )
+            self.stateChanged.emit()
+            return
         if not path.is_file():
             self._onboarding = True
+            # A clean first launch has no previous Profile and should remain
+            # quiet.  A stale explicit/remembered id, however, must be
+            # explained instead of being silently replaced.
+            if self._profile_id != "default" or self._profile_restore_error_code:
+                # ``_restore_active_profile_id`` may already have classified a
+                # stale remembered id as corrupt.  Do not overwrite that
+                # actionable diagnosis merely because the safe fallback id
+                # (``default``) has no profile of its own.
+                if not self._profile_restore_error_code:
+                    self._set_profile_restore_error("PROFILE_NOT_FOUND")
+                self._set_action_result(
+                    success=False,
+                    error_code=self._profile_restore_error_code or "PROFILE_NOT_FOUND",
+                    user_message=self._profile_restore_error
+                    or text("profile.not_found", language=self._language),
+                    recommended_action=(
+                        "请先备份数据目录，再修复该档案或从设置切换到其他档案。"
+                        if self._profile_restore_error_code == "PROFILE_CORRUPTED"
+                        else "请在设置中选择一个现有档案，或重新创建学习档案。"
+                    ),
+                )
             self._dashboard = {}
             self._problems = []
             self._connections = []
@@ -1447,7 +1681,221 @@ class AppController(QObject):
         try:
             self._load_profile_state()
         except Exception as error:
-            self._show_error(error)
+            self._onboarding = True
+            self._set_profile_restore_error("PROFILE_CORRUPTED", str(error))
+            self._set_action_result(
+                success=False,
+                error_code="PROFILE_CORRUPTED",
+                user_message=self._profile_restore_error,
+                technical_message=" ".join(str(error).split())[:400],
+                recommended_action="请先备份数据目录，再修复该档案或从设置切换到其他档案。",
+            )
+            self.toast.emit(
+                f"{self._profile_restore_error}请先备份数据目录，再从设置切换档案。"
+                "（错误编号：PROFILE_CORRUPTED）"
+            )
+        self.stateChanged.emit()
+
+    @Slot(str, result=bool)
+    def switchProfile(self, profile_id: str) -> bool:
+        """Switch the desktop snapshot to one validated local Profile.
+
+        Switching is synchronous and guarded because every loaded view,
+        recording draft and background identity is scoped to ``_profile_id``.
+        We refuse a dirty or active operation rather than guessing whether a
+        user's work should be discarded.
+        """
+
+        operation_id = uuid4().hex
+        if self._demo_mode:
+            self._profile_switch_error = "合成演示不会切换真实学习档案。"
+            self._set_action_result(
+                success=False,
+                operation_id=operation_id,
+                error_code="PROFILE_NOT_READY",
+                user_message=self._profile_switch_error,
+                recommended_action="退出演示后再选择真实学习档案。",
+            )
+            self.stateChanged.emit()
+            return False
+        if self._profile_switch_busy or self._onboarding_busy:
+            self._profile_switch_error = text("profile.switch_busy", language=self._language)
+            self._set_action_result(
+                success=False,
+                operation_id=operation_id,
+                error_code="PROFILE_SWITCH_BUSY",
+                user_message=self._profile_switch_error,
+                recommended_action="等待当前操作完成后重试。",
+            )
+            self.stateChanged.emit()
+            return False
+        if self._busy or self._coach_streaming:
+            self._profile_switch_error = text("profile.switch_busy", language=self._language)
+            self._set_action_result(
+                success=False,
+                operation_id=operation_id,
+                error_code="PROFILE_SWITCH_BUSY",
+                user_message=self._profile_switch_error,
+                recommended_action="等待测试或 AI 教练操作完成后重试。",
+            )
+            self.stateChanged.emit()
+            return False
+        if (
+            self._voice_transcription_operation_id
+            or self._voice_recorder.state in {"recording", "recorded"}
+            or self._interview_provider_operation_id
+            or self._codex_interview_operation_id
+            or self._interview_plan_request is not None
+        ):
+            self._profile_switch_error = text("profile.switch_busy", language=self._language)
+            self._set_action_result(
+                success=False,
+                operation_id=operation_id,
+                error_code="PROFILE_SWITCH_BUSY",
+                user_message=self._profile_switch_error,
+                recommended_action="先完成或明确结束当前面试录音/请求，再切换学习档案。",
+            )
+            self.stateChanged.emit()
+            return False
+        if self.submissionDirty:
+            self._profile_switch_error = text("profile.switch_unsaved", language=self._language)
+            self._set_action_result(
+                success=False,
+                operation_id=operation_id,
+                error_code="UNSAVED_CHANGES",
+                user_message=self._profile_switch_error,
+                recommended_action="先保存当前答案，或返回当前题目明确放弃修改。",
+            )
+            self.stateChanged.emit()
+            return False
+
+        candidate = str(profile_id or "").strip()
+        if candidate == self._profile_id:
+            self._profile_switch_error = ""
+            self._set_action_result(success=True, operation_id=operation_id)
+            self.stateChanged.emit()
+            return True
+        previous = self._profile_id
+        self._profile_switch_busy = True
+        self._profile_switch_error = ""
+        self.stateChanged.emit()
+        try:
+            validate_profile_id(candidate)
+            target_paths = profile_paths(self.repo_root, candidate)
+            if not target_paths.profile_file.is_file():
+                raise WorkspaceError("profile was not found")
+            # Validate before changing the active id. This keeps a malformed
+            # target from clearing the currently usable snapshot.
+            load_profile(target_paths, self.repo_root)
+            # Fence every queued callback before replacing the Profile
+            # snapshot.  ``_busy`` normally catches these operations, but the
+            # generation is the final correctness boundary for queued events.
+            self._background_generation += 1
+            self._cancel_coach_stream_for_reload()
+            self._background_operations.clear()
+            self._set_busy(False)
+            self._interview_plan_request = None
+            self._interview_plan_preview = {}
+            self._profile_id = candidate
+            self._load_profile_state()
+            self._persist_active_profile_id()
+            self._refresh_profile_options()
+            self.navigate("home")
+            self._set_action_result(
+                success=True,
+                operation_id=operation_id,
+                recommended_action="继续当前学习档案中的训练。",
+            )
+            return True
+        except (TypeError, ValueError, WorkspaceError) as error:
+            message = str(error).lower()
+            code = "PROFILE_CORRUPTED" if any(
+                token in message
+                for token in ("invalid profile", "profile.yaml", "does not match", "cannot be read")
+            ) else "PROFILE_NOT_FOUND"
+            self._profile_switch_error = (
+                text("profile.corrupted", language=self._language)
+                if code == "PROFILE_CORRUPTED"
+                else text("profile.not_found", language=self._language)
+            )
+            self._set_action_result(
+                success=False,
+                operation_id=operation_id,
+                error_code=code,
+                user_message=self._profile_switch_error,
+                technical_message=" ".join(str(error).split())[:400],
+                recommended_action="请从列表选择其他档案，或先备份后修复该档案。",
+            )
+            if self._profile_id != previous:
+                self._profile_id = previous
+                try:
+                    self._load_profile_state()
+                except Exception:
+                    pass
+            return False
+        except Exception as error:
+            self._profile_switch_error = text("profile.not_ready", language=self._language)
+            self._set_action_result(
+                success=False,
+                operation_id=operation_id,
+                error_code="PROFILE_NOT_READY",
+                user_message=self._profile_switch_error,
+                technical_message=" ".join(str(error).split())[:400],
+                recommended_action="请查看本地日志后重试。",
+            )
+            logging.getLogger("llm_interview_lab.desktop").error(
+                "profile_switch_failed error_type=%s", type(error).__name__
+            )
+            # A target failure must never leave the controller pointed at a
+            # half-loaded Profile. Restore the previous snapshot when needed.
+            if self._profile_id != previous:
+                self._profile_id = previous
+                try:
+                    self._load_profile_state()
+                except Exception:
+                    pass
+            return False
+        finally:
+            self._profile_switch_busy = False
+            self.stateChanged.emit()
+
+    @Slot()
+    def clearProfileSwitchError(self) -> None:
+        if self._profile_switch_error:
+            self._profile_switch_error = ""
+            self.stateChanged.emit()
+
+    @Slot()
+    def openProfileRecovery(self) -> None:
+        """Expose Settings when automatic Profile recovery needs help."""
+
+        if not self._profile_restore_error_code:
+            return
+        # A stale/corrupt remembered id must not trap the user behind the
+        # onboarding overlay. Settings can show the metadata-only picker and
+        # let the user choose a valid Profile without creating a replacement.
+        self._onboarding = False
+        # Use the public navigation signal so StackLayout and any embedding
+        # client actually reveal Settings; assigning the private page field
+        # alone would leave the underlying Home page selected.
+        self.navigate("settings")
+        self.stateChanged.emit()
+
+    @Slot()
+    def retryProfileSetup(self) -> None:
+        """Return to a clean first-run form without deleting any Profile."""
+
+        self._clear_profile_errors()
+        self._last_action_result = {
+            "success": False,
+            "error_code": "",
+            "user_message": "",
+            "technical_message": "",
+            "recommended_action": "",
+            "operation_id": "",
+        }
+        self._onboarding = True
+        self.navigate("home")
         self.stateChanged.emit()
 
     @Slot(str, str, str, str, str, result=bool)
@@ -1500,6 +1948,13 @@ class AppController(QObject):
         display_name: str | None = None,
     ) -> bool:
         if self._onboarding_busy:
+            self._set_action_result(
+                success=False,
+                error_code="ONBOARDING_BUSY",
+                user_message="正在创建学习档案，请不要重复点击。",
+                recommended_action="等待当前操作完成。",
+            )
+            self.stateChanged.emit()
             return False
         self._onboarding_busy = True
         self._onboarding_error = ""
@@ -1515,6 +1970,7 @@ class AppController(QObject):
         }
         self.stateChanged.emit()
         stage = "validate"
+        first_problem_failed = False
         try:
             profile_id = profile_id.strip()
             validate_profile_id(profile_id)
@@ -1539,6 +1995,7 @@ class AppController(QObject):
             self._profile_id = profile_id
             stage = "refresh"
             self._load_profile_state()
+            self._clear_profile_errors()
             self.stateChanged.emit()
             if self._dashboard.get("unlocks"):
                 stage = "open_problem"
@@ -1547,13 +2004,40 @@ class AppController(QObject):
                         self._dashboard["unlocks"][0]["problem_id"]
                     )
                 except Exception as error:
+                    first_problem_failed = True
                     logging.getLogger("llm_interview_lab.desktop").error(
                         "onboarding_first_problem_failed error_type=%s",
                         type(error).__name__,
                     )
                     self.navigate("home")
+                    detail = " ".join(str(error).split())[:400]
+                    message = detail.lower()
+                    if "prerequisite" in message or "not mastered" in message:
+                        open_code = "NO_UNLOCKED_PROBLEM"
+                        open_message = "学习档案已创建，但当前首题的前置条件尚未满足。"
+                        open_action = "请从刷题训练选择已解锁的题目。"
+                    elif "planned" in message or "asset" in message:
+                        open_code = "PUBLIC_ASSETS_MISSING"
+                        open_message = "学习档案已创建，但首题课程资源暂不可用。"
+                        open_action = "请刷新课程或重新安装应用，再从刷题训练选择其他题目。"
+                    elif "profile" in message or "workspace" in message:
+                        open_code = "PROFILE_INVALID"
+                        open_message = "学习档案已创建，但本地数据目录无法读取。"
+                        open_action = "请打开设置检查数据目录，或切换到其他学习档案。"
+                    else:
+                        open_code = "INTERNAL_ERROR"
+                        open_message = "学习档案已创建，但首题暂时无法打开。"
+                        open_action = "请从首页进入刷题训练重试；若仍失败，请打开日志目录。"
+                    self._set_action_result(
+                        success=False,
+                        operation_id=operation_id,
+                        error_code=open_code,
+                        user_message=open_message,
+                        technical_message=detail,
+                        recommended_action=open_action,
+                    )
                     self.toast.emit(
-                        "学习档案已创建，但首题暂时无法打开。请从首页重新尝试。"
+                        f"{open_message}{open_action}（错误编号：{open_code}）"
                     )
             else:
                 self.navigate("home")
@@ -1566,6 +2050,12 @@ class AppController(QObject):
                 "operation_id": operation_id,
                 "profile_id": self._profile_id,
             }
+            if not first_problem_failed:
+                self._set_action_result(
+                    success=True,
+                    operation_id=operation_id,
+                    recommended_action="继续当前训练。",
+                )
             return True
         except RoleCatalogError as error:
             return self._onboarding_failure("ROLE_NOT_FOUND", stage, error)
@@ -1663,11 +2153,47 @@ class AppController(QObject):
 
     @Slot(str, result=bool)
     def openProblem(self, problem_id: str) -> bool:
+        operation_id = uuid4().hex
         try:
             self._open_problem(problem_id)
+            self._set_action_result(
+                success=True,
+                operation_id=operation_id,
+                recommended_action="完成作答后运行公开测试。",
+            )
+            self.stateChanged.emit()
             return True
         except Exception as error:
-            self._show_error(error)
+            message = str(error).lower()
+            if "prerequisite" in message or "not mastered" in message:
+                code = "NO_UNLOCKED_PROBLEM"
+                user_message = "这道题的前置能力尚未完成，请先完成已解锁的训练。"
+                action = "返回刷题训练，先完成前置题目。"
+            elif "planned" in message or "asset" in message:
+                code = "PUBLIC_ASSETS_MISSING"
+                user_message = "这道题的公开课程资源暂不可用，请刷新课程或重新安装应用。"
+                action = "打开刷题训练查看其他可运行题目。"
+            elif "profile" in message or "workspace" in message:
+                code = "PROFILE_INVALID"
+                user_message = "当前学习档案无法读取，请从设置检查数据目录或切换档案。"
+                action = "打开设置检查学习档案。"
+            else:
+                code = "INTERNAL_ERROR"
+                user_message = "暂时无法打开这道题。请查看本地日志并重试。"
+                action = "返回首页后重试；若仍失败，请打开日志目录。"
+            self._set_action_result(
+                success=False,
+                operation_id=operation_id,
+                error_code=code,
+                user_message=user_message,
+                technical_message=" ".join(str(error).split())[:400],
+                recommended_action=action,
+            )
+            # Keep the user-facing message tied to the structured result. The
+            # generic error toast hides the next action and makes a failed
+            # first-use entry look like an unexplained application failure.
+            self.toast.emit(f"{user_message}{action}（错误编号：{code}）")
+            self.stateChanged.emit()
             return False
 
     @Slot(str, result=bool)
@@ -3782,7 +4308,7 @@ class AppController(QObject):
         self._codex_cancel_pending_kind = ""
         self._codex_drain_token = ""
         self._finish_codex_event_gate()
-        self._ai_status = text("status.ai_offline")
+        self._ai_status = text("status.ai_offline", language=self._language)
         self.aiStateChanged.emit()
         if backend is not None and self._codex_loop is not None:
             try:
@@ -3820,7 +4346,7 @@ class AppController(QObject):
         self._codex_thread_mode = None
         self._codex_turn_id = None
         self._codex_pump_started = False
-        self._ai_status = text("status.ai_offline")
+        self._ai_status = text("status.ai_offline", language=self._language)
         self.aiStateChanged.emit()
         if stale_backend is not None and self._codex_loop is not None:
             try:
@@ -3880,7 +4406,7 @@ class AppController(QObject):
         self._codex_threads = {}
         self._codex_thread_mode = None
         self._codex_pump_started = False
-        self._ai_status = text("status.ai_offline")
+        self._ai_status = text("status.ai_offline", language=self._language)
         self.aiStateChanged.emit()
         if stale_backend is not None and self._codex_loop is not None:
             try:
@@ -4857,7 +5383,7 @@ class AppController(QObject):
         self._codex_cancel_pending_kind = ""
         self._codex_drain_token = ""
         self._finish_codex_event_gate()
-        self._ai_status = text("status.ai_offline")
+        self._ai_status = text("status.ai_offline", language=self._language)
         self.aiStateChanged.emit()
         # A dead stream must not leave either workflow visually streaming.
         if self._codex_coach_identity is not None:
@@ -4931,7 +5457,7 @@ class AppController(QObject):
         self._codex_thread_id = thread_id
         self._codex_threads[mode] = thread_id
         self._codex_thread_mode = mode
-        self._ai_status = text("status.codex_connected")
+        self._ai_status = text("status.codex_connected", language=self._language)
         self.aiStateChanged.emit()
         if self._codex_loop is not None:
             self._codex_loop.call_soon_threadsafe(self._launch_codex_pump, backend)
@@ -4946,9 +5472,9 @@ class AppController(QObject):
             keep_existing = bool(error.get("keep_existing"))
             error = error.get("error") or "Codex 连接失败"
         if keep_existing and self._codex_backend is not None and self._codex_pump_started:
-            self._ai_status = text("status.codex_connected")
+            self._ai_status = text("status.codex_connected", language=self._language)
         else:
-            self._ai_status = text("status.ai_offline")
+            self._ai_status = text("status.ai_offline", language=self._language)
         self.aiStateChanged.emit()
         self._show_error(error if isinstance(error, (BaseException, str)) else str(error))
 
@@ -5129,7 +5655,8 @@ class AppController(QObject):
             self._ai_status = text(
                 "status.codex_ready"
                 if outcome == "completed"
-                else "status.codex_connected"
+                else "status.codex_connected",
+                language=self._language,
             )
             self.aiStateChanged.emit()
             if self._codex_coach_identity is not None:
@@ -5226,7 +5753,7 @@ class AppController(QObject):
                 # the requested sandbox/approval policy.  Threads are never
                 # shared between Coach, Interviewer and repository-agent.
                 loop = self._ensure_codex_loop()
-                self._ai_status = "Codex 工作流切换中…"
+                self._ai_status = text("status.codex_switching", language=self._language)
                 self.aiStateChanged.emit()
 
                 async def open_thread() -> str:
@@ -5274,7 +5801,7 @@ class AppController(QObject):
             self._codex_thread_id = None
             self._codex_threads = {}
             self._codex_thread_mode = None
-            self._ai_status = text("status.ai_offline")
+            self._ai_status = text("status.ai_offline", language=self._language)
             self.aiStateChanged.emit()
             try:
                 if self._codex_loop:
@@ -5285,7 +5812,7 @@ class AppController(QObject):
                 pass
         try:
             loop = self._ensure_codex_loop()
-            self._ai_status = "Codex 连接中…"
+            self._ai_status = text("status.codex_connecting", language=self._language)
             self.aiStateChanged.emit()
 
             async def connect() -> dict[str, Any]:
@@ -5338,7 +5865,7 @@ class AppController(QObject):
 
             future.add_done_callback(finished)
         except Exception as error:
-            self._ai_status = text("status.ai_offline")
+            self._ai_status = text("status.ai_offline", language=self._language)
             self.aiStateChanged.emit()
             self._show_error(error)
 
@@ -5671,6 +6198,7 @@ class AppController(QObject):
             self._theme = value
             if not self._demo_mode:
                 self._settings.setValue("theme", value)
+                self._settings.sync()
             self.stateChanged.emit()
 
     @Slot(float)
@@ -5678,7 +6206,29 @@ class AppController(QObject):
         self._font_scale = max(0.85, min(1.4, value))
         if not self._demo_mode:
             self._settings.setValue("fontScale", self._font_scale)
+            self._settings.sync()
         self.stateChanged.emit()
+
+    @Slot(str)
+    def setLanguage(self, value: str) -> None:
+        """Persist the opt-in language choice; Chinese remains canonical."""
+
+        language = value if value in {"zh-CN", "en"} else "zh-CN"
+        if self._language == language:
+            return
+        self._language = language
+        if self._codex_backend is not None and self._codex_thread_id:
+            status_key = "status.codex_connected"
+        elif self._codex_available:
+            status_key = "status.codex_ready"
+        else:
+            status_key = "status.ai_offline"
+        self._ai_status = text(status_key, language=language)
+        if not self._demo_mode:
+            self._settings.setValue("language", language)
+            self._settings.sync()
+        self.stateChanged.emit()
+        self.aiStateChanged.emit()
 
     @Slot()
     def refreshCodexAvailability(self) -> None:
@@ -5687,24 +6237,60 @@ class AppController(QObject):
         if self._demo_mode:
             # Synthetic pages must not inspect PATH or a user's local binary.
             self._codex_available = False
+            self._codex_discovery_state = "not_checked"
+            self._codex_discovery_message = "合成演示不会探测本机 Codex。"
+            self.aiStateChanged.emit()
             return
         if self._codex_probe_running or self._shutdown_done:
             return
+        self._codex_probe_token += 1
+        probe_token = self._codex_probe_token
         self._codex_probe_running = True
+        self._codex_discovery_state = "checking"
+        self._codex_discovery_message = text("codex.checking", language=self._language)
+        self.aiStateChanged.emit()
         configured = self._codex_executable or None
         worker = Worker(lambda: discover_codex_executable(configured))
         self._workers.add(worker)
 
         def finish(value: object) -> None:
+            if probe_token != self._codex_probe_token or self._shutdown_done:
+                self._workers.discard(worker)
+                return
             self._workers.discard(worker)
             self._codex_probe_running = False
             self._codex_available = value is not None
+            self._codex_discovered_path = str(value or "")
+            if self._codex_available:
+                # Finder/Explorer launches often have a minimal PATH. Keep
+                # the resolved executable for the next App Server connection
+                # instead of merely displaying a path that the connector
+                # cannot use.
+                self._codex_executable = self._codex_discovered_path
+                self._codex_discovery_state = "found"
+                self._codex_discovery_message = (
+                    text("codex.found", language=self._language)
+                    + self._safe_display_path(self._codex_discovered_path)
+                )
+            else:
+                self._codex_discovery_state = "missing"
+                self._codex_discovery_message = text(
+                    "codex.missing", language=self._language
+                )
             self.aiStateChanged.emit()
 
         def fail(_: str) -> None:
+            if probe_token != self._codex_probe_token or self._shutdown_done:
+                self._workers.discard(worker)
+                return
             self._workers.discard(worker)
             self._codex_probe_running = False
             self._codex_available = False
+            self._codex_discovered_path = ""
+            self._codex_discovery_state = "missing"
+            self._codex_discovery_message = text(
+                "codex.missing", language=self._language
+            )
             self.aiStateChanged.emit()
 
         worker.signals.completed.connect(finish)
@@ -5716,15 +6302,31 @@ class AppController(QObject):
         if self._demo_mode:
             self.toast.emit("合成演示不会保存或探测本机 Codex 路径。")
             return
+        # Invalidate an in-flight automatic probe before applying a manual
+        # choice; otherwise its late result could overwrite the selected path.
+        self._codex_probe_token += 1
+        self._codex_probe_running = False
         candidate = QUrl(value).toLocalFile() if value.startswith("file:") else value
         path = Path(candidate).expanduser()
         resolved = discover_codex_executable(path)
         if resolved is None:
-            self.toast.emit(text("error.codex_missing"))
+            self._codex_available = False
+            self._codex_discovery_state = "missing"
+            self._codex_discovered_path = ""
+            self._codex_discovery_message = text("error.codex_missing", language=self._language)
+            self.aiStateChanged.emit()
+            self.toast.emit(text("error.codex_missing", language=self._language))
             return
         self._codex_executable = resolved
         self._codex_available = True
+        self._codex_discovered_path = resolved
+        self._codex_discovery_state = "found"
+        self._codex_discovery_message = (
+            text("codex.found", language=self._language)
+            + self._safe_display_path(resolved)
+        )
         self._settings.setValue("codexExecutable", self._codex_executable)
+        self._settings.sync()
         self.aiStateChanged.emit()
         self.stateChanged.emit()
         self.toast.emit("Codex 可执行文件位置已保存。")
@@ -5734,12 +6336,21 @@ class AppController(QObject):
         if self._demo_mode:
             self._codex_executable = ""
             self._codex_available = False
+            self._codex_discovered_path = ""
+            self._codex_discovery_state = "not_checked"
+            self._codex_discovery_message = "合成演示不会探测本机 Codex。"
             self.aiStateChanged.emit()
             self.stateChanged.emit()
             return
+        self._codex_probe_token += 1
+        self._codex_probe_running = False
         self._codex_executable = ""
         self._codex_available = False
+        self._codex_discovered_path = ""
+        self._codex_discovery_state = "idle"
+        self._codex_discovery_message = text("codex.checking", language=self._language)
         self._settings.remove("codexExecutable")
+        self._settings.sync()
         self.aiStateChanged.emit()
         self.stateChanged.emit()
         self.refreshCodexAvailability()
