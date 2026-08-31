@@ -641,7 +641,11 @@ def test_desktop_release_configuration_is_portable_and_separate_from_core_ci() -
     assert "python_path = \n" in spec
     assert "desktop-windows:" in workflow
     assert 'python -m pip install -e ".[desktop,ai,dev]"' in workflow
-    repository_job, desktop_job = workflow.split("  desktop-windows:", maxsplit=1)
+    repository_job, desktop_jobs = workflow.split("  desktop-windows:", maxsplit=1)
+    # Keep assertions scoped to the Windows job.  Release publishing is defined
+    # after the desktop jobs and its dependency list legitimately mentions the
+    # CPU PyTorch validation job.
+    desktop_job, _ = desktop_jobs.split("  desktop-macos-arm64:", maxsplit=1)
     assert ".[desktop" not in repository_job
     assert "torch" not in desktop_job.lower()
     assert "check_desktop_artifact.py" in desktop_job
