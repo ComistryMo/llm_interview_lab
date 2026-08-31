@@ -24,6 +24,8 @@ from llm_interview_lab.desktop.controller import (
     _codex_terminal_outcome,
     _decode_ai_assessment,
 )
+from llm_interview_lab.ai.base import ChatEvent
+from llm_interview_lab.ai.providers import ProviderConfig
 from llm_interview_lab.desktop.runtime import prepare_desktop_repository
 from llm_interview_lab.pytest_plugin import (
     ENV_SUBMISSION,
@@ -443,6 +445,300 @@ def test_provider_assessment_scores_the_locked_answer_once(
     controller.shutdown()
 
 
+def test_controller_previews_context_then_confirms_real_personalized_plan(
+    tmp_path: Path, qapp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="personalized-user")
+    assert controller.completeOnboarding(
+        "personalized-user",
+        "post_training_engineer",
+        "new_grad",
+        "provider",
+        "{}",
+    )
+    source = tmp_path / "resume.md"
+    source.write_text(
+        "Sanitized preference-data project. Scope and metrics require candidate confirmation.",
+        encoding="utf-8",
+    )
+    assert controller.addMaterial(str(source), "resume", "脱敏简历", True)
+    material_id = controller.materials[0]["id"]
+    connection = ProviderConfig(
+        "provider-main",
+        "openai-compatible",
+        "local-test-model",
+        "测试连接",
+        "http://127.0.0.1:9999/v1",
+        None,
+    )
+
+    class FakeProvider:
+        async def stream_chat(self, messages):
+            assert "Mode=INTERVIEW_PLAN" in messages[0]["content"]
+            yield ChatEvent(
+                "text_delta",
+                json.dumps(
+                    {
+                        "questions": [
+                            {
+                                "round_index": 1,
+                                "kind": "oral",
+                                "title": "偏好优化证据",
+                                "prompt": "请基于已确认材料解释偏好优化的 reference policy；材料未说明的指标请先向候选人确认。",
+                            },
+                            {
+                                "round_index": 2,
+                                "kind": "evaluation_case",
+                                "title": "数据验证评测",
+                                "prompt": "请为材料中的偏好数据项目设计离线评测，并区分事实、推断、遗漏和失败回退。",
+                            },
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+            yield ChatEvent("completed")
+
+    monkeypatch.setattr(
+        "llm_interview_lab.desktop.controller.list_connections",
+        lambda repo_root, profile_id: (connection,),
+    )
+    monkeypatch.setattr(
+        "llm_interview_lab.desktop.controller.create_chat_provider",
+        lambda config, api_key: FakeProvider(),
+    )
+
+    def synchronous_background(operation, complete, failed=None):
+        try:
+            complete(operation())
+        except Exception as error:
+            if failed:
+                failed(str(error))
+            else:
+                raise
+
+    monkeypatch.setattr(controller, "_background", synchronous_background)
+    context = controller.personalizedInterviewPlanContext(
+        "post_training_engineer",
+        "new_grad",
+        "medium",
+        material_id,
+        True,
+    )
+    assert context["context_sha256"]
+    assert any(part["sensitive"] for part in context["parts"])
+    controller.generatePersonalizedInterviewPlan(
+        "post_training_engineer",
+        "new_grad",
+        "medium",
+        connection.connection_id,
+        material_id,
+        True,
+        context["context_sha256"],
+    )
+    assert controller.interviewPlanPreview["status"] == "ready"
+    assert [
+        question["source"]["kind"]
+        for question in controller.interviewPlanPreview["questions"]
+    ] == ["catalog_problem", "ai_generated", "ai_generated"]
+    assert controller.confirmPersonalizedInterviewPlan()
+    assert controller.interview["status"] == "active"
+    assert controller.interview["question"]["source"]["kind"] == "catalog_problem"
+    session = controller.service.interview_session(
+        "personalized-user", controller.interview["interview_id"]
+    )
+    assert session["plan_mode"] == "ai_generated"
+    assert session["material_refs"][0]["id"] == material_id
+    controller.shutdown()
+
+
+def test_controller_transcription_populates_editable_draft_without_locking(
+    tmp_path: Path, qapp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="voice-user")
+    controller.completeOnboarding(
+        "voice-user", "ai_product_manager", "new_grad", "provider", "{}"
+    )
+    controller.createConfiguredInterview(
+        "ai_product_manager", "new_grad", "medium", "provider"
+    )
+    assert _wait_for(lambda: controller.interview.get("question") is not None)
+    question = controller.interview["question"]
+    assert question["kind"] != "coding"
+
+    audio = (
+        profile_paths(root, "voice-user").interviews_root
+        / controller.interview["interview_id"]
+        / "audio"
+        / "answer.wav"
+    )
+    audio.parent.mkdir(parents=True)
+    audio.write_bytes(b"RIFF synthetic")
+    recorder = controller._voice_recorder
+    recorder.path = audio
+    recorder.state = "recorded"
+    connection = ProviderConfig(
+        "voice-provider", "openai-compatible", "whisper", "Voice provider", "http://127.0.0.1:1/v1", None
+    )
+
+    class FakeTranscriber:
+        async def transcribe(self, path, *, consent_remote, language):
+            assert path == audio
+            assert consent_remote is True
+            assert language == "zh"
+            return "这是可以继续编辑的转录草稿。"
+
+    monkeypatch.setattr(
+        "llm_interview_lab.desktop.controller.list_connections",
+        lambda repo_root, profile_id: (connection,),
+    )
+    monkeypatch.setattr(
+        "llm_interview_lab.desktop.controller.OpenAICompatibleTranscriber",
+        lambda config, api_key: FakeTranscriber(),
+    )
+
+    def synchronous_background(operation, complete, failed=None):
+        try:
+            complete(operation())
+        except Exception as error:
+            if failed:
+                failed(str(error))
+            else:
+                raise
+
+    monkeypatch.setattr(controller, "_background", synchronous_background)
+    received: list[str] = []
+    controller.interviewTranscriptReady.connect(received.append)
+    controller.transcribeInterviewRecording(connection.connection_id, True)
+
+    assert received == ["这是可以继续编辑的转录草稿。"]
+    assert controller.interviewVoice["transcription_state"] == "transcribed"
+    assert controller.interview.get("answer_locked") is False
+    session = controller.service.interview_session(
+        "voice-user", controller.interview["interview_id"]
+    )
+    assert session["answers"] == {}
+    controller.shutdown()
+
+
+def test_controller_transcription_rejects_without_remote_consent(
+    tmp_path: Path, qapp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="voice-consent-user")
+    controller.completeOnboarding(
+        "voice-consent-user", "ai_product_manager", "new_grad", "provider", "{}"
+    )
+    controller.createConfiguredInterview(
+        "ai_product_manager", "new_grad", "medium", "provider"
+    )
+    assert _wait_for(lambda: controller.interview.get("question") is not None)
+    audio = (
+        profile_paths(root, "voice-consent-user").interviews_root
+        / controller.interview["interview_id"]
+        / "audio"
+        / "answer.wav"
+    )
+    audio.parent.mkdir(parents=True)
+    audio.write_bytes(b"wav")
+    controller._voice_recorder.path = audio
+    controller._voice_recorder.state = "recorded"
+    called = False
+
+    class UnexpectedTranscriber:
+        def __init__(self, *args, **kwargs):
+            nonlocal called
+            called = True
+
+    monkeypatch.setattr(
+        "llm_interview_lab.desktop.controller.OpenAICompatibleTranscriber",
+        UnexpectedTranscriber,
+    )
+    connection = ProviderConfig(
+        "voice-provider", "openai-compatible", "whisper", "Voice provider", "http://127.0.0.1:1/v1", None
+    )
+    monkeypatch.setattr(
+        "llm_interview_lab.desktop.controller.list_connections",
+        lambda repo_root, profile_id: (connection,),
+    )
+    errors: list[str] = []
+    controller.toast.connect(errors.append)
+    controller.transcribeInterviewRecording(connection.connection_id, False)
+    assert not called
+    assert errors and "授权" in errors[-1]
+    controller.shutdown()
+
+
+def test_late_transcription_for_previous_question_is_ignored(
+    tmp_path: Path, qapp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="voice-stale-user")
+    controller.completeOnboarding(
+        "voice-stale-user", "ai_product_manager", "new_grad", "provider", "{}"
+    )
+    controller.createConfiguredInterview(
+        "ai_product_manager", "new_grad", "medium", "provider"
+    )
+    assert _wait_for(lambda: controller.interview.get("question") is not None)
+    audio = (
+        profile_paths(root, "voice-stale-user").interviews_root
+        / controller.interview["interview_id"]
+        / "audio"
+        / "answer.wav"
+    )
+    audio.parent.mkdir(parents=True)
+    audio.write_bytes(b"wav")
+    controller._voice_recorder.path = audio
+    controller._voice_recorder.state = "recorded"
+    connection = ProviderConfig(
+        "voice-provider", "openai-compatible", "whisper", "Voice provider", "http://127.0.0.1:1/v1", None
+    )
+
+    class FakeTranscriber:
+        async def transcribe(self, path, *, consent_remote, language):
+            return "late transcript"
+
+    monkeypatch.setattr(
+        "llm_interview_lab.desktop.controller.list_connections",
+        lambda repo_root, profile_id: (connection,),
+    )
+    monkeypatch.setattr(
+        "llm_interview_lab.desktop.controller.OpenAICompatibleTranscriber",
+        lambda config, api_key: FakeTranscriber(),
+    )
+    pending: list[tuple[object, object, object]] = []
+
+    def delayed_background(operation, complete, failed=None):
+        pending.append((operation, complete, failed))
+
+    monkeypatch.setattr(controller, "_background", delayed_background)
+    received: list[str] = []
+    controller.interviewTranscriptReady.connect(received.append)
+    controller.transcribeInterviewRecording(connection.connection_id, True)
+    assert pending
+    original_question = controller.interview["question"]
+    controller._interview["question"] = {**original_question, "question_id": "q-999"}
+    _operation, complete, _failed = pending[0]
+    complete("late transcript")
+    assert received == []
+    controller.shutdown()
+
+
 def test_delayed_provider_assessment_cannot_rewrite_frozen_evidence(
     tmp_path: Path, qapp, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -811,9 +1107,28 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert 'role.currentValue || "applied_ai_engineer"' not in interview
     assert 'objectName: "startNonCodingInterview"' in interview
     assert 'enabled: root.configuration.available !== false' in interview
-    assert 'visible: leftPanel.setupVisible && root.fallbackAvailable()' in interview
-    assert 'highlighted: true\n                        enabled: root.fallbackAvailable()' in interview
-    assert '"完整模拟面试（需要 PyTorch）"' in interview
+    assert 'objectName: "personalizedInterviewConnection"' in interview
+    assert 'objectName: "personalizedInterviewAlphaScope"' in interview
+    assert 'objectName: "personalizedInterviewContextDialog"' in interview
+    assert 'objectName: "personalizedInterviewPlanDialog"' in interview
+    assert 'objectName: "confirmPersonalizedInterviewPlan"' in interview
+    assert 'objectName: "interviewVoiceCard"' in interview
+    assert 'objectName: "startInterviewRecording"' in interview
+    assert 'objectName: "stopInterviewRecording"' in interview
+    assert 'objectName: "transcribeInterviewRecording"' in interview
+    assert 'objectName: "interviewVoiceRemoteConsent"' in interview
+    assert 'app.startInterviewRecording()' in interview
+    assert 'app.stopInterviewRecording()' in interview
+    assert 'app.transcribeInterviewRecording(' in interview
+    assert 'function onInterviewTranscriptReady(value)' in interview
+    # A transcript is deliberately inserted as an editable draft; it must
+    # still go through the normal lock/submit action.
+    assert 'answer.text = value || ""' in interview
+    assert 'app.lockInterviewAnswer(value)' not in interview
+    assert "app.personalizedInterviewPlanContext(" in interview
+    assert "app.generatePersonalizedInterviewPlan(" in interview
+    assert "app.confirmPersonalizedInterviewPlan()" in interview
+    assert 'visible: false' in interview
     assert interview.index('objectName: "startNonCodingInterview"') < interview.index(
         'objectName: "interviewPyTorchEnvironmentHelp"'
     )
@@ -894,14 +1209,16 @@ def test_no_ai_interview_setup_explains_the_ai_boundary() -> None:
     assert 'aiMode.currentValue !== "disabled"' in interview
 
 
-def test_material_import_disables_ai_consent_for_opaque_files() -> None:
+def test_material_import_explains_pdf_docx_text_snapshot_capability() -> None:
     career = (
         REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/CareerPage.qml"
     ).read_text(encoding="utf-8")
     assert 'readonly property bool selectedOpaqueMaterial' in career
     assert 'objectName: "materialAiCapabilityNotice"' in career
-    assert "PDF / DOCX 仅保存原文件" in career
-    assert "aiAccess.checked && !root.selectedOpaqueMaterial" in career
+    assert "文本型 PDF" in career
+    assert "DOCX 会提取" in career
+    assert "文本快照" in career
+    assert "aiAccess.checked" in career
 
 
 @pytest.mark.parametrize("page", ["home", "learn", "exercise", "interview"])

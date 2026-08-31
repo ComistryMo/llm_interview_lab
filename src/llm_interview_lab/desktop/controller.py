@@ -27,7 +27,9 @@ from ..ai.context_builder import (
     build_role_interview_context_preview,
 )
 from ..ai.credentials import KeyringCredentialStore
+from ..ai.interview_planner import decode_personalized_questions
 from ..ai.providers import create_chat_provider
+from ..ai.transcription import OpenAICompatibleTranscriber
 from ..application import ApplicationError, ApplicationService
 from ..coach_sessions import (
     CoachSessionError,
@@ -47,6 +49,7 @@ from ..workspace import (
 )
 from .i18n import friendly_error, localize_role, onboarding_error_text, text
 from .runtime import is_packaged_desktop, migrate_legacy_desktop_data
+from .voice import InterviewVoiceRecorder
 
 
 class WorkerSignals(QObject):
@@ -265,6 +268,8 @@ class AppController(QObject):
     _codexTurnStarted = Signal(object)
     _codexApprovalResult = Signal(object)
     aiStateChanged = Signal()
+    interviewPlanReady = Signal()
+    interviewTranscriptReady = Signal(str)
     codexApproval = Signal("QVariantMap")
     codexApprovalResolved = Signal(str)
     codexApprovalFailed = Signal("QVariantMap")
@@ -317,6 +322,15 @@ class AppController(QObject):
         self._test_identity: tuple[str, str, str] | None = None
         self._test_output = ""
         self._interview: dict[str, Any] = {}
+        self._interview_plan_preview: dict[str, Any] = {}
+        self._interview_plan_request: dict[str, Any] | None = None
+        self._voice_recorder = InterviewVoiceRecorder(self)
+        self._voice_transcription_state = "idle"
+        self._voice_transcription_error = ""
+        self._voice_transcription_operation_id = ""
+        self._voice_question_key = ""
+        self._voice_recorder.changed.connect(self._voice_state_changed)
+        self._voice_recorder.failed.connect(self._voice_failed)
         self._recent_interview: dict[str, Any] = {}
         self._connections: list[dict[str, Any]] = []
         self._connection_error = ""
@@ -508,7 +522,7 @@ class AppController(QObject):
             "summary": "示例面试已留档；评分只基于已记录证据。",
         }
         self._connections = [
-            {"connection_id": "ollama-local", "provider_id": "ollama", "display_name": "本地 Ollama", "model": "qwen", "status": "尚未测试"},
+            {"connection_id": "ollama-local", "provider_id": "ollama", "display_name": "本地 Ollama", "model": "qwen", "status": "尚未测试", "ready": False},
         ]
         self._materials = [
             {
@@ -666,6 +680,23 @@ class AppController(QObject):
     @Property("QVariantMap", notify=stateChanged)
     def interview(self) -> dict[str, Any]:
         return self._interview
+
+    @Property("QVariantMap", notify=stateChanged)
+    def interviewPlanPreview(self) -> dict[str, Any]:
+        """The no-write AI plan awaiting explicit user confirmation."""
+
+        return dict(self._interview_plan_preview)
+
+    @Property("QVariantMap", notify=stateChanged)
+    def interviewVoice(self) -> dict[str, Any]:
+        return {
+            "state": self._voice_recorder.state,
+            "duration_ms": self._voice_recorder.duration_ms,
+            "audio_ready": self._voice_recorder.state == "recorded",
+            "error": self._voice_recorder.error_message
+            or self._voice_transcription_error,
+            "transcription_state": self._voice_transcription_state,
+        }
 
     @Property("QVariantMap", notify=stateChanged)
     def recentInterview(self) -> dict[str, Any]:
@@ -984,6 +1015,13 @@ class AppController(QObject):
             self._busy = value
             self.busyChanged.emit()
 
+    def _voice_state_changed(self) -> None:
+        self.stateChanged.emit()
+
+    def _voice_failed(self, message: str) -> None:
+        self._voice_transcription_error = friendly_error(message)
+        self.stateChanged.emit()
+
     def _active_profile_settings_key(self) -> str:
         """Return a stable, non-sensitive QSettings key for this data root."""
 
@@ -1072,7 +1110,7 @@ class AppController(QObject):
                 current["problem_id"], current["attempt_id"], self._profile_id
             )
         self._connections = [
-            {**config.__dict__, "status": "已保存，尚未测试"}
+            {**config.__dict__, "status": "已保存，尚未测试", "ready": False}
             for config in list_connections(self.repo_root, self._profile_id)
         ]
         self._connection_error = ""
@@ -1080,6 +1118,15 @@ class AppController(QObject):
         self._load_coach_state()
         self._interview = {}
         self._recent_interview = {}
+        # A Profile without a resumable interview must not inherit audio or
+        # transcription state from the Profile that was open before it. The
+        # identity fence in ``_load_interview`` handles active sessions; this
+        # reset covers the no-session branch as well.
+        self._voice_recorder.reset()
+        self._voice_transcription_state = "idle"
+        self._voice_transcription_error = ""
+        self._voice_transcription_operation_id = ""
+        self._voice_question_key = f"{self._profile_id}::"
         try:
             preferred = self.service.preferred_interview(self._profile_id)
             if preferred is not None:
@@ -1364,6 +1411,11 @@ class AppController(QObject):
         self._background_operations.clear()
         self._set_busy(False)
         self._pending_ai_assessment = None
+        # A pending AI plan is bound to the current Profile, material SHA and
+        # context preview. It must not survive a reload into a different or
+        # newly missing Profile.
+        self._interview_plan_request = None
+        self._interview_plan_preview = {}
         path = profile_paths(self.repo_root, self._profile_id).profile_file
         if not path.is_file():
             self._onboarding = True
@@ -1374,6 +1426,13 @@ class AppController(QObject):
             self._materials = []
             self._interview = {}
             self._recent_interview = {}
+            # A missing Profile must not leave a recording or transcription
+            # draft from the previously selected Profile visible in QML.
+            self._voice_recorder.reset()
+            self._voice_transcription_state = "idle"
+            self._voice_transcription_error = ""
+            self._voice_transcription_operation_id = ""
+            self._voice_question_key = ""
             self._interview_coding_identity = None
             self._interview_coding_tested_revision = ""
             self._interview_coding_test_operation_id = ""
@@ -2058,6 +2117,21 @@ class AppController(QObject):
                     if result_view.get(key) is not None
                 }
         question = current.get("question")
+        # Include the Profile in the identity: interview ids are allocated per
+        # Profile, so the same ``role-interview-0001/q-001`` pair can legally
+        # exist in two Profiles.  Audio/transcription state must never cross
+        # that boundary when the desktop switches Profiles or reloads.
+        voice_question_key = (
+            f"{self._profile_id}::{interview_id}::{question.get('question_id', '')}"
+            if question
+            else f"{self._profile_id}::"
+        )
+        if voice_question_key != self._voice_question_key:
+            self._voice_recorder.reset()
+            self._voice_transcription_state = "idle"
+            self._voice_transcription_error = ""
+            self._voice_transcription_operation_id = ""
+            self._voice_question_key = voice_question_key
         if question:
             question_id = question["question_id"]
             answer_record = session.get("answers", {}).get(question_id)
@@ -2205,6 +2279,130 @@ class AppController(QObject):
             self._load_interview(self._interview["interview_id"])
         except Exception as error:
             self._show_error(error)
+
+    @Slot(result=bool)
+    def startInterviewRecording(self) -> bool:
+        """Start a real profile-local recording for the current text round."""
+
+        question = self._interview.get("question") or {}
+        if (
+            self._profile_id == "demo"
+            or self._interview.get("status") != "active"
+            or not question
+            or question.get("kind") == "coding"
+            or self._interview.get("answer_locked")
+        ):
+            self._show_error("当前问题不能开始录音；你仍可直接输入文字回答。")
+            return False
+        try:
+            interview_id = str(self._interview["interview_id"])
+            audio_root = profile_paths(
+                self.repo_root, self._profile_id
+            ).interviews_root / interview_id / "audio"
+            ensure_profile_path_is_safe(
+                self.repo_root, self._profile_id, audio_root
+            )
+            destination = audio_root / (
+                f"{question['question_id']}-{uuid4().hex[:10]}.wav"
+            )
+            ensure_profile_path_is_safe(
+                self.repo_root, self._profile_id, destination
+            )
+            self._voice_transcription_state = "idle"
+            self._voice_transcription_error = ""
+            self._voice_recorder.start(destination)
+            return True
+        except Exception as error:
+            self._show_error(error)
+            return False
+
+    @Slot(result=bool)
+    def stopInterviewRecording(self) -> bool:
+        try:
+            self._voice_recorder.stop()
+            return True
+        except Exception as error:
+            self._show_error(error)
+            return False
+
+    @Slot(str, bool)
+    def transcribeInterviewRecording(
+        self, connection_id: str, consent_remote: bool
+    ) -> None:
+        """Send only the selected local WAV after one explicit consent."""
+
+        if self._profile_id == "demo":
+            self.toast.emit("合成演示不会发送真实音频。")
+            return
+        if self._voice_transcription_operation_id or self._busy:
+            self._show_error("已有录音或转录操作正在进行，请等待完成。")
+            return
+        audio_path = self._voice_recorder.path
+        if self._voice_recorder.state != "recorded" or audio_path is None:
+            self._show_error("请先完成一次有效录音；也可以直接输入文字回答。")
+            return
+        if not consent_remote:
+            self._show_error("发送音频到远程转录服务前，需要勾选本次明确授权。")
+            return
+        profile_id = self._profile_id
+        interview_id = str(self._interview.get("interview_id") or "")
+        question_id = str((self._interview.get("question") or {}).get("question_id") or "")
+        operation_id = uuid4().hex
+        self._voice_transcription_operation_id = operation_id
+        self._voice_transcription_state = "transcribing"
+        self._voice_transcription_error = ""
+        self.stateChanged.emit()
+
+        def operation() -> str:
+            config = next(
+                (
+                    item
+                    for item in list_connections(self.repo_root, profile_id)
+                    if item.connection_id == connection_id
+                ),
+                None,
+            )
+            if config is None:
+                raise RuntimeError("找不到所选转录连接，请在 AI 连接页重新保存并测试。")
+            key = (
+                KeyringCredentialStore().load(config.key_reference)
+                if config.key_reference
+                else None
+            )
+            transcriber = OpenAICompatibleTranscriber(config, api_key=key)
+            return asyncio.run(
+                transcriber.transcribe(
+                    audio_path,
+                    consent_remote=True,
+                    language="zh",
+                )
+            )
+
+        def complete(transcript: str) -> None:
+            if (
+                self._voice_transcription_operation_id != operation_id
+                or self._profile_id != profile_id
+                or self._interview.get("interview_id") != interview_id
+                or (self._interview.get("question") or {}).get("question_id")
+                != question_id
+            ):
+                return
+            self._voice_transcription_operation_id = ""
+            self._voice_transcription_state = "transcribed"
+            self._voice_transcription_error = ""
+            self.stateChanged.emit()
+            self.interviewTranscriptReady.emit(transcript)
+
+        def failed(message: str) -> None:
+            if self._voice_transcription_operation_id != operation_id:
+                return
+            self._voice_transcription_operation_id = ""
+            self._voice_transcription_state = "error"
+            self._voice_transcription_error = friendly_error(message)
+            self.stateChanged.emit()
+            self._show_error(message)
+
+        self._background(operation, complete, failed)
 
     @Slot(str, result=bool)
     def saveInterviewCoding(self, text: str) -> bool:
@@ -2757,6 +2955,9 @@ class AppController(QObject):
             self._connection_error = "找不到这条连接。请重新保存配置，或继续使用 No-AI。"
             self.stateChanged.emit()
             return
+        selected["ready"] = False
+        selected["status"] = "测试中"
+        self.stateChanged.emit()
         # A connection can be replaced while a network probe is in flight.
         # Capture its non-secret configuration identity and only apply the
         # result if that exact configuration is still selected when the worker
@@ -2810,6 +3011,7 @@ class AppController(QObject):
                 return
             for item in self._connections:
                 if item["connection_id"] == connection_id:
+                    item["ready"] = bool(result.ok)
                     item["status"] = "已连接" if result.ok else "连接失败"
             self._connection_error = "" if result.ok else friendly_error(result.message)
             self.stateChanged.emit()
@@ -2818,6 +3020,17 @@ class AppController(QObject):
         def failed(message: str) -> None:
             if generation != self._background_generation or profile_id != self._profile_id:
                 return
+            current = next(
+                (
+                    item
+                    for item in self._connections
+                    if item.get("connection_id") == connection_id
+                ),
+                None,
+            )
+            if current is not None:
+                current["ready"] = False
+                current["status"] = "连接失败"
             self._connection_error = friendly_error(message)
             self.stateChanged.emit()
             self._show_error(message)
@@ -2954,6 +3167,224 @@ class AppController(QObject):
         except Exception as error:
             self._show_error(error)
             return {"estimated_tokens": 0, "parts": []}
+
+    @Slot(str, str, str, str, bool, result="QVariantMap")
+    def personalizedInterviewPlanContext(
+        self,
+        role_id: str,
+        seniority: str,
+        difficulty: str,
+        material_id: str,
+        consent: bool,
+    ) -> dict[str, Any]:
+        """Preview the exact role/material context before any provider call."""
+
+        if self._profile_id == "demo":
+            return {
+                "estimated_tokens": 320,
+                "context_sha256": "d" * 64,
+                "parts": [
+                    {"id": "policy", "label": "AI 面试计划边界", "selected": True, "sensitive": False},
+                    {"id": "blueprint", "label": "岗位与冻结蓝图", "selected": True, "sensitive": False},
+                    {"id": "material:resume-demo", "label": "逐场授权的合成简历", "selected": True, "sensitive": True},
+                ],
+            }
+        try:
+            if not material_id or not consent:
+                raise RuntimeError("首版个性化面试需要选择一份 AI 可读材料并逐场授权。")
+            preview = self.service.personalized_interview_context(
+                self._profile_id,
+                role_id=role_id,
+                seniority=seniority,
+                difficulty=difficulty,
+                material_ids=(material_id,),
+                consent_materials=True,
+            )
+            return {
+                "estimated_tokens": preview.estimated_tokens,
+                "context_sha256": hashlib.sha256(
+                    preview.selected_text.encode("utf-8")
+                ).hexdigest(),
+                "parts": [
+                    {
+                        "id": part.id,
+                        "label": part.label,
+                        "selected": part.selected,
+                        "sensitive": part.sensitive,
+                        "sha256": part.sha256,
+                    }
+                    for part in preview.parts
+                ],
+            }
+        except Exception as error:
+            self._show_error(error)
+            return {"estimated_tokens": 0, "context_sha256": "", "parts": []}
+
+    @Slot(str, str, str, str, str, bool, str)
+    def generatePersonalizedInterviewPlan(
+        self,
+        role_id: str,
+        seniority: str,
+        difficulty: str,
+        connection_id: str,
+        material_id: str,
+        consent: bool,
+        approved_context_sha256: str,
+    ) -> None:
+        """Use one explicit provider to draft non-coding prompts only."""
+
+        if self._profile_id == "demo":
+            self.toast.emit("合成演示不会调用真实 AI 服务。")
+            return
+        if self._busy or self._interview_plan_request is not None:
+            self._show_error("已有面试计划请求正在处理，请等待完成。")
+            return
+        profile_id = self._profile_id
+        request_identity = uuid4().hex
+        self._interview_plan_request = {"operation_id": request_identity}
+        self._interview_plan_preview = {
+            "status": "generating",
+            "user_message": "AI 正在根据已确认上下文生成非代码问题；Coding 题仍由本地题库选择。",
+        }
+        self.stateChanged.emit()
+
+        def operation() -> dict[str, Any]:
+            if not connection_id:
+                raise RuntimeError("请选择一个已保存并测试通过的 AI 连接。")
+            config = next(
+                (
+                    item
+                    for item in list_connections(self.repo_root, profile_id)
+                    if item.connection_id == connection_id
+                ),
+                None,
+            )
+            if config is None:
+                raise RuntimeError("找不到所选 AI 连接，请返回 AI 连接页重新保存并测试。")
+            preview = self.service.personalized_interview_context(
+                profile_id,
+                role_id=role_id,
+                seniority=seniority,
+                difficulty=difficulty,
+                material_ids=(material_id,),
+                consent_materials=consent,
+            )
+            current_sha = hashlib.sha256(
+                preview.selected_text.encode("utf-8")
+            ).hexdigest()
+            if current_sha != approved_context_sha256:
+                raise RuntimeError("上下文在确认后发生变化，请重新预览后再发送。")
+            key = (
+                KeyringCredentialStore().load(config.key_reference)
+                if config.key_reference
+                else None
+            )
+            provider = create_chat_provider(config, api_key=key)
+
+            async def collect() -> str:
+                chunks: list[str] = []
+                async for event in provider.stream_chat(
+                    [
+                        {"role": "system", "content": preview.selected_text},
+                        {
+                            "role": "user",
+                            "content": "按 output_schema 生成本场非代码主问题。只返回 JSON，不要生成 Coding 题、答案、评分或未提供的经历事实。",
+                        },
+                    ]
+                ):
+                    if event.text:
+                        chunks.append(event.text)
+                return "".join(chunks)
+
+            response = asyncio.run(collect())
+            blueprint = self.service.roles.blueprint_for(role_id, seniority)
+            generated = decode_personalized_questions(response, blueprint)
+            plan = self.service.preview_personalized_interview(
+                profile_id,
+                role_id=role_id,
+                seniority=seniority,
+                difficulty=difficulty,
+                generated_questions=generated,
+                plan_context_sha256=current_sha,
+                material_ids=(material_id,),
+                consent_materials=True,
+            )
+            return {
+                "plan": plan,
+                "generated_questions": list(generated),
+                "context_sha256": current_sha,
+                "role_id": role_id,
+                "seniority": seniority,
+                "difficulty": difficulty,
+                "material_id": material_id,
+                "consent": True,
+            }
+
+        def complete(result: dict[str, Any]) -> None:
+            if (
+                self._profile_id != profile_id
+                or not self._interview_plan_request
+                or self._interview_plan_request.get("operation_id") != request_identity
+            ):
+                return
+            self._interview_plan_request = result
+            self._interview_plan_preview = {
+                **result["plan"],
+                "status": "ready",
+                "user_message": "计划尚未写入；请检查所有问题后再确认开始。",
+            }
+            self.stateChanged.emit()
+            self.interviewPlanReady.emit()
+
+        def failed(message: str) -> None:
+            if (
+                self._interview_plan_request
+                and self._interview_plan_request.get("operation_id") == request_identity
+            ):
+                self._interview_plan_request = None
+                self._interview_plan_preview = {
+                    "status": "error",
+                    "user_message": friendly_error(message),
+                }
+                self.stateChanged.emit()
+            self._show_error(message)
+
+        self._background(operation, complete, failed)
+
+    @Slot(result=bool)
+    def confirmPersonalizedInterviewPlan(self) -> bool:
+        request = self._interview_plan_request
+        if not request or "generated_questions" not in request:
+            self._show_error("当前没有可确认的 AI 面试计划。")
+            return False
+        try:
+            session = self.service.create_personalized_interview(
+                self._profile_id,
+                role_id=request["role_id"],
+                seniority=request["seniority"],
+                difficulty=request["difficulty"],
+                generated_questions=request["generated_questions"],
+                plan_context_sha256=request["context_sha256"],
+                material_ids=(request["material_id"],),
+                consent_materials=request["consent"],
+            )
+            self.service.start_interview(self._profile_id, session["interview_id"])
+            self._interview_plan_request = None
+            self._interview_plan_preview = {}
+            self._load_interview(session["interview_id"])
+            self.navigate("interview")
+            return True
+        except Exception as error:
+            self._show_error(error)
+            return False
+
+    @Slot()
+    def cancelPersonalizedInterviewPlan(self) -> None:
+        if self._interview_plan_preview.get("status") == "generating":
+            return
+        self._interview_plan_request = None
+        self._interview_plan_preview = {}
+        self.stateChanged.emit()
 
     # ------------------------------------------------------------------
     # Resumable local Coach workspace

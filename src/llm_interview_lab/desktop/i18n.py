@@ -107,7 +107,13 @@ def localize_role(card: dict[str, Any]) -> dict[str, Any]:
 
 
 def friendly_error(error: BaseException | str) -> str:
-    message = str(error).lower()
+    raw = str(error).strip()
+    message = raw.lower()
+    # Audio and transcription errors are already sanitized by the local
+    # recorder / transcriber boundary.  Preserve their actionable next step
+    # instead of collapsing them into the generic provider hint.
+    if any(token in raw for token in ("录音", "转录", "音频")):
+        return raw[:400] or TEXT["error.generic"]
     if "connection id must" in message:
         return "连接 ID 只能使用小写字母、数字和连字符，并且要以字母开头。请展开高级设置后修改。"
     if "provider is not supported" in message:

@@ -10,6 +10,7 @@ Item {
     property var activeQuestion: app.interview.question || null
     property var rubricScores: ({})
     property var aiPreview: ({"parts": [], "estimated_tokens": 0})
+    property var planContext: ({"parts": [], "estimated_tokens": 0, "context_sha256": ""})
     property string pendingAIAction: ""
     property string pendingConnection: ""
     property bool answerLocked: !!app.interview.answer_locked
@@ -85,10 +86,9 @@ Item {
     }
 
     function providerIsReady(itemOrId) {
-        // ComboBox.currentValue is the connection id (because valueRole is
-        // set below), while the status lives on the corresponding map.  Keep
-        // this helper tolerant of either shape so a restored session cannot
-        // accidentally disable every real provider action.
+        // ``ready`` is a controller-owned boolean set only after a successful
+        // connection test.  Presentation strings such as “已连接” must not
+        // become a second business-status source in QML.
         var item = itemOrId
         if (typeof itemOrId === "string") {
             var values = app.connections || []
@@ -101,9 +101,7 @@ Item {
         }
         if (!item || typeof item !== "object")
             return false
-        var value = String(item.status || "").toLowerCase()
-        return value.indexOf("已连接") >= 0 || value.indexOf("就绪") >= 0
-               || value.indexOf("connected") >= 0 || value.indexOf("ready") >= 0
+        return item.ready === true
     }
 
     function seniorityText(value) {
@@ -406,6 +404,21 @@ Item {
         Qt.callLater(root.syncQuestionEditors)
     }
 
+    Connections {
+        target: app
+        function onInterviewPlanReady() {
+            personalizedPlanDialog.open()
+        }
+        function onInterviewTranscriptReady(value) {
+            // Transcription is a draft only.  Keep the answer editable and
+            // require the normal "submit and lock" action before it becomes
+            // interview evidence.
+            answer.text = value || ""
+            root.answerDraft = answer.text
+            answer.forceActiveFocus()
+        }
+    }
+
     Timer {
         interval: 1000
         repeat: true
@@ -490,12 +503,48 @@ Item {
                         text: "去 AI 连接"
                         onClicked: app.navigate("connections")
                     }
+                    Text {
+                        width: parent.width
+                        visible: leftPanel.setupVisible && aiMode.currentValue === "codex"
+                        text: "Codex 仍可用于本地 Coach 和仓库协作；Alpha 个性化面试计划当前只支持已测试的普通 LLM API。"
+                        color: root.palette.warning
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 12
+                    }
+                    Text {
+                        width: parent.width
+                        visible: leftPanel.setupVisible && aiMode.currentValue === "provider"
+                        text: "AI 连接"
+                        color: root.palette.muted
+                        font.pixelSize: 12
+                    }
+                    ComboBox {
+                        id: planConnection
+                        objectName: "personalizedInterviewConnection"
+                        width: parent.width
+                        visible: leftPanel.setupVisible && aiMode.currentValue === "provider"
+                        model: app.connections
+                        textRole: "display_name"
+                        valueRole: "connection_id"
+                    }
+                    Text {
+                        width: parent.width
+                        visible: leftPanel.setupVisible && aiMode.currentValue === "provider"
+                                 && (planConnection.currentIndex < 0
+                                     || !root.providerIsReady(planConnection.currentValue))
+                        text: planConnection.currentIndex < 0
+                              ? "尚未选择 AI 连接。"
+                              : "该连接尚未通过测试；请先到 AI 连接页保存并测试。"
+                        color: root.palette.warning
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 11
+                    }
                     CheckBox {
                         id: useMaterial
                         width: parent.width
                         visible: leftPanel.setupVisible
                         enabled: aiMode.currentValue !== "disabled" && app.materials.length > 0
-                        text: "使用一份逐场授权的求职材料"
+                        text: "使用一份逐场授权的求职材料（首版必选）"
                     }
                     ComboBox {
                         id: material
@@ -531,7 +580,7 @@ Item {
                     Button {
                         objectName: "startNonCodingInterview"
                         width: parent.width
-                        visible: leftPanel.setupVisible && root.fallbackAvailable()
+                        visible: false
                         text: app.busy ? "正在准备专项面试……" : "开始非代码专项面试"
                         highlighted: true
                         enabled: root.fallbackAvailable()
@@ -566,22 +615,46 @@ Item {
                         objectName: "startConfiguredInterview"
                         width: parent.width
                         visible: leftPanel.setupVisible
-                        text: app.busy ? "正在准备面试……"
-                                       : (root.fallbackAvailable()
-                                          ? "完整模拟面试（需要 PyTorch）"
-                                          : "开始模拟面试")
+                        text: app.busy ? "正在生成面试计划……" : "预览 AI 个性化面试计划"
                         highlighted: !root.fallbackAvailable()
                         enabled: root.configuration.available !== false
                                  && !!role.currentValue
                                  && !app.busy
-                                 && aiMode.currentValue !== "disabled"
-                                 && (!useMaterial.checked || (material.currentIndex >= 0 && app.materials[material.currentIndex].ai_access && consent.checked))
+                                 && aiMode.currentValue === "provider"
+                                 && role.currentValue === "post_training_engineer"
+                                 && seniority.currentValue === "new_grad"
+                                 && difficulty.currentValue === "medium"
+                                 && planConnection.currentIndex >= 0
+                                 && root.providerIsReady(planConnection.currentValue)
+                                 && useMaterial.checked
+                                 && material.currentIndex >= 0
+                                 && app.materials[material.currentIndex].ai_access
+                                 && consent.checked
                         // Creating a session freezes the public question plan
                         // and starts the authoritative clock.  Require an
                         // explicit review/confirmation so a stray click
                         // cannot create a real interview before the learner
                         // sees the selected role, difficulty and AI policy.
-                        onClicked: startInterviewDialog.open()
+                        onClicked: {
+                            root.planContext = app.personalizedInterviewPlanContext(
+                                role.currentValue,
+                                seniority.currentValue,
+                                difficulty.currentValue,
+                                material.currentValue,
+                                consent.checked
+                            )
+                            if ((root.planContext.parts || []).length > 0)
+                                planContextDialog.open()
+                        }
+                    }
+                    Text {
+                        objectName: "personalizedInterviewAlphaScope"
+                        width: parent.width
+                        visible: leftPanel.setupVisible && aiMode.currentValue === "provider"
+                        text: "当前真实 Golden Path：后训练工程师 · 校招 · 标准难度。非代码问题由 AI 基于授权材料生成并先供你确认；Coding 题只从已验证题库选择。"
+                        color: root.palette.muted
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 11
                     }
                     Rectangle { width: parent.width; height: 1; color: root.palette.border }
                     Text { text: "本场事实"; color: root.palette.text; font.bold: true }
@@ -698,6 +771,121 @@ Item {
                     spacing: root.compactInterviewLayout ? 12 : 16
                     Text { width: parent.width; text: activeQuestion ? activeQuestion.prompt : "选择岗位、求职阶段与难度。系统会冻结一份公共面试蓝图，每次只展示一个问题，并将客观代码证据与 Rubric 主观判断分开。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
                     TextArea { id: answer; objectName: "interviewAnswerEditor"; width: parent.width; height: root.compactInterviewLayout ? 140 : 180; visible: !!activeQuestion && activeQuestion.kind !== "coding"; text: root.answerLocked ? (app.interview.answer_text || "") : root.answerDraft; readOnly: root.answerLocked || !root.interviewCanEdit; onTextChanged: if (!root.answerLocked && !root.syncingQuestionEditors) root.answerDraft = text; placeholderText: root.answerLocked ? "回答已锁定" : !root.interviewCanEdit ? "面试已暂停或结束" : "输入你的回答……"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.answerLocked ? root.palette.accent : root.palette.border } }
+                    LabCard {
+                        objectName: "interviewVoiceCard"
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding"
+                                 && !root.answerLocked && root.interviewCanEdit
+                        width: parent.width
+                        cardColor: root.palette.surfaceAlt
+                        borderColor: app.interviewVoice.state === "recording"
+                                      ? root.palette.warning : root.palette.border
+                        ColumnLayout {
+                            width: parent.width
+                            spacing: 8
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text {
+                                    text: "语音回答（可选）"
+                                    color: root.palette.text
+                                    font.bold: true
+                                    Layout.fillWidth: true
+                                }
+                                StatusPill {
+                                    objectName: "interviewVoiceState"
+                                    text: app.interviewVoice.state === "recording"
+                                          ? "录音中"
+                                          : app.interviewVoice.transcription_state === "transcribing"
+                                            ? "转录中" : app.interviewVoice.audio_ready ? "已录音" : "未开始"
+                                    tone: app.interviewVoice.state === "recording"
+                                          ? root.palette.warning : root.palette.muted
+                                }
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: "录音保存在当前学习档案；只有勾选本次授权并点击转录时，音频才会发送到所选 AI 服务。转录结果会先放入可编辑回答框。"
+                                color: root.palette.muted
+                                font.pixelSize: 11
+                                wrapMode: Text.Wrap
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Button {
+                                    objectName: "startInterviewRecording"
+                                    text: "开始录音"
+                                    enabled: app.interviewVoice.state !== "recording"
+                                             && app.interviewVoice.transcription_state !== "transcribing"
+                                             && !app.busy
+                                    onClicked: app.startInterviewRecording()
+                                }
+                                Button {
+                                    objectName: "stopInterviewRecording"
+                                    text: "停止录音"
+                                    enabled: app.interviewVoice.state === "recording"
+                                    onClicked: app.stopInterviewRecording()
+                                }
+                                Text {
+                                    objectName: "interviewVoiceDuration"
+                                    text: {
+                                        var ms = Number(app.interviewVoice.duration_ms || 0)
+                                        var seconds = Math.floor(ms / 1000)
+                                        return "时长 " + (seconds < 10 ? "0" : "") + seconds + " 秒"
+                                    }
+                                    color: root.palette.muted
+                                    font.pixelSize: 12
+                                }
+                                Item { Layout.fillWidth: true }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                ComboBox {
+                                    id: voiceConnection
+                                    objectName: "interviewVoiceConnection"
+                                    Layout.fillWidth: true
+                                    model: app.connections
+                                    textRole: "display_name"
+                                    valueRole: "connection_id"
+                                    enabled: app.interviewVoice.audio_ready
+                                             && app.interviewVoice.transcription_state !== "transcribing"
+                                }
+                                CheckBox {
+                                    id: voiceConsent
+                                    objectName: "interviewVoiceRemoteConsent"
+                                    text: "本次允许远程转录"
+                                    enabled: app.interviewVoice.audio_ready
+                                             && app.interviewVoice.transcription_state !== "transcribing"
+                                }
+                                Button {
+                                    objectName: "transcribeInterviewRecording"
+                                    text: app.interviewVoice.transcription_state === "transcribing"
+                                          ? "正在转录…" : "转录到回答框"
+                                    enabled: app.interviewVoice.audio_ready
+                                             && voiceConsent.checked
+                                             && voiceConnection.currentValue
+                                             && app.interviewVoice.transcription_state !== "transcribing"
+                                             && !app.busy
+                                    onClicked: app.transcribeInterviewRecording(
+                                        voiceConnection.currentValue, voiceConsent.checked
+                                    )
+                                }
+                            }
+                            Text {
+                                visible: (app.connections || []).length === 0
+                                Layout.fillWidth: true
+                                text: "尚未配置可用的 AI 连接。你仍可直接输入文字回答；如需转录，请先在 AI 连接页保存并测试。"
+                                color: root.palette.muted
+                                font.pixelSize: 11
+                                wrapMode: Text.Wrap
+                            }
+                            Text {
+                                visible: !!app.interviewVoice.error
+                                Layout.fillWidth: true
+                                text: app.interviewVoice.error || ""
+                                color: root.palette.danger
+                                font.pixelSize: 11
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                    }
                     LabCard {
                         objectName: "interviewAnswerCorruption"
                         visible: !!app.interview.answer_corrupted
@@ -1301,6 +1489,169 @@ Item {
                 text: "预计上下文：" + (root.aiPreview.estimated_tokens || 0) + " tokens"
                 color: root.palette.muted
                 font.pixelSize: 12
+            }
+        }
+    }
+
+    Dialog {
+        id: planContextDialog
+        objectName: "personalizedInterviewContextDialog"
+        modal: true
+        anchors.centerIn: parent
+        width: Math.min(620, root.width - 48)
+        height: Math.min(520, root.height - 48)
+        title: "确认发送给 AI 的上下文"
+        standardButtons: Dialog.Cancel | Dialog.Ok
+        onAccepted: app.generatePersonalizedInterviewPlan(
+            role.currentValue,
+            seniority.currentValue,
+            difficulty.currentValue,
+            planConnection.currentValue,
+            material.currentValue,
+            consent.checked,
+            root.planContext.context_sha256 || ""
+        )
+        contentItem: ColumnLayout {
+            spacing: 10
+            Text {
+                Layout.fillWidth: true
+                text: "只有下列明确列出的内容会发送。本次确认只用于生成计划；Coding 题、Rubric 和计时仍由本地确定性代码决定。"
+                color: root.palette.text
+                wrapMode: Text.Wrap
+            }
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                Column {
+                    width: parent.width
+                    spacing: 8
+                    Repeater {
+                        model: root.planContext.parts || []
+                        delegate: RowLayout {
+                            required property var modelData
+                            width: parent.width
+                            StatusPill {
+                                text: modelData.selected ? "将发送" : "不发送"
+                                tone: modelData.selected ? root.palette.accent : root.palette.muted
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: modelData.label
+                                color: root.palette.text
+                                wrapMode: Text.Wrap
+                            }
+                            StatusPill {
+                                visible: modelData.sensitive
+                                text: "敏感内容"
+                                tone: root.palette.warning
+                            }
+                        }
+                    }
+                }
+            }
+            Text {
+                text: "预计上下文：" + (root.planContext.estimated_tokens || 0)
+                      + " tokens · SHA " + String(root.planContext.context_sha256 || "").slice(0, 12)
+                color: root.palette.muted
+                font.pixelSize: 11
+            }
+        }
+    }
+
+    Dialog {
+        id: personalizedPlanDialog
+        objectName: "personalizedInterviewPlanDialog"
+        modal: true
+        anchors.centerIn: parent
+        width: Math.min(720, root.width - 48)
+        height: Math.min(620, root.height - 48)
+        title: "确认冻结 AI 个性化面试计划"
+        standardButtons: Dialog.NoButton
+        contentItem: ColumnLayout {
+            spacing: 10
+            Text {
+                Layout.fillWidth: true
+                text: app.interviewPlanPreview.user_message || "请检查计划。"
+                color: root.palette.text
+                wrapMode: Text.Wrap
+                font.bold: true
+            }
+            Text {
+                Layout.fillWidth: true
+                text: "岗位：" + (app.interviewPlanPreview.role_title || "")
+                      + " · 总时长：" + (app.interviewPlanPreview.duration_minutes || 0) + " 分钟"
+                      + "\n材料：" + ((app.interviewPlanPreview.material_refs || []).length)
+                      + " 份逐场授权 · 上下文 SHA："
+                      + String(app.interviewPlanPreview.plan_context_sha256 || "").slice(0, 12)
+                color: root.palette.muted
+                wrapMode: Text.Wrap
+                font.pixelSize: 12
+            }
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                Column {
+                    width: parent.width
+                    spacing: 10
+                    Repeater {
+                        model: app.interviewPlanPreview.questions || []
+                        delegate: LabCard {
+                            required property var modelData
+                            width: parent.width
+                            cardColor: root.palette.surfaceAlt
+                            borderColor: modelData.source.kind === "catalog_problem"
+                                         ? root.palette.accent : root.palette.border
+                            Text {
+                                width: parent.width
+                                text: (modelData.source.kind === "catalog_problem" ? "已验证题库 Coding" : "AI 生成 · " + root.roundTypeText(modelData.kind))
+                                      + " · " + modelData.timebox_minutes + " 分钟"
+                                color: modelData.source.kind === "catalog_problem"
+                                       ? root.palette.accent : root.palette.muted
+                                font.pixelSize: 11
+                                font.bold: true
+                            }
+                            Text {
+                                width: parent.width
+                                text: modelData.title
+                                color: root.palette.text
+                                font.pixelSize: 16
+                                font.bold: true
+                                wrapMode: Text.Wrap
+                            }
+                            Text {
+                                width: parent.width
+                                text: modelData.prompt
+                                color: root.palette.muted
+                                wrapMode: Text.Wrap
+                                maximumLineCount: 4
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Item { Layout.fillWidth: true }
+                Button {
+                    text: "取消"
+                    onClicked: {
+                        app.cancelPersonalizedInterviewPlan()
+                        personalizedPlanDialog.close()
+                    }
+                }
+                Button {
+                    objectName: "confirmPersonalizedInterviewPlan"
+                    text: "确认并开始计时"
+                    highlighted: true
+                    enabled: app.interviewPlanPreview.status === "ready" && !app.busy
+                    onClicked: {
+                        if (app.confirmPersonalizedInterviewPlan())
+                            personalizedPlanDialog.close()
+                    }
+                }
             }
         }
     }
