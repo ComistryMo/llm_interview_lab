@@ -2,7 +2,7 @@
 
 ## 基线
 
-- HEAD / branch / dirty state：`feature/real-user-iteration-20260831`；基线提交 `d52238f646aee5aa7cc85ce2ba740b272aaa9c5a`；本报告对应的最终提交以 `git rev-parse HEAD` 为准。
+- HEAD / branch / dirty state：`79db3fc301128ce509384b66fc2bade4f4147e51` / `feature/real-user-iteration-20260831` / 工作树干净；基线提交 `d52238f646aee5aa7cc85ce2ba740b272aaa9c5a`。
 - Python：`3.11.9`（统一使用 `py -3.11`）。
 - 既有唯一一次本地全量回归：`py -3.11 -m pytest -q` → **507 passed, 14 skipped in 834.32s**。本轮没有重复运行。
 
@@ -71,7 +71,7 @@
 ## Git / 远端
 
 - 已提交两个逻辑提交：`7f0667d feat(interview): add consent-bound personalized plans and snapshots`、`7ef4c3a feat(interview): add profile-local voice answer flow`。
-- 分支：`feature/real-user-iteration-20260831`。推送、PR 创建和最终工作树状态以收尾命令输出为准；未合并 `main`、未重写历史、未创建 tag 或 Release。
+- 分支：`feature/real-user-iteration-20260831` 已推送至 `origin`，远端 SHA 为 `79db3fc301128ce509384b66fc2bade4f4147e51`；PR 创建链接：<https://github.com/ComistryMo/llm_interview_lab/pull/new/feature/real-user-iteration-20260831>。当前环境 `gh` 未登录，因此未代创建 PR；未合并 `main`、未重写历史、未创建 tag 或 Release。
 
 ## 剩余风险
 
