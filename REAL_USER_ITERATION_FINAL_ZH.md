@@ -71,7 +71,7 @@
 ## Git / 远端
 
 - 已提交两个逻辑提交：`7f0667d feat(interview): add consent-bound personalized plans and snapshots`、`7ef4c3a feat(interview): add profile-local voice answer flow`。
-- 分支：`feature/real-user-iteration-20260831` 已推送至 `origin`，远端 SHA 为 `79db3fc301128ce509384b66fc2bade4f4147e51`；PR 创建链接：<https://github.com/ComistryMo/llm_interview_lab/pull/new/feature/real-user-iteration-20260831>。当前环境 `gh` 未登录，因此未代创建 PR；未合并 `main`、未重写历史、未创建 tag 或 Release。
+- 分支：`feature/real-user-iteration-20260831` 已推送至 `origin`，远端与本地 HEAD 已同步（最终 SHA 以收尾时的 `git rev-parse HEAD` / `git ls-remote` 为准）；PR 创建链接：<https://github.com/ComistryMo/llm_interview_lab/pull/new/feature/real-user-iteration-20260831>。当前环境 `gh` 未登录，因此未代创建 PR；未合并 `main`、未重写历史、未创建 tag 或 Release。
 
 ## 剩余风险
 
