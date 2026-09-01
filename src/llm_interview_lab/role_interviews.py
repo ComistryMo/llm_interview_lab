@@ -910,8 +910,16 @@ def _create_session_from_plan(
     if delivery_mode == "non_coding_fallback" and blueprint_coverage is not None:
         session["delivery_mode"] = delivery_mode
         session["blueprint_coverage"] = dict(blueprint_coverage)
+    elif delivery_mode == "dynamic_ai":
+        # Dynamic sessions persist only turns that have actually been asked.
+        # Future questions remain provider state, not hidden session content.
+        session["delivery_mode"] = delivery_mode
     if plan_context_sha256 is not None:
-        session["plan_mode"] = "ai_generated"
+        # A dynamic session records only the turns already asked.  Keep its
+        # mode explicit so readers never mistake it for a pre-generated plan.
+        session["plan_mode"] = (
+            "dynamic_ai" if delivery_mode == "dynamic_ai" else "ai_generated"
+        )
         session["plan_context_sha256"] = plan_context_sha256
     try:
         _write_session(repo_root, root / "session.json", session)
@@ -920,6 +928,136 @@ def _create_session_from_plan(
             child.rmdir()
         root.rmdir()
         raise
+    return session
+
+
+def create_dynamic_role_interview(
+    repo_root: Path,
+    profile_id: str,
+    role_catalog: RoleCatalog,
+    *,
+    role_id: str,
+    seniority: str,
+    difficulty: str,
+    ai_mode: str,
+    initial_question: Mapping[str, Any],
+    plan_context_sha256: str,
+    material_refs: list[dict[str, Any]],
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Create a dynamic interview containing only its first real question.
+
+    The provider chooses one non-coding question at a time.  Role skills,
+    process, timing and coding eligibility remain local facts; future turns
+    are deliberately not materialized here.
+    """
+
+    if ai_mode not in {"provider", "codex"}:
+        raise RoleInterviewError("dynamic interviews require provider or codex AI")
+    if not isinstance(plan_context_sha256, str) or len(plan_context_sha256) != 64:
+        raise RoleInterviewError("dynamic interview needs a valid context SHA-256")
+    if any(character not in "0123456789abcdef" for character in plan_context_sha256):
+        raise RoleInterviewError("dynamic interview needs a valid context SHA-256")
+    role = role_catalog.resolve_role(role_id)
+    blueprint = role_catalog.blueprint_for(role.id, seniority)
+    non_coding = [
+        (index, round_value)
+        for index, round_value in enumerate(blueprint.rounds)
+        if round_value.type != "coding"
+    ]
+    if not non_coding:
+        raise RoleInterviewError("this role has no non-coding interview round")
+    round_index, round_value = non_coding[0]
+    if not isinstance(initial_question, Mapping):
+        raise RoleInterviewError("initial interview question must be an object")
+    if initial_question.get("kind") != round_value.type:
+        raise RoleInterviewError("initial question kind does not match the first round")
+    question = _generated_non_coding_question(
+        initial_question,
+        question_id="q-001",
+        round_index=round_index,
+        round_type=round_value.type,
+        round_weight=round_value.weight,
+        timebox_minutes=max(1, round_value.duration),
+        skills=round_value.skills,
+        plan_context_sha256=plan_context_sha256,
+    )
+    if not material_refs:
+        material_refs = []
+    return _create_session_from_plan(
+        repo_root,
+        profile_id,
+        role_id=role.id,
+        seniority=seniority,
+        difficulty=difficulty,
+        blueprint_id=blueprint.id,
+        duration_minutes=blueprint.duration_minutes,
+        ai_mode=ai_mode,
+        material_refs=list(material_refs),
+        questions=[question],
+        delivery_mode="dynamic_ai",
+        blueprint_coverage=None,
+        plan_context_sha256=plan_context_sha256,
+        now=now,
+    )
+
+
+def append_dynamic_role_question(
+    repo_root: Path,
+    profile_id: str,
+    role_catalog: RoleCatalog,
+    interview_id: str,
+    *,
+    question: Mapping[str, Any],
+    plan_context_sha256: str,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Append exactly one provider question after the current turn completes."""
+
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    if session.get("delivery_mode") != "dynamic_ai":
+        raise RoleInterviewError("only dynamic AI interviews accept generated turns")
+    if session.get("status") != "active":
+        raise RoleInterviewError("dynamic question requires an active interview")
+    if not isinstance(question, Mapping):
+        raise RoleInterviewError("generated interview question must be an object")
+    if any(not _is_complete(session, value) for value in session["questions"]):
+        raise RoleInterviewError("complete the current interview turn before asking another")
+    if session.get("plan_context_sha256") != plan_context_sha256:
+        raise RoleInterviewError("dynamic interview context is stale; start a new turn")
+    role = role_catalog.resolve_role(session["role_id"])
+    blueprint = role_catalog.blueprint_for(role.id, session["seniority"])
+    requested_kind = question.get("kind")
+    matching = [
+        (index, round_value)
+        for index, round_value in enumerate(blueprint.rounds)
+        if round_value.type != "coding" and round_value.type == requested_kind
+    ]
+    if not matching:
+        raise RoleInterviewError("generated question kind is not allowed by this role")
+    round_index, round_value = matching[0]
+    if len(session["questions"]) >= 20:
+        raise RoleInterviewError("dynamic interview reached its 20-question limit")
+    question_id = f"q-{len(session['questions']) + 1:03d}"
+    appended = _generated_non_coding_question(
+        question,
+        question_id=question_id,
+        round_index=round_index,
+        round_type=round_value.type,
+        round_weight=round_value.weight,
+        timebox_minutes=max(1, round_value.duration),
+        skills=round_value.skills,
+        plan_context_sha256=plan_context_sha256,
+    )
+    session["questions"].append(appended)
+    session["timeline"].append(
+        {
+            "event": "question_generated",
+            "question_id": question_id,
+            "timestamp": _timestamp(now),
+        }
+    )
+    _save(repo_root, profile_id, session)
     return session
 
 

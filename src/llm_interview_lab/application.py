@@ -22,10 +22,15 @@ from .events import WorkspaceState, append_event, read_events, reduce_events
 from .grader import GraderResult, run_public_tests
 from .knowledge import KnowledgeCard, KnowledgeCatalog, KnowledgeError, load_knowledge
 from .lifecycle import ReviewInput, ReviewResult, record_review
-from .materials import add_material, list_materials, set_material_ai_access
-from .ai.context_builder import build_role_interview_plan_context_preview
+from .materials import add_material, get_material, list_materials, set_material_ai_access
+from .ai.context_builder import (
+    build_dynamic_role_interview_context_preview,
+    build_role_interview_plan_context_preview,
+)
 from .role_interviews import (
     RoleInterviewError,
+    append_dynamic_role_question,
+    create_dynamic_role_interview,
     create_role_interview,
     current_role_question,
     finish_role_interview,
@@ -1324,6 +1329,89 @@ class ApplicationService:
             material_ids=tuple(material_ids),
             consent_materials=consent_materials,
             knowledge_cards=tuple(knowledge_cards),
+        )
+
+    def dynamic_interview_context(
+        self,
+        profile_id: str,
+        *,
+        role_id: str,
+        seniority: str,
+        difficulty: str,
+        material_ids: Iterable[str] = (),
+        consent_materials: bool = False,
+    ):
+        """Return start-of-interview context without a future question plan."""
+
+        return build_dynamic_role_interview_context_preview(
+            self.repo_root,
+            profile_id,
+            self.roles,
+            role_id=role_id,
+            seniority=seniority,
+            difficulty=difficulty,
+            material_ids=tuple(material_ids),
+            consent_materials=consent_materials,
+        )
+
+    def create_dynamic_interview(
+        self,
+        profile_id: str,
+        *,
+        role_id: str,
+        seniority: str,
+        difficulty: str,
+        ai_mode: str,
+        initial_question: Mapping[str, Any],
+        context_sha256: str,
+        material_ids: Iterable[str] = (),
+        consent_materials: bool = False,
+    ) -> dict[str, Any]:
+        refs: list[dict[str, Any]] = []
+        selected = tuple(material_ids)
+        if selected and not consent_materials:
+            raise ApplicationError("selected material requires explicit interview consent")
+        for material_id in selected:
+            material = get_material(self.repo_root, profile_id, material_id)
+            if not material.ai_access:
+                raise ApplicationError("selected material is not authorized for this interview")
+            refs.append(
+                {
+                    "id": material.id,
+                    "sha256": material.sha256,
+                    "kind": material.kind,
+                    "title": material.title,
+                    "allowed_use": "role_interview",
+                }
+            )
+        return create_dynamic_role_interview(
+            self.repo_root,
+            profile_id,
+            self.roles,
+            role_id=role_id,
+            seniority=seniority,
+            difficulty=difficulty,
+            ai_mode=ai_mode,
+            initial_question=initial_question,
+            plan_context_sha256=context_sha256,
+            material_refs=refs,
+        )
+
+    def append_dynamic_interview_question(
+        self,
+        profile_id: str,
+        interview_id: str,
+        *,
+        question: Mapping[str, Any],
+        context_sha256: str,
+    ) -> dict[str, Any]:
+        return append_dynamic_role_question(
+            self.repo_root,
+            profile_id,
+            self.roles,
+            interview_id,
+            question=question,
+            plan_context_sha256=context_sha256,
         )
 
     def preview_personalized_interview(

@@ -108,7 +108,7 @@ Key 只写入操作系统密钥环：
 
 Coach、Reviewer 与 Interviewer 默认只读，不修改答案。Repository Agent 只面向维护者和贡献者，并使用显式审批。
 
-在桌面端“设置 → 模型与推理强度”中可以为 Codex 选择模型 ID 和 `default / low / medium / high / xhigh` 推理强度。该设置同时用于 Coach、面试评估和个性化面试计划；只影响新的 Codex 请求。面试设置页选择“Codex”后也会显示当前值并提供“修改”入口。Codex 计划只生成经过本地蓝图校验的非代码问题，用户确认前不会创建面试会话。
+在桌面端“设置 → 模型与推理强度”中可以为 Codex 选择模型 ID 和 `default / low / medium / high / xhigh` 推理强度。该设置同时用于 Coach、面试评估和动态面试的当前问题；只影响新的 Codex 请求。面试设置页选择“Codex”后也会显示当前值并提供“修改”入口。动态面试每次只生成当前非代码问题，用户确认上下文后才创建会话，不会预先生成整场问题。
 
 ### macOS 查找 Codex
 

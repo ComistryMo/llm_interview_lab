@@ -1224,9 +1224,11 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     # still go through the normal lock/submit action.
     assert 'answer.text = value || ""' in interview
     assert 'app.lockInterviewAnswer(value)' not in interview
-    assert "app.personalizedInterviewPlanContext(" in interview
-    assert "app.generatePersonalizedInterviewPlan(" in interview
-    assert "app.generatePersonalizedInterviewPlanWithCodex(" in interview
+    assert "app.dynamicInterviewContextPreview(" in interview
+    assert "app.startDynamicPersonalizedInterview(" in interview
+    assert "app.personalizedInterviewPlanContext(" not in interview
+    assert "app.generatePersonalizedInterviewPlan(" not in interview
+    assert "app.generatePersonalizedInterviewPlanWithCodex(" not in interview
     assert 'objectName: "personalizedInterviewCodexPreferences"' in interview
     assert 'objectName: "openCodexPreferencesFromInterview"' in interview
     assert 'text: "打开设置 → Codex"' in interview

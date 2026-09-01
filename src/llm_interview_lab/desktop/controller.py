@@ -27,7 +27,7 @@ from ..ai.context_builder import (
     build_role_interview_context_preview,
 )
 from ..ai.credentials import KeyringCredentialStore
-from ..ai.interview_planner import decode_personalized_questions
+from ..ai.interview_planner import decode_dynamic_question, decode_personalized_questions
 from ..ai.providers import create_chat_provider
 from ..ai.transcription import OpenAICompatibleTranscriber
 from ..application import ApplicationError, ApplicationService
@@ -457,6 +457,7 @@ class AppController(QObject):
         # contract.  Keep a small explicit marker so the shared event pump
         # cannot decode a plan as an assessment.
         self._codex_plan_pending = False
+        self._codex_dynamic_initial_pending = False
         self._codex_interview_dimensions: set[str] = set()
         self._codex_interview_fatal_issues: set[str] = set()
         self._codex_interview_operation_id = ""
@@ -1160,6 +1161,7 @@ class AppController(QObject):
         self._codex_interview_turn_id = None
         self._codex_interview_buffer = ""
         self._codex_plan_pending = False
+        self._codex_dynamic_initial_pending = False
         self._codex_interview_dimensions = set()
         self._codex_interview_fatal_issues = set()
         self._codex_interview_operation_id = ""
@@ -3443,6 +3445,23 @@ class AppController(QObject):
                 fatal_issues=pending["fatal_issues"],
                 followup_ids=followup_ids,
             )
+            # A dynamic session must grow only after the locked answer has
+            # been assessed.  Reuse the provider's evidence-backed follow-up
+            # as the next single turn; never materialize the rest of the plan.
+            if pending.get("follow_up") and self._interview.get("delivery_mode") == "dynamic_ai":
+                session = self.service.interview_session(
+                    profile_id, pending["interview_id"]
+                )
+                self.service.append_dynamic_interview_question(
+                    profile_id,
+                    pending["interview_id"],
+                    question={
+                        "kind": (self._interview.get("question") or {}).get("kind"),
+                        "title": "根据上一回答继续追问",
+                        "prompt": pending["follow_up"],
+                    },
+                    context_sha256=str(session["plan_context_sha256"]),
+                )
             interview_id = pending["interview_id"]
             self._pending_ai_assessment = None
             self._load_interview(interview_id)
@@ -3828,6 +3847,255 @@ class AppController(QObject):
         except Exception as error:
             self._show_error(error)
             return {"estimated_tokens": 0, "context_sha256": "", "parts": []}
+
+    @Slot(str, str, str, str, bool, result="QVariantMap")
+    def dynamicInterviewContextPreview(
+        self,
+        role_id: str,
+        seniority: str,
+        difficulty: str,
+        material_id: str,
+        consent: bool,
+    ) -> dict[str, Any]:
+        """Preview only the settings sent for the first dynamic turn."""
+
+        if self._profile_id == "demo":
+            return {
+                "estimated_tokens": 320,
+                "context_sha256": "d" * 64,
+                "parts": [
+                    {"id": "policy", "label": "动态面试规则", "selected": True, "sensitive": False},
+                    {"id": "interview_contract", "label": "本场流程与岗位技能", "selected": True, "sensitive": False},
+                ],
+            }
+        try:
+            selected = (material_id,) if material_id and consent else ()
+            preview = self.service.dynamic_interview_context(
+                self._profile_id,
+                role_id=role_id,
+                seniority=seniority,
+                difficulty=difficulty,
+                material_ids=selected,
+                consent_materials=bool(selected),
+            )
+            return {
+                "estimated_tokens": preview.estimated_tokens,
+                "context_sha256": hashlib.sha256(preview.selected_text.encode("utf-8")).hexdigest(),
+                "parts": [
+                    {
+                        "id": part.id,
+                        "label": part.label,
+                        "selected": part.selected,
+                        "sensitive": part.sensitive,
+                        "sha256": part.sha256,
+                    }
+                    for part in preview.parts
+                ],
+            }
+        except Exception as error:
+            self._show_error(error)
+            return {"estimated_tokens": 0, "context_sha256": "", "parts": []}
+
+    def _finish_dynamic_initial_question(
+        self, question: Mapping[str, Any], *, error: str = ""
+    ) -> None:
+        request = self._interview_plan_request or {}
+        try:
+            if error:
+                raise RuntimeError(error)
+            if self._profile_id != request.get("profile_id"):
+                raise RuntimeError("学习档案已切换，已丢弃旧的面试请求")
+            context = self.service.dynamic_interview_context(
+                self._profile_id,
+                role_id=str(request["role_id"]),
+                seniority=str(request["seniority"]),
+                difficulty=str(request["difficulty"]),
+                material_ids=((str(request["material_id"]),) if request.get("consent") else ()),
+                consent_materials=bool(request.get("consent")),
+            )
+            current_sha = hashlib.sha256(context.selected_text.encode("utf-8")).hexdigest()
+            if current_sha != str(request.get("context_sha256")):
+                raise RuntimeError("面试上下文在确认后发生变化，请重新预览")
+            session = self.service.create_dynamic_interview(
+                self._profile_id,
+                role_id=str(request["role_id"]),
+                seniority=str(request["seniority"]),
+                difficulty=str(request["difficulty"]),
+                ai_mode=str(request["ai_mode"]),
+                initial_question=question,
+                context_sha256=current_sha,
+                material_ids=((str(request["material_id"]),) if request.get("consent") else ()),
+                consent_materials=bool(request.get("consent")),
+            )
+            self.service.start_interview(self._profile_id, session["interview_id"])
+            self._interview_plan_request = None
+            self._interview_plan_preview = {}
+            self._load_interview(session["interview_id"])
+            self.navigate("interview")
+            self.toast.emit("第一问已准备好；后续问题会根据你的回答逐步生成")
+        except Exception as caught:
+            self._interview_plan_preview = {
+                "status": "error",
+                "user_message": friendly_error(caught),
+            }
+            self._show_error(caught)
+
+    @Slot(str, str, str, str, str, bool, str)
+    def startDynamicPersonalizedInterview(
+        self,
+        role_id: str,
+        seniority: str,
+        difficulty: str,
+        connection_id: str,
+        material_id: str,
+        consent: bool,
+        approved_context_sha256: str,
+    ) -> None:
+        """Start a personalized interview by generating one question only."""
+
+        if self._profile_id == "demo":
+            return
+        if self._busy or self._interview_plan_request is not None:
+            self._show_error("已有面试请求正在处理，请等待当前第一问完成")
+            return
+        ai_mode = "codex" if connection_id == "codex" else "provider"
+        if ai_mode == "codex":
+            if self._codex_backend is None or not self._codex_thread_id or self._codex_loop is None:
+                self._show_error("请先连接 Codex 面试官，再开始生成第一问")
+                return
+        else:
+            config = next(
+                (item for item in list_connections(self.repo_root, self._profile_id)
+                 if item.connection_id == connection_id),
+                None,
+            )
+            if config is None:
+                self._show_error("找不到所选 AI 服务，请先保存并测试连接")
+                return
+        try:
+            preview = self.service.dynamic_interview_context(
+                self._profile_id,
+                role_id=role_id,
+                seniority=seniority,
+                difficulty=difficulty,
+                material_ids=((material_id,) if material_id and consent else ()),
+                consent_materials=bool(material_id and consent),
+            )
+            current_sha = hashlib.sha256(preview.selected_text.encode("utf-8")).hexdigest()
+            if current_sha != approved_context_sha256:
+                raise RuntimeError("面试上下文在确认后发生变化，请重新预览")
+            blueprint = self.service.roles.blueprint_for(role_id, seniority)
+            non_coding_rounds = [
+                round_value for round_value in blueprint.rounds
+                if round_value.type != "coding"
+            ]
+            allowed = [non_coding_rounds[0].type] if non_coding_rounds else []
+            if not allowed:
+                raise RuntimeError("当前岗位没有可生成的非 coding 面试环节")
+        except Exception as error:
+            self._show_error(error)
+            return
+        profile_id = self._profile_id
+        operation_id = uuid4().hex
+        self._interview_plan_request = {
+            "profile_id": profile_id,
+            "operation_id": operation_id,
+            "role_id": role_id,
+            "seniority": seniority,
+            "difficulty": difficulty,
+            "material_id": material_id,
+            "consent": bool(material_id and consent),
+            "context_sha256": current_sha,
+            "ai_mode": ai_mode,
+            "allowed_kinds": allowed,
+        }
+        self._interview_plan_preview = {
+            "status": "generating",
+            "user_message": "正在生成第一问；不会预生成或展示后续问题",
+        }
+        self.stateChanged.emit()
+        instruction = (
+            "只生成当前第一问，返回 JSON 且只能包含 kind、title、prompt。"
+            f"kind 必须是以下之一：{allowed}。优先从自我介绍或经历展开，"
+            "一次只问一个主问题，不要输出计划、评分、答案或 coding 题。"
+        )
+        if ai_mode == "provider":
+            def operation() -> dict[str, str]:
+                key = KeyringCredentialStore().load(config.key_reference) if config.key_reference else None
+                provider = create_chat_provider(config, api_key=key)
+
+                async def collect() -> str:
+                    chunks: list[str] = []
+                    async for event in provider.stream_chat(
+                        [{"role": "system", "content": preview.selected_text}, {"role": "user", "content": instruction}]
+                    ):
+                        if event.text:
+                            chunks.append(event.text)
+                    return "".join(chunks)
+
+                return decode_dynamic_question(asyncio.run(collect()), set(allowed))
+
+            def complete(value: Mapping[str, Any]) -> None:
+                if self._interview_plan_request and self._interview_plan_request.get("operation_id") == operation_id:
+                    self._finish_dynamic_initial_question(value)
+                    self._interview_plan_request = None
+
+            def failed(message: str) -> None:
+                if self._interview_plan_request and self._interview_plan_request.get("operation_id") == operation_id:
+                    self._interview_plan_preview = {"status": "error", "user_message": friendly_error(message)}
+                    self._show_error(message)
+                    self._interview_plan_request = None
+
+            self._background(operation, complete, failed)
+            return
+
+        # Codex uses the existing read-only interviewer thread and event gate.
+        self._codex_dynamic_initial_pending = True
+        self._codex_interview_identity = (profile_id, "__dynamic_initial__", "", operation_id, "codex")
+        self._codex_interview_buffer = ""
+        self._codex_interview_operation_id = operation_id
+        self._begin_codex_turn("interview", operation_id)
+        self._background_operations.add(operation_id)
+        self._set_busy(True)
+        self.stateChanged.emit()
+        output_schema = {
+            "type": "object",
+            "properties": {
+                "kind": {"type": "string", "enum": allowed},
+                "title": {"type": "string"},
+                "prompt": {"type": "string"},
+            },
+            "required": ["kind", "title", "prompt"],
+            "additionalProperties": False,
+        }
+        try:
+            future = asyncio.run_coroutine_threadsafe(
+                self._codex_backend.start_turn(
+                    self._codex_thread_id,
+                    preview.selected_text + "\n\n" + instruction,
+                    model=self._codex_model or None,
+                    effort=self._codex_reasoning_effort or None,
+                    output_schema=output_schema,
+                ),
+                self._codex_loop,
+            )
+        except Exception as error:
+            self._finish_codex_interview_assessment(self._codex_interview_identity, error=str(error))
+            return
+
+        def on_started(value: Any, token=self._codex_interview_identity) -> None:
+            try:
+                caught = value.exception()
+                if caught:
+                    self._codexTurnStarted.emit({"kind": "interview", "identity": token, "error": str(caught)})
+                    return
+                response = value.result() or {}
+                turn = response.get("turn") if isinstance(response, Mapping) else None
+                self._codexTurnStarted.emit({"kind": "interview", "identity": token, "turn_id": (turn or {}).get("id") if isinstance(turn, Mapping) else None})
+            except Exception as caught:
+                self._codexTurnStarted.emit({"kind": "interview", "identity": token, "error": str(caught)})
+
+        future.add_done_callback(on_started)
 
     @Slot(str, str, str, str, str, bool, str)
     def generatePersonalizedInterviewPlan(
@@ -6078,6 +6346,7 @@ class AppController(QObject):
             }
             self.stateChanged.emit()
             self.interviewPlanReady.emit()
+
         except Exception as caught:
             self._interview_plan_request = None
             self._interview_plan_preview = {
@@ -6088,6 +6357,40 @@ class AppController(QObject):
             self._show_error(caught)
         finally:
             self._codex_plan_pending = False
+            self._codex_interview_buffer = ""
+            self._codex_interview_identity = None
+            self._release_codex_interview_turn(operation_id)
+            self.stateChanged.emit()
+
+    def _finish_codex_dynamic_initial(
+        self,
+        identity: tuple[str, str, str, str, str],
+        *,
+        error: str = "",
+    ) -> None:
+        """Finish one Codex first-question turn and enter the real session."""
+
+        profile_id, _marker, _question_id, operation_id, _provider_kind = identity
+        try:
+            if error:
+                raise RuntimeError(error)
+            request = self._interview_plan_request
+            if not request or request.get("operation_id") != operation_id:
+                raise RuntimeError("当前第一问请求已过期，请重新开始面试")
+            question = decode_dynamic_question(
+                self._codex_interview_buffer,
+                set(request.get("allowed_kinds") or ()),
+            )
+            self._finish_dynamic_initial_question(question)
+        except Exception as caught:
+            self._interview_plan_preview = {
+                "status": "error",
+                "user_message": friendly_error(caught),
+            }
+            self._show_error(caught)
+        finally:
+            self._codex_dynamic_initial_pending = False
+            self._interview_plan_request = None
             self._codex_interview_buffer = ""
             self._codex_interview_identity = None
             self._release_codex_interview_turn(operation_id)
@@ -6241,6 +6544,9 @@ class AppController(QObject):
     ) -> None:
         """Validate one Codex scorecard before writing interview evidence."""
 
+        if self._codex_dynamic_initial_pending:
+            self._finish_codex_dynamic_initial(identity, error=error)
+            return
         if self._codex_plan_pending:
             self._finish_codex_personalized_plan(identity, error=error)
             return

@@ -18,6 +18,7 @@ from llm_interview_lab.ai.context_builder import (
 )
 from llm_interview_lab.ai.interview_planner import (
     InterviewPlannerError,
+    decode_dynamic_question,
     decode_personalized_questions,
 )
 from llm_interview_lab.catalog import load_catalog
@@ -27,6 +28,8 @@ from llm_interview_lab.materials import add_material, resolve_material_path
 from llm_interview_lab.role_interviews import (
     RoleInterviewError,
     _build_questions,
+    append_dynamic_role_question,
+    create_dynamic_role_interview,
     create_role_interview,
     current_role_question,
     finish_role_interview,
@@ -361,6 +364,70 @@ def test_personalized_plan_positions_are_strict_integers(
             ],
             plan_context_sha256="a" * 64,
         )
+
+
+def test_dynamic_role_interview_materializes_only_current_turn(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    service = ApplicationService(root)
+    context = service.dynamic_interview_context(
+        "learner-one",
+        role_id="post_training_engineer",
+        seniority="intern",
+        difficulty="hard",
+    )
+    assert "questions" not in context.selected_text
+    assert "output_schema" in context.selected_text
+    context_sha = hashlib.sha256(context.selected_text.encode("utf-8")).hexdigest()
+    first = decode_dynamic_question(
+        '{"kind":"oral","title":"自我介绍","prompt":"请介绍一个你亲自完成的后训练项目，并说明你的具体贡献。"}',
+        {"oral"},
+    )
+    session = service.create_dynamic_interview(
+        "learner-one",
+        role_id="post_training_engineer",
+        seniority="intern",
+        difficulty="hard",
+        ai_mode="codex",
+        initial_question=first,
+        context_sha256=context_sha,
+    )
+    assert session["plan_mode"] == "dynamic_ai"
+    assert session["delivery_mode"] == "dynamic_ai"
+    assert len(session["questions"]) == 1
+    start_role_interview(root, "learner-one", session["interview_id"], load_catalog(root), now=T0)
+    record_role_answer(
+        root,
+        "learner-one",
+        session["interview_id"],
+        "q-001",
+        "我负责数据清洗和评测。",
+        now=T0 + timedelta(minutes=1),
+    )
+    record_role_assessment(
+        root,
+        "learner-one",
+        session["interview_id"],
+        "q-001",
+        {"skill_depth": 3, "evidence_and_reasoning": 3},
+        evidence="引用候选人的原回答。",
+        source="ai",
+        confidence="medium",
+        now=T0 + timedelta(minutes=2),
+    )
+    updated = append_dynamic_role_question(
+        root,
+        "learner-one",
+        load_role_catalog(root, curriculum=load_catalog(root)),
+        session["interview_id"],
+        question={
+            "kind": "oral",
+            "title": "继续追问",
+            "prompt": "你如何验证数据清洗没有引入新的偏差？",
+        },
+        plan_context_sha256=context_sha,
+    )
+    assert len(updated["questions"]) == 2
+    assert updated["questions"][1]["question_id"] == "q-002"
 
 
 def test_product_role_interview_runs_one_question_at_a_time_and_reports_evidence(

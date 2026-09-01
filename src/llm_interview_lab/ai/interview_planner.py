@@ -29,6 +29,37 @@ def _json_object(text: str) -> Mapping[str, Any]:
     return loaded
 
 
+def decode_dynamic_question(
+    text: str,
+    allowed_kinds: set[str] | frozenset[str],
+) -> dict[str, str]:
+    """Decode one current-turn question; never accepts a future question list."""
+
+    value = text.strip()
+    if value.startswith("```"):
+        lines = value.splitlines()
+        if len(lines) >= 3 and lines[-1].strip() == "```":
+            value = "\n".join(lines[1:-1]).strip()
+            if value.lower().startswith("json\n"):
+                value = value[5:].lstrip()
+    try:
+        loaded = json.loads(value)
+    except (TypeError, json.JSONDecodeError) as error:
+        raise InterviewPlannerError("AI 返回的当前问题不是有效 JSON，请重试") from error
+    if not isinstance(loaded, Mapping) or set(loaded) != {"kind", "title", "prompt"}:
+        raise InterviewPlannerError("当前问题必须只包含 kind、title 和 prompt")
+    kind = loaded["kind"]
+    title = loaded["title"]
+    prompt = loaded["prompt"]
+    if not isinstance(kind, str) or kind not in set(allowed_kinds):
+        raise InterviewPlannerError("AI 返回了当前岗位不允许的问题类型")
+    if not isinstance(title, str) or not 1 <= len(title.strip()) <= 120:
+        raise InterviewPlannerError("当前问题标题长度必须为 1 到 120 个字符")
+    if not isinstance(prompt, str) or not 10 <= len(prompt.strip()) <= 5000:
+        raise InterviewPlannerError("当前问题正文长度必须为 10 到 5000 个字符")
+    return {"kind": kind, "title": title.strip(), "prompt": prompt.strip()}
+
+
 def decode_personalized_questions(
     text: str,
     blueprint: InterviewBlueprint,

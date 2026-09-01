@@ -23,9 +23,9 @@
     "blueprint_id": {"type": "string", "pattern": "^interview\\."},
     "duration_minutes": {"type": "integer", "minimum": 1, "maximum": 150},
     "ai_mode": {"enum": ["disabled", "provider", "codex"]},
-    "plan_mode": {"enum": ["ai_generated"]},
+    "plan_mode": {"enum": ["ai_generated", "dynamic_ai"]},
     "plan_context_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "delivery_mode": {"enum": ["full_blueprint", "non_coding_fallback"]},
+    "delivery_mode": {"enum": ["full_blueprint", "non_coding_fallback", "dynamic_ai"]},
     "blueprint_coverage": {
       "type": "object",
       "additionalProperties": false,
@@ -107,7 +107,7 @@
         "type": "object",
         "required": ["event", "timestamp"],
         "properties": {
-          "event": {"enum": ["created", "started", "paused", "resumed", "answered", "coding_tested", "finished"]},
+        "event": {"enum": ["created", "started", "paused", "resumed", "answered", "coding_tested", "question_generated", "finished"]},
           "timestamp": {"type": "string", "format": "date-time"},
           "question_id": {"type": "string", "pattern": "^q-[0-9]{3}$"}
         },
@@ -120,7 +120,7 @@
     {
       "if": {
         "required": ["plan_mode"],
-        "properties": {"plan_mode": {"const": "ai_generated"}}
+        "properties": {"plan_mode": {"enum": ["ai_generated", "dynamic_ai"]}}
       },
       "then": {"required": ["plan_context_sha256"]},
       "else": {"not": {"required": ["plan_context_sha256"]}}
@@ -135,11 +135,24 @@
         "properties": {"questions": {"minItems": 1}}
       },
       "else": {
-        "properties": {
-          "duration_minutes": {"minimum": 30},
-          "questions": {"minItems": 2}
+        "if": {
+          "required": ["delivery_mode"],
+          "properties": {"delivery_mode": {"const": "dynamic_ai"}}
         },
-        "not": {"required": ["blueprint_coverage"]}
+        "then": {
+          "properties": {
+            "duration_minutes": {"minimum": 1},
+            "questions": {"minItems": 1}
+          },
+          "not": {"required": ["blueprint_coverage"]}
+        },
+        "else": {
+          "properties": {
+            "duration_minutes": {"minimum": 30},
+            "questions": {"minItems": 2}
+          },
+          "not": {"required": ["blueprint_coverage"]}
+        }
       }
     }
   ],

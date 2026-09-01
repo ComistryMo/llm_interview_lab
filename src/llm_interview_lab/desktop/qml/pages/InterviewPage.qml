@@ -108,7 +108,7 @@ Item {
     }
 
     function openPersonalizedPlanContext() {
-        root.planContext = app.personalizedInterviewPlanContext(
+        root.planContext = app.dynamicInterviewContextPreview(
             role.currentValue,
             seniority.currentValue,
             difficulty.currentValue,
@@ -581,7 +581,7 @@ Item {
                         visible: leftPanel.setupVisible && aiMode.currentValue === "codex"
                         objectName: "personalizedInterviewCodexStatus"
                         text: app.aiStatusVariant === "connected"
-                              ? "Codex 面试官已连接。它会按当前岗位蓝图生成计划，并继续使用本地规则冻结 Coding 题。"
+                              ? "Codex 面试官已连接。它会先生成当前一问，再根据你的回答逐步追问；Coding 题仍由本地规则决定。"
                               : (app.codexAvailable
                                  ? "点击下方按钮连接 Codex 面试官；也可以先在设置中选择模型和推理强度。"
                                  : "尚未发现 Codex。请在 AI 连接页检查安装/登录状态；普通 LLM API 也可单独使用。")
@@ -766,14 +766,14 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible
                         text: app.busy
-                              ? "正在生成面试计划……"
+                              ? "正在准备第一问……"
                               : aiMode.currentValue === "codex"
                                 ? (app.aiStatusVariant === "connecting"
                                    ? "正在连接 Codex 面试官…"
                                    : app.aiStatusVariant === "connected"
-                                   ? "预览 Codex 个性化面试计划"
+                                   ? "开始动态模拟面试"
                                    : "连接 Codex 面试官")
-                                : "预览 AI 个性化面试计划"
+                                : "开始动态模拟面试"
                         highlighted: true
                         enabled: !!role.currentValue
                                  && !app.busy
@@ -787,11 +787,8 @@ Item {
                                      || (material.currentIndex >= 0
                                          && app.materials[material.currentIndex].ai_access
                                          && consent.checked))
-                        // Creating a session freezes the public question plan
-                        // and starts the authoritative clock.  Require an
-                        // explicit review/confirmation so a stray click
-                        // cannot create a real interview before the learner
-                        // sees the selected role, difficulty and AI policy.
+                        // Confirm only the explicit first-turn context. Future
+                        // questions are generated after the current answer.
                         onClicked: {
                             if (aiMode.currentValue === "codex"
                                     && app.aiStatusVariant !== "connected") {
@@ -805,8 +802,17 @@ Item {
                     Text {
                         objectName: "personalizedInterviewAlphaScope"
                         width: parent.width
-                        visible: leftPanel.setupVisible && aiMode.currentValue !== "disabled"
+                        visible: false
                         text: "AI 会依据岗位蓝图、canonical skills、求职级别和难度生成结构化问题；材料是可选上下文。Coding 环节只使用当前环境可运行的已验证本地题，不满足时会在计划中明确省略。"
+                        color: root.palette.muted
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 11
+                    }
+                    Text {
+                        objectName: "dynamicInterviewScope"
+                        width: parent.width
+                        visible: leftPanel.setupVisible && aiMode.currentValue !== "disabled"
+                        text: "AI 只接收面试流程、岗位技能、难度、求职意向和你明确授权的材料；先生成一问，后续问题根据你的回答逐步追问。Coding 题仍由本地已验证题库决定。"
                         color: root.palette.muted
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
@@ -924,7 +930,7 @@ Item {
                 Column {
                     width: questionScroll.availableWidth
                     spacing: root.compactInterviewLayout ? 12 : 16
-                    Text { width: parent.width; text: activeQuestion ? activeQuestion.prompt : "选择岗位、求职阶段与难度。系统会冻结一份公共面试蓝图，每次只展示一个问题，并将客观代码证据与 Rubric 主观判断分开。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
+                    Text { width: parent.width; text: activeQuestion ? activeQuestion.prompt : "选择岗位、求职阶段与难度。AI 会先生成当前一问，之后根据你的回答逐步追问；客观代码证据与 Rubric 主观判断分开记录。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
                     TextArea { id: answer; objectName: "interviewAnswerEditor"; width: parent.width; height: root.compactInterviewLayout ? 140 : 180; visible: !!activeQuestion && activeQuestion.kind !== "coding"; text: root.answerLocked ? (app.interview.answer_text || "") : root.answerDraft; readOnly: root.answerLocked || !root.interviewCanEdit; onTextChanged: if (!root.answerLocked && !root.syncingQuestionEditors) root.answerDraft = text; placeholderText: root.answerLocked ? "回答已锁定" : !root.interviewCanEdit ? "面试已暂停或结束" : "输入你的回答……"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.answerLocked ? root.palette.accent : root.palette.border } }
                     LabCard {
                         objectName: "interviewVoiceCard"
@@ -1655,34 +1661,24 @@ Item {
         anchors.centerIn: parent
         width: Math.min(620, root.width - 48)
         height: Math.min(520, root.height - 48)
-        title: "确认发送给 AI 的上下文"
+        title: "确认本场设置并生成第一问"
         standardButtons: Dialog.Cancel | Dialog.Ok
         onAccepted: {
-            if (aiMode.currentValue === "codex")
-                app.generatePersonalizedInterviewPlanWithCodex(
-                    role.currentValue,
-                    seniority.currentValue,
-                    difficulty.currentValue,
-                    useMaterial.checked ? material.currentValue : "",
-                    useMaterial.checked ? consent.checked : false,
-                    root.planContext.context_sha256 || ""
-                )
-            else
-                app.generatePersonalizedInterviewPlan(
-                    role.currentValue,
-                    seniority.currentValue,
-                    difficulty.currentValue,
-                    planConnection.currentValue,
-                    useMaterial.checked ? material.currentValue : "",
-                    useMaterial.checked ? consent.checked : false,
-                    root.planContext.context_sha256 || ""
-                )
+            app.startDynamicPersonalizedInterview(
+                role.currentValue,
+                seniority.currentValue,
+                difficulty.currentValue,
+                aiMode.currentValue === "codex" ? "codex" : planConnection.currentValue,
+                useMaterial.checked ? material.currentValue : "",
+                useMaterial.checked ? consent.checked : false,
+                root.planContext.context_sha256 || ""
+            )
         }
         contentItem: ColumnLayout {
             spacing: 10
             Text {
                 Layout.fillWidth: true
-                text: "只有下列明确列出的内容会发送。本次确认只用于生成问题文字；岗位 Blueprint、skills、评分契约、Coding 题和计时仍由本地代码冻结。"
+                text: "本次只发送岗位技能、面试流程、难度、你的求职意向，以及你明确授权的材料。AI 现在只生成第一问；后续问题会根据你的回答逐步生成，不会提前展示整场计划。"
                 color: root.palette.text
                 wrapMode: Text.Wrap
             }
