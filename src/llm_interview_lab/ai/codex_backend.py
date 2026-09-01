@@ -149,9 +149,15 @@ class CodexAppServerBackend:
                 command = (
                     os.environ.get("COMSPEC", "cmd.exe"),
                     "/d",
-                    "/s",
                     "/c",
-                    f'"{executable}" app-server --listen stdio://',
+                    # Keep the executable and arguments as separate process
+                    # arguments.  asyncio quotes a path containing spaces for
+                    # CreateProcess; embedding quotes inside a single /c
+                    # string would make cmd.exe receive literal backslashes.
+                    executable,
+                    "app-server",
+                    "--listen",
+                    "stdio://",
                 )
             self._process = await self._process_factory(
                 *command,
