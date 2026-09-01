@@ -48,7 +48,14 @@ from ..workspace import (
     load_profile,
     validate_profile_id,
 )
-from .i18n import friendly_error, localize_role, onboarding_error_text, text
+from .i18n import (
+    friendly_error,
+    localize_role,
+    onboarding_error_text,
+    problem_brief,
+    problem_title,
+    text,
+)
 from .runtime import is_packaged_desktop, migrate_legacy_desktop_data
 from .voice import InterviewVoiceRecorder
 
@@ -696,6 +703,18 @@ class AppController(QObject):
     @Property("QVariantList", notify=stateChanged)
     def roles(self) -> list[dict[str, Any]]:
         return [localize_role(card) for card in self.service.role_cards()]
+
+    @Slot(str, str, result=str)
+    def problemTitle(self, problem_id: str, fallback: str = "") -> str:
+        """Resolve a stable catalog id to the current UI language."""
+
+        return problem_title(problem_id, fallback, self._language)
+
+    @Slot(str, str, result=str)
+    def problemBrief(self, problem_id: str, fallback: str = "") -> str:
+        """Return the localized first-read brief without changing task.md."""
+
+        return problem_brief(problem_id, fallback, self._language)
 
     @Slot(str, str, str, result="QVariantMap")
     def interviewConfiguration(

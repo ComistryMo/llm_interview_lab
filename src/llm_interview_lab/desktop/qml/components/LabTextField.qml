@@ -14,6 +14,12 @@ TextField {
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
     implicitHeight: theme ? theme.controlHeight : 40
+    // Keep text inside the control on Windows styles and with enlarged CJK
+    // fonts.  The default TextField vertical metrics can otherwise place the
+    // baseline half outside the painted background.
+    height: Math.max(implicitHeight, theme ? theme.scaledPx(44) : 44)
+    verticalAlignment: Text.AlignVCenter
+    clip: true
     leftPadding: 12
     rightPadding: busy ? 38 : 12
     topPadding: 8

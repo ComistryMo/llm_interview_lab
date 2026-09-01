@@ -112,7 +112,10 @@ Flickable {
 
     function retentionLabel(item) {
         var stage = (item.stage || "").toUpperCase()
-        return (item.title || item.problem_id || "间隔复测") + (stage ? " · " + stage : "")
+        var title = item.problem_id
+                ? app.problemTitle(item.problem_id, item.title || item.problem_id)
+                : (item.title || "间隔复测")
+        return title + (stage ? " · " + stage : "")
     }
 
     function focusEyebrow() {
@@ -130,7 +133,7 @@ Flickable {
         if (focusKind === "retention")
             return retentionLabel(actionableRetention)
         if (focusProblem)
-            return focusProblem.title || focusProblem.problem_id
+            return app.problemTitle(focusProblem.problem_id, focusProblem.title || focusProblem.problem_id)
         return "选择一项可练任务"
     }
 
@@ -385,6 +388,7 @@ Flickable {
                 level: "base"
                 outlined: true
                 padding: root.compactLayout ? 18 : 20
+                clip: true
 
                 ColumnLayout {
                     id: evidenceContent
@@ -438,7 +442,9 @@ Flickable {
                         LabText { theme: root.theme; text: String(root.dueReviewCount); strong: true }
                     }
 
-                    Item { Layout.fillHeight: true }
+                    // Keep the evidence note inside the surface. A fill-height
+                    // spacer could push it beyond the fixed wide card height.
+                    Item { Layout.preferredHeight: 6 }
                     LabText {
                         theme: root.theme
                         Layout.fillWidth: true

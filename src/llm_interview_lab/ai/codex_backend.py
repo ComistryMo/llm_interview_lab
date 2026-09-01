@@ -130,11 +130,31 @@ class CodexAppServerBackend:
             raise CodexBackendError("Codex executable was not found")
         executable = resolved or self.executable
         try:
-            self._process = await self._process_factory(
+            command: tuple[str, ...] = (
                 executable,
                 "app-server",
                 "--listen",
                 "stdio://",
+            )
+            # ``codex`` installed through npm on Windows is commonly a
+            # ``.cmd`` shim.  ``CreateProcess`` cannot execute that file
+            # directly (WinError 193); route only the real subprocess path
+            # through the system command interpreter.  Fake process factories
+            # used by tests still receive the simple executable command.
+            if (
+                self._process_factory is asyncio.create_subprocess_exec
+                and sys.platform == "win32"
+                and Path(executable).suffix.lower() in {".cmd", ".bat"}
+            ):
+                command = (
+                    os.environ.get("COMSPEC", "cmd.exe"),
+                    "/d",
+                    "/s",
+                    "/c",
+                    f'"{executable}" app-server --listen stdio://',
+                )
+            self._process = await self._process_factory(
+                *command,
                 cwd=str(self.workspace_root),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,

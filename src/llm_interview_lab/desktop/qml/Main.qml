@@ -58,7 +58,7 @@ ApplicationWindow {
         {id: "learn", label: "打开刷题训练", hint: "按课程前置选择题目"},
         {id: "exercise", label: "打开答题工作区", hint: "继续当前题目或浏览可练题目"},
         {id: "interview", label: "打开模拟面试", hint: "开始或恢复结构化面试"},
-        {id: "coach", label: "打开 AI 教练", hint: "查看上下文并请求只读帮助"},
+        {id: "coach", label: "打开 AI 辅助（可选）", hint: "仅在需要时请求只读帮助；模拟面试请进入面试"},
         {id: "career", label: "打开求职材料", hint: "管理当前 Profile 的材料"},
         {id: "progress", label: "打开学习进度", hint: "查看当前 Profile 的进度"},
         {id: "connections", label: "打开 AI 连接", hint: "配置或测试普通 LLM"},

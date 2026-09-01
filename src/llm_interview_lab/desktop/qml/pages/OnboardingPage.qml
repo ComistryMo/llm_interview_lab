@@ -409,6 +409,7 @@ Rectangle {
                                 id: profileName
                                 objectName: "onboardingProfileName"
                                 width: parent.width
+                                height: Math.max(root.scaledPx(44), implicitHeight)
                                 theme: root.theme
                                 accessibleLabel: "学习档案名称"
                                 placeholderText: "例如：我的秋招准备"

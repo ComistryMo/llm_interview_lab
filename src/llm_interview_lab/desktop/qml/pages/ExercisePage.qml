@@ -31,6 +31,7 @@ Item {
     // nothing against an absent submission.
     property bool hasTask: root.activeProblemId.length > 0
     property bool syncingEditor: false
+    property bool showOriginalContract: false
     property string codeFontFamily: Qt.platform.os === "windows" ? "Cascadia Mono"
                                     : Qt.platform.os === "osx" ? "Menlo" : "monospace"
 
@@ -120,6 +121,16 @@ Item {
         return "运行测试前会先保存编辑器中的最新代码。"
     }
 
+    function displayTitle() {
+        return app.problemTitle(root.activeProblemId,
+                                app.currentTask.title || "选择一道题开始")
+    }
+
+    function displayTask() {
+        return app.problemBrief(root.activeProblemId,
+                                app.currentTask.task || "请先从刷题训练中打开已解锁的题目。")
+    }
+
     function runPrimaryAction() {
         var kind = root.primaryActionKind()
         if (kind === "no-task")
@@ -147,8 +158,17 @@ Item {
         root.syncingEditor = false
     }
 
-    onActiveProblemIdChanged: Qt.callLater(root.syncEditorFromBackend)
+    onActiveProblemIdChanged: {
+        root.showOriginalContract = false
+        Qt.callLater(root.syncEditorFromBackend)
+    }
     Component.onCompleted: Qt.callLater(root.syncEditorFromBackend)
+    // A modal review left open while navigating away must never reappear on
+    // the next exercise. Review is opened only by the explicit primary action.
+    onVisibleChanged: if (visible) Qt.callLater(function() {
+        if (reviewDialog.visible)
+            reviewDialog.close()
+    })
 
     SplitView {
         anchors.fill: parent
@@ -167,10 +187,26 @@ Item {
                     id: detailsColumn
                     width: detailsScroll.availableWidth; spacing: 12
                     Text { width: parent.width; text: root.hasTask ? app.currentTask.problem_id : "尚未选择题目"; color: root.hasTask ? root.palette.accent : root.palette.muted; font.bold: true; font.pixelSize: 12 }
-                    Text { width: parent.width; text: app.currentTask.title || "选择一道题开始"; color: root.palette.text; font.pixelSize: 21; font.bold: true; wrapMode: Text.Wrap }
+                    Text { width: parent.width; text: root.displayTitle(); color: root.palette.text; font.pixelSize: 21; font.bold: true; wrapMode: Text.Wrap }
                     StatusPill { text: root.hasTask ? (app.currentTask.validation || "尚未开始") : "未选择"; tone: root.hasTask ? root.palette.success : root.palette.muted }
                     Rectangle { width: parent.width; height: 1; color: root.palette.border }
-                    Text { width: parent.width; text: app.currentTask.task || "请先从刷题训练中打开已解锁的题目。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
+                    Text { width: parent.width; text: root.displayTask(); color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
+                    Button {
+                        visible: app.language !== "en" && root.hasTask && !!app.currentTask.task
+                        text: root.showOriginalContract ? "隐藏英文原始契约" : "查看英文原始契约"
+                        flat: true
+                        Layout.alignment: Qt.AlignLeft
+                        onClicked: root.showOriginalContract = !root.showOriginalContract
+                    }
+                    Text {
+                        visible: root.showOriginalContract
+                        width: parent.width
+                        text: app.currentTask.task || ""
+                        color: root.palette.muted
+                        wrapMode: Text.Wrap
+                        textFormat: Text.MarkdownText
+                        lineHeight: 1.2
+                    }
                     Rectangle { width: parent.width; height: 1; color: root.palette.border }
                     Text { text: "掌握流程"; color: root.palette.text; font.bold: true }
                     Text {
@@ -204,9 +240,8 @@ Item {
                         spacing: 2
                         Text { text: "submission.py"; color: root.palette.text; font.bold: true; Layout.leftMargin: 4 }
                         Item { Layout.fillWidth: true }
-                        // Keep both reference panes reachable in focus mode.
-                        // On a wide screen they open as drawers; on a compact
-                        // screen the same buttons already use the drawers.
+                        // Reference panes remain available on compact layouts;
+                        // wide screens keep the editor deliberately quiet.
                         Button {
                             visible: root.focusMode || !root.wideLayout
                             text: "题面"
@@ -215,11 +250,10 @@ Item {
                         }
                         Button {
                             visible: root.focusMode || !root.wideLayout || !root.coachOpen
-                            text: "AI 教练"
+                            text: "AI 辅助（可选）"
                             flat: true
                             onClicked: root.wideLayout && !root.focusMode ? root.coachOpen = true : coachDrawer.open()
                         }
-                        Button { text: root.focusMode ? "退出专注" : "专注编码"; flat: true; onClicked: root.focusMode = !root.focusMode }
                         Button { text: "保存"; flat: true; enabled: root.hasTask && !app.busy; onClicked: app.saveSubmission(editor.text) }
                     }
                 }
@@ -238,7 +272,7 @@ Item {
                         Text {
                             objectName: "exerciseContextLabel"
                             text: (app.currentTask.problem_id || "当前题目")
-                                  + " · " + (app.currentTask.title || "未命名题目")
+                                  + " · " + root.displayTitle()
                             color: root.palette.text
                             font.bold: true
                             elide: Text.ElideRight
@@ -478,19 +512,19 @@ Item {
                 anchors.fill: parent; anchors.margins: 16; spacing: 12
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "AI 教练"; color: root.palette.text; font.bold: true; font.pixelSize: 17 }
+                    Text { text: "AI 辅助（可选）"; color: root.palette.text; font.bold: true; font.pixelSize: 17 }
                     Item { Layout.fillWidth: true }
                     Button { text: "×"; flat: true; onClicked: root.coachOpen = false }
                 }
-                Text { text: "遵守 H0–H5 帮助边界；AI 教练不能静默修改当前答案。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; font.pixelSize: 12 }
+                Text { text: "遵守 H0–H5 帮助边界；AI 辅助不会静默修改当前答案。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; font.pixelSize: 12 }
                 Text {
                     Layout.fillWidth: true
-                    text: "需要提示或只读审查时，在 AI 教练页面打开当前任务。该页面提供真实的发送、停止与上下文预览。"
+                    text: "需要提示或只读审查时，再打开 AI 辅助页面。模拟面试请进入“模拟面试”；本页不会自动占用训练流程。"
                     color: root.palette.text
                     wrapMode: Text.Wrap
                 }
                 Item { Layout.fillHeight: true }
-                Button { text: "在 AI 教练中打开当前任务"; Layout.fillWidth: true; onClicked: app.navigate("coach") }
+                Button { text: "在 AI 教练中打开当前任务（可选）"; Layout.fillWidth: true; onClicked: app.navigate("coach") }
             }
         }
     }
@@ -509,8 +543,15 @@ Item {
                 x: 20
                 width: parent.width - 40
                 spacing: 12
-                Text { text: app.currentTask.title || "题面"; color: root.palette.text; font.pixelSize: 20; font.bold: true; wrapMode: Text.Wrap; width: parent.width }
-                Text { text: app.currentTask.task || "暂无题面"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
+                Text { text: root.displayTitle(); color: root.palette.text; font.pixelSize: 20; font.bold: true; wrapMode: Text.Wrap; width: parent.width }
+                Text { text: root.displayTask(); color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
+                Button {
+                    visible: app.language !== "en" && root.hasTask && !!app.currentTask.task
+                    text: root.showOriginalContract ? "隐藏英文原始契约" : "查看英文原始契约"
+                    flat: true
+                    onClicked: root.showOriginalContract = !root.showOriginalContract
+                }
+                Text { visible: root.showOriginalContract; text: app.currentTask.task || ""; color: root.palette.muted; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
             }
         }
     }
@@ -526,9 +567,9 @@ Item {
             anchors.fill: parent
             anchors.margins: 16
             spacing: 12
-            Text { text: "AI 教练"; color: root.palette.text; font.pixelSize: 20; font.bold: true }
-            Text { text: "AI 只提供解释和审查，不会自动修改答案。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
-            Button { text: "打开 AI 教练页面"; Layout.fillWidth: true; onClicked: { coachDrawer.close(); app.navigate("coach") } }
+            Text { text: "AI 辅助（可选）"; color: root.palette.text; font.pixelSize: 20; font.bold: true }
+            Text { text: "模拟面试请进入“模拟面试”。这里仅提供主动请求的解释和只读审查，不会自动修改答案。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+            Button { text: "打开 AI 辅助页面"; Layout.fillWidth: true; onClicked: { coachDrawer.close(); app.navigate("coach") } }
             Item { Layout.fillHeight: true }
         }
     }

@@ -13,6 +13,7 @@ import pytest
 from llm_interview_lab.application import ApplicationService
 from llm_interview_lab import __version__
 from llm_interview_lab.desktop import runtime
+from llm_interview_lab.desktop.i18n import problem_brief, problem_title
 from llm_interview_lab.grader import GraderResult
 from llm_interview_lab.workspace import (
     init_profile,
@@ -298,3 +299,22 @@ def test_practice_and_interview_surfaces_do_not_expose_fake_actions() -> None:
     assert "提交并锁定回答" in interview
     assert "refreshInterviewClock" in interview
     assert "候选人自评 Rubric" in interview
+
+
+def test_problem_surfaces_are_chinese_first_without_changing_public_contracts() -> None:
+    assert problem_title("FND-001", "Wrong Prediction Count") == "统计错误预测样本"
+    assert "实现一个纯函数" in problem_brief("FND-001", "raw task")
+    exercise = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/ExercisePage.qml"
+    ).read_text(encoding="utf-8")
+    learn = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/LearnPage.qml"
+    ).read_text(encoding="utf-8")
+    text_field = (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/components/LabTextField.qml"
+    ).read_text(encoding="utf-8")
+    assert "function displayTitle()" in exercise
+    assert "function displayTask()" in exercise
+    assert "app.problemTitle(card.problem_id" in learn
+    assert "verticalAlignment: Text.AlignVCenter" in text_field
+    assert "height: Math.max(implicitHeight" in text_field

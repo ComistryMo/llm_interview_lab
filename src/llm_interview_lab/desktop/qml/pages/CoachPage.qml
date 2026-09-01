@@ -389,7 +389,7 @@ Item {
                         spacing: 2
                         Text {
                             Layout.fillWidth: true
-                            text: root.activeSession.title || "AI 教练"
+                            text: root.activeSession.title || "AI 辅助（可选）"
                             color: root.palette.text
                             font.pixelSize: 20
                             font.bold: true
@@ -514,13 +514,13 @@ Item {
                             Text { text: "从一个具体问题开始"; color: root.palette.text; font.pixelSize: 17; font.bold: true }
                             Text {
                                 Layout.fillWidth: true
-                                text: "先新建会话，再选择教练、讲解或审查模式；可按需发送当前答案和测试摘要。AI 不会替你改答案。"
+                                text: "主流程中的 AI 角色是模拟面试官；本页仅在你主动需要时提供只读提示、讲解或审查，不会替你改答案。"
                                 color: root.palette.muted
                                 wrapMode: Text.Wrap
                             }
                             Button {
                                 visible: !root.hasSession
-                                text: "新建本地会话"
+                                text: "打开 AI 辅助"
                                 highlighted: true
                                 Layout.alignment: Qt.AlignLeft
                                 enabled: !app.coachStreaming

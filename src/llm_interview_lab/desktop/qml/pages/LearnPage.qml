@@ -30,8 +30,14 @@ Item {
         return ({oracle: "已验证", field: "已实测", stable: "稳定",
                  contract: "实验性"})[value] || value || "未验证"
     }
+    function displayTitle(card) {
+        return card && card.problem_id
+               ? app.problemTitle(card.problem_id, card.title || card.problem_id)
+               : (card && card.title) || "未命名题目"
+    }
     function searchable(card) {
-        var values = [card.problem_id, card.title].concat(card.skills || [], card.keywords || [])
+        var values = [card.problem_id, card.title, root.displayTitle(card)]
+                .concat(card.skills || [], card.keywords || [])
         return values.join(" ").toLowerCase()
     }
     function retentionDueFor(card) {
@@ -339,7 +345,7 @@ Item {
                                 activeFocusOnTab: true
                                 readonly property bool selected: root.selectedProblem.problem_id === modelData.problem_id
                                 Accessible.role: Accessible.ListItem
-                                Accessible.name: modelData.title
+                                Accessible.name: root.displayTitle(modelData)
                                 Accessible.selected: selected
 
                                 ColumnLayout {
@@ -349,7 +355,7 @@ Item {
                                     LabText {
                                         theme: root.theme
                                         Layout.fillWidth: true
-                                        text: modelData.title
+                                        text: root.displayTitle(modelData)
                                         strong: true
                                         wrapMode: Text.Wrap
                                         maximumLineCount: 2
@@ -435,7 +441,7 @@ Item {
                                 LabText {
                                     theme: root.theme
                                     Layout.fillWidth: true
-                                    text: root.selectedProblem.title || ""
+                                    text: root.displayTitle(root.selectedProblem)
                                     variant: "section"
                                     strong: true
                                     wrapMode: Text.Wrap

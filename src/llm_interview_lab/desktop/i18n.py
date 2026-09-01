@@ -10,7 +10,7 @@ TEXT: dict[str, str] = {
     "nav.career": "求职材料",
     "nav.learn": "刷题训练",
     "nav.interview": "模拟面试",
-    "nav.coach": "AI 教练",
+    "nav.coach": "AI 辅助（可选）",
     "nav.progress": "学习进度",
     "nav.connections": "AI 连接",
     "nav.settings": "设置",
@@ -116,6 +116,101 @@ ROLE_TEXT: dict[str, tuple[str, str, str]] = {
 }
 
 
+# Problem assets keep their stable English ids and source contracts.  The
+# desktop surface uses this small vocabulary to make the first reading pass
+# Chinese-first without changing Catalog fingerprints or public task files.
+PROBLEM_TITLE_ZH: dict[str, str] = {
+    "FND-001": "统计错误预测样本",
+    "FND-002": "校验样本契约",
+    "FND-003": "筛选困难样本",
+    "FND-004": "汇总困难样本",
+    "FND-005": "流式读取 JSONL",
+    "FND-006": "实现小批量迭代器",
+    "CAP-FND-001": "困难样本数据流水线",
+    "TNS-002": "重排、置换与连续内存",
+    "TNS-003": "张量广播",
+    "TNS-006": "张量 Gather",
+    "TNS-010": "序列 Mask",
+    "TNS-011": "取最后一个有效 Token",
+    "TNS-013": "Autograd、Detach 与 No-Grad",
+    "LOSS-007": "稳定 Softmax",
+    "LOSS-008": "LogSumExp",
+    "LOSS-013": "带 Logits 的 BCE",
+    "LOSS-014": "交叉熵损失",
+    "CAP-LOSS-001": "带 Mask 的序列分类损失",
+    "NNL-001": "Linear 层",
+    "NNL-002": "Embedding 层",
+    "NNL-008": "RMSNorm",
+    "OPT-001": "SGD 优化器",
+    "OPT-002": "Momentum 优化器",
+    "OPT-004": "Adam 优化器",
+    "OPT-005": "AdamW 优化器",
+    "CAP-TRN-001": "小型序列分类训练器",
+    "ATT-002": "缩放点积注意力",
+    "ATT-004": "多头注意力",
+    "ATT-005": "多查询注意力",
+    "ATT-006": "分组查询注意力",
+    "ATT-007": "旋转位置编码",
+    "ATT-009": "KV Cache",
+    "PT-001": "SFT 标签 Mask",
+    "PT-002": "Token / 序列 Logprob",
+    "PT-005": "偏好对契约校验",
+    "PT-006": "DPO 损失",
+    "PT-014": "GRPO 分组优势",
+    "PT-015": "GRPO 损失",
+    "PT-016": "无效 Completion 处理",
+    "AGT-001": "工具 Schema",
+    "AGT-002": "工具注册表",
+    "AGT-006": "工具调用 Agent Loop",
+    "AGT-009": "Trajectory JSONL",
+    "VLM-007": "多模态标签 Mask",
+}
+
+
+PROBLEM_BRIEF_ZH: dict[str, str] = {
+    "FND-001": "实现一个纯函数，统计预测与标签不一致的样本数量。请处理空输入、长度不一致和输入不变性，并返回稳定的整数结果。\n\n完整接口与边界契约仍以当前题目文件和公开测试为准。",
+    "FND-002": "检查每条训练样本是否满足字段、类型和标签范围契约；遇到无效样本时给出可定位的结果，不要修改原始数据。",
+    "FND-003": "根据预测错误、置信度或损失等信号筛选困难样本。保持样本顺序和输入不变，并明确空结果的行为。",
+    "FND-004": "对困难样本做确定性统计，输出数量、错误分布和可用于复盘的摘要。注意空集合和缺失字段。",
+    "FND-005": "逐行读取 JSONL 数据并转换为样本记录；跳过或报告坏行的策略必须稳定，不能一次性把整个文件加载进内存。",
+    "FND-006": "把样本按 batch_size 迭代输出，正确处理最后一个不完整批次、空输入和重复迭代。迭代过程不得改写原始样本。",
+    "TNS-002": "实现 reshape、permute 与 contiguous 的组合操作，保持元素语义和目标 Shape；特别注意非连续输入和内存布局。",
+    "TNS-003": "实现符合 PyTorch 规则的广播计算，处理标量、不同维度和不可广播输入，并保持 dtype 与输入不变。",
+    "TNS-006": "沿指定维度 gather 张量中的元素，校验索引范围并保持结果 Shape；不要用循环掩盖维度错误。",
+    "TNS-010": "根据序列长度或有效位置生成 attention mask，支持批次内不同长度并保持 CPU、dtype 和输入不变性。",
+    "TNS-011": "利用 mask 找到每条序列最后一个有效 Token。全 Padding 样本必须明确报错，不能悄悄取到 Padding。",
+    "TNS-013": "解释并实现需要梯度、detach 和 no_grad 的边界；返回值应保持正确的 requires_grad 与反向传播关系。",
+    "LOSS-007": "实现数值稳定的 Softmax，避免极端 logits 溢出，并保持维度、dtype 与梯度行为符合 PyTorch 语义。",
+    "LOSS-008": "实现稳定的 LogSumExp，使用平移技巧处理极端值，并支持指定维度、保留维度和梯度回传。",
+    "LOSS-014": "实现稳定交叉熵：从 logits 计算每个样本的损失，处理 class 维度、reduction、极端值和梯度。",
+    "NNL-001": "实现带权重和偏置的 Linear 前向计算，支持批量输入、dtype 和梯度回传，不修改参数或输入。",
+    "NNL-002": "实现 Embedding 查表，处理索引 dtype、边界和重复索引，并验证梯度只回传到被使用的行。",
+    "NNL-008": "实现 RMSNorm 的归一化、缩放和数值稳定项，支持不同 Shape、dtype 与反向传播。",
+    "OPT-001": "实现多步 SGD 更新，正确处理学习率、None gradient、参数组和 state_dict 语义。",
+    "OPT-002": "在 SGD 基础上加入动量状态，验证多步更新、零梯度和状态演化。",
+    "OPT-004": "实现带一阶/二阶矩和偏置修正的 Adam，确保多参数、多步更新与官方参考对齐。",
+    "OPT-005": "实现 AdamW 的解耦 weight decay，处理参数组、None gradient、状态恢复和零梯度行为。",
+    "ATT-002": "实现缩放点积注意力，计算 Q/K/V 的 Shape、缩放和权重归一化；支持 mask、极端值和梯度。",
+    "ATT-004": "实现多头注意力的头拆分、转置、合并和投影，验证非连续输入、mask 与输出 Shape。",
+    "ATT-005": "实现共享 K/V 的多查询注意力，明确 Query 与 KV 头数关系，并检查 Cache 友好的布局。",
+    "ATT-006": "实现分组查询注意力，在 Query 头与 KV 头之间进行分组映射，保持数值和 Shape 正确。",
+    "ATT-007": "实现旋转位置编码，处理偶数维度、位置索引和 cos/sin 广播，保证输入不被修改。",
+    "ATT-009": "实现 KV Cache 的追加、读取和长度管理，处理批次、位置和容量边界。",
+    "PT-001": "构造 SFT 标签 Mask，使提示部分不参与损失而答案部分保留监督信号；处理 Padding 和边界。",
+    "PT-002": "从 logits 中提取 Token 与序列级 Logprob，处理 shift、Mask 和长度差异，不把 Padding 计入分数。",
+    "PT-005": "校验 chosen/rejected 偏好对的字段、长度和有效性，输出确定性错误信息并保持原始数据不变。",
+    "PT-006": "实现 DPO 损失，分离 current/reference logprob，处理 beta、Mask、长度差异和数值稳定。",
+    "PT-014": "按组计算 GRPO 优势，处理组内均值、方差为零和无效 completion。",
+    "PT-015": "实现 GRPO 损失的比率、裁剪和优势加权，明确 sign、Mask 与 reduction 语义。",
+    "PT-016": "识别并稳定处理无效 completion，避免把错误轨迹当作正向训练信号。",
+    "AGT-001": "定义工具名称、参数 Schema 和返回契约，拒绝未知字段或无效参数，并给出可修复错误。",
+    "AGT-002": "实现工具注册和查找，处理重复名称、未知工具和不可调用工具。",
+    "AGT-006": "实现包含 parser、validation、executor 的最小工具调用循环，处理异常、超时和最大步数。",
+    "AGT-009": "按 JSONL 记录完整 Agent 轨迹，保证事件顺序、工具输入输出和失败原因可复盘。",
+    "VLM-007": "为图像与文本混合序列构造标签 Mask，正确区分视觉占位符、Padding 和监督 Token。",
+}
+
+
 ONBOARDING_ERRORS: dict[str, str] = {
     "PROFILE_ID_INVALID": "档案标识需以小写字母开头，并且只能包含小写字母、数字或连字符。",
     "ROLE_REQUIRED": "请选择一个目标岗位后继续。",
@@ -169,6 +264,25 @@ def localize_role(card: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def problem_title(problem_id: str, fallback: str = "", language: str = "zh-CN") -> str:
+    """Return the user-facing title while keeping the catalog title stable."""
+
+    if language in {"en", "en-US", "en-GB"}:
+        return fallback or problem_id
+    return PROBLEM_TITLE_ZH.get(str(problem_id), fallback or problem_id)
+
+
+def problem_brief(problem_id: str, fallback: str = "", language: str = "zh-CN") -> str:
+    """Return a concise Chinese first-read contract; English remains opt-in."""
+
+    if language in {"en", "en-US", "en-GB"}:
+        return fallback
+    return PROBLEM_BRIEF_ZH.get(
+        str(problem_id),
+        f"本题训练“{problem_title(problem_id, fallback, language)}”相关能力。请结合接口、约束和公开测试完成实现。",
+    )
+
+
 def friendly_error(error: BaseException | str) -> str:
     raw = str(error).strip()
     message = raw.lower()
@@ -215,6 +329,8 @@ def friendly_error(error: BaseException | str) -> str:
         return TEXT["error.keyring"]
     if "codex" in message and ("not found" in message or "executable" in message):
         return TEXT["error.codex_missing"]
+    if "codex" in message and ("could not be started" in message or "winerror 193" in message):
+        return "Codex 已找到，但 Windows 无法直接启动该命令包装器。请在设置中重新测试；若仍失败，请选择 codex.exe 或更新 Codex CLI。"
     if "codex" in message and ("sign" in message or "account" in message):
         return TEXT["error.codex_login"]
     if any(token in message for token in ("401", "429", "500", "provider", "connection", "timeout")):
