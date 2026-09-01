@@ -57,7 +57,7 @@ Item {
         if (item.local)
             return true
         if (item.codex)
-            return String(app.aiStatus || "").match(/已连接|就绪|connected|ready/) !== null
+            return app.aiStatusVariant === "connected"
         var status = String(item.status || "")
         return status === "connected" || status === "ready"
                || status.indexOf("已连接") >= 0 || status.indexOf("就绪") >= 0
@@ -69,8 +69,10 @@ Item {
             return "先新建会话。"
         if (item.local)
             return "No-AI：只在本机保存会话，不请求远程模型。"
+        if (item.codex && app.aiStatusVariant === "connecting")
+            return "正在连接 Codex，请稍候；也可以切换 No-AI。"
         if (item.codex && !root.selectedProviderReady())
-            return "Codex 尚未连接；可点击连接，或切换 No-AI。"
+            return "Codex 已发现但尚未连接；请点击连接并确认 Codex 已登录，或切换 No-AI。"
         if (!root.selectedProviderReady())
             return "连接尚未测试；请先在 AI 连接页测试，或切换 No-AI。"
         return (item.display_name || item.provider_id || "AI") + " 已就绪。"
@@ -566,10 +568,11 @@ Item {
                     }
                     Button {
                         visible: root.codexSelected && app.codexAvailable
-                                 && !String(app.aiStatus || "").match(/已连接|就绪|connected|ready/)
-                        text: root.compactLayout ? "连接" : "连接 Codex"
+                                 && app.aiStatusVariant !== "connected"
+                        text: app.aiStatusVariant === "connecting"
+                              ? "连接中…" : (root.compactLayout ? "连接" : "连接 Codex")
                         Layout.minimumWidth: root.compactLayout ? 64 : 96
-                        enabled: !app.coachStreaming
+                        enabled: !app.coachStreaming && app.aiStatusVariant !== "connecting"
                         onClicked: app.connectCodex(mode.currentValue === "reviewer" ? "reviewer" : "coach")
                     }
                     ToolButton {

@@ -236,10 +236,12 @@ Flickable {
                     objectName: "codexDiscoveryStatus"
                     compact: true
                     text: app.codexProbeRunning ? "检查中"
-                          : app.codexDiscoveryState === "found" ? "已发现"
+                          : app.aiStatusVariant === "connected" ? "已连接"
+                          : app.codexDiscoveryState === "found" ? "已发现（未连接）"
                           : app.codexDiscoveryState === "missing" ? "未发现" : "未检查"
-                    tone: app.codexProbeRunning ? root.palette.warning
-                          : app.codexDiscoveryState === "found" ? root.palette.success
+                    tone: app.codexProbeRunning || app.aiStatusVariant === "connecting" ? root.palette.warning
+                          : app.aiStatusVariant === "connected" ? root.palette.success
+                          : app.codexDiscoveryState === "found" ? root.palette.accent
                           : root.palette.muted
                 }
                 Text {
@@ -273,7 +275,14 @@ Flickable {
                     onClicked: app.clearCodexExecutable()
                 }
             }
-            Text { width: parent.width; text: "未检测到 Codex 不会影响本地训练或普通 LLM API。"; color: root.palette.muted; wrapMode: Text.Wrap }
+            Text {
+                width: parent.width
+                text: app.codexDiscoveryState === "found" && app.aiStatusVariant !== "connected"
+                      ? "已发现只代表找到可执行文件；连接还需要 Codex 已登录并成功创建 App Server 会话。"
+                      : "未检测到 Codex 不会影响本地训练或普通 LLM API。"
+                color: root.palette.muted
+                wrapMode: Text.Wrap
+            }
         }
 
         LabCard {

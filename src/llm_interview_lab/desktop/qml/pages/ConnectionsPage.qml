@@ -209,13 +209,22 @@ Flickable {
                     width: parent.width
                     Text { text: "Codex"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
                     Item { Layout.fillWidth: true }
-                    StatusPill { text: app.codexAvailable ? "可用" : "未检测到"; tone: app.codexAvailable ? root.palette.success : root.palette.warning }
+                    StatusPill {
+                        text: app.aiStatusVariant === "connected" ? "已连接"
+                              : app.aiStatusVariant === "connecting" ? "连接中"
+                              : app.codexAvailable ? "已发现（未连接）" : "未检测到"
+                        tone: app.aiStatusVariant === "connected" ? root.palette.success
+                              : app.aiStatusVariant === "connecting" ? root.palette.warning
+                              : app.codexAvailable ? root.palette.accent : root.palette.warning
+                    }
                 }
                 Text {
                     width: parent.width
-                    text: root.compactOverview && !app.codexAvailable
+                    text: !app.codexAvailable
                           ? "未检测到 Codex，可在设置中选择路径或继续使用 No-AI。"
-                          : "通过官方 App Server 使用 Thread、流式事件、Diff、取消和显式审批；不会解析交互式终端输出。"
+                          : app.aiStatusVariant === "connected"
+                            ? "Codex 已连接，可使用只读教练或经审批的仓库代理。"
+                            : "已找到 Codex，但还没有建立连接；请确认已登录后再点击连接。"
                     color: root.palette.muted
                     wrapMode: Text.Wrap
                     maximumLineCount: root.compactOverview ? 1 : 3
@@ -228,8 +237,8 @@ Flickable {
                     columns: root.compactOverview || codexCard.width < 500 ? 2 : 4
                     columnSpacing: 8
                     rowSpacing: root.compactOverview ? 4 : 6
-                    Button { visible: app.codexAvailable; Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "教练模式"; flat: true; onClicked: app.connectCodex("coach") }
-                    Button { visible: app.codexAvailable; Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "仓库代理模式"; flat: true; onClicked: app.connectCodex("repository_agent") }
+                    Button { visible: app.codexAvailable; enabled: app.aiStatusVariant !== "connecting"; Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "教练模式"; flat: true; onClicked: app.connectCodex("coach") }
+                    Button { visible: app.codexAvailable; enabled: app.aiStatusVariant !== "connecting"; Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "仓库代理模式"; flat: true; onClicked: app.connectCodex("repository_agent") }
                     Button { Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "重新检测"; flat: true; onClicked: app.refreshCodexAvailability() }
                     Button { Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "查找设置"; flat: true; visible: !app.codexAvailable; onClicked: app.navigate("settings") }
                 }

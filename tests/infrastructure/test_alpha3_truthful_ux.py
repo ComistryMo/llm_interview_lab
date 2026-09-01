@@ -315,6 +315,8 @@ def test_problem_surfaces_are_chinese_first_without_changing_public_contracts() 
     ).read_text(encoding="utf-8")
     assert "function displayTitle()" in exercise
     assert "function displayTask()" in exercise
+    assert "查看英文题目" in exercise
+    assert "英文原始契约" not in exercise
     assert "app.problemTitle(card.problem_id" in learn
     assert "verticalAlignment: Text.AlignVCenter" in text_field
     assert "height: Math.max(implicitHeight" in text_field

@@ -291,7 +291,10 @@ class CodexAppServerBackend:
         params: dict[str, Any] = {
             "cwd": str(self.workspace_root),
             "approvalPolicy": "untrusted" if mode == "repository_agent" else "never",
-            "sandbox": "workspaceWrite" if mode == "repository_agent" else "readOnly",
+            # The App Server protocol uses kebab-case sandbox variants.
+            # The camelCase spellings look plausible but are rejected by
+            # current Codex releases before a thread can be created.
+            "sandbox": "workspace-write" if mode == "repository_agent" else "read-only",
         }
         if model:
             params["model"] = model

@@ -382,12 +382,21 @@ Flickable {
                 theme: root.theme
                 Layout.columnSpan: root.compactLayout ? 1 : 4
                 Layout.fillWidth: true
-                Layout.preferredHeight: root.compactLayout
-                                        ? Math.max(210, evidenceContent.implicitHeight + padding * 2)
-                                        : 272
+                // The evidence note is part of the card content.  Keep the
+                // wide layout's comfortable minimum, but let the card grow
+                // when Chinese wrapping or enlarged fonts need more room.
+                Layout.preferredHeight: Math.max(
+                    root.compactLayout ? 210 : 272,
+                    evidenceContent.implicitHeight + evidencePadding * 2
+                )
+                Layout.minimumHeight: Math.max(
+                    root.compactLayout ? 210 : 272,
+                    evidenceContent.implicitHeight + evidencePadding * 2
+                )
                 level: "base"
                 outlined: true
-                padding: root.compactLayout ? 18 : 20
+                property int evidencePadding: root.compactLayout ? 18 : 20
+                padding: evidencePadding
                 clip: true
 
                 ColumnLayout {

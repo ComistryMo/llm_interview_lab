@@ -22,6 +22,7 @@ from llm_interview_lab.ai.providers import (
     ProviderError,
     create_chat_provider,
 )
+from llm_interview_lab.desktop.i18n import friendly_error
 from llm_interview_lab.workspace import init_profile
 
 
@@ -406,11 +407,42 @@ def test_codex_app_server_protocol_stream_and_explicit_approval(tmp_path: Path) 
         assert process.stdin.messages[-1] == {"id": 77, "result": {"decision": "decline"}}
         thread_start = next(message for message in process.stdin.messages if message.get("method") == "thread/start")
         assert thread_start["params"]["approvalPolicy"] == "untrusted"
-        assert thread_start["params"]["sandbox"] == "workspaceWrite"
+        assert thread_start["params"]["sandbox"] == "workspace-write"
         assert process_kwargs["stderr"] is asyncio.subprocess.DEVNULL
         await backend.close()
 
     asyncio.run(scenario())
+
+
+def test_codex_read_only_workflows_use_protocol_sandbox_name(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        process = FakeProcess()
+
+        async def factory(*args, **kwargs):
+            del args, kwargs
+            return process
+
+        backend = CodexAppServerBackend(tmp_path, process_factory=factory)
+        await backend.connect()
+        await backend.start_thread(mode="coach")
+        thread_start = next(
+            message
+            for message in process.stdin.messages
+            if message.get("method") == "thread/start"
+        )
+        assert thread_start["params"]["sandbox"] == "read-only"
+        await backend.close()
+
+    asyncio.run(scenario())
+
+
+def test_codex_protocol_error_has_actionable_message() -> None:
+    message = friendly_error(
+        "Invalid request: unknown variant `readOnly`, expected one of "
+        "`read-only`, `workspace-write`, `danger-full-access`"
+    )
+    assert "协议不兼容" in message
+    assert "更新 Codex CLI" in message
 
 
 def test_codex_request_send_failure_does_not_leave_pending_future(

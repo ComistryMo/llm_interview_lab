@@ -18,7 +18,7 @@ TEXT: dict[str, str] = {
     "status.ai_offline": "AI 未连接 · 本地功能可用",
     "status.ai_connected": "AI 已连接",
     "status.codex_connected": "Codex 已连接",
-    "status.codex_ready": "Codex 就绪",
+    "status.codex_ready": "Codex 已发现（尚未连接）",
     "status.codex_connecting": "Codex 连接中……",
     "status.codex_switching": "Codex 工作流切换中……",
     "error.generic": "操作未完成。请检查输入后重试；本地训练仍可继续。",
@@ -53,7 +53,7 @@ EN_TEXT: dict[str, str] = {
     "status.ai_offline": "AI offline · Local features available",
     "status.ai_connected": "AI connected",
     "status.codex_connected": "Codex connected",
-    "status.codex_ready": "Codex ready",
+    "status.codex_ready": "Codex found (not connected)",
     "status.codex_connecting": "Connecting to Codex…",
     "status.codex_switching": "Switching Codex workflow…",
     "error.generic": "The operation could not be completed. Check the input and try again; local practice remains available.",
@@ -329,6 +329,8 @@ def friendly_error(error: BaseException | str) -> str:
         return TEXT["error.keyring"]
     if "codex" in message and ("not found" in message or "executable" in message):
         return TEXT["error.codex_missing"]
+    if "unknown variant" in message and "sandbox" in message:
+        return "Codex 已发现，但当前版本协议不兼容。请更新 Codex CLI 后重试；本地训练和 No-AI 不受影响。"
     if "codex" in message and ("could not be started" in message or "winerror 193" in message):
         return "Codex 已找到，但 Windows 无法直接启动该命令包装器。请在设置中重新测试；若仍失败，请选择 codex.exe 或更新 Codex CLI。"
     if "codex" in message and ("sign" in message or "account" in message):

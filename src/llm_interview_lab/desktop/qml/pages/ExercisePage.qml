@@ -192,7 +192,7 @@ Item {
                     Text { width: parent.width; text: root.displayTask(); color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
                     Button {
                         visible: app.language !== "en" && root.hasTask && !!app.currentTask.task
-                        text: root.showOriginalContract ? "隐藏英文原始契约" : "查看英文原始契约"
+                        text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
                         flat: true
                         Layout.alignment: Qt.AlignLeft
                         onClicked: root.showOriginalContract = !root.showOriginalContract
@@ -546,7 +546,7 @@ Item {
                 Text { text: root.displayTask(); color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
                 Button {
                     visible: app.language !== "en" && root.hasTask && !!app.currentTask.task
-                    text: root.showOriginalContract ? "隐藏英文原始契约" : "查看英文原始契约"
+                    text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
                     flat: true
                     onClicked: root.showOriginalContract = !root.showOriginalContract
                 }
