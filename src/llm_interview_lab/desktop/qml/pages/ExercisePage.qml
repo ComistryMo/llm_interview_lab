@@ -11,7 +11,6 @@ Item {
     // available on demand, but opening it by default steals useful width from
     // a long coding session on wide monitors.
     property bool coachOpen: false
-    property bool focusMode: false
     // `width` is the page viewport after the shell/sidebar.  These thresholds
     // therefore map to a 1440px window for the three-column view and keep the
     // 900px minimum window on a single, usable editor surface.
@@ -175,7 +174,7 @@ Item {
         orientation: Qt.Horizontal
 
         Rectangle {
-            visible: root.wideLayout || (root.mediumLayout && !root.focusMode)
+            visible: root.wideLayout || root.mediumLayout
             SplitView.preferredWidth: root.wideLayout ? 330 : 300
             SplitView.minimumWidth: 248
             color: root.palette.surface
@@ -243,16 +242,16 @@ Item {
                         // Reference panes remain available on compact layouts;
                         // wide screens keep the editor deliberately quiet.
                         Button {
-                            visible: root.focusMode || !root.wideLayout
+                            visible: !root.wideLayout
                             text: "题面"
                             flat: true
                             onClicked: detailsDrawer.open()
                         }
                         Button {
-                            visible: root.focusMode || !root.wideLayout || !root.coachOpen
+                            visible: !root.wideLayout || !root.coachOpen
                             text: "AI 辅助（可选）"
                             flat: true
-                            onClicked: root.wideLayout && !root.focusMode ? root.coachOpen = true : coachDrawer.open()
+                            onClicked: root.wideLayout ? root.coachOpen = true : coachDrawer.open()
                         }
                         Button { text: "保存"; flat: true; enabled: root.hasTask && !app.busy; onClicked: app.saveSubmission(editor.text) }
                     }
@@ -503,7 +502,7 @@ Item {
         }
 
         Rectangle {
-            visible: root.wideLayout && root.coachOpen && !root.focusMode
+            visible: root.wideLayout && root.coachOpen
             SplitView.preferredWidth: root.coachOpen ? 310 : 0
             SplitView.minimumWidth: root.coachOpen ? 270 : 0
             color: root.palette.surface
