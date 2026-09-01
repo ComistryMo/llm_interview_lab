@@ -604,7 +604,7 @@ Item {
                         }
                         Button {
                             objectName: "openCodexPreferencesFromInterview"
-                            text: "打开 Codex 设置"
+                            text: "打开设置 → Codex"
                             flat: true
                             onClicked: app.navigate("settings")
                         }
