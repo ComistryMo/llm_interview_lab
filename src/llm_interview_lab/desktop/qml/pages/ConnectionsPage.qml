@@ -240,6 +240,25 @@ Flickable {
                     elide: Text.ElideRight
                     visible: true
                 }
+                RowLayout {
+                    width: parent.width
+                    spacing: 8
+                    Text {
+                        objectName: "codexModelEffortSummary"
+                        Layout.fillWidth: true
+                        text: "模型：" + (app.codexModel || "默认")
+                              + " · 推理强度：" + (app.codexReasoningEffort || "默认")
+                        color: root.palette.muted
+                        font.pixelSize: 11
+                        elide: Text.ElideRight
+                    }
+                    Button {
+                        objectName: "openCodexModelSettings"
+                        text: "模型与推理强度"
+                        flat: true
+                        onClicked: app.navigate("settings")
+                    }
+                }
                 GridLayout {
                     id: codexActions
                     width: parent.width

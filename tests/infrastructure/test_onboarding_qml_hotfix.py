@@ -268,6 +268,14 @@ def test_placeholder_is_removed_as_soon_as_user_text_exists(onboarding_scene) ->
     assert field is not None
     placeholder = field.findChild(QQuickItem, "labTextFieldPlaceholder")
     assert placeholder is not None
+    # Hide before the first IME composition commits text.  This is the
+    # regression that a text-only visibility check misses.
+    field.forceActiveFocus()
+    QCoreApplication.processEvents()
+    assert placeholder.property("visible") is False
+    field.setProperty("focus", False)
+    QCoreApplication.processEvents()
+    assert placeholder.property("visible") is True
     field.setProperty("text", "中文学习档案")
     QCoreApplication.processEvents()
     assert placeholder.property("visible") is False

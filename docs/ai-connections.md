@@ -8,7 +8,7 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 |---|---|---|
 | No-AI | 课程、测试、复测、手动模拟面试 | 否 |
 | 普通 LLM API | 解释、提示、只读审查、面试追问 | 视服务而定 |
-| Codex | 仓库感知教练、测试、Diff 与受审批维护 | 需要 Codex 可用并完成相应认证 |
+| Codex | 仓库感知教练、个性化面试计划、测试、Diff 与受审批维护 | 需要 Codex 可用并完成相应认证 |
 
 首次启动默认选择 No-AI。任何连接故障都不应阻塞本地训练。
 
@@ -107,6 +107,8 @@ Key 只写入操作系统密钥环：
 - Coach、Reviewer、Interviewer、Repository Agent 模式。
 
 Coach、Reviewer 与 Interviewer 默认只读，不修改答案。Repository Agent 只面向维护者和贡献者，并使用显式审批。
+
+在桌面端“设置 → 模型与推理强度”中可以为 Codex 选择模型 ID 和 `default / low / medium / high / xhigh` 推理强度。该设置同时用于 Coach、面试评估和个性化面试计划；只影响新的 Codex 请求。面试设置页选择“Codex”后也会显示当前值并提供“修改”入口。Codex 计划只生成经过本地蓝图校验的非代码问题，用户确认前不会创建面试会话。
 
 ### macOS 查找 Codex
 

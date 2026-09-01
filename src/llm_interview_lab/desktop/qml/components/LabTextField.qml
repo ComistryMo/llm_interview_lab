@@ -64,7 +64,11 @@ TextField {
         anchors.verticalCenter: parent.verticalCenter
         anchors.leftMargin: control.leftPadding
         anchors.rightMargin: control.rightPadding
-        visible: control.text.length === 0 && !control.inputMethodComposing
+        // Hide on focus as soon as the learner starts editing.  Some input
+        // methods report their first composition keystroke before Qt updates
+        // ``inputMethodComposing`` or ``text``; relying on those signals alone
+        // briefly paints the hint over the composing glyph.
+        visible: control.text.length === 0 && !control.activeFocus && !control.inputMethodComposing
         text: control.placeholderText
         color: control.theme ? control.theme.subtle : "#858880"
         font: control.font

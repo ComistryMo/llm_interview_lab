@@ -1356,8 +1356,11 @@ class ApplicationService:
         plan_context_sha256: str,
         material_ids: Iterable[str] = (),
         consent_materials: bool = False,
+        ai_mode: str = "provider",
         seed: int = 0,
     ) -> dict[str, Any]:
+        if ai_mode not in {"provider", "codex"}:
+            raise ApplicationError("personalized interview AI mode must be provider or codex")
         generated_questions = tuple(generated_questions)
         material_ids = tuple(material_ids)
         context = self.personalized_interview_context(
@@ -1397,7 +1400,7 @@ class ApplicationService:
             role_id=role_id,
             seniority=seniority,
             difficulty=difficulty,
-            ai_mode="provider",
+            ai_mode=ai_mode,
             material_ids=material_ids,
             consent_materials=consent_materials,
             seed=seed,

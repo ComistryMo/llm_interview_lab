@@ -540,10 +540,35 @@ Item {
                     Text {
                         width: parent.width
                         visible: leftPanel.setupVisible && aiMode.currentValue === "codex"
-                        text: "Codex 仍可用于本地 Coach 和仓库协作；Alpha 个性化面试计划当前只支持已测试的普通 LLM API。"
-                        color: root.palette.warning
+                        objectName: "personalizedInterviewCodexStatus"
+                        text: app.aiStatusVariant === "connected"
+                              ? "Codex 面试官已连接。它会按当前岗位蓝图生成计划，并继续使用本地规则冻结 Coding 题。"
+                              : (app.codexAvailable
+                                 ? "点击下方按钮连接 Codex 面试官；也可以先在设置中选择模型和推理强度。"
+                                 : "尚未发现 Codex。请在 AI 连接页检查安装/登录状态；普通 LLM API 也可单独使用。")
+                        color: app.aiStatusVariant === "connected" ? root.palette.success : root.palette.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
+                    }
+                    RowLayout {
+                        width: parent.width
+                        visible: leftPanel.setupVisible && aiMode.currentValue === "codex"
+                        spacing: 8
+                        Text {
+                            objectName: "personalizedInterviewCodexPreferences"
+                            Layout.fillWidth: true
+                            text: "模型：" + (app.codexModel || "Codex 默认")
+                                  + " · 推理强度：" + (app.codexReasoningEffort || "默认")
+                            color: root.palette.muted
+                            font.pixelSize: 11
+                            elide: Text.ElideRight
+                        }
+                        Button {
+                            objectName: "openCodexPreferencesFromInterview"
+                            text: "修改"
+                            flat: true
+                            onClicked: app.navigate("settings")
+                        }
                     }
                     Text {
                         width: parent.width
@@ -653,13 +678,21 @@ Item {
                         objectName: "startConfiguredInterview"
                         width: parent.width
                         visible: leftPanel.setupVisible
-                        text: app.busy ? "正在生成面试计划……" : "预览 AI 个性化面试计划"
+                        text: app.busy
+                              ? "正在生成面试计划……"
+                              : aiMode.currentValue === "codex"
+                                ? (app.aiStatusVariant === "connected"
+                                   ? "预览 Codex 个性化面试计划"
+                                   : "连接 Codex 面试官")
+                                : "预览 AI 个性化面试计划"
                         highlighted: true
                         enabled: !!role.currentValue
                                  && !app.busy
-                                 && aiMode.currentValue === "provider"
-                                 && planConnection.currentIndex >= 0
-                                 && root.providerIsReady(planConnection.currentValue)
+                                 && ((aiMode.currentValue === "provider"
+                                      && planConnection.currentIndex >= 0
+                                      && root.providerIsReady(planConnection.currentValue))
+                                     || (aiMode.currentValue === "codex"
+                                         && app.codexAvailable))
                                  && (!useMaterial.checked
                                      || (material.currentIndex >= 0
                                          && app.materials[material.currentIndex].ai_access
@@ -670,6 +703,11 @@ Item {
                         // cannot create a real interview before the learner
                         // sees the selected role, difficulty and AI policy.
                         onClicked: {
+                            if (aiMode.currentValue === "codex"
+                                    && app.aiStatusVariant !== "connected") {
+                                app.connectCodex("interviewer")
+                                return
+                            }
                             root.planContext = app.personalizedInterviewPlanContext(
                                 role.currentValue,
                                 seniority.currentValue,
@@ -684,7 +722,7 @@ Item {
                     Text {
                         objectName: "personalizedInterviewAlphaScope"
                         width: parent.width
-                        visible: leftPanel.setupVisible && aiMode.currentValue === "provider"
+                        visible: leftPanel.setupVisible && aiMode.currentValue !== "disabled"
                         text: "AI 会依据岗位蓝图、canonical skills、求职级别和难度生成结构化问题；材料是可选上下文。Coding 环节只使用当前环境可运行的已验证本地题，不满足时会在计划中明确省略。"
                         color: root.palette.muted
                         wrapMode: Text.Wrap
@@ -1536,15 +1574,27 @@ Item {
         height: Math.min(520, root.height - 48)
         title: "确认发送给 AI 的上下文"
         standardButtons: Dialog.Cancel | Dialog.Ok
-        onAccepted: app.generatePersonalizedInterviewPlan(
-            role.currentValue,
-            seniority.currentValue,
-            difficulty.currentValue,
-            planConnection.currentValue,
-            useMaterial.checked ? material.currentValue : "",
-            useMaterial.checked ? consent.checked : false,
-            root.planContext.context_sha256 || ""
-        )
+        onAccepted: {
+            if (aiMode.currentValue === "codex")
+                app.generatePersonalizedInterviewPlanWithCodex(
+                    role.currentValue,
+                    seniority.currentValue,
+                    difficulty.currentValue,
+                    useMaterial.checked ? material.currentValue : "",
+                    useMaterial.checked ? consent.checked : false,
+                    root.planContext.context_sha256 || ""
+                )
+            else
+                app.generatePersonalizedInterviewPlan(
+                    role.currentValue,
+                    seniority.currentValue,
+                    difficulty.currentValue,
+                    planConnection.currentValue,
+                    useMaterial.checked ? material.currentValue : "",
+                    useMaterial.checked ? consent.checked : false,
+                    root.planContext.context_sha256 || ""
+                )
+        }
         contentItem: ColumnLayout {
             spacing: 10
             Text {

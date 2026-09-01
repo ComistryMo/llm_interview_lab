@@ -24,6 +24,7 @@ from llm_interview_lab.desktop.controller import (
     _codex_terminal_outcome,
     _decode_ai_assessment,
 )
+from llm_interview_lab.ai.codex_backend import CodexEvent
 from llm_interview_lab.ai.base import ChatEvent
 from llm_interview_lab.ai.providers import ProviderConfig
 from llm_interview_lab.desktop.runtime import prepare_desktop_repository
@@ -556,6 +557,94 @@ def test_controller_previews_context_then_confirms_real_personalized_plan(
     controller.shutdown()
 
 
+def test_codex_personalized_plan_route_keeps_codex_mode_and_schema() -> None:
+    controller = (REPO_ROOT / "src/llm_interview_lab/desktop/controller.py").read_text(
+        encoding="utf-8"
+    )
+    application = (REPO_ROOT / "src/llm_interview_lab/application.py").read_text(
+        encoding="utf-8"
+    )
+    assert "def generatePersonalizedInterviewPlanWithCodex" in controller
+    assert 'output_schema: dict[str, Any]' in controller
+    assert '"provider_kind": "codex"' in controller
+    assert '"ai_mode": "codex"' in controller
+    assert 'ai_mode=request.get("ai_mode", "provider")' in controller
+    assert 'ai_mode: str = "provider"' in application
+
+
+def test_codex_personalized_plan_stream_is_decoded_and_persisted(
+    tmp_path: Path, qapp
+) -> None:
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="codex-plan-user")
+    assert controller.completeOnboarding(
+        "codex-plan-user", "post_training_engineer", "new_grad", "codex", "{}"
+    )
+
+    class FakeBackend:
+        def __init__(self) -> None:
+            self.calls: list[dict] = []
+
+        async def start_turn(self, *args, **kwargs):
+            self.calls.append({"args": args, "kwargs": kwargs})
+            return {"turn": {"id": "turn-plan"}}
+
+    backend = FakeBackend()
+    controller._codex_backend = backend
+    controller._codex_thread_id = "thread-plan"
+    controller._codex_thread_mode = "interviewer"
+    controller._ensure_codex_loop()
+    blueprint = controller.service.roles.blueprint_for(
+        "post_training_engineer", "new_grad"
+    )
+    questions = []
+    for round_index, round_value in enumerate(blueprint.rounds):
+        if round_value.type == "coding":
+            continue
+        for item_index in range(round_value.item_count):
+            questions.append(
+                {
+                    "round_index": round_index,
+                    "kind": round_value.type,
+                    "title": f"Codex 计划 {round_index}-{item_index}",
+                    "prompt": "请说明判断、证据和失败回退路径，并给出一个可验证的工程细节。",
+                }
+            )
+    context = controller.personalizedInterviewPlanContext(
+        "post_training_engineer", "new_grad", "medium", "", False
+    )
+    controller.generatePersonalizedInterviewPlanWithCodex(
+        "post_training_engineer",
+        "new_grad",
+        "medium",
+        "",
+        False,
+        context["context_sha256"],
+    )
+    assert _wait_for(lambda: len(backend.calls) == 1)
+    assert backend.calls[0]["kwargs"]["output_schema"]["required"] == ["questions"]
+    for event in (
+        CodexEvent("turn/started", {"turnId": "turn-plan"}),
+        CodexEvent(
+            "item/agentMessage/delta",
+            {"turnId": "turn-plan", "delta": json.dumps({"questions": questions})},
+        ),
+        CodexEvent("turn/completed", {"turnId": "turn-plan", "status": "completed"}),
+    ):
+        controller._handle_codex_event(event)
+        QCoreApplication.processEvents()
+    assert controller.interviewPlanPreview["status"] == "ready"
+    assert controller.confirmPersonalizedInterviewPlan()
+    session = controller.service.interview_session(
+        "codex-plan-user", controller.interview["interview_id"]
+    )
+    assert session["ai_mode"] == "codex"
+    controller.shutdown()
+
+
 def test_controller_transcription_populates_editable_draft_without_locking(
     tmp_path: Path, qapp, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -973,6 +1062,9 @@ def test_desktop_release_configuration_is_portable_and_separate_from_core_ci() -
     assert "pendingApproval" not in connections_qml
     assert 'objectName: "saveAndTestConnection"' in connections_qml
     assert 'text: "保存并测试"' in connections_qml
+    assert 'objectName: "codexModelEffortSummary"' in connections_qml
+    assert 'objectName: "openCodexModelSettings"' in connections_qml
+    assert 'text: "模型与推理强度"' in connections_qml
     assert "if (saved)" in connections_qml
     assert "app.testConnection(connectionId.text)" in connections_qml
     assert "desktop-macos-arm64:" in workflow
@@ -1130,6 +1222,11 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert 'app.lockInterviewAnswer(value)' not in interview
     assert "app.personalizedInterviewPlanContext(" in interview
     assert "app.generatePersonalizedInterviewPlan(" in interview
+    assert "app.generatePersonalizedInterviewPlanWithCodex(" in interview
+    assert 'objectName: "personalizedInterviewCodexPreferences"' in interview
+    assert 'objectName: "openCodexPreferencesFromInterview"' in interview
+    assert 'app.navigate("settings")' in interview
+    assert "outputSchema" not in interview  # schema stays in the controller
     assert "app.confirmPersonalizedInterviewPlan()" in interview
     assert 'visible: false' in interview
     assert interview.index('objectName: "startNonCodingInterview"') < interview.index(

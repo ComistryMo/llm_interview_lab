@@ -310,6 +310,7 @@ class CodexAppServerBackend:
         *,
         model: str | None = None,
         effort: str | None = None,
+        output_schema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         params: dict[str, Any] = {
             "threadId": thread_id,
@@ -319,6 +320,10 @@ class CodexAppServerBackend:
             params["model"] = model
         if effort:
             params["effort"] = effort
+        if output_schema:
+            # Codex App Server uses the camelCase wire spelling.  Keep the
+            # Python API snake_case so callers do not need protocol details.
+            params["outputSchema"] = output_schema
         return await self.request(
             "turn/start",
             params,

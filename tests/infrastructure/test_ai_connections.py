@@ -402,7 +402,8 @@ def test_codex_app_server_protocol_stream_and_explicit_approval(tmp_path: Path) 
         thread = await backend.start_thread(mode="repository_agent")
         assert thread["thread"]["id"] == "thr-1"
         await backend.start_turn(
-            "thr-1", "Review this repository", model="gpt-test", effort="high"
+            "thr-1", "Review this repository", model="gpt-test", effort="high",
+            output_schema={"type": "object", "required": ["questions"]},
         )
         first = await anext(backend.events())
         second = await anext(backend.events())
@@ -418,6 +419,7 @@ def test_codex_app_server_protocol_stream_and_explicit_approval(tmp_path: Path) 
         turn_start = next(message for message in process.stdin.messages if message.get("method") == "turn/start")
         assert turn_start["params"]["model"] == "gpt-test"
         assert turn_start["params"]["effort"] == "high"
+        assert turn_start["params"]["outputSchema"]["required"] == ["questions"]
         assert process_kwargs["stderr"] is asyncio.subprocess.DEVNULL
         await backend.close()
 

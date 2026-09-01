@@ -452,6 +452,11 @@ class AppController(QObject):
         self._codex_interview_identity: tuple[str, str, str, str, str] | None = None
         self._codex_interview_turn_id: str | None = None
         self._codex_interview_buffer = ""
+        # Personalized interview planning uses the same read-only
+        # interviewer thread as scorecards, but has a different response
+        # contract.  Keep a small explicit marker so the shared event pump
+        # cannot decode a plan as an assessment.
+        self._codex_plan_pending = False
         self._codex_interview_dimensions: set[str] = set()
         self._codex_interview_fatal_issues: set[str] = set()
         self._codex_interview_operation_id = ""
@@ -1154,6 +1159,7 @@ class AppController(QObject):
         self._codex_interview_identity = None
         self._codex_interview_turn_id = None
         self._codex_interview_buffer = ""
+        self._codex_plan_pending = False
         self._codex_interview_dimensions = set()
         self._codex_interview_fatal_issues = set()
         self._codex_interview_operation_id = ""
@@ -3937,6 +3943,7 @@ class AppController(QObject):
                 plan_context_sha256=request["context_sha256"],
                 material_ids=(request["material_id"],) if request["consent"] else (),
                 consent_materials=request["consent"],
+                ai_mode=request.get("ai_mode", "provider"),
             )
             self.service.start_interview(self._profile_id, session["interview_id"])
             self._interview_plan_request = None
@@ -5988,6 +5995,210 @@ class AppController(QObject):
             self._codex_interview_turn_id = None
             self._codex_interview_message_id = ""
 
+    def _finish_codex_personalized_plan(
+        self,
+        identity: tuple[str, str, str, str, str],
+        *,
+        error: str = "",
+    ) -> None:
+        """Decode a Codex-authored plan without treating it as score evidence."""
+
+        profile_id, _marker, _question_id, operation_id, _provider_kind = identity
+        request = self._interview_plan_request
+        try:
+            if error:
+                raise RuntimeError(error)
+            if self._profile_id != profile_id or not request:
+                raise RuntimeError("当前学习档案或面试计划请求已变化，已丢弃旧的 Codex 结果。")
+            if request.get("operation_id") != operation_id:
+                raise RuntimeError("Codex 返回的面试计划已过期，请重新生成。")
+            role_id = str(request["role_id"])
+            seniority = str(request["seniority"])
+            difficulty = str(request["difficulty"])
+            material_id = str(request.get("material_id") or "")
+            consent = bool(request.get("consent"))
+            blueprint = self.service.roles.blueprint_for(role_id, seniority)
+            generated = decode_personalized_questions(
+                self._codex_interview_buffer, blueprint
+            )
+            plan = self.service.preview_personalized_interview(
+                profile_id,
+                role_id=role_id,
+                seniority=seniority,
+                difficulty=difficulty,
+                generated_questions=generated,
+                plan_context_sha256=str(request["context_sha256"]),
+                material_ids=(material_id,) if consent else (),
+                consent_materials=consent,
+            )
+            self._interview_plan_request = {
+                **request,
+                "plan": plan,
+                "generated_questions": list(generated),
+                "context_sha256": str(request["context_sha256"]),
+            }
+            self._interview_plan_preview = {
+                **plan,
+                "status": "ready",
+                "user_message": "Codex 已生成计划，尚未写入；请检查问题后再确认开始。",
+            }
+            self.stateChanged.emit()
+            self.interviewPlanReady.emit()
+        except Exception as caught:
+            self._interview_plan_request = None
+            self._interview_plan_preview = {
+                "status": "error",
+                "user_message": friendly_error(caught),
+            }
+            self.stateChanged.emit()
+            self._show_error(caught)
+        finally:
+            self._codex_plan_pending = False
+            self._codex_interview_buffer = ""
+            self._codex_interview_identity = None
+            self._release_codex_interview_turn(operation_id)
+            self.stateChanged.emit()
+
+    @Slot(str, str, str, str, str, bool, str)
+    def generatePersonalizedInterviewPlanWithCodex(
+        self,
+        role_id: str,
+        seniority: str,
+        difficulty: str,
+        material_id: str,
+        consent: bool,
+        approved_context_sha256: str,
+    ) -> None:
+        """Generate the non-coding portion of a plan through Codex App Server."""
+
+        if self._profile_id == "demo":
+            self.toast.emit("合成演示不会调用真实 Codex。")
+            return
+        if self._busy or self._interview_plan_request is not None:
+            self._show_error("已有面试计划请求正在处理，请等待完成。")
+            return
+        if self._codex_backend is None or not self._codex_thread_id or self._codex_loop is None:
+            self._show_error("请先连接 Codex 面试官模式，再生成个性化面试计划。")
+            return
+        if self._codex_thread_mode not in {None, "interviewer"}:
+            self._show_error("当前 Codex 工作流不是面试官模式，请重新连接 Codex 面试官。")
+            return
+
+        profile_id = self._profile_id
+        try:
+            selected_materials = (material_id,) if material_id and consent else ()
+            preview = self.service.personalized_interview_context(
+                profile_id,
+                role_id=role_id,
+                seniority=seniority,
+                difficulty=difficulty,
+                material_ids=selected_materials,
+                consent_materials=bool(selected_materials),
+            )
+            current_sha = hashlib.sha256(
+                preview.selected_text.encode("utf-8")
+            ).hexdigest()
+            if current_sha != approved_context_sha256:
+                raise RuntimeError("上下文在确认后发生变化，请重新预览后再发送。")
+        except Exception as error:
+            self._show_error(error)
+            return
+
+        operation_id = uuid4().hex
+        self._interview_plan_request = {
+            "operation_id": operation_id,
+            "role_id": role_id,
+            "seniority": seniority,
+            "difficulty": difficulty,
+            "material_id": material_id,
+            "consent": bool(selected_materials),
+            "context_sha256": current_sha,
+            "provider_kind": "codex",
+            "ai_mode": "codex",
+        }
+        self._interview_plan_preview = {
+            "status": "generating",
+            "user_message": "Codex 正在根据已确认上下文生成非代码问题；Coding 题仍由本地题库选择。",
+        }
+        self._codex_plan_pending = True
+        self._codex_interview_identity = (
+            profile_id,
+            "__personalized_plan__",
+            "",
+            operation_id,
+            "codex",
+        )
+        self._codex_interview_buffer = ""
+        self._codex_interview_operation_id = operation_id
+        self._background_operations.add(operation_id)
+        self._set_busy(True)
+        self._begin_codex_turn("interview", operation_id)
+        self.stateChanged.emit()
+
+        output_schema: dict[str, Any] = {
+            "type": "object",
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "round_index": {"type": "integer"},
+                            "kind": {"type": "string"},
+                            "title": {"type": "string"},
+                            "prompt": {"type": "string"},
+                        },
+                        "required": ["round_index", "kind", "title", "prompt"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["questions"],
+            "additionalProperties": False,
+        }
+        prompt = (
+            preview.selected_text
+            + "\n\n## Codex 个性化面试计划契约\n"
+            + "只返回符合 outputSchema 的 JSON。生成本场非 coding 主问题；不要生成 coding 题、答案、评分或未提供的经历事实。"
+        )
+        try:
+            future = asyncio.run_coroutine_threadsafe(
+                self._codex_backend.start_turn(
+                    self._codex_thread_id,
+                    prompt,
+                    model=self._codex_model or None,
+                    effort=self._codex_reasoning_effort or None,
+                    output_schema=output_schema,
+                ),
+                self._codex_loop,
+            )
+        except Exception as error:
+            self._finish_codex_interview_assessment(
+                self._codex_interview_identity, error=str(error)
+            )
+            return
+
+        def on_started(value: Any, token=self._codex_interview_identity) -> None:
+            try:
+                caught = value.exception()
+                if caught:
+                    self._codexTurnStarted.emit(
+                        {"kind": "interview", "identity": token, "error": str(caught)}
+                    )
+                    return
+                response = value.result() or {}
+                turn = response.get("turn") if isinstance(response, Mapping) else None
+                turn_id = (turn or {}).get("id") if isinstance(turn, Mapping) else None
+                self._codexTurnStarted.emit(
+                    {"kind": "interview", "identity": token, "turn_id": turn_id}
+                )
+            except Exception as caught:
+                self._codexTurnStarted.emit(
+                    {"kind": "interview", "identity": token, "error": str(caught)}
+                )
+
+        future.add_done_callback(on_started)
+
     def _finish_codex_interview_assessment(
         self,
         identity: tuple[str, str, str, str, str],
@@ -5995,6 +6206,10 @@ class AppController(QObject):
         error: str = "",
     ) -> None:
         """Validate one Codex scorecard before writing interview evidence."""
+
+        if self._codex_plan_pending:
+            self._finish_codex_personalized_plan(identity, error=error)
+            return
 
         profile_id, interview_id, question_id, operation_id, provider_kind = identity
         if self._codex_interview_operation_id != operation_id:
