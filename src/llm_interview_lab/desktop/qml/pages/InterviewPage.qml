@@ -433,7 +433,13 @@ Item {
             }
         }
         function onInterviewPlanReady() {
-            personalizedPlanDialog.open()
+            // The legacy full-plan signal must never interrupt a dynamic
+            // interview.  Dynamic sessions enter the room immediately after
+            // the first question is persisted and do not expose a future
+            // question list for confirmation.
+            if (app.interviewPlanPreview.status === "ready"
+                    && app.interviewPlanPreview.plan_mode !== "dynamic_ai")
+                personalizedPlanDialog.open()
         }
         function onInterviewTranscriptReady(value) {
             // Transcription is a draft only.  Keep the answer editable and

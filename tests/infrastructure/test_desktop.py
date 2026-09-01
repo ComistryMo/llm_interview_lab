@@ -1229,6 +1229,7 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert "app.personalizedInterviewPlanContext(" not in interview
     assert "app.generatePersonalizedInterviewPlan(" not in interview
     assert "app.generatePersonalizedInterviewPlanWithCodex(" not in interview
+    assert 'app.interviewPlanPreview.plan_mode !== "dynamic_ai"' in interview
     assert 'objectName: "personalizedInterviewCodexPreferences"' in interview
     assert 'objectName: "openCodexPreferencesFromInterview"' in interview
     assert 'text: "打开设置 → Codex"' in interview
