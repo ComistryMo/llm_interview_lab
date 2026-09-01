@@ -329,7 +329,9 @@ def friendly_error(error: BaseException | str) -> str:
         return TEXT["error.keyring"]
     if "codex" in message and ("not found" in message or "executable" in message):
         return TEXT["error.codex_missing"]
-    if "unknown variant" in message and "sandbox" in message:
+    if "unknown variant" in message and any(
+        token in message for token in ("readOnly", "workspaceWrite", "read-only")
+    ):
         return "Codex 已发现，但当前版本协议不兼容。请更新 Codex CLI 后重试；本地训练和 No-AI 不受影响。"
     if "codex" in message and ("could not be started" in message or "winerror 193" in message):
         return "Codex 已找到，但 Windows 无法直接启动该命令包装器。请在设置中重新测试；若仍失败，请选择 codex.exe 或更新 Codex CLI。"

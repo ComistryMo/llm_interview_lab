@@ -232,14 +232,19 @@ Flickable {
 
         GridLayout {
             Layout.fillWidth: true
-            columns: root.compactLayout ? 1 : 12
+            // This row contains only the focus and evidence surfaces.  A
+            // three-column grid gives the focus card two columns and the
+            // evidence card one, without creating ten unnecessary inter-column
+            // gaps that could push the right card outside a small window.
+            columns: root.compactLayout ? 1 : 3
             columnSpacing: 14
             rowSpacing: 14
 
             LabSurface {
                 id: todayFocus
                 theme: root.theme
-                Layout.columnSpan: root.compactLayout ? 1 : 8
+                Layout.columnSpan: root.compactLayout ? 1 : 2
+                Layout.minimumWidth: 0
                 Layout.fillWidth: true
                 Layout.preferredHeight: root.compactLayout ? 226 : 272
                 level: "raised"
@@ -380,7 +385,8 @@ Flickable {
                 id: evidenceRail
                 objectName: "homeEvidenceRail"
                 theme: root.theme
-                Layout.columnSpan: root.compactLayout ? 1 : 4
+                Layout.columnSpan: 1
+                Layout.minimumWidth: 0
                 Layout.fillWidth: true
                 // The evidence note is part of the card content.  Keep the
                 // wide layout's comfortable minimum, but let the card grow
