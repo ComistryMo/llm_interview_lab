@@ -241,6 +241,11 @@ def build_dynamic_role_interview_context_preview(
         "role": {"id": role.id, "title": role.title, "summary": role.summary},
         "seniority": seniority,
         "difficulty": difficulty,
+        "difficulty_directive": {
+            "easy": "以基础概念和一个直接应用为主；语气友好；一次只验证一个关键点。",
+            "medium": "要求独立说明实现、边界和至少一项真实权衡；追问应基于回答中的证据。",
+            "hard": "保持专业且有时间压力；加入反例、失败恢复和多层权衡；不主动给提示或补全答案。",
+        }[difficulty],
         "interview_process": process,
         "role_skills": skills,
         "current_turn": "Generate the first appropriate non-coding question (usually a concise self-introduction or experience prompt).",

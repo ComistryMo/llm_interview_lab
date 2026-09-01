@@ -3316,6 +3316,14 @@ class AppController(QObject):
                 "the candidate answer), confidence (low|medium|high), fatal_issues (only "
                 f"from {sorted(fatal_issues)}), and follow_up (one concise adaptive question "
                 "or an empty string). Do not infer missing career facts."
+                + (
+                    " This is a dynamic interview: when the session is still active, "
+                    "return a non-empty follow_up so the next single question can be "
+                    "generated from this answer; use an empty string only when the "
+                    "interview should close."
+                    if self._interview.get("delivery_mode") == "dynamic_ai"
+                    else ""
+                )
             )
 
             async def collect() -> str:
@@ -3354,7 +3362,36 @@ class AppController(QObject):
                     "assessments", {}
                 ):
                     return
-                if result["follow_up"]:
+                if result["follow_up"] and self._interview.get("delivery_mode") == "dynamic_ai":
+                    # Dynamic interviews advance one turn at a time.  The
+                    # follow-up returned by the assessment becomes the next
+                    # question immediately; it must not be shown once here
+                    # and then appended a second time after another answer.
+                    self.service.score_interview(
+                        profile_id,
+                        interview_id,
+                        question_id,
+                        result["scores"],
+                        evidence=result["evidence"],
+                        source="ai",
+                        confidence=result["confidence"],
+                        fatal_issues=result["fatal_issues"],
+                    )
+                    latest = self.service.interview_session(profile_id, interview_id)
+                    self.service.append_dynamic_interview_question(
+                        profile_id,
+                        interview_id,
+                        question={
+                            "kind": question.get("kind", "oral"),
+                            "title": "根据上一回答继续追问",
+                            "prompt": result["follow_up"],
+                        },
+                        context_sha256=str(latest["plan_context_sha256"]),
+                    )
+                    self._interview["ai_assessment_state"] = "complete"
+                    self._interview["ai_error"] = ""
+                    self._load_interview(interview_id)
+                elif result["follow_up"]:
                     self._pending_ai_assessment = {
                         **result,
                         "profile_id": profile_id,
@@ -3445,23 +3482,6 @@ class AppController(QObject):
                 fatal_issues=pending["fatal_issues"],
                 followup_ids=followup_ids,
             )
-            # A dynamic session must grow only after the locked answer has
-            # been assessed.  Reuse the provider's evidence-backed follow-up
-            # as the next single turn; never materialize the rest of the plan.
-            if pending.get("follow_up") and self._interview.get("delivery_mode") == "dynamic_ai":
-                session = self.service.interview_session(
-                    profile_id, pending["interview_id"]
-                )
-                self.service.append_dynamic_interview_question(
-                    profile_id,
-                    pending["interview_id"],
-                    question={
-                        "kind": (self._interview.get("question") or {}).get("kind"),
-                        "title": "根据上一回答继续追问",
-                        "prompt": pending["follow_up"],
-                    },
-                    context_sha256=str(session["plan_context_sha256"]),
-                )
             interview_id = pending["interview_id"]
             self._pending_ai_assessment = None
             self._load_interview(interview_id)
@@ -6571,7 +6591,32 @@ class AppController(QObject):
             latest = self.service.interview_session(profile_id, interview_id)
             if latest.get("status") != "active" or question_id in latest.get("assessments", {}):
                 raise RuntimeError("当前问题已经评分或面试已经结束，未重复写入 Codex 结果。")
-            if result["follow_up"]:
+            if result["follow_up"] and self._interview.get("delivery_mode") == "dynamic_ai":
+                self.service.score_interview(
+                    profile_id,
+                    interview_id,
+                    question_id,
+                    result["scores"],
+                    evidence=result["evidence"],
+                    source="ai",
+                    confidence=result["confidence"],
+                    fatal_issues=result["fatal_issues"],
+                )
+                latest = self.service.interview_session(profile_id, interview_id)
+                self.service.append_dynamic_interview_question(
+                    profile_id,
+                    interview_id,
+                    question={
+                        "kind": question.get("kind", "oral"),
+                        "title": "根据上一回答继续追问",
+                        "prompt": result["follow_up"],
+                    },
+                    context_sha256=str(latest["plan_context_sha256"]),
+                )
+                self._interview["ai_assessment_state"] = "complete"
+                self._interview["ai_error"] = ""
+                self._load_interview(interview_id)
+            elif result["follow_up"]:
                 self._pending_ai_assessment = {
                     **result,
                     "profile_id": profile_id,
@@ -6688,6 +6733,14 @@ class AppController(QObject):
             f"(only from {sorted(fatal_issues)}), and follow_up (one concise adaptive "
             "question or an empty string). Do not invent career facts, do not modify "
             "the answer, and do not claim Practice mastery."
+            + (
+                " This is a dynamic interview: while the session remains active, "
+                "return a non-empty follow_up so the next single question can be "
+                "generated from this answer; use an empty string only when the "
+                "interview should close."
+                if self._interview.get("delivery_mode") == "dynamic_ai"
+                else ""
+            )
         )
         prompt = preview.selected_text + "\n\n## Frozen scorecard contract\n" + instruction
         try:

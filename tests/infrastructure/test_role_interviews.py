@@ -375,8 +375,10 @@ def test_dynamic_role_interview_materializes_only_current_turn(tmp_path: Path) -
         seniority="intern",
         difficulty="hard",
     )
-    assert "questions" not in context.selected_text
+    assert '"questions": [' not in context.selected_text
+    assert "generated_questions" not in context.selected_text
     assert "output_schema" in context.selected_text
+    assert "difficulty_directive" in context.selected_text
     context_sha = hashlib.sha256(context.selected_text.encode("utf-8")).hexdigest()
     first = decode_dynamic_question(
         '{"kind":"oral","title":"自我介绍","prompt":"请介绍一个你亲自完成的后训练项目，并说明你的具体贡献。"}',
