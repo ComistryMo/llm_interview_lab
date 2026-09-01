@@ -1229,6 +1229,7 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert "app.generatePersonalizedInterviewPlanWithCodex(" in interview
     assert 'objectName: "personalizedInterviewCodexPreferences"' in interview
     assert 'objectName: "openCodexPreferencesFromInterview"' in interview
+    assert 'text: "打开设置 → Codex"' in interview
     assert 'objectName: "personalizedInterviewMaterialAccessNotice"' in interview
     assert 'objectName: "openMaterialsForInterviewAuthorization"' in interview
     assert 'objectName: "personalizedInterviewConsentNotice"' in interview
