@@ -7,6 +7,7 @@ Flickable {
     id: root
     required property var app
     required property var palette
+    required property var theme
     contentWidth: width; contentHeight: content.implicitHeight + 60; clip: true
     property bool advanced: false
     // Editing stays local to this form. The key itself is never read back
@@ -80,6 +81,13 @@ Flickable {
         // display fields.
         connectionId.text = root.editingConnectionId
         model.text = String(item.model || "")
+        var effortValue = String(item.reasoning_effort || "")
+        for (var j = 0; j < reasoningEffort.count; ++j) {
+            if (String(reasoningEffort.model[j].value) === effortValue) {
+                reasoningEffort.currentIndex = j
+                break
+            }
+        }
         displayName.text = String(item.display_name || "")
         endpoint.text = String(item.base_url || "")
         // Remote credentials are write-only. Keep this blank so saveConnection
@@ -94,6 +102,7 @@ Flickable {
         root.advanced = false
         provider.currentIndex = 0
         model.text = ""
+        reasoningEffort.currentIndex = 0
         secretOrEndpoint.text = ""
         endpoint.text = ""
         connectionId.text = provider.currentText + "-main"
@@ -290,7 +299,8 @@ Flickable {
                         var isOllama = provider.currentText === "ollama"
                         var saved = app.saveConnection(connectionId.text, provider.currentText, model.text,
                                                        displayName.text, isOllama ? secretOrEndpoint.text : endpoint.text,
-                                                       isOllama ? "" : secretOrEndpoint.text)
+                                                       isOllama ? "" : secretOrEndpoint.text,
+                                                       reasoningEffort.currentValue)
                         if (saved) {
                             root.formError = ""
                             app.testConnection(connectionId.text)
@@ -325,11 +335,36 @@ Flickable {
                     onActivated: root.clearFormError()
                 }
                 Text { text: "模型"; color: root.palette.muted }
-                TextField {
+                LabTextField {
                     id: model
+                    theme: root.theme
                     Layout.fillWidth: true
                     placeholderText: "例如 gpt-5、claude 或本地模型 ID"
                     onTextEdited: root.clearFormError()
+                }
+                Text { text: "推理强度"; color: root.palette.muted }
+                ComboBox {
+                    id: reasoningEffort
+                    objectName: "providerReasoningEffort"
+                    Layout.fillWidth: true
+                    textRole: "label"
+                    valueRole: "value"
+                    model: [
+                        {value: "", label: "使用服务默认值"},
+                        {value: "low", label: "低"},
+                        {value: "medium", label: "中"},
+                        {value: "high", label: "高"},
+                        {value: "xhigh", label: "极高"}
+                    ]
+                    onActivated: root.clearFormError()
+                }
+                Text {
+                    text: "仅在所选模型支持时生效；不确定时保留默认值。"
+                    color: root.palette.muted
+                    font.pixelSize: 12
+                    Layout.columnSpan: 2
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
                 }
                 Text {
                     visible: model.text.trim().length === 0
@@ -341,8 +376,9 @@ Flickable {
                     wrapMode: Text.Wrap
                 }
                 Text { text: provider.currentText === "ollama" ? "本地地址" : "API Key"; color: root.palette.muted }
-                TextField {
+                LabTextField {
                     id: secretOrEndpoint; Layout.fillWidth: true
+                    theme: root.theme
                     placeholderText: provider.currentText === "ollama" ? "http://127.0.0.1:11434" : "仅保存到系统密钥环"
                     echoMode: provider.currentText === "ollama" ? TextInput.Normal : TextInput.Password
                     onTextEdited: root.clearFormError()
@@ -370,23 +406,26 @@ Flickable {
             GridLayout {
                 visible: root.advanced
                 width: parent.width; columns: 2; columnSpacing: 12; rowSpacing: 10
-                TextField {
+                LabTextField {
                     id: connectionId
+                    theme: root.theme
                     Layout.fillWidth: true
                     text: provider.currentText + "-main"
                     readOnly: root.editingConnectionId.length > 0
                     placeholderText: root.editingConnectionId.length > 0
                                      ? "编辑时保持连接 ID 不变" : "连接 ID"
                 }
-                TextField {
+                LabTextField {
                     id: displayName
+                    theme: root.theme
                     Layout.fillWidth: true
                     text: provider.currentText === "ollama" ? "本地 Ollama" : provider.currentText
                     placeholderText: "显示名称"
                     onTextEdited: root.clearFormError()
                 }
-                TextField {
+                LabTextField {
                     id: endpoint
+                    theme: root.theme
                     Layout.columnSpan: 2
                     Layout.fillWidth: true
                     placeholderText: "自定义 Endpoint（OpenAI-compatible 可选）"
@@ -426,7 +465,15 @@ Flickable {
                             Layout.fillWidth: true
                             spacing: 2
                             Text { text: modelData.display_name || modelData.connection_id; color: root.palette.text; font.bold: true; elide: Text.ElideRight; Layout.fillWidth: true }
-                            Text { text: modelData.provider_id + " · " + modelData.model; color: root.palette.muted; elide: Text.ElideRight; Layout.fillWidth: true; font.pixelSize: 12 }
+                            Text {
+                                text: modelData.provider_id + " · " + modelData.model
+                                      + (modelData.reasoning_effort
+                                         ? " · 推理 " + modelData.reasoning_effort : "")
+                                color: root.palette.muted
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                                font.pixelSize: 12
+                            }
                         }
                         StatusPill {
                             text: modelData.status || "已保存，尚未测试"

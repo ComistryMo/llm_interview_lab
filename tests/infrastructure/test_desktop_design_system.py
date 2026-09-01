@@ -201,10 +201,11 @@ def test_shell_breakpoints_and_exercise_route_are_permanent() -> None:
     assert 'width < 1400 ? "standard" : "wide"' in source
     assert 'layoutMode === "wide" ? 224' in source
     assert 'layoutMode === "standard" ? 72 : 64' in source
-    assert source.count('{id: "exercise"') >= 2
-    assert "ExercisePage { app: backend; palette: window.colors }" in source
-    assert 'if (actionId === "run-tests")' in source
-    assert "backend.navigate(actionId)" in source
+    assert source.count('{id: "exercise"') == 1
+    assert "ExercisePage { app: backend; palette: window.colors; theme: appTheme }" in source
+    assert "exercise:3" in source
+    assert 'sequences: ["Ctrl+R", "Meta+R"]' in source
+    assert "onActivated: backend.runTests()" in source
 
 
 def test_shell_and_legacy_home_actions_use_accessible_theme_foregrounds() -> None:
@@ -219,16 +220,14 @@ def test_shell_and_legacy_home_actions_use_accessible_theme_foregrounds() -> Non
     assert 'id: continueTrainingButton' in home_source
     assert 'variant: "primary"' in home_source
     assert 'variant: "secondary"' in shell_source
-    assert 'highlighted: true' in shell_source
+    assert 'text: window.pageTitle(backend.currentPage)' in shell_source
 
 
-def test_non_macos_shell_keeps_native_equivalent_actions_discoverable() -> None:
+def test_shell_uses_native_window_actions_without_a_command_palette() -> None:
     source = _read(MAIN_QML_PATH)
     assert 'visible: Qt.platform.os === "osx"' in source
-    assert '{id: "about"' in source
-    assert '{id: "quit"' in source
-    assert 'actionId === "about"' in source
-    assert 'actionId === "quit"' in source
+    assert 'id: commandPalette' not in source
+    assert '搜索或执行命令' not in source
     assert "aboutDialog.open()" in source
     assert "Qt.quit()" in source
     assert "sequence: StandardKey.Preferences" in source
@@ -297,9 +296,6 @@ def test_recursive_resources_and_icon_license_are_packaged() -> None:
 def test_shell_automation_object_names_remain_stable() -> None:
     source = _read(MAIN_QML_PATH)
     required = {
-        "commandPalette",
-        "commandPaletteSearch",
-        "commandPaletteList",
         "globalToast",
         "codexApprovalBanner",
         "codexApprovalViewButton",
@@ -307,8 +303,10 @@ def test_shell_automation_object_names_remain_stable() -> None:
         "codexApprovalClose",
         "codexApprovalDecline",
         "codexApprovalApprove",
-        "moreNavigationButton",
         "aboutDialog",
     }
     for object_name in required:
         assert f'objectName: "{object_name}"' in source
+    assert "commandPalette" not in source
+    assert "搜索或执行命令" not in source
+    assert 'sequences: ["Ctrl+K", "Meta+K"]' not in source

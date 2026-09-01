@@ -541,6 +541,177 @@ def _coding_question(
     }
 
 
+def _generated_non_coding_question(
+    generated_value: Mapping[str, Any],
+    *,
+    question_id: str,
+    round_index: int,
+    round_type: str,
+    round_weight: float,
+    timebox_minutes: int,
+    skills: tuple[str, ...],
+    plan_context_sha256: str,
+) -> dict[str, Any]:
+    """Freeze AI wording against the Blueprint's local skills contract."""
+
+    if generated_value.get("kind") != round_type:
+        raise RoleInterviewError(
+            "generated interview question kind does not match blueprint"
+        )
+    title = generated_value.get("title")
+    prompt = generated_value.get("prompt")
+    if not isinstance(title, str) or not 1 <= len(title.strip()) <= 120:
+        raise RoleInterviewError("generated question title is invalid")
+    if not isinstance(prompt, str) or not 10 <= len(prompt.strip()) <= 5000:
+        raise RoleInterviewError("generated question prompt is invalid")
+    rubric = {
+        "dimensions": {
+            "skill_depth": {
+                "weight": 0.6,
+                "anchors": {
+                    "1": "核心概念或适用边界存在明显错误，无法回应题目约束。",
+                    "3": "核心判断基本正确，但实现、权衡或边界证据仍不完整。",
+                    "5": "能够准确应用目标技能，并清楚解释约束、权衡和失败边界。",
+                },
+            },
+            "evidence_and_reasoning": {
+                "weight": 0.4,
+                "anchors": {
+                    "1": "只有结论或术语，缺少可核对的推理与证据。",
+                    "3": "给出部分推理或实例，但假设、不确定性或取舍未说清。",
+                    "5": "事实、推断和不确定性区分清楚，证据与结论可相互对应。",
+                },
+            },
+        },
+        "fatal_issues": [
+            "fabricates_candidate_evidence",
+            "ignores_question_constraints",
+        ],
+    }
+    rubric_sha256 = hashlib.sha256(
+        json.dumps(
+            rubric, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+    ).hexdigest()
+    source_id = f"blueprint-round-{round_index + 1}-{round_type}"
+    source_payload = {
+        "title": title.strip(),
+        "prompt": prompt.strip(),
+        "context_sha256": plan_context_sha256,
+        "rubric_id": source_id,
+        "rubric_sha256": rubric_sha256,
+        "skills": list(skills),
+    }
+    return {
+        "question_id": question_id,
+        "round_index": round_index,
+        "kind": round_type,
+        "title": title.strip(),
+        "timebox_minutes": timebox_minutes,
+        "round_weight": round_weight,
+        "skills": list(skills),
+        "source": {
+            "kind": "ai_generated",
+            "id": source_id,
+            "sha256": hashlib.sha256(
+                json.dumps(
+                    source_payload,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest(),
+            "context_sha256": plan_context_sha256,
+            "rubric_sha256": rubric_sha256,
+        },
+        "prompt": prompt.strip(),
+        "rubric": rubric,
+    }
+
+
+def _personalized_round_selection(
+    catalog: Catalog,
+    role_catalog: RoleCatalog,
+    *,
+    role_id: str,
+    seniority: str,
+    difficulty: str,
+    torch_available: bool,
+) -> dict[str, Any]:
+    """Allow Blueprint/skills AI rounds; keep coding locally validated only."""
+
+    if difficulty not in DIFFICULTY_BANDS:
+        raise RoleInterviewError("difficulty must be easy, medium, or hard")
+    role = role_catalog.resolve_role(role_id)
+    blueprint = role_catalog.blueprint_for(role.id, seniority)
+    included: list[int] = []
+    omitted: list[dict[str, Any]] = []
+    for round_index, round_value in enumerate(blueprint.rounds):
+        if round_value.type != "coding":
+            included.append(round_index)
+            continue
+        candidates = _coding_candidates(
+            catalog,
+            role_catalog,
+            role.required_tracks,
+            difficulty,
+            round_value.skills,
+            torch_available=torch_available,
+        )
+        if len(candidates) >= round_value.item_count:
+            included.append(round_index)
+            continue
+        with_torch = _coding_candidates(
+            catalog,
+            role_catalog,
+            role.required_tracks,
+            difficulty,
+            round_value.skills,
+            torch_available=True,
+        )
+        missing_environment = (
+            not torch_available and len(with_torch) >= round_value.item_count
+        )
+        omitted.append(
+            {
+                "round_index": round_index,
+                "type": "coding",
+                "reason": (
+                    "missing_environment"
+                    if missing_environment
+                    else "no_validated_local_coding"
+                ),
+                "environment": "pytorch" if missing_environment else "catalog",
+                "duration_minutes": round_value.duration,
+                "weight": round_value.weight,
+            }
+        )
+    if not included:
+        raise RoleInterviewError("当前岗位蓝图没有可生成的面试轮次")
+    if omitted:
+        return {
+            "delivery_mode": "non_coding_fallback",
+            "included_round_indices": set(included),
+            "duration_minutes": sum(
+                blueprint.rounds[index].duration for index in included
+            ),
+            "blueprint_coverage": {
+                "full_blueprint": False,
+                "coverage_weight": round(
+                    sum(blueprint.rounds[index].weight for index in included), 8
+                ),
+                "included_round_indices": included,
+                "omitted_rounds": omitted,
+            },
+        }
+    return {
+        "delivery_mode": "full_blueprint",
+        "included_round_indices": None,
+        "duration_minutes": blueprint.duration_minutes,
+        "blueprint_coverage": None,
+    }
+
+
 def _build_questions(
     repo_root: Path,
     catalog: Catalog,
@@ -628,68 +799,44 @@ def _build_questions(
                     skills=matched_skills,
                 )
             else:
-                pool = tuple(
-                    candidate
-                    for candidate in _item_candidates(
-                        role_catalog,
-                        role_id=role.id,
-                        seniority=seniority,
-                        round_type=round_value.type,
-                        difficulty=difficulty,
-                        required_skills=round_value.skills,
-                    )
-                    if candidate[0].id not in used_items
-                )
-                item, matched_skills = _stable_choice(pool, identity)
-                used_items.add(item.id)
-                question = _item_question(
-                    item,
-                    question_id=question_id,
-                    round_index=round_index,
-                    round_weight=round_value.weight,
-                    timebox_minutes=each_timebox,
-                    skills=matched_skills,
-                )
                 position = (round_index, item_index)
                 generated_value = generated_by_position.get(position)
                 if generated_value is not None:
-                    if generated_value.get("kind") != round_value.type:
-                        raise RoleInterviewError(
-                            "generated interview question kind does not match blueprint"
-                        )
-                    title = generated_value.get("title")
-                    prompt = generated_value.get("prompt")
-                    if not isinstance(title, str) or not 1 <= len(title.strip()) <= 120:
-                        raise RoleInterviewError("generated question title is invalid")
-                    if not isinstance(prompt, str) or not 10 <= len(prompt.strip()) <= 5000:
-                        raise RoleInterviewError("generated question prompt is invalid")
-                    rubric_sha256 = hashlib.sha256(
-                        item.rubric_path.read_bytes()
-                    ).hexdigest()
-                    generated_payload = {
-                        "title": title.strip(),
-                        "prompt": prompt.strip(),
-                        "context_sha256": plan_context_sha256,
-                        "rubric_id": item.id,
-                        "rubric_sha256": rubric_sha256,
-                    }
-                    question["title"] = generated_payload["title"]
-                    question["prompt"] = generated_payload["prompt"]
-                    question["source"] = {
-                        "kind": "ai_generated",
-                        "id": item.id,
-                        "sha256": hashlib.sha256(
-                            json.dumps(
-                                generated_payload,
-                                ensure_ascii=False,
-                                sort_keys=True,
-                                separators=(",", ":"),
-                            ).encode("utf-8")
-                        ).hexdigest(),
-                        "context_sha256": plan_context_sha256,
-                        "rubric_sha256": rubric_sha256,
-                    }
+                    assert plan_context_sha256 is not None
+                    question = _generated_non_coding_question(
+                        generated_value,
+                        question_id=question_id,
+                        round_index=round_index,
+                        round_type=round_value.type,
+                        round_weight=round_value.weight,
+                        timebox_minutes=each_timebox,
+                        skills=round_value.skills,
+                        plan_context_sha256=plan_context_sha256,
+                    )
                     used_generated.add(position)
+                else:
+                    pool = tuple(
+                        candidate
+                        for candidate in _item_candidates(
+                            role_catalog,
+                            role_id=role.id,
+                            seniority=seniority,
+                            round_type=round_value.type,
+                            difficulty=difficulty,
+                            required_skills=round_value.skills,
+                        )
+                        if candidate[0].id not in used_items
+                    )
+                    item, matched_skills = _stable_choice(pool, identity)
+                    used_items.add(item.id)
+                    question = _item_question(
+                        item,
+                        question_id=question_id,
+                        round_index=round_index,
+                        round_weight=round_value.weight,
+                        timebox_minutes=each_timebox,
+                        skills=matched_skills,
+                    )
             questions.append(question)
             number += 1
     if generated and used_generated != set(generated_by_position):
@@ -827,26 +974,17 @@ def preview_personalized_role_interview(
     paths = profile_paths(repo_root, profile_id)
     load_profile(paths, repo_root)
     ensure_profile_is_ignored(repo_root, profile_id)
-    if (role_id, seniority, difficulty) != (
-        "post_training_engineer",
-        "new_grad",
-        "medium",
-    ):
-        raise RoleInterviewError(
-            "Alpha 个性化面试当前仅开放后训练工程师 / 校招 / 标准难度"
-        )
     if type(seed) is not int or isinstance(seed, bool) or seed < 0:
         raise RoleInterviewError("seed must be a non-negative integer")
-    availability = interview_preflight(
-        repo_root,
+    torch_available = importlib.util.find_spec("torch") is not None
+    selection = _personalized_round_selection(
         catalog,
         role_catalog,
         role_id=role_id,
         seniority=seniority,
         difficulty=difficulty,
+        torch_available=torch_available,
     )
-    if not availability["available"]:
-        raise RoleInterviewError(availability["user_message"])
     role = role_catalog.resolve_role(role_id)
     blueprint = role_catalog.blueprint_for(role.id, seniority)
     material_refs = _material_references(
@@ -863,8 +1001,8 @@ def preview_personalized_role_interview(
         seniority=seniority,
         difficulty=difficulty,
         seed=seed,
-        included_round_indices=None,
-        torch_available=importlib.util.find_spec("torch") is not None,
+        included_round_indices=selection["included_round_indices"],
+        torch_available=torch_available,
         generated_questions=generated_questions,
         plan_context_sha256=plan_context_sha256,
     )
@@ -875,11 +1013,14 @@ def preview_personalized_role_interview(
         "seniority": seniority,
         "difficulty": difficulty,
         "blueprint_id": blueprint.id,
-        "duration_minutes": blueprint.duration_minutes,
+        "duration_minutes": selection["duration_minutes"],
+        "delivery_mode": selection["delivery_mode"],
         "material_refs": material_refs,
         "questions": questions,
         "plan_context_sha256": plan_context_sha256,
     }
+    if selection["blueprint_coverage"] is not None:
+        value["blueprint_coverage"] = selection["blueprint_coverage"]
     value["draft_fingerprint"] = hashlib.sha256(
         json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
             "utf-8"
@@ -927,20 +1068,34 @@ def create_role_interview(
     role = role_catalog.resolve_role(role_id)
     blueprint = role_catalog.blueprint_for(role.id, seniority)
     torch_available = importlib.util.find_spec("torch") is not None
-    availability = interview_preflight(
-        repo_root,
-        catalog,
-        role_catalog,
-        role_id=role.id,
-        seniority=seniority,
-        difficulty=difficulty,
-        torch_available=torch_available,
-    )
-    if delivery_mode == "full_blueprint":
+    selection: Mapping[str, Any] | None = None
+    if generated_questions is not None:
+        generated_questions = tuple(generated_questions)
+        selection = _personalized_round_selection(
+            catalog,
+            role_catalog,
+            role_id=role.id,
+            seniority=seniority,
+            difficulty=difficulty,
+            torch_available=torch_available,
+        )
+        delivery_mode = str(selection["delivery_mode"])
+        included_round_indices = selection["included_round_indices"]
+    else:
+        availability = interview_preflight(
+            repo_root,
+            catalog,
+            role_catalog,
+            role_id=role.id,
+            seniority=seniority,
+            difficulty=difficulty,
+            torch_available=torch_available,
+        )
+    if generated_questions is None and delivery_mode == "full_blueprint":
         if not availability["available"]:
             raise RoleInterviewError(availability["user_message"])
         included_round_indices = None
-    else:
+    elif generated_questions is None:
         fallback = availability["non_coding_fallback"]
         if not fallback["available"]:
             raise RoleInterviewError(
@@ -970,8 +1125,10 @@ def create_role_interview(
         generated_questions=generated_questions,
         plan_context_sha256=plan_context_sha256,
     )
-    blueprint_coverage: Mapping[str, Any] | None = None
-    if delivery_mode == "non_coding_fallback":
+    blueprint_coverage: Mapping[str, Any] | None = (
+        selection["blueprint_coverage"] if selection is not None else None
+    )
+    if generated_questions is None and delivery_mode == "non_coding_fallback":
         fallback = availability["non_coding_fallback"]
         blueprint_coverage = {
             "full_blueprint": False,
@@ -989,7 +1146,9 @@ def create_role_interview(
         difficulty=difficulty,
         blueprint_id=blueprint.id,
         duration_minutes=(
-            blueprint.duration_minutes
+            int(selection["duration_minutes"])
+            if selection is not None
+            else blueprint.duration_minutes
             if delivery_mode == "full_blueprint"
             else int(availability["non_coding_fallback"]["duration_minutes"])
         ),

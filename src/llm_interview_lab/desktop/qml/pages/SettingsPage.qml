@@ -8,8 +8,14 @@ Flickable {
     id: root
     required property var app
     required property var palette
+    required property var theme
     property bool compactLayout: width < 780
     property bool refreshRequested: false
+    function codexEffortIndex(value) {
+        var values = ["", "low", "medium", "high", "xhigh"]
+        var index = values.indexOf(String(value || ""))
+        return index < 0 ? 0 : index
+    }
     contentWidth: width
     contentHeight: content.implicitHeight + 60
     clip: true
@@ -260,6 +266,55 @@ Flickable {
                 color: root.palette.text
                 elide: Text.ElideMiddle
                 font.pixelSize: 12
+            }
+            Text { text: "模型与推理强度"; color: root.palette.text; font.bold: true }
+            GridLayout {
+                width: parent.width
+                columns: root.compactLayout ? 1 : 2
+                columnSpacing: 10
+                rowSpacing: 8
+                LabTextField {
+                    id: codexModelField
+                    objectName: "codexModelField"
+                    theme: root.theme
+                    Layout.fillWidth: true
+                    text: app.codexModel || ""
+                    placeholderText: "模型 ID（留空使用 Codex 默认模型）"
+                    accessibleLabel: "Codex 模型 ID"
+                }
+                ComboBox {
+                    id: codexEffort
+                    objectName: "codexReasoningEffort"
+                    Layout.fillWidth: true
+                    textRole: "label"
+                    valueRole: "value"
+                    model: [
+                        {value: "", label: "推理强度：默认"},
+                        {value: "low", label: "推理强度：低"},
+                        {value: "medium", label: "推理强度：中"},
+                        {value: "high", label: "推理强度：高"},
+                        {value: "xhigh", label: "推理强度：极高"}
+                    ]
+                    currentIndex: root.codexEffortIndex(app.codexReasoningEffort)
+                }
+            }
+            RowLayout {
+                width: parent.width
+                Button {
+                    objectName: "saveCodexModelPreferences"
+                    text: "保存模型设置"
+                    onClicked: {
+                        app.setCodexModel(codexModelField.text)
+                        app.setCodexReasoningEffort(codexEffort.currentValue)
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: "只影响新的 Codex 请求；模型不支持所选强度时会返回明确错误。"
+                    color: root.palette.muted
+                    wrapMode: Text.Wrap
+                    font.pixelSize: 12
+                }
             }
             Flow {
                 width: parent.width

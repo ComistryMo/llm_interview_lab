@@ -54,6 +54,7 @@ def build_role_interview_plan_context_preview(
     selected = tuple(dict.fromkeys(material_ids))
     if selected and not consent_materials:
         raise ContextBuilderError("materials require explicit per-interview consent")
+    profile = load_profile(profile_paths(repo_root, profile_id), repo_root)
     non_coding_rounds = [
         {
             "round_index": index,
@@ -76,8 +77,31 @@ def build_role_interview_plan_context_preview(
         "role": {"id": role.id, "title": role.title, "summary": role.summary},
         "seniority": seniority,
         "difficulty": difficulty,
+        "difficulty_guidance": {
+            "easy": "以基础概念和一个直接应用为主，追问用于确认理解。",
+            "medium": "要求独立应用、边界判断和至少一项真实权衡。",
+            "hard": "使用高压但公平的约束变化、反例、失败恢复和多层追问。",
+        }[difficulty],
         "blueprint_id": blueprint.id,
         "non_coding_rounds": non_coding_rounds,
+        "skill_contracts": [
+            {
+                "id": skill_id,
+                "title": role_catalog.skills[skill_id].title,
+                "description": role_catalog.skills[skill_id].description,
+                "target_level": role.skill_weights[skill_id].target_level.get(
+                    seniority, 0
+                )
+                if skill_id in role.skill_weights
+                else 0,
+            }
+            for skill_id in dict.fromkeys(
+                skill_id
+                for round_value in blueprint.rounds
+                if round_value.type != "coding"
+                for skill_id in round_value.skills
+            )
+        ],
         "output_schema": {
             "questions": [
                 {
@@ -97,6 +121,19 @@ def build_role_interview_plan_context_preview(
             json.dumps(contract, ensure_ascii=False, indent=2),
         ),
     ]
+    profile_context = {
+        "display_name": profile.get("display_name", profile_id),
+        "career_intent": profile.get("career_intent"),
+        "role_preferences": profile.get("role_preferences"),
+    }
+    parts.append(
+        _part(
+            "profile_context",
+            "当前学习档案中的求职意向与自评（本场确认后发送）",
+            json.dumps(profile_context, ensure_ascii=False, indent=2),
+            sensitive=True,
+        )
+    )
     if knowledge_cards:
         # Give the provider reviewed themes, not answer keys.  The cards are
         # selected locally from the validated public knowledge catalog; only

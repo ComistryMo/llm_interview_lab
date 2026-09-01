@@ -49,8 +49,8 @@
             "properties": {
               "round_index": {"type": "integer", "minimum": 0},
               "type": {"const": "coding"},
-              "reason": {"const": "missing_environment"},
-              "environment": {"const": "pytorch"},
+              "reason": {"enum": ["missing_environment", "no_validated_local_coding"]},
+              "environment": {"enum": ["pytorch", "catalog"]},
               "duration_minutes": {"type": "integer", "minimum": 1, "maximum": 60},
               "weight": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
             }

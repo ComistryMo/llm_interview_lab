@@ -471,6 +471,8 @@ Item {
                         text: {
                             if (!role.currentValue)
                                 return "先选择岗位，系统会检查该难度是否有完整题目。"
+                            if (aiMode.currentValue === "provider")
+                                return "AI 将按岗位 Blueprint、skills 和所选强度生成非代码问题；可运行的本地 Coding 环节会单独加入。"
                             if (root.configuration.available !== false)
                                 return "当前难度可用；开始后题目组合会冻结。"
                             if (root.fallbackAvailable())
@@ -479,7 +481,9 @@ Item {
                                 return "当前配置无法形成可信的非代码专项；请补齐 PyTorch 环境或切换岗位 / 难度。"
                             return "当前岗位在此难度没有完整固定题；请切换到“标准”或更换岗位。"
                         }
-                        color: root.configuration.available === false ? root.palette.warning : root.palette.muted
+                        color: root.configuration.available === false
+                               && aiMode.currentValue !== "provider"
+                               ? root.palette.warning : root.palette.muted
                         wrapMode: Text.Wrap
                         maximumLineCount: 2
                         elide: Text.ElideRight
@@ -574,7 +578,7 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible
                         enabled: aiMode.currentValue !== "disabled" && app.materials.length > 0
-                        text: "使用一份逐场授权的求职材料（首版必选）"
+                        text: "使用一份逐场授权的求职材料（可选）"
                     }
                     ComboBox {
                         id: material
@@ -601,7 +605,9 @@ Item {
                     Text {
                         objectName: "interviewConfigurationMessage"
                         width: parent.width
-                        visible: leftPanel.setupVisible && root.configuration.available === false
+                        visible: leftPanel.setupVisible
+                                 && aiMode.currentValue !== "provider"
+                                 && root.configuration.available === false
                         text: root.configurationMessage()
                         color: root.palette.warning
                         wrapMode: Text.Wrap
@@ -624,6 +630,7 @@ Item {
                         objectName: "interviewPyTorchEnvironmentHelp"
                         width: parent.width
                         visible: leftPanel.setupVisible
+                                 && aiMode.currentValue !== "provider"
                                  && (root.configuration.missing_environment || []).indexOf("pytorch") >= 0
                         text: "完整蓝图需要源码 PyTorch 环境。桌面应用不会自行安装依赖。需先克隆源码并进入仓库根目录，再运行：\npython -m pip install -e \".[torch,dev]\""
                         color: root.palette.muted
@@ -634,6 +641,7 @@ Item {
                         objectName: "interviewSourceEnvironmentLink"
                         width: parent.width
                         visible: leftPanel.setupVisible
+                                 && aiMode.currentValue !== "provider"
                                  && (root.configuration.missing_environment || []).indexOf("pytorch") >= 0
                         text: "<a href=\"https://github.com/ComistryMo/llm_interview_lab/blob/main/docs/desktop-app.md\">查看源码环境说明</a>"
                         textFormat: Text.RichText
@@ -646,20 +654,16 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible
                         text: app.busy ? "正在生成面试计划……" : "预览 AI 个性化面试计划"
-                        highlighted: !root.fallbackAvailable()
-                        enabled: root.configuration.available !== false
-                                 && !!role.currentValue
+                        highlighted: true
+                        enabled: !!role.currentValue
                                  && !app.busy
                                  && aiMode.currentValue === "provider"
-                                 && role.currentValue === "post_training_engineer"
-                                 && seniority.currentValue === "new_grad"
-                                 && difficulty.currentValue === "medium"
                                  && planConnection.currentIndex >= 0
                                  && root.providerIsReady(planConnection.currentValue)
-                                 && useMaterial.checked
-                                 && material.currentIndex >= 0
-                                 && app.materials[material.currentIndex].ai_access
-                                 && consent.checked
+                                 && (!useMaterial.checked
+                                     || (material.currentIndex >= 0
+                                         && app.materials[material.currentIndex].ai_access
+                                         && consent.checked))
                         // Creating a session freezes the public question plan
                         // and starts the authoritative clock.  Require an
                         // explicit review/confirmation so a stray click
@@ -670,8 +674,8 @@ Item {
                                 role.currentValue,
                                 seniority.currentValue,
                                 difficulty.currentValue,
-                                material.currentValue,
-                                consent.checked
+                                useMaterial.checked ? material.currentValue : "",
+                                useMaterial.checked ? consent.checked : false
                             )
                             if ((root.planContext.parts || []).length > 0)
                                 planContextDialog.open()
@@ -681,7 +685,7 @@ Item {
                         objectName: "personalizedInterviewAlphaScope"
                         width: parent.width
                         visible: leftPanel.setupVisible && aiMode.currentValue === "provider"
-                        text: "当前真实 Golden Path：后训练工程师 · 校招 · 标准难度。非代码问题由 AI 基于授权材料生成并先供你确认；Coding 题只从已验证题库选择。"
+                        text: "AI 会依据岗位蓝图、canonical skills、求职级别和难度生成结构化问题；材料是可选上下文。Coding 环节只使用当前环境可运行的已验证本地题，不满足时会在计划中明确省略。"
                         color: root.palette.muted
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
@@ -1537,15 +1541,15 @@ Item {
             seniority.currentValue,
             difficulty.currentValue,
             planConnection.currentValue,
-            material.currentValue,
-            consent.checked,
+            useMaterial.checked ? material.currentValue : "",
+            useMaterial.checked ? consent.checked : false,
             root.planContext.context_sha256 || ""
         )
         contentItem: ColumnLayout {
             spacing: 10
             Text {
                 Layout.fillWidth: true
-                text: "只有下列明确列出的内容会发送。本次确认只用于生成计划；Coding 题、Rubric 和计时仍由本地确定性代码决定。"
+                text: "只有下列明确列出的内容会发送。本次确认只用于生成问题文字；岗位 Blueprint、skills、评分契约、Coding 题和计时仍由本地代码冻结。"
                 color: root.palette.text
                 wrapMode: Text.Wrap
             }

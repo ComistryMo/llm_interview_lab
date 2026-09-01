@@ -212,6 +212,72 @@ def test_personalized_plan_is_previewed_then_freezes_ai_questions_and_catalog_co
     assert loaded["plan_fingerprint"] == session["plan_fingerprint"]
 
 
+def test_high_pressure_intern_plan_uses_blueprint_skills_without_required_material(
+    tmp_path: Path,
+) -> None:
+    """AI planning is driven by role/level/skills, not a fixed Golden Path."""
+
+    root = _repository(tmp_path)
+    service = ApplicationService(root)
+    context = service.personalized_interview_context(
+        "learner-one",
+        role_id="post_training_engineer",
+        seniority="intern",
+        difficulty="hard",
+    )
+    assert any(part.id == "profile_context" for part in context.parts)
+    blueprint_part = next(part for part in context.parts if part.id == "blueprint")
+    contract = json.loads(blueprint_part.content)
+    assert contract["difficulty"] == "hard"
+    assert contract["skill_contracts"]
+    assert not any(part.id.startswith("material:") for part in context.parts)
+    context_sha = hashlib.sha256(context.selected_text.encode("utf-8")).hexdigest()
+    blueprint = service.roles.blueprint_for("post_training_engineer", "intern")
+    generated = decode_personalized_questions(
+        json.dumps(
+            {
+                "questions": [
+                    {
+                        "round_index": 1,
+                        "kind": "oral",
+                        "title": "高压偏好优化追问",
+                        "prompt": "请在没有预设项目事实的前提下，解释偏好数据和策略优化的关键失败模式，并说明你会如何验证。",
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        blueprint,
+    )
+    preview = service.preview_personalized_interview(
+        "learner-one",
+        role_id="post_training_engineer",
+        seniority="intern",
+        difficulty="hard",
+        generated_questions=generated,
+        plan_context_sha256=context_sha,
+    )
+    assert preview["material_refs"] == []
+    oral = next(question for question in preview["questions"] if question["kind"] == "oral")
+    assert oral["source"]["kind"] == "ai_generated"
+    assert oral["skills"] == list(blueprint.rounds[1].skills)
+    assert set(oral["rubric"]["dimensions"]) == {
+        "skill_depth",
+        "evidence_and_reasoning",
+    }
+    session = service.create_personalized_interview(
+        "learner-one",
+        role_id="post_training_engineer",
+        seniority="intern",
+        difficulty="hard",
+        generated_questions=generated,
+        plan_context_sha256=context_sha,
+    )
+    assert session["seniority"] == "intern"
+    assert session["difficulty"] == "hard"
+    assert session["material_refs"] == []
+
+
 def test_personalized_plan_rejects_malformed_provider_output_and_stale_material(
     tmp_path: Path,
 ) -> None:

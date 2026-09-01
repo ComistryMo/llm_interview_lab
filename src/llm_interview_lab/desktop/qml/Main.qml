@@ -52,21 +52,6 @@ ApplicationWindow {
     readonly property bool compactShell: layoutMode !== "wide"
     readonly property int sidebarWidth: layoutMode === "wide" ? 224
                                         : layoutMode === "standard" ? 72 : 64
-    property string paletteQuery: ""
-    property var paletteActions: [
-        {id: "home", label: "打开首页", hint: "继续训练或开始模拟面试"},
-        {id: "learn", label: "打开刷题训练", hint: "按课程前置选择题目"},
-        {id: "exercise", label: "打开答题工作区", hint: "继续当前题目或浏览可练题目"},
-        {id: "interview", label: "打开模拟面试", hint: "开始或恢复结构化面试"},
-        {id: "coach", label: "打开 AI 辅助（可选）", hint: "仅在需要时请求只读帮助；模拟面试请进入面试"},
-        {id: "career", label: "打开求职材料", hint: "管理当前 Profile 的材料"},
-        {id: "progress", label: "打开学习进度", hint: "查看当前 Profile 的进度"},
-        {id: "connections", label: "打开 AI 连接", hint: "配置或测试普通 LLM"},
-        {id: "settings", label: "打开设置", hint: "外观、本地目录与 Codex"},
-        {id: "run-tests", label: "运行公开测试", hint: "保存当前编辑器并运行测试", exerciseOnly: true},
-        {id: "about", label: "关于 LLM Interview Lab", hint: "查看版本和产品说明"},
-        {id: "quit", label: "退出应用", hint: "安全关闭本地工作台"}
-    ]
     // A Codex request is owned by the shell, not by an individual page.  The
     // map is intentionally kept here so navigation cannot hide a pending
     // safety decision.
@@ -100,21 +85,6 @@ ApplicationWindow {
         }
     }
 
-    function paletteItems() {
-        var query = paletteQuery.trim().toLowerCase()
-        var result = []
-        for (var i = 0; i < paletteActions.length; ++i) {
-            var action = paletteActions[i]
-            if (action.exerciseOnly
-                    && (backend.currentPage !== "exercise" || backend.busy))
-                continue
-            var haystack = (action.label + " " + action.hint).toLowerCase()
-            if (!query || haystack.indexOf(query) >= 0)
-                result.push(action)
-        }
-        return result
-    }
-
     function pageTitle(pageId) {
         var titles = {
             home: backend.uiText("nav.home"),
@@ -130,26 +100,6 @@ ApplicationWindow {
         return titles[pageId] || "LLM Interview Lab"
     }
 
-    function triggerPaletteAction(actionId) {
-        if (actionId === "run-tests") {
-            if (backend.currentPage === "exercise" && !backend.busy)
-                backend.runTests()
-            commandPalette.close()
-            return
-        }
-        if (actionId === "about") {
-            commandPalette.close()
-            aboutDialog.open()
-            return
-        }
-        if (actionId === "quit") {
-            commandPalette.close()
-            Qt.quit()
-            return
-        }
-        backend.navigate(actionId)
-        commandPalette.close()
-    }
     font.pixelSize: appTheme.scaledPx(14)
     // An empty family lets Qt use the platform fallback chain.  Reading
     // Qt.application.font.family on minimal Linux/offscreen setups yields the
@@ -200,20 +150,6 @@ ApplicationWindow {
         sequences: ["Ctrl+R", "Meta+R"]
         enabled: backend.currentPage === "exercise" && !backend.busy
         onActivated: backend.runTests()
-    }
-
-    // A deliberately small command palette keeps navigation discoverable for
-    // keyboard users without introducing a second command/router layer.  All
-    // entries map to existing backend actions; unavailable actions are simply
-    // omitted from the list.
-    Shortcut {
-        sequences: ["Ctrl+K", "Meta+K"]
-        enabled: !backend.onboardingRequired
-        onActivated: {
-            commandPalette.open()
-            paletteSearch.forceActiveFocus()
-            paletteSearch.selectAll()
-        }
     }
 
     onClosing: backend.shutdown()
@@ -374,21 +310,6 @@ ApplicationWindow {
                     delegate: navButtonDelegate
                 }
 
-                LabIconButton {
-                    id: moreNavigationButton
-                    objectName: "moreNavigationButton"
-                    theme: appTheme
-                    iconSource: Qt.resolvedUrl("../resources/icons/more.svg")
-                    accessibleName: "更多导航和命令"
-                    toolTip: "更多导航和命令 · Ctrl/⌘ K"
-                    Layout.alignment: Qt.AlignHCenter
-                    onClicked: {
-                        commandPalette.open()
-                        paletteSearch.forceActiveFocus()
-                        paletteSearch.selectAll()
-                    }
-                }
-
                 Item { Layout.fillHeight: true }
                 LabSurface {
                     objectName: "sidebarProfileSwitcher"
@@ -455,35 +376,6 @@ ApplicationWindow {
                         strong: true
                         elide: Text.ElideRight
                         Layout.maximumWidth: window.layoutMode === "compact" ? 156 : 190
-                    }
-                    LabButton {
-                        visible: window.layoutMode !== "compact"
-                        theme: appTheme
-                        variant: "secondary"
-                        compact: true
-                        text: Qt.platform.os === "osx"
-                              ? "搜索或执行命令  ⌘ K"
-                              : "搜索或执行命令  Ctrl K"
-                        iconSource: Qt.resolvedUrl("../resources/icons/search.svg")
-                        toolTip: "打开 Command Palette"
-                        onClicked: {
-                            commandPalette.open()
-                            paletteSearch.forceActiveFocus()
-                            paletteSearch.selectAll()
-                        }
-                    }
-                    LabIconButton {
-                        visible: window.layoutMode === "compact"
-                        theme: appTheme
-                        highlighted: true
-                        iconSource: Qt.resolvedUrl("../resources/icons/search.svg")
-                        accessibleName: "搜索或执行命令"
-                        toolTip: "搜索或执行命令 · Ctrl/⌘ K"
-                        onClicked: {
-                            commandPalette.open()
-                            paletteSearch.forceActiveFocus()
-                            paletteSearch.selectAll()
-                        }
                     }
                     Item { Layout.fillWidth: true }
                     StatusPill {
@@ -573,19 +465,19 @@ ApplicationWindow {
                     theme: appTheme
                     layoutMode: window.layoutMode
                 }
-                CareerPage { app: backend; palette: window.colors }
+                CareerPage { app: backend; palette: window.colors; theme: appTheme }
                 LearnPage {
                     app: backend
                     palette: window.colors
                     theme: appTheme
                     layoutMode: window.layoutMode
                 }
-                ExercisePage { app: backend; palette: window.colors }
+                ExercisePage { app: backend; palette: window.colors; theme: appTheme }
                 InterviewPage { app: backend; palette: window.colors }
                 CoachPage { app: backend; palette: window.colors; theme: appTheme }
                 ProgressPage { app: backend; palette: window.colors }
-                ConnectionsPage { app: backend; palette: window.colors }
-                SettingsPage { app: backend; palette: window.colors }
+                ConnectionsPage { app: backend; palette: window.colors; theme: appTheme }
+                SettingsPage { app: backend; palette: window.colors; theme: appTheme }
             }
         }
     }
@@ -598,150 +490,6 @@ ApplicationWindow {
         palette: window.colors
         theme: appTheme
         layoutMode: window.layoutMode
-    }
-
-    Popup {
-        id: commandPalette
-        objectName: "commandPalette"
-        // The first-run flow is intentionally focused and has no navigation
-        // actions behind it.  Keep the popup closed if onboarding becomes
-        // required again; `enabled` avoids binding Popup.visible to its
-        // internal open/close state (which would otherwise show it at launch).
-        enabled: !backend.onboardingRequired
-        x: Math.max(24, Math.round((window.width - width) / 2))
-        y: 76
-        width: Math.min(560, window.width - 48)
-        height: Math.min(410, window.height - 112)
-        modal: true
-        focus: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        onOpened: {
-            if (backend.onboardingRequired) {
-                commandPalette.close()
-                return
-            }
-            paletteList.currentIndex = paletteList.count > 0 ? 0 : -1
-            paletteSearch.forceActiveFocus()
-            paletteSearch.selectAll()
-        }
-        onClosed: {
-            window.paletteQuery = ""
-            paletteSearch.text = ""
-        }
-        background: LabSurface {
-            theme: appTheme
-            level: "raised"
-            padding: 0
-            cornerRadius: appTheme.radiusLarge
-        }
-        contentItem: ColumnLayout {
-            spacing: 8
-            LabText {
-                theme: appTheme
-                text: "快速操作"
-                variant: "section"
-                strong: true
-                Layout.fillWidth: true
-            }
-            LabTextField {
-                id: paletteSearch
-                objectName: "commandPaletteSearch"
-                theme: appTheme
-                accessibleLabel: placeholderText
-                Layout.fillWidth: true
-                placeholderText: "搜索页面或动作…"
-                selectByMouse: true
-                onTextChanged: window.paletteQuery = text
-                onAccepted: {
-                    var items = window.paletteItems()
-                    if (items.length > 0)
-                        window.triggerPaletteAction(items[0].id)
-                }
-                Keys.onDownPressed: {
-                    if (paletteList.count > 0) {
-                        paletteList.forceActiveFocus()
-                        paletteList.currentIndex = Math.max(0, paletteList.currentIndex)
-                    }
-                }
-            }
-            ListView {
-                id: paletteList
-                objectName: "commandPaletteList"
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                spacing: 3
-                model: window.paletteItems()
-                onCountChanged: {
-                    // Filtering can shrink the model below the previously
-                    // selected index. Always leave Enter on a real first
-                    // result (or no result), never on an invisible row.
-                    currentIndex = count > 0
-                                   ? Math.min(Math.max(currentIndex, 0), count - 1)
-                                   : -1
-                }
-                Keys.onReturnPressed: {
-                    if (currentIndex >= 0 && currentIndex < count)
-                        window.triggerPaletteAction(window.paletteItems()[currentIndex].id)
-                }
-                delegate: LabButton {
-                    id: paletteActionButton
-                    required property var modelData
-                    required property int index
-                    property bool selected: index === paletteList.currentIndex
-                    theme: appTheme
-                    variant: "ghost"
-                    width: paletteList.width
-                    height: 48
-                    focusPolicy: Qt.StrongFocus
-                    onClicked: window.triggerPaletteAction(modelData.id)
-                    background: Rectangle {
-                        radius: appTheme.radiusMedium
-                        color: paletteActionButton.selected
-                               || paletteActionButton.hovered
-                               || paletteActionButton.activeFocus
-                               ? appTheme.surfaceHover
-                               : "transparent"
-                        border.color: paletteActionButton.activeFocus
-                                      ? appTheme.focusRing : "transparent"
-                        border.width: paletteActionButton.activeFocus ? 2 : 0
-                    }
-                    contentItem: RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 12
-                        anchors.rightMargin: 12
-                        spacing: 10
-                        LabText {
-                            theme: appTheme
-                            text: paletteActionButton.modelData.label
-                            strong: true
-                            Layout.preferredWidth: 142
-                        }
-                        LabText {
-                            theme: appTheme
-                            text: paletteActionButton.modelData.hint
-                            tone: "muted"
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                        }
-                    }
-                }
-                LabText {
-                    theme: appTheme
-                    anchors.centerIn: parent
-                    visible: paletteList.count === 0
-                    text: "没有匹配的操作"
-                    tone: "muted"
-                }
-            }
-            LabText {
-                theme: appTheme
-                text: "Enter 执行 · Esc 关闭 · Ctrl/⌘ K 打开"
-                tone: "muted"
-                variant: "caption"
-                Layout.fillWidth: true
-            }
-        }
     }
 
     Popup {
@@ -807,14 +555,6 @@ ApplicationWindow {
             toastTimer.restart()
         }
     }
-    Connections {
-        target: backend
-        function onStateChanged() {
-            if (backend.onboardingRequired && commandPalette.opened)
-                commandPalette.close()
-        }
-    }
-
     Dialog {
         id: approvalDialog
         objectName: "codexApprovalDetails"

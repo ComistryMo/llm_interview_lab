@@ -24,6 +24,7 @@ CONNECTION_ID_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 SUPPORTED_PROVIDERS = frozenset(
     {"openai", "openai-compatible", "anthropic", "gemini", "ollama"}
 )
+SUPPORTED_REASONING_EFFORTS = frozenset({"low", "medium", "high", "xhigh"})
 
 
 class ConnectionConfigError(RuntimeError):
@@ -43,22 +44,36 @@ def _read(repo_root: Path, profile_id: str) -> dict[str, Any]:
     load_profile(paths, repo_root)
     path = _path(repo_root, profile_id)
     if not path.exists():
-        return {"schema_version": 1, "connections": []}
+        return {"schema_version": 2, "connections": []}
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise ConnectionConfigError("connection metadata cannot be read") from error
-    if not isinstance(value, dict) or value.get("schema_version") != 1 or not isinstance(value.get("connections"), list):
+    if (
+        not isinstance(value, dict)
+        or value.get("schema_version") not in {1, 2}
+        or not isinstance(value.get("connections"), list)
+    ):
         raise ConnectionConfigError("connection metadata has an unsupported format")
     ids: set[str] = set()
     for item in value["connections"]:
-        if not isinstance(item, dict) or set(item) != {
+        required = {
             "connection_id", "provider_id", "model", "display_name", "base_url", "key_reference"
-        }:
+        }
+        if (
+            not isinstance(item, dict)
+            or not required.issubset(item)
+            or not set(item).issubset(required | {"reasoning_effort"})
+        ):
             raise ConnectionConfigError("connection metadata contains an invalid record")
+        effort = item.get("reasoning_effort")
+        if effort is not None and effort not in SUPPORTED_REASONING_EFFORTS:
+            raise ConnectionConfigError("connection metadata contains an invalid reasoning effort")
         if item["connection_id"] in ids:
             raise ConnectionConfigError("connection IDs must be unique")
         ids.add(item["connection_id"])
+        item.setdefault("reasoning_effort", None)
+    value["schema_version"] = 2
     return value
 
 
@@ -99,6 +114,7 @@ def list_connections(repo_root: Path, profile_id: str) -> tuple[ProviderConfig, 
             item["display_name"],
             item["base_url"],
             item["key_reference"],
+            item.get("reasoning_effort"),
         )
         for item in value["connections"]
     )
@@ -114,6 +130,7 @@ def save_connection(
     display_name: str,
     base_url: str | None = None,
     api_key: str | None = None,
+    reasoning_effort: str | None = None,
     credential_store: KeyringCredentialStore | None = None,
 ) -> ProviderConfig:
     if CONNECTION_ID_RE.fullmatch(connection_id) is None:
@@ -123,6 +140,11 @@ def save_connection(
     if not model.strip() or len(model) > 200 or not display_name.strip() or len(display_name) > 100:
         raise ConnectionConfigError("model and display name must be non-empty and bounded")
     endpoint = _validate_url(provider_id, base_url)
+    effort = reasoning_effort.strip().lower() if reasoning_effort else None
+    if effort not in SUPPORTED_REASONING_EFFORTS | {None}:
+        raise ConnectionConfigError(
+            "reasoning effort must be low, medium, high, xhigh, or empty"
+        )
     value = _read(repo_root, profile_id)
     existing = next(
         (item for item in value["connections"] if item["connection_id"] == connection_id),
@@ -141,13 +163,20 @@ def save_connection(
         "display_name": display_name.strip(),
         "base_url": endpoint,
         "key_reference": reference,
+        "reasoning_effort": effort,
     }
     value["connections"] = [
         item for item in value["connections"] if item["connection_id"] != connection_id
     ] + [record]
     _write(repo_root, profile_id, value)
     return ProviderConfig(
-        connection_id, provider_id, record["model"], record["display_name"], endpoint, reference
+        connection_id,
+        provider_id,
+        record["model"],
+        record["display_name"],
+        endpoint,
+        reference,
+        effort,
     )
 
 

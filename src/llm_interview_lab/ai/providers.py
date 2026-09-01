@@ -25,6 +25,7 @@ class ProviderConfig:
     display_name: str
     base_url: str | None = None
     key_reference: str | None = None
+    reasoning_effort: str | None = None
 
 
 def _safe_error(error: Exception) -> ProviderError:
@@ -98,6 +99,8 @@ class AnyLLMChatProvider:
             values["api_key"] = self._api_key
         if self.config.base_url:
             values["api_base"] = self.config.base_url
+        if self.config.reasoning_effort:
+            values["reasoning_effort"] = self.config.reasoning_effort
         return values
 
     async def test_connection(self) -> ConnectionResult:
@@ -192,14 +195,17 @@ class OpenAICompatibleChatProvider:
         started = time.perf_counter()
         client = self._client()
         try:
+            payload: dict[str, Any] = {
+                "model": self.config.model,
+                "messages": [{"role": "user", "content": "Reply with OK."}],
+                "max_tokens": 2,
+            }
+            if self.config.reasoning_effort:
+                payload["reasoning_effort"] = self.config.reasoning_effort
             await asyncio.wait_for(
                 self._post_checked(
                     client,
-                    {
-                        "model": self.config.model,
-                        "messages": [{"role": "user", "content": "Reply with OK."}],
-                        "max_tokens": 2,
-                    },
+                    payload,
                 ),
                 timeout=20,
             )
@@ -223,14 +229,17 @@ class OpenAICompatibleChatProvider:
     ) -> AsyncIterator[ChatEvent]:
         client = self._client()
         try:
+            payload: dict[str, Any] = {
+                "model": self.config.model,
+                "messages": list(messages),
+                "stream": True,
+            }
+            if self.config.reasoning_effort:
+                payload["reasoning_effort"] = self.config.reasoning_effort
             async with client.stream(
                 "POST",
                 "chat/completions",
-                json={
-                    "model": self.config.model,
-                    "messages": list(messages),
-                    "stream": True,
-                },
+                json=payload,
             ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():

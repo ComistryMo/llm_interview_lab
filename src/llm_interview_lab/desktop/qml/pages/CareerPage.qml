@@ -8,6 +8,7 @@ Flickable {
     id: root
     required property var app
     required property var palette
+    required property var theme
     property bool compactLayout: width < 780
     contentWidth: width
     contentHeight: content.implicitHeight + 56
@@ -98,8 +99,8 @@ Flickable {
                     textRole: "label"
                     valueRole: "id"
                 }
-                TextField { id: materialTitle; Layout.fillWidth: true; placeholderText: "标题（可选）" }
-                TextField { id: selectedPath; Layout.fillWidth: true; readOnly: true; placeholderText: "选择 .md、.txt、.json、.yaml、.pdf 或 .docx" }
+                LabTextField { id: materialTitle; theme: root.theme; Layout.fillWidth: true; placeholderText: "标题（可选）" }
+                LabTextField { id: selectedPath; theme: root.theme; Layout.fillWidth: true; readOnly: true; placeholderText: "选择 .md、.txt、.json、.yaml、.pdf 或 .docx" }
                 Button { text: "选择文件"; onClicked: filePicker.open() }
             }
             CheckBox {

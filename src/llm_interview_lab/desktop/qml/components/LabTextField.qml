@@ -25,7 +25,11 @@ TextField {
     topPadding: 8
     bottomPadding: 8
     color: theme ? theme.text : "#2c2e29"
-    placeholderTextColor: theme ? theme.subtle : "#858880"
+    // Qt's Material style may keep its floating placeholder in the same
+    // content rectangle after input starts.  Draw the hint ourselves and
+    // make the native placeholder transparent so hint and user text can
+    // never overlap.
+    placeholderTextColor: "transparent"
     selectionColor: theme ? theme.accent : "#315ec7"
     selectedTextColor: theme ? theme.accentForeground : "#ffffff"
     font.pixelSize: theme ? theme.scaledPx(14) : 14
@@ -50,6 +54,24 @@ TextField {
                           ? (control.theme ? control.theme.borderStrong : "#a9aaa2")
                           : (control.theme ? control.theme.controlBorder : "#cfcdc5")
         border.width: control.activeFocus || control.invalid ? 2 : 1
+    }
+
+    Text {
+        id: controlledPlaceholder
+        objectName: "labTextFieldPlaceholder"
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.leftMargin: control.leftPadding
+        anchors.rightMargin: control.rightPadding
+        visible: control.text.length === 0 && !control.inputMethodComposing
+        text: control.placeholderText
+        color: control.theme ? control.theme.subtle : "#858880"
+        font: control.font
+        elide: Text.ElideRight
+        maximumLineCount: 1
+        verticalAlignment: Text.AlignVCenter
+        z: 2
     }
 
     LabBusyIndicator {

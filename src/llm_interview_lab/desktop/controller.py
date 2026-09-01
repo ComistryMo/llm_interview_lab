@@ -410,6 +410,17 @@ class AppController(QObject):
         self._codex_executable = "" if demo_page else str(
             self._settings.value("codexExecutable", "")
         )
+        self._codex_model = "" if demo_page else str(
+            self._settings.value("codexModel", "")
+        ).strip()
+        stored_effort = "" if demo_page else str(
+            self._settings.value("codexReasoningEffort", "")
+        ).strip().lower()
+        self._codex_reasoning_effort = (
+            stored_effort
+            if stored_effort in {"", "low", "medium", "high", "xhigh"}
+            else ""
+        )
         self._codex_available = False
         self._codex_probe_running = False
         self._codex_discovery_state = "idle"
@@ -966,6 +977,14 @@ class AppController(QObject):
     @Property(str, notify=stateChanged)
     def codexExecutable(self) -> str:
         return self._codex_executable
+
+    @Property(str, notify=stateChanged)
+    def codexModel(self) -> str:
+        return self._codex_model
+
+    @Property(str, notify=stateChanged)
+    def codexReasoningEffort(self) -> str:
+        return self._codex_reasoning_effort
 
     @Property(bool, notify=stateChanged)
     def legacyMigrationAvailable(self) -> bool:
@@ -3413,7 +3432,7 @@ class AppController(QObject):
         except Exception as error:
             self._show_error(error)
 
-    @Slot(str, str, str, str, str, str, result=bool)
+    @Slot(str, str, str, str, str, str, str, result=bool)
     def saveConnection(
         self,
         connection_id: str,
@@ -3422,6 +3441,7 @@ class AppController(QObject):
         display_name: str,
         base_url: str,
         api_key: str,
+        reasoning_effort: str = "",
     ) -> bool:
         if self._demo_mode:
             self.toast.emit("合成演示不会保存真实 AI 连接；No-AI 始终可用。")
@@ -3437,6 +3457,7 @@ class AppController(QObject):
                 display_name=display_name,
                 base_url=base_url or None,
                 api_key=api_key or None,
+                reasoning_effort=reasoning_effort or None,
             )
             self.refresh()
             self.toast.emit("连接已保存；API Key 仅存入系统密钥环。")
@@ -3510,7 +3531,9 @@ class AppController(QObject):
         # comparison/log path.
         selected_identity = tuple(
             str(selected.get(field) or "")
-            for field in ("provider_id", "model", "display_name", "base_url", "key_reference")
+            for field in (
+                "provider_id", "model", "reasoning_effort", "display_name", "base_url"
+            )
         )
 
         def operation():
@@ -3550,7 +3573,9 @@ class AppController(QObject):
                 return
             current_identity = tuple(
                 str(current.get(field) or "")
-                for field in ("provider_id", "model", "display_name", "base_url", "key_reference")
+                for field in (
+                    "provider_id", "model", "reasoning_effort", "display_name", "base_url"
+                )
             )
             if current_identity != selected_identity:
                 return
@@ -3735,15 +3760,14 @@ class AppController(QObject):
                 ],
             }
         try:
-            if not material_id or not consent:
-                raise RuntimeError("首版个性化面试需要选择一份 AI 可读材料并逐场授权。")
+            selected_materials = (material_id,) if material_id and consent else ()
             preview = self.service.personalized_interview_context(
                 self._profile_id,
                 role_id=role_id,
                 seniority=seniority,
                 difficulty=difficulty,
-                material_ids=(material_id,),
-                consent_materials=True,
+                material_ids=selected_materials,
+                consent_materials=bool(selected_materials),
             )
             return {
                 "estimated_tokens": preview.estimated_tokens,
@@ -3806,13 +3830,14 @@ class AppController(QObject):
             )
             if config is None:
                 raise RuntimeError("找不到所选 AI 连接，请返回 AI 连接页重新保存并测试。")
+            selected_materials = (material_id,) if material_id and consent else ()
             preview = self.service.personalized_interview_context(
                 profile_id,
                 role_id=role_id,
                 seniority=seniority,
                 difficulty=difficulty,
-                material_ids=(material_id,),
-                consent_materials=consent,
+                material_ids=selected_materials,
+                consent_materials=bool(selected_materials),
             )
             current_sha = hashlib.sha256(
                 preview.selected_text.encode("utf-8")
@@ -3851,8 +3876,8 @@ class AppController(QObject):
                 difficulty=difficulty,
                 generated_questions=generated,
                 plan_context_sha256=current_sha,
-                material_ids=(material_id,),
-                consent_materials=True,
+                material_ids=selected_materials,
+                consent_materials=bool(selected_materials),
             )
             return {
                 "plan": plan,
@@ -3862,7 +3887,7 @@ class AppController(QObject):
                 "seniority": seniority,
                 "difficulty": difficulty,
                 "material_id": material_id,
-                "consent": True,
+                "consent": bool(selected_materials),
             }
 
         def complete(result: dict[str, Any]) -> None:
@@ -3910,7 +3935,7 @@ class AppController(QObject):
                 difficulty=request["difficulty"],
                 generated_questions=request["generated_questions"],
                 plan_context_sha256=request["context_sha256"],
-                material_ids=(request["material_id"],),
+                material_ids=(request["material_id"],) if request["consent"] else (),
                 consent_materials=request["consent"],
             )
             self.service.start_interview(self._profile_id, session["interview_id"])
@@ -4652,7 +4677,12 @@ class AppController(QObject):
         prompt += "\n\n## Learner request\n" + user_text
         try:
             future = asyncio.run_coroutine_threadsafe(
-                self._codex_backend.start_turn(self._codex_thread_id, prompt),
+                self._codex_backend.start_turn(
+                    self._codex_thread_id,
+                    prompt,
+                    model=self._codex_model or None,
+                    effort=self._codex_reasoning_effort or None,
+                ),
                 self._ensure_codex_loop(),
             )
         except Exception as error:
@@ -5776,7 +5806,9 @@ class AppController(QObject):
                 self.aiStateChanged.emit()
 
                 async def open_thread() -> str:
-                    response = await self._codex_backend.start_thread(mode=mode)
+                    response = await self._codex_backend.start_thread(
+                        mode=mode, model=self._codex_model or None
+                    )
                     return str(response["thread"]["id"])
 
                 try:
@@ -5844,7 +5876,9 @@ class AppController(QObject):
                     account = await backend.account()
                     if account.get("account") is None:
                         raise RuntimeError("Codex is not signed in")
-                    response = await backend.start_thread(mode=mode)
+                    response = await backend.start_thread(
+                        mode=mode, model=self._codex_model or None
+                    )
                     thread_id = response["thread"]["id"]
                 except Exception:
                     try:
@@ -5900,7 +5934,12 @@ class AppController(QObject):
             self.toast.emit("请先连接 Codex；也可以继续使用无需 AI 的本地功能。")
             return
         future = asyncio.run_coroutine_threadsafe(
-            self._codex_backend.start_turn(self._codex_thread_id, message),
+            self._codex_backend.start_turn(
+                self._codex_thread_id,
+                message,
+                model=self._codex_model or None,
+                effort=self._codex_reasoning_effort or None,
+            ),
             self._codex_loop,
         )
         future.add_done_callback(
@@ -6098,7 +6137,12 @@ class AppController(QObject):
         prompt = preview.selected_text + "\n\n## Frozen scorecard contract\n" + instruction
         try:
             future = asyncio.run_coroutine_threadsafe(
-                self._codex_backend.start_turn(self._codex_thread_id, prompt),
+                self._codex_backend.start_turn(
+                    self._codex_thread_id,
+                    prompt,
+                    model=self._codex_model or None,
+                    effort=self._codex_reasoning_effort or None,
+                ),
                 self._codex_loop,
             )
         except Exception as caught:
@@ -6349,6 +6393,42 @@ class AppController(QObject):
         self.aiStateChanged.emit()
         self.stateChanged.emit()
         self.toast.emit("Codex 可执行文件位置已保存。")
+
+    @Slot(str)
+    def setCodexModel(self, value: str) -> None:
+        model = str(value or "").strip()
+        if len(model) > 200:
+            self._show_error("Codex 模型 ID 不能超过 200 个字符。")
+            return
+        self._codex_model = model
+        if self._demo_mode:
+            self.stateChanged.emit()
+            return
+        if model:
+            self._settings.setValue("codexModel", model)
+        else:
+            self._settings.remove("codexModel")
+        self._settings.sync()
+        self.stateChanged.emit()
+        self.toast.emit("Codex 模型偏好已保存；留空时使用 Codex 默认模型。")
+
+    @Slot(str)
+    def setCodexReasoningEffort(self, value: str) -> None:
+        effort = str(value or "").strip().lower()
+        if effort not in {"", "low", "medium", "high", "xhigh"}:
+            self._show_error("不支持的 Codex 推理强度。")
+            return
+        self._codex_reasoning_effort = effort
+        if self._demo_mode:
+            self.stateChanged.emit()
+            return
+        if effort:
+            self._settings.setValue("codexReasoningEffort", effort)
+        else:
+            self._settings.remove("codexReasoningEffort")
+        self._settings.sync()
+        self.stateChanged.emit()
+        self.toast.emit("Codex 推理强度已保存；新请求会使用该偏好。")
 
     @Slot()
     def clearCodexExecutable(self) -> None:

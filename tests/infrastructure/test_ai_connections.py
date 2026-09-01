@@ -73,11 +73,14 @@ def test_connection_metadata_never_contains_api_key(tmp_path: Path) -> None:
         model="gpt-test",
         display_name="OpenAI",
         api_key="super-secret",
+        reasoning_effort="high",
         credential_store=store,
     )
     raw = (root / "workspace/profiles/learner-one/connections.json").read_text(encoding="utf-8")
     assert "super-secret" not in raw
     assert config.key_reference == "profile:learner-one:connection:openai-main"
+    assert config.reasoning_effort == "high"
+    assert json.loads(raw)["schema_version"] == 2
     assert backend.values[(SERVICE_NAME, config.key_reference)] == "super-secret"
     assert list_connections(root, "learner-one") == (config,)
     assert delete_connection(
@@ -145,6 +148,7 @@ def test_openai_compatible_uses_openai_adapter_with_custom_endpoint() -> None:
             "Compatible endpoint",
             "https://models.example.test/v1",
             "ref",
+            "high",
         ),
         api_key="not-logged",
         completion=completion,
@@ -153,6 +157,7 @@ def test_openai_compatible_uses_openai_adapter_with_custom_endpoint() -> None:
     assert calls[0]["provider"] == "openai"
     assert calls[0]["api_base"] == "https://models.example.test/v1"
     assert calls[0]["api_key"] == "not-logged"
+    assert calls[0]["reasoning_effort"] == "high"
 
 
 class FakeHTTPResponse:
@@ -396,7 +401,9 @@ def test_codex_app_server_protocol_stream_and_explicit_approval(tmp_path: Path) 
         assert (await backend.account())["account"]["type"] == "chatgpt"
         thread = await backend.start_thread(mode="repository_agent")
         assert thread["thread"]["id"] == "thr-1"
-        await backend.start_turn("thr-1", "Review this repository")
+        await backend.start_turn(
+            "thr-1", "Review this repository", model="gpt-test", effort="high"
+        )
         first = await anext(backend.events())
         second = await anext(backend.events())
         third = await anext(backend.events())
@@ -408,6 +415,9 @@ def test_codex_app_server_protocol_stream_and_explicit_approval(tmp_path: Path) 
         thread_start = next(message for message in process.stdin.messages if message.get("method") == "thread/start")
         assert thread_start["params"]["approvalPolicy"] == "untrusted"
         assert thread_start["params"]["sandbox"] == "workspace-write"
+        turn_start = next(message for message in process.stdin.messages if message.get("method") == "turn/start")
+        assert turn_start["params"]["model"] == "gpt-test"
+        assert turn_start["params"]["effort"] == "high"
         assert process_kwargs["stderr"] is asyncio.subprocess.DEVNULL
         await backend.close()
 

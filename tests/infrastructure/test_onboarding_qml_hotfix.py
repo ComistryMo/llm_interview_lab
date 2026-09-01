@@ -258,6 +258,24 @@ def test_next_is_disabled_until_a_role_is_selected(onboarding_scene) -> None:
     assert page.property("step") == 1
 
 
+def test_placeholder_is_removed_as_soon_as_user_text_exists(onboarding_scene) -> None:
+    """The custom hint must never paint over a learner's real input."""
+
+    _, _, page, _ = onboarding_scene
+    page.setProperty("step", 0)
+    QCoreApplication.processEvents()
+    field = page.findChild(QQuickItem, "onboardingProfileName")
+    assert field is not None
+    placeholder = field.findChild(QQuickItem, "labTextFieldPlaceholder")
+    assert placeholder is not None
+    field.setProperty("text", "中文学习档案")
+    QCoreApplication.processEvents()
+    assert placeholder.property("visible") is False
+    field.setProperty("text", "")
+    QCoreApplication.processEvents()
+    assert placeholder.property("visible") is True
+
+
 def test_submit_state_is_visible_and_blocks_repeat_clicks(onboarding_scene) -> None:
     _, _, page, _ = onboarding_scene
     page.setProperty("step", 1)

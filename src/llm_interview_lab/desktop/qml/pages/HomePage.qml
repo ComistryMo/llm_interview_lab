@@ -230,23 +230,27 @@ Flickable {
 
         }
 
-        GridLayout {
+        Item {
+            id: overviewGrid
+            objectName: "homeOverviewGrid"
             Layout.fillWidth: true
-            // This row contains only the focus and evidence surfaces.  A
-            // three-column grid gives the focus card two columns and the
-            // evidence card one, without creating ten unnecessary inter-column
-            // gaps that could push the right card outside a small window.
-            columns: root.compactLayout ? 1 : 3
-            columnSpacing: 14
-            rowSpacing: 14
+            Layout.preferredHeight: implicitHeight
+            implicitHeight: root.compactLayout
+                            ? todayFocus.height + 14 + evidenceRail.height
+                            : Math.max(todayFocus.height, evidenceRail.height)
 
             LabSurface {
                 id: todayFocus
+                objectName: "homeTodayFocus"
                 theme: root.theme
-                Layout.columnSpan: root.compactLayout ? 1 : 2
-                Layout.minimumWidth: 0
-                Layout.fillWidth: true
-                Layout.preferredHeight: root.compactLayout ? 226 : 272
+                x: 0
+                y: 0
+                width: root.compactLayout ? overviewGrid.width
+                                           : (overviewGrid.width - 14) * 0.72
+                height: root.compactLayout ? 226 : Math.max(
+                    272,
+                    evidenceContent.implicitHeight + evidenceRail.evidencePadding * 2
+                )
                 level: "raised"
                 outlined: true
                 padding: root.compactLayout ? 18 : 24
@@ -385,17 +389,14 @@ Flickable {
                 id: evidenceRail
                 objectName: "homeEvidenceRail"
                 theme: root.theme
-                Layout.columnSpan: 1
-                Layout.minimumWidth: 0
-                Layout.fillWidth: true
+                x: root.compactLayout ? 0 : todayFocus.width + 14
+                y: root.compactLayout ? todayFocus.height + 14 : 0
+                width: root.compactLayout ? overviewGrid.width
+                                          : overviewGrid.width - x
                 // The evidence note is part of the card content.  Keep the
                 // wide layout's comfortable minimum, but let the card grow
                 // when Chinese wrapping or enlarged fonts need more room.
-                Layout.preferredHeight: Math.max(
-                    root.compactLayout ? 210 : 272,
-                    evidenceContent.implicitHeight + evidencePadding * 2
-                )
-                Layout.minimumHeight: Math.max(
+                height: Math.max(
                     root.compactLayout ? 210 : 272,
                     evidenceContent.implicitHeight + evidencePadding * 2
                 )

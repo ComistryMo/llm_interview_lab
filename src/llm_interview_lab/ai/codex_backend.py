@@ -303,10 +303,25 @@ class CodexAppServerBackend:
     async def resume_thread(self, thread_id: str) -> dict[str, Any]:
         return await self.request("thread/resume", {"threadId": thread_id})
 
-    async def start_turn(self, thread_id: str, text: str) -> dict[str, Any]:
+    async def start_turn(
+        self,
+        thread_id: str,
+        text: str,
+        *,
+        model: str | None = None,
+        effort: str | None = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "threadId": thread_id,
+            "input": [{"type": "text", "text": text}],
+        }
+        if model:
+            params["model"] = model
+        if effort:
+            params["effort"] = effort
         return await self.request(
             "turn/start",
-            {"threadId": thread_id, "input": [{"type": "text", "text": text}]},
+            params,
         )
 
     async def interrupt(self, thread_id: str, turn_id: str) -> dict[str, Any]:

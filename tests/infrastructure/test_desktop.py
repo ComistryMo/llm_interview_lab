@@ -1106,7 +1106,10 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert 'rounds.join("、")' not in interview
     assert 'role.currentValue || "applied_ai_engineer"' not in interview
     assert 'objectName: "startNonCodingInterview"' in interview
-    assert 'enabled: root.configuration.available !== false' in interview
+    assert 'role.currentValue === "post_training_engineer"' not in interview
+    assert 'seniority.currentValue === "new_grad"' not in interview
+    assert 'difficulty.currentValue === "medium"' not in interview
+    assert "求职材料（可选）" in interview
     assert 'objectName: "personalizedInterviewConnection"' in interview
     assert 'objectName: "personalizedInterviewAlphaScope"' in interview
     assert 'objectName: "personalizedInterviewContextDialog"' in interview
