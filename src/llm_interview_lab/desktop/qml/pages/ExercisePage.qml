@@ -194,6 +194,7 @@ Item {
                         visible: app.language !== "en" && root.hasTask && !!app.currentTask.task
                         text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
                         flat: true
+                        palette.buttonText: root.palette.text
                         Layout.alignment: Qt.AlignLeft
                         onClicked: root.showOriginalContract = !root.showOriginalContract
                     }
@@ -245,15 +246,17 @@ Item {
                             visible: !root.wideLayout
                             text: "题面"
                             flat: true
+                            palette.buttonText: root.palette.text
                             onClicked: detailsDrawer.open()
                         }
                         Button {
                             visible: !root.wideLayout || !root.coachOpen
                             text: "AI 辅助（可选）"
                             flat: true
+                            palette.buttonText: root.palette.text
                             onClicked: root.wideLayout ? root.coachOpen = true : coachDrawer.open()
                         }
-                        Button { text: "保存"; flat: true; enabled: root.hasTask && !app.busy; onClicked: app.saveSubmission(editor.text) }
+                        Button { text: "保存"; flat: true; palette.buttonText: root.palette.text; enabled: root.hasTask && !app.busy; onClicked: app.saveSubmission(editor.text) }
                     }
                 }
                 Rectangle {
@@ -376,6 +379,7 @@ Item {
                                 Layout.preferredHeight: 40
                                 text: "去刷题训练"
                                 highlighted: true
+                                palette.buttonText: "white"
                                 onClicked: app.navigate("learn")
                             }
                         }
@@ -491,6 +495,7 @@ Item {
                             visible: root.primaryActionKind() === "blocked"
                             text: "返回可做题目"
                             flat: true
+                            palette.buttonText: root.palette.text
                             Layout.preferredWidth: 132
                             Layout.preferredHeight: 40
                             onClicked: app.navigate("learn")
@@ -548,6 +553,7 @@ Item {
                     visible: app.language !== "en" && root.hasTask && !!app.currentTask.task
                     text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
                     flat: true
+                    palette.buttonText: root.palette.text
                     onClicked: root.showOriginalContract = !root.showOriginalContract
                 }
                 Text { visible: root.showOriginalContract; text: app.currentTask.task || ""; color: root.palette.muted; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
