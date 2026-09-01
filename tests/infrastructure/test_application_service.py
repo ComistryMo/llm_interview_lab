@@ -118,6 +118,10 @@ def test_shared_application_service_initializes_role_and_local_material(
     )
     assert material["id"].startswith("material-")
     assert service.material_cards("learner-one") == [material]
+    revoked = service.set_material_ai_access("learner-one", material["id"], False)
+    assert revoked["ai_access"] is False
+    enabled = service.set_material_ai_access("learner-one", material["id"], True)
+    assert enabled["ai_access"] is True
     assert "No employer data" not in (
         root / "workspace/profiles/learner-one/materials/manifest.json"
     ).read_text(encoding="utf-8")

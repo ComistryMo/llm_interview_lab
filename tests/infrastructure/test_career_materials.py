@@ -21,6 +21,7 @@ from llm_interview_lab.materials import (
     list_materials,
     resolve_material_path,
     resolve_material_text_path,
+    set_material_ai_access,
 )
 from llm_interview_lab.workspace import WorkspaceError, init_profile, profile_paths
 
@@ -335,6 +336,59 @@ def test_local_only_opaque_material_does_not_duplicate_extracted_text(
         ai_access=False,
     )
     assert record.text_snapshot_relative_path is None
+
+
+def test_existing_pdf_can_be_explicitly_authorized_for_ai_and_snapshot_is_bound(
+    tmp_path: Path,
+) -> None:
+    root = _workspace_repo(tmp_path)
+    init_profile(root, "learner-one")
+    source = tmp_path / "local-only.pdf"
+    source.write_bytes(_pdf_with_text("Enable me later"))
+    record = add_material(
+        root,
+        "learner-one",
+        source,
+        material_id="toggle-pdf",
+        kind="resume",
+        ai_access=False,
+    )
+
+    enabled = set_material_ai_access(root, "learner-one", record.id, True)
+
+    assert enabled.ai_access is True
+    assert enabled.text_snapshot_relative_path == "materials/text/toggle-pdf.txt"
+    assert enabled.text_snapshot_source_sha256 == enabled.sha256
+    assert resolve_material_text_path(root, "learner-one", enabled).read_text(
+        encoding="utf-8"
+    ).strip() == "Enable me later"
+
+    revoked = set_material_ai_access(root, "learner-one", record.id, False)
+    assert revoked.ai_access is False
+    with pytest.raises(MaterialError, match="does not allow AI access"):
+        resolve_material_text_path(root, "learner-one", revoked)
+
+
+def test_existing_unreadable_pdf_cannot_be_authorized_and_remains_local_only(
+    tmp_path: Path,
+) -> None:
+    root = _workspace_repo(tmp_path)
+    init_profile(root, "learner-one")
+    source = tmp_path / "opaque.pdf"
+    source.write_bytes(b"not a readable pdf")
+    record = add_material(
+        root,
+        "learner-one",
+        source,
+        material_id="opaque-toggle",
+        kind="resume",
+        ai_access=False,
+    )
+
+    with pytest.raises(MaterialError, match="PDF"):
+        set_material_ai_access(root, "learner-one", record.id, True)
+
+    assert get_material(root, "learner-one", record.id).ai_access is False
 
 
 def test_invalid_utf8_unsupported_type_directory_and_oversize_are_rejected(

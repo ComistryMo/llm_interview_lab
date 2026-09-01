@@ -597,6 +597,88 @@ def add_material(
     return record
 
 
+def set_material_ai_access(
+    repo_root: Path,
+    profile_id: str,
+    material_id: str,
+    enabled: bool,
+) -> MaterialRecord:
+    """Explicitly grant or revoke AI access for one existing material.
+
+    Enabling an opaque PDF/DOCX material performs the same text extraction
+    and source-SHA binding as :func:`add_material`.  The manifest is changed
+    only after extraction succeeds, so an unreadable document remains local
+    only and the caller can retry without losing the original file.
+    """
+
+    if type(enabled) is not bool:
+        raise MaterialError("ai_access must be a boolean")
+    identifier = _validate_material_id(material_id)
+    paths = profile_paths(repo_root, profile_id)
+    manifest = _load_manifest(repo_root, profile_id)
+    items = list(manifest["materials"])
+    target_index = next(
+        (index for index, item in enumerate(items) if item["id"] == identifier),
+        None,
+    )
+    if target_index is None:
+        raise MaterialError(f"unknown material ID in current Profile: {identifier}")
+
+    current_item = items[target_index]
+    current = _record(current_item)
+    stored = _resolve_stored_path(repo_root, profile_id, current)
+    if current.ai_access == enabled:
+        return current
+
+    updated_item = dict(current_item)
+    updated_item["ai_access"] = enabled
+    snapshot_bytes: bytes | None = None
+    snapshot_destination: Path | None = None
+    if enabled:
+        suffix = PurePosixPath(current.relative_path).suffix.lower()
+        if current.opaque:
+            try:
+                content = stored.read_bytes()
+            except OSError as error:
+                raise MaterialError("stored material cannot be read; keep it local or retry") from error
+            snapshot_text, snapshot_format = _extract_text_snapshot(content, suffix)
+            snapshot_bytes = snapshot_text.encode("utf-8")
+            snapshot_relative_path = f"materials/text/{identifier}.txt"
+            updated_item["text_snapshot"] = {
+                "relative_path": snapshot_relative_path,
+                "sha256": hashlib.sha256(snapshot_bytes).hexdigest(),
+                "source_sha256": current.sha256,
+                "format": snapshot_format,
+            }
+            snapshot_destination = paths.root.joinpath(
+                *PurePosixPath(snapshot_relative_path).parts
+            )
+            _safe_profile_path(repo_root, profile_id, snapshot_destination)
+        else:
+            try:
+                stored.read_bytes().decode("utf-8")
+            except UnicodeDecodeError as error:
+                raise MaterialError("AI-readable text materials must be UTF-8") from error
+            except OSError as error:
+                raise MaterialError("stored material cannot be read; keep it local or retry") from error
+
+    updated = {
+        "schema_version": 1,
+        "materials": items,
+    }
+    updated["materials"][target_index] = updated_item
+    _validate_manifest(repo_root, updated)
+    if snapshot_destination is not None and snapshot_bytes is not None:
+        _atomic_write(snapshot_destination, snapshot_bytes)
+    try:
+        _atomic_write_manifest(_manifest_path(repo_root, profile_id), updated)
+    except (OSError, MaterialError) as error:
+        if isinstance(error, MaterialError):
+            raise
+        raise MaterialError("material access setting could not be saved; please retry") from error
+    return _record(updated_item)
+
+
 def list_materials(repo_root: Path, profile_id: str) -> tuple[MaterialRecord, ...]:
     """List only the explicitly named Profile's verified material records."""
 

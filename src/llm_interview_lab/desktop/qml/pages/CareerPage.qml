@@ -199,6 +199,31 @@ Flickable {
                             onClicked: details.visible = !details.visible
                         }
                     }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        CheckBox {
+                            id: materialAiAccessToggle
+                            objectName: "materialAiAccessToggle"
+                            checked: !!modelData.ai_access
+                            enabled: !app.busy
+                            text: "允许在逐场授权后供 AI 使用"
+                            Accessible.name: text
+                            onClicked: {
+                                var desired = checked
+                                if (!app.setMaterialAiAccess(modelData.id, desired))
+                                    checked = !desired
+                            }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: modelData.ai_access
+                                  ? "已开启；每场面试仍需用户明确同意。"
+                                  : "仅保存在本机，未授权给 AI。"
+                            color: root.palette.muted
+                            font.pixelSize: 11
+                            wrapMode: Text.Wrap
+                        }
+                    }
                     ColumnLayout {
                         id: details
                         visible: false

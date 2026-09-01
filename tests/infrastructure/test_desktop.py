@@ -1232,6 +1232,7 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert 'text: "打开设置 → Codex"' in interview
     assert 'objectName: "personalizedInterviewMaterialAccessNotice"' in interview
     assert 'objectName: "openMaterialsForInterviewAuthorization"' in interview
+    assert "app.setMaterialAiAccess(material.currentValue, true)" in interview
     assert 'objectName: "personalizedInterviewConsentNotice"' in interview
     assert 'objectName: "personalizedInterviewCodexCoverageHint"' in interview
     assert 'property bool codexPlanPending: false' in interview
@@ -1331,6 +1332,10 @@ def test_material_import_explains_pdf_docx_text_snapshot_capability() -> None:
     assert "DOCX 会提取" in career
     assert "文本快照" in career
     assert "aiAccess.checked" in career
+
+
+    assert 'objectName: "materialAiAccessToggle"' in career
+    assert "app.setMaterialAiAccess(modelData.id, desired)" in career
 
 
 @pytest.mark.parametrize("page", ["home", "learn", "exercise", "interview"])

@@ -667,7 +667,7 @@ Item {
                                  && useMaterial.checked
                                  && material.currentIndex >= 0
                                  && !app.materials[material.currentIndex].ai_access
-                        text: "这份材料尚未允许 AI 使用。请在“求职材料”中开启“允许 AI 使用”，或取消本场材料。"
+                        text: "这份材料尚未允许 AI 使用。点击下方按钮后，系统会在本机重新提取 PDF/DOCX 文本并绑定当前文件 SHA；提取失败时仍保持本地保存。"
                         color: root.palette.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
@@ -678,9 +678,10 @@ Item {
                                  && useMaterial.checked
                                  && material.currentIndex >= 0
                                  && !app.materials[material.currentIndex].ai_access
-                        text: "去求职材料授权"
+                        text: "允许此材料供 AI 使用"
                         flat: true
-                        onClicked: app.navigate("career")
+                        enabled: !app.busy
+                        onClicked: app.setMaterialAiAccess(material.currentValue, true)
                     }
                     CheckBox {
                         id: consent

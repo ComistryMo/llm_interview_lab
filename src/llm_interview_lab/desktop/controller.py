@@ -2166,6 +2166,40 @@ class AppController(QObject):
             self._show_error(error)
             return False
 
+    @Slot(str, bool, result=bool)
+    def setMaterialAiAccess(self, material_id: str, enabled: bool) -> bool:
+        """Apply an explicit AI-access choice to one existing material."""
+
+        if self._profile_id == "demo":
+            self.toast.emit("演示材料不可修改；请先创建或切换到真实学习档案。")
+            return False
+        try:
+            self.service.set_material_ai_access(
+                self._profile_id, material_id, enabled
+            )
+            self.refresh()
+            self.toast.emit(
+                "已允许该材料在每场面试单独确认后供 AI 使用。"
+                if enabled
+                else "已撤销该材料的 AI 使用权限；材料仍保存在本机。"
+            )
+            return True
+        except Exception as error:
+            # Keep the failure actionable and preserve the checkbox state in
+            # QML.  In particular, an unreadable PDF/DOCX must remain local
+            # only instead of being silently granted access.
+            detail = " ".join(str(error).split())[:260]
+            self.toast.emit(f"无法更改材料 AI 权限：{detail or '请稍后重试。'}")
+            logging.getLogger("llm_interview_lab.desktop").warning(
+                "material_ai_access_failed profile=%s material=%s enabled=%s error_type=%s detail=%s",
+                self._profile_id,
+                material_id,
+                enabled,
+                type(error).__name__,
+                detail,
+            )
+            return False
+
     def _open_problem(self, problem_id: str) -> None:
         current = self.service.current_submission(self._profile_id)
         if current is None or current["problem_id"] != problem_id:

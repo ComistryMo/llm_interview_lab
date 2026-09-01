@@ -22,7 +22,7 @@ from .events import WorkspaceState, append_event, read_events, reduce_events
 from .grader import GraderResult, run_public_tests
 from .knowledge import KnowledgeCard, KnowledgeCatalog, KnowledgeError, load_knowledge
 from .lifecycle import ReviewInput, ReviewResult, record_review
-from .materials import add_material, list_materials
+from .materials import add_material, list_materials, set_material_ai_access
 from .ai.context_builder import build_role_interview_plan_context_preview
 from .role_interviews import (
     RoleInterviewError,
@@ -592,6 +592,15 @@ class ApplicationService:
             kind=kind,
             title=title,
             ai_access=ai_access,
+        ).as_dict()
+
+    def set_material_ai_access(
+        self, profile_id: str, material_id: str, enabled: bool
+    ) -> dict[str, Any]:
+        """Change AI access for one explicitly selected material."""
+
+        return set_material_ai_access(
+            self.repo_root, profile_id, material_id, enabled
         ).as_dict()
 
     def _state(self, profile_id: str):
