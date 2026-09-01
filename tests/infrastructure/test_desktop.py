@@ -565,6 +565,10 @@ def test_codex_personalized_plan_route_keeps_codex_mode_and_schema() -> None:
         encoding="utf-8"
     )
     assert "def generatePersonalizedInterviewPlanWithCodex" in controller
+    assert "@Slot(str, str, str, str, bool, str)" in controller
+    method_start = controller.index("def generatePersonalizedInterviewPlanWithCodex")
+    decorator_window = controller[max(0, method_start - 100):method_start]
+    assert "@Slot(str, str, str, str, str, bool, str)" not in decorator_window
     assert 'output_schema: dict[str, Any]' in controller
     assert '"provider_kind": "codex"' in controller
     assert '"ai_mode": "codex"' in controller
@@ -1225,6 +1229,13 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert "app.generatePersonalizedInterviewPlanWithCodex(" in interview
     assert 'objectName: "personalizedInterviewCodexPreferences"' in interview
     assert 'objectName: "openCodexPreferencesFromInterview"' in interview
+    assert 'objectName: "personalizedInterviewMaterialAccessNotice"' in interview
+    assert 'objectName: "openMaterialsForInterviewAuthorization"' in interview
+    assert 'objectName: "personalizedInterviewConsentNotice"' in interview
+    assert 'objectName: "personalizedInterviewCodexCoverageHint"' in interview
+    assert 'property bool codexPlanPending: false' in interview
+    assert 'function onAiStateChanged()' in interview
+    assert 'Qt.callLater(root.openPersonalizedPlanContext)' in interview
     assert 'app.navigate("settings")' in interview
     assert "outputSchema" not in interview  # schema stays in the controller
     assert "app.confirmPersonalizedInterviewPlan()" in interview

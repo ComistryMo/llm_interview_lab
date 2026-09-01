@@ -6059,7 +6059,7 @@ class AppController(QObject):
             self._release_codex_interview_turn(operation_id)
             self.stateChanged.emit()
 
-    @Slot(str, str, str, str, str, bool, str)
+    @Slot(str, str, str, str, bool, str)
     def generatePersonalizedInterviewPlanWithCodex(
         self,
         role_id: str,

@@ -11,6 +11,9 @@ Item {
     property var rubricScores: ({})
     property var aiPreview: ({"parts": [], "estimated_tokens": 0})
     property var planContext: ({"parts": [], "estimated_tokens": 0, "context_sha256": ""})
+    // A Codex plan click connects the dedicated interviewer thread first.
+    // Keep that intent so the first click continues into the context preview.
+    property bool codexPlanPending: false
     property string pendingAIAction: ""
     property string pendingConnection: ""
     property bool answerLocked: !!app.interview.answer_locked
@@ -102,6 +105,18 @@ Item {
         if (!item || typeof item !== "object")
             return false
         return item.ready === true
+    }
+
+    function openPersonalizedPlanContext() {
+        root.planContext = app.personalizedInterviewPlanContext(
+            role.currentValue,
+            seniority.currentValue,
+            difficulty.currentValue,
+            useMaterial.checked ? material.currentValue : "",
+            useMaterial.checked ? consent.checked : false
+        )
+        if ((root.planContext.parts || []).length > 0)
+            planContextDialog.open()
     }
 
     function seniorityText(value) {
@@ -406,6 +421,17 @@ Item {
 
     Connections {
         target: app
+        function onAiStateChanged() {
+            // Continue the original button action once the Codex interviewer
+            // thread is ready; do not make the user click a second time.
+            if (root.codexPlanPending
+                    && root.visible
+                    && aiMode.currentValue === "codex"
+                    && app.aiStatusVariant === "connected") {
+                root.codexPlanPending = false
+                Qt.callLater(root.openPersonalizedPlanContext)
+            }
+        }
         function onInterviewPlanReady() {
             personalizedPlanDialog.open()
         }
@@ -490,7 +516,20 @@ Item {
                         font.pixelSize: 11
                     }
                     Text { visible: leftPanel.setupVisible; text: "面试官"; color: root.palette.muted; font.pixelSize: 12 }
-                    ComboBox { visible: leftPanel.setupVisible; id: aiMode; width: parent.width; model: [{id:"disabled", label:"手动 / 无 AI"}, {id:"provider", label:"普通 LLM API"}, {id:"codex", label:"Codex"}]; textRole: "label"; valueRole: "id" }
+                    ComboBox {
+                        visible: leftPanel.setupVisible
+                        id: aiMode
+                        width: parent.width
+                        model: [{id:"disabled", label:"手动 / 无 AI"}, {id:"provider", label:"普通 LLM API"}, {id:"codex", label:"Codex"}]
+                        textRole: "label"
+                        valueRole: "id"
+                        onActivated: {
+                            if (currentValue === "codex"
+                                    && !app.codexAvailable
+                                    && !app.codexProbeRunning)
+                                app.refreshCodexAvailability()
+                        }
+                    }
                     Text {
                         objectName: "noAiInterviewNotice"
                         width: parent.width
@@ -557,7 +596,7 @@ Item {
                         Text {
                             objectName: "personalizedInterviewCodexPreferences"
                             Layout.fillWidth: true
-                            text: "模型：" + (app.codexModel || "Codex 默认")
+                            text: "本场 Codex：" + (app.codexModel || "默认模型")
                                   + " · 推理强度：" + (app.codexReasoningEffort || "默认")
                             color: root.palette.muted
                             font.pixelSize: 11
@@ -565,7 +604,7 @@ Item {
                         }
                         Button {
                             objectName: "openCodexPreferencesFromInterview"
-                            text: "修改"
+                            text: "打开 Codex 设置"
                             flat: true
                             onClicked: app.navigate("settings")
                         }
@@ -621,6 +660,28 @@ Item {
                         font.pixelSize: 10
                         wrapMode: Text.WrapAnywhere
                     }
+                    Text {
+                        objectName: "personalizedInterviewMaterialAccessNotice"
+                        width: parent.width
+                        visible: leftPanel.setupVisible
+                                 && useMaterial.checked
+                                 && material.currentIndex >= 0
+                                 && !app.materials[material.currentIndex].ai_access
+                        text: "这份材料尚未允许 AI 使用。请在“求职材料”中开启“允许 AI 使用”，或取消本场材料。"
+                        color: root.palette.warning
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 11
+                    }
+                    Button {
+                        objectName: "openMaterialsForInterviewAuthorization"
+                        visible: leftPanel.setupVisible
+                                 && useMaterial.checked
+                                 && material.currentIndex >= 0
+                                 && !app.materials[material.currentIndex].ai_access
+                        text: "去求职材料授权"
+                        flat: true
+                        onClicked: app.navigate("career")
+                    }
                     CheckBox {
                         id: consent
                         width: parent.width
@@ -628,15 +689,40 @@ Item {
                         text: "我同意本场面试读取这个精确 ID / SHA 的材料"
                     }
                     Text {
+                        objectName: "personalizedInterviewConsentNotice"
+                        width: parent.width
+                        visible: leftPanel.setupVisible
+                                 && useMaterial.checked
+                                 && material.currentIndex >= 0
+                                 && app.materials[material.currentIndex].ai_access
+                                 && !consent.checked
+                        text: "请勾选上方授权后，Codex 才会读取这份材料；未勾选不会发送。"
+                        color: root.palette.warning
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 11
+                    }
+                    Text {
                         objectName: "interviewConfigurationMessage"
                         width: parent.width
                         visible: leftPanel.setupVisible
                                  && aiMode.currentValue !== "provider"
+                                 && aiMode.currentValue !== "codex"
                                  && root.configuration.available === false
                         text: root.configurationMessage()
                         color: root.palette.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
+                    }
+                    Text {
+                        objectName: "personalizedInterviewCodexCoverageHint"
+                        width: parent.width
+                        visible: leftPanel.setupVisible
+                                 && aiMode.currentValue === "codex"
+                                 && root.configuration.available === false
+                        text: "高压设置不会阻止 Codex 个性化面试。Codex 会根据岗位技能生成非 coding 主问题；本地 coding 题仅在已验证资产可用时加入。"
+                        color: root.palette.muted
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 11
                     }
                     Button {
                         objectName: "startNonCodingInterview"
@@ -681,7 +767,9 @@ Item {
                         text: app.busy
                               ? "正在生成面试计划……"
                               : aiMode.currentValue === "codex"
-                                ? (app.aiStatusVariant === "connected"
+                                ? (app.aiStatusVariant === "connecting"
+                                   ? "正在连接 Codex 面试官…"
+                                   : app.aiStatusVariant === "connected"
                                    ? "预览 Codex 个性化面试计划"
                                    : "连接 Codex 面试官")
                                 : "预览 AI 个性化面试计划"
@@ -689,10 +777,11 @@ Item {
                         enabled: !!role.currentValue
                                  && !app.busy
                                  && ((aiMode.currentValue === "provider"
-                                      && planConnection.currentIndex >= 0
-                                      && root.providerIsReady(planConnection.currentValue))
+                                     && planConnection.currentIndex >= 0
+                                     && root.providerIsReady(planConnection.currentValue))
                                      || (aiMode.currentValue === "codex"
-                                         && app.codexAvailable))
+                                         && app.codexAvailable
+                                         && app.aiStatusVariant !== "connecting"))
                                  && (!useMaterial.checked
                                      || (material.currentIndex >= 0
                                          && app.materials[material.currentIndex].ai_access
@@ -705,18 +794,11 @@ Item {
                         onClicked: {
                             if (aiMode.currentValue === "codex"
                                     && app.aiStatusVariant !== "connected") {
+                                root.codexPlanPending = true
                                 app.connectCodex("interviewer")
                                 return
                             }
-                            root.planContext = app.personalizedInterviewPlanContext(
-                                role.currentValue,
-                                seniority.currentValue,
-                                difficulty.currentValue,
-                                useMaterial.checked ? material.currentValue : "",
-                                useMaterial.checked ? consent.checked : false
-                            )
-                            if ((root.planContext.parts || []).length > 0)
-                                planContextDialog.open()
+                            root.openPersonalizedPlanContext()
                         }
                     }
                     Text {
