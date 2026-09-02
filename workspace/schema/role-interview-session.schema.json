@@ -168,7 +168,7 @@
         }
       ],
       "properties": {
-        "kind": {"enum": ["fixed_item", "catalog_problem", "ai_generated"]},
+        "kind": {"enum": ["fixed_item", "catalog_problem", "ai_generated", "process_opening"]},
         "id": {"type": "string"},
         "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "context_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},

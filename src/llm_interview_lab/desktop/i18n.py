@@ -337,6 +337,11 @@ def friendly_error(error: BaseException | str) -> str:
         return "Codex 已找到，但 Windows 无法直接启动该命令包装器。请在设置中重新测试；若仍失败，请选择 codex.exe 或更新 Codex CLI。"
     if "codex" in message and ("sign" in message or "account" in message):
         return TEXT["error.codex_login"]
+    if "评分请求超时" in raw or "score request timed out" in message:
+        return (
+            "Codex 评分请求超时，模型服务没有返回结果。请检查网络后重试，"
+            "或改用人工评分；本地训练仍可继续。"
+        )
     if any(token in message for token in ("401", "429", "500", "provider", "connection", "timeout")):
         return TEXT["error.provider"]
     return TEXT["error.generic"]

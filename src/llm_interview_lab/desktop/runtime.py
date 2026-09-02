@@ -24,6 +24,12 @@ WORKSPACE_PUBLIC_DIRECTORIES = ("schema", "templates")
 PUBLIC_FILES = ("AGENTS.md", ".gitignore")
 STANDALONE_MARKER = ".llm-lab-standalone.json"
 MIGRATION_MARKER = ".llm-lab-desktop-migration.json"
+# Public assets can change between two builds that carry the same alpha
+# version (for example, when a session schema learns a new provenance kind).
+# Keep a small explicit revision in the standalone marker so an existing app
+# data directory receives that public-asset update without ever touching the
+# private ``workspace/profiles`` tree.
+PUBLIC_ASSET_REVISION = "role-interview-source-kind-v2"
 
 # Error messages can contain paths that are not one of the well-known roots
 # (for example a pytest temporary directory).  Keep bootstrap diagnostics
@@ -384,19 +390,30 @@ def prepare_desktop_repository() -> Path:
     destination = desktop_data_root()
     marker = destination / STANDALONE_MARKER
     installed_version = None
+    installed_asset_revision = None
     if marker.is_file():
         try:
-            installed_version = json.loads(marker.read_text(encoding="utf-8")).get(
-                "version"
-            )
+            marker_value = json.loads(marker.read_text(encoding="utf-8"))
+            if isinstance(marker_value, dict):
+                installed_version = marker_value.get("version")
+                installed_asset_revision = marker_value.get("public_asset_revision")
         except (OSError, UnicodeError, json.JSONDecodeError):
             installed_version = None
-    if installed_version != __version__:
+            installed_asset_revision = None
+    if (
+        installed_version != __version__
+        or installed_asset_revision != PUBLIC_ASSET_REVISION
+    ):
         destination.mkdir(parents=True, exist_ok=True)
         _copy_public_assets(bundle, destination)
         marker.write_text(
             json.dumps(
-                {"schema_version": 1, "version": __version__, "synthetic": True},
+                {
+                    "schema_version": 1,
+                    "version": __version__,
+                    "public_asset_revision": PUBLIC_ASSET_REVISION,
+                    "synthetic": True,
+                },
                 sort_keys=True,
             )
             + "\n",

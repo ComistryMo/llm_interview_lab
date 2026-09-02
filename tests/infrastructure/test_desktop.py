@@ -576,6 +576,197 @@ def test_codex_personalized_plan_route_keeps_codex_mode_and_schema() -> None:
     assert 'ai_mode: str = "provider"' in application
 
 
+def test_codex_dynamic_first_question_error_is_actionable_and_releases_busy(
+    tmp_path: Path, qapp
+) -> None:
+    """App Server retry/error events must not leave the first-question UI stuck."""
+
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="dynamic-codex-user")
+    assert controller.completeOnboarding(
+        "dynamic-codex-user", "post_training_engineer", "intern", "codex", "{}"
+    )
+
+    operation_id = "dynamic-first-question-op"
+    controller._codex_backend = None
+    controller._codex_thread_id = "thread-1"
+    controller._codex_dynamic_initial_pending = True
+    controller._codex_interview_identity = (
+        "dynamic-codex-user",
+        "__dynamic_initial__",
+        "",
+        operation_id,
+        "codex",
+    )
+    controller._codex_interview_turn_id = "turn-1"
+    controller._codex_start_ready = True
+    controller._codex_start_response_turn_id = "turn-1"
+    controller._interview_plan_request = {"operation_id": operation_id}
+    controller._background_operations.add(operation_id)
+    controller._set_busy(True)
+
+    controller._handle_codex_event(
+        CodexEvent(
+            "error",
+            {
+                "turnId": "turn-1",
+                "error": {"message": "Reconnecting... 5/5; sampling request timed out"},
+                "willRetry": True,
+            },
+        )
+    )
+    assert controller.busy is True
+    assert controller.interviewPlanPreview["status"] == "generating"
+    assert "重试" in controller.interviewPlanPreview["user_message"]
+
+    controller._handle_codex_event(
+        CodexEvent(
+            "error",
+            {
+                "turnId": "turn-1",
+                "error": {"message": "sampling request timed out"},
+                "willRetry": False,
+            },
+        )
+    )
+    assert controller.busy is False
+    assert controller.interviewPlanPreview["status"] == "error"
+    assert "操作未完成" not in controller.interviewPlanPreview["user_message"]
+    assert "重试" in controller.interviewPlanPreview["user_message"]
+    controller.shutdown()
+
+
+def test_codex_dynamic_first_question_accepts_completed_item_payload(
+    tmp_path: Path, qapp
+) -> None:
+    """Decode the authoritative completed App Server item when no deltas arrive."""
+
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="dynamic-completed-user")
+    assert controller.completeOnboarding(
+        "dynamic-completed-user", "post_training_engineer", "intern", "codex", "{}"
+    )
+
+    controller._codex_thread_id = "thread-dynamic"
+    controller._codex_thread_mode = "interviewer"
+    context = controller.dynamicInterviewContextPreview(
+        "post_training_engineer", "intern", "medium", "", False
+    )
+    allowed_kind = next(
+        round_value.type
+        for round_value in controller.service.roles.blueprint_for(
+            "post_training_engineer", "intern"
+        ).rounds
+        if round_value.type != "coding"
+    )
+    operation_id = "dynamic-completed-op"
+    controller._codex_dynamic_initial_pending = True
+    controller._codex_interview_identity = (
+        "dynamic-completed-user",
+        "__dynamic_initial__",
+        "",
+        operation_id,
+        "codex",
+    )
+    controller._codex_interview_turn_id = "turn-dynamic"
+    controller._codex_interview_operation_id = operation_id
+    controller._codex_start_ready = True
+    controller._codex_start_response_turn_id = "turn-dynamic"
+    controller._interview_plan_request = {
+        "profile_id": "dynamic-completed-user",
+        "operation_id": operation_id,
+        "role_id": "post_training_engineer",
+        "seniority": "intern",
+        "difficulty": "medium",
+        "material_id": "",
+        "consent": False,
+        "context_sha256": context["context_sha256"],
+        "ai_mode": "codex",
+        "allowed_kinds": [allowed_kind],
+    }
+    controller._background_operations.add(operation_id)
+    controller._set_busy(True)
+    question = {
+        "kind": controller._interview_plan_request["allowed_kinds"][0],
+        "title": "自我介绍与岗位目标",
+        "prompt": "请用两分钟介绍你的经历，并说明你为何选择这个岗位。",
+    }
+    payload = {
+        "turnId": "turn-dynamic",
+        "item": {
+            "id": "item-answer",
+            "type": "agentMessage",
+            "phase": "final_answer",
+            "text": json.dumps(question, ensure_ascii=False),
+        },
+    }
+    controller._handle_codex_event(CodexEvent("item/completed", payload))
+    controller._handle_codex_event(
+        CodexEvent(
+            "turn/completed",
+            {
+                "threadId": "thread-dynamic",
+                "turn": {
+                    "id": "turn-dynamic",
+                    "status": "completed",
+                    "items": [payload["item"]],
+                },
+            },
+        )
+    )
+    assert controller.interview["status"] == "active"
+    assert controller.interview["question"]["title"] == question["title"]
+    assert controller.busy is False
+    controller.shutdown()
+
+
+def test_dynamic_interview_enters_with_local_opening_without_waiting_for_codex(
+    tmp_path: Path, qapp
+) -> None:
+    """The first usable screen is local; Codex is reserved for later turns."""
+
+    del qapp
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    root = _repository(tmp_path)
+    controller = AppController(root, profile_id="dynamic-local-opening-user")
+    assert controller.completeOnboarding(
+        "dynamic-local-opening-user", "post_training_engineer", "intern", "codex", "{}"
+    )
+
+    # No Codex transport is installed in this fixture.  A local opening must
+    # still create the real persisted session and enter the interview room.
+    context = controller.dynamicInterviewContextPreview(
+        "post_training_engineer", "intern", "hard", "", False
+    )
+    controller.startDynamicPersonalizedInterview(
+        "post_training_engineer",
+        "intern",
+        "hard",
+        "codex",
+        "",
+        False,
+        context["context_sha256"],
+    )
+    assert controller.interview["status"] == "active"
+    assert controller.interview["delivery_mode"] == "dynamic_ai"
+    assert controller.interview["question"]["title"] == "自我介绍与经历概述"
+    assert controller.interview["question"]["source"]["kind"] == "process_opening"
+    assert controller.busy is False
+    assert controller._codex_dynamic_initial_pending is False
+    session_id = controller.interview["interview_id"]
+    assert controller.service.interview_session(
+        "dynamic-local-opening-user", session_id
+    )["questions"][0]["source"]["kind"] == "process_opening"
+    controller.shutdown()
+
+
 def test_codex_personalized_plan_stream_is_decoded_and_persisted(
     tmp_path: Path, qapp
 ) -> None:
@@ -1229,7 +1420,23 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert "app.personalizedInterviewPlanContext(" not in interview
     assert "app.generatePersonalizedInterviewPlan(" not in interview
     assert "app.generatePersonalizedInterviewPlanWithCodex(" not in interview
-    assert 'app.interviewPlanPreview.plan_mode !== "dynamic_ai"' in interview
+    # Dynamic interviews enter on a local process opening and materialize only
+    # the current turn.  The legacy plan dialog remains a compatibility object
+    # but must never be opened by the current GUI path.
+    assert 'app.interviewPlanPreview.plan_mode !== "dynamic_ai"' not in interview
+    assert 'function onInterviewPlanReady()' in interview
+    signal_body = interview.split('function onInterviewPlanReady()', 1)[1].split(
+        'function onInterviewTranscriptReady', 1
+    )[0]
+    assert '.open()' not in signal_body
+    assert 'startDynamicPersonalizedInterview(' in interview
+    assert '正在准备第一问' not in interview
+    dialog_body = interview.split('objectName: "personalizedInterviewContextDialog"', 1)[1].split(
+        'objectName: "personalizedInterviewPlanDialog"', 1
+    )[0]
+    assert 'StatusPill {' not in dialog_body
+    assert 'width: planContextPartsView.width' in dialog_body
+    assert 'height: modelData.sensitive' in dialog_body
     assert 'objectName: "personalizedInterviewCodexPreferences"' in interview
     assert 'objectName: "openCodexPreferencesFromInterview"' in interview
     assert 'text: "打开设置 → Codex"' in interview

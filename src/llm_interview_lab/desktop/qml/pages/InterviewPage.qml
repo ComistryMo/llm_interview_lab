@@ -29,6 +29,11 @@ Item {
                                   + "::" + String(activeQuestion ? activeQuestion.question_id : "")
     property bool showSessionDetails: false
     property bool syncingQuestionEditors: false
+    // The context confirmation is a single, synchronous hand-off to the
+    // controller.  Keep a local gate as well as ``app.busy`` so keyboard
+    // activation and a mouse click in the same event loop cannot create two
+    // sessions.
+    property bool startingDynamicInterview: false
     // A coding round can only be recorded when the visible editor still
     // matches the revision that the local Grader tested. TextArea bindings are
     // intentionally broken after typing, so track edits explicitly.
@@ -108,6 +113,8 @@ Item {
     }
 
     function openPersonalizedPlanContext() {
+        if (root.startingDynamicInterview || app.busy)
+            return
         root.planContext = app.dynamicInterviewContextPreview(
             role.currentValue,
             seniority.currentValue,
@@ -117,6 +124,60 @@ Item {
         )
         if ((root.planContext.parts || []).length > 0)
             planContextDialog.open()
+    }
+
+    // Keep long material titles and hashes out of the layout's primary row.
+    // The context preview is a confirmation surface, not a raw diagnostic
+    // dump: show a short human label first and put the integrity hash on its
+    // own bounded line.
+    function previewPartLabel(part) {
+        var id = String((part && part.id) || "")
+        var value = String((part && (part.label || part.id)) || "")
+        // The preview is a consent surface, not a raw context dump.  Keep
+        // stable human labels in the first line and put sensitive/hash
+        // metadata on their own bounded lines below it.
+        if (id === "policy")
+            return "面试流程与 AI 使用规则"
+        if (id === "interview_contract" || id === "blueprint")
+            return "岗位技能与面试流程"
+        if (id === "profile_context")
+            return "求职意向与能力自评"
+        // Match the semantic marker itself instead of relying on a particular
+        // full-width/ASCII parenthesis spelling.  Values can come through a
+        // QVariant bridge where punctuation is normalized.
+        var hashMarker = value.indexOf("SHA-256")
+        if (hashMarker >= 0)
+            value = value.slice(0, hashMarker)
+        var consentMarker = value.indexOf("本场确认后发送")
+        if (consentMarker >= 0)
+            value = value.slice(0, consentMarker)
+        value = value.replace(/[（(\s]+$/, "").trim()
+        if (id.indexOf("material:") === 0) {
+            var colon = value.indexOf(":")
+            if (colon < 0)
+                colon = value.indexOf("：")
+            if (colon >= 0)
+                value = value.slice(colon + 1).trim()
+            return "授权材料：" + value
+        }
+        return value.trim()
+    }
+
+    function previewPartSha(part) {
+        // The context digest shown at the bottom is the integrity proof for
+        // the whole request.  Per-part hashes are useful only for an
+        // explicitly authorised material; showing hashes for policy and role
+        // metadata makes this confirmation surface look like a log dump.
+        var id = String((part && part.id) || "")
+        if (id.indexOf("material:") !== 0)
+            return ""
+        var value = String((part && part.sha256) || "")
+        if (!value) {
+            var label = String((part && part.label) || "")
+            var match = label.match(/SHA-256\s+([0-9a-fA-F]+)/)
+            value = match ? match[1] : ""
+        }
+        return value ? "已校验 · SHA-256 " + value.slice(0, 8) : ""
     }
 
     function seniorityText(value) {
@@ -433,13 +494,11 @@ Item {
             }
         }
         function onInterviewPlanReady() {
-            // The legacy full-plan signal must never interrupt a dynamic
-            // interview.  Dynamic sessions enter the room immediately after
-            // the first question is persisted and do not expose a future
-            // question list for confirmation.
-            if (app.interviewPlanPreview.status === "ready"
-                    && app.interviewPlanPreview.plan_mode !== "dynamic_ai")
-                personalizedPlanDialog.open()
+            // The legacy full-plan signal is retained for old API clients,
+            // but it is intentionally not rendered here.  A dynamic session
+            // starts with one local opening question; exposing a frozen list
+            // would contradict the one-question-at-a-time contract and can
+            // leave users waiting for a provider response.
         }
         function onInterviewTranscriptReady(value) {
             // Transcription is a draft only.  Keep the answer editable and
@@ -459,7 +518,10 @@ Item {
     }
 
     RowLayout {
-        anchors.fill: parent; anchors.margins: root.compactInterviewLayout ? 12 : 26; spacing: 12
+        anchors.fill: parent
+        anchors.margins: root.compactInterviewLayout ? 12 : 26
+        spacing: 12
+        clip: true
 
         LabCard {
             id: leftPanel
@@ -491,11 +553,11 @@ Item {
                     spacing: 9
                     Text { width: parent.width; text: leftPanel.setupVisible ? "面试设置" : "进行中的面试"; color: root.palette.text; font.pixelSize: 19; font.bold: true; wrapMode: Text.Wrap }
                     Text { visible: leftPanel.setupVisible; text: "目标岗位"; color: root.palette.muted; font.pixelSize: 12 }
-                    ComboBox { visible: leftPanel.setupVisible; id: role; width: parent.width; textRole: "title"; valueRole: "id"; model: app.roles; currentIndex: -1; onActivated: root.refreshConfiguration() }
+                    ComboBox { visible: leftPanel.setupVisible; id: role; objectName: "interviewRoleSelector"; width: parent.width; textRole: "title"; valueRole: "id"; model: app.roles; currentIndex: -1; onActivated: root.refreshConfiguration() }
                     Text { visible: leftPanel.setupVisible; text: "求职阶段"; color: root.palette.muted; font.pixelSize: 12 }
-                    ComboBox { visible: leftPanel.setupVisible; id: seniority; width: parent.width; model: [{id:"intern", label:"实习"}, {id:"new_grad", label:"校招"}, {id:"mid", label:"有经验"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.refreshConfiguration() }
+                    ComboBox { visible: leftPanel.setupVisible; id: seniority; objectName: "interviewSenioritySelector"; width: parent.width; model: [{id:"intern", label:"实习"}, {id:"new_grad", label:"校招"}, {id:"mid", label:"有经验"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.refreshConfiguration() }
                     Text { visible: leftPanel.setupVisible; text: "难度"; color: root.palette.muted; font.pixelSize: 12 }
-                    ComboBox { visible: leftPanel.setupVisible; id: difficulty; width: parent.width; model: [{id:"easy", label:"基础"}, {id:"medium", label:"标准"}, {id:"hard", label:"高压"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.refreshConfiguration() }
+                    ComboBox { visible: leftPanel.setupVisible; id: difficulty; objectName: "interviewDifficultySelector"; width: parent.width; model: [{id:"easy", label:"基础"}, {id:"medium", label:"标准"}, {id:"hard", label:"高压"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.refreshConfiguration() }
                     Text {
                         objectName: "interviewDifficultyHint"
                         visible: leftPanel.setupVisible
@@ -525,6 +587,7 @@ Item {
                     ComboBox {
                         visible: leftPanel.setupVisible
                         id: aiMode
+                        objectName: "interviewAiModeSelector"
                         width: parent.width
                         model: [{id:"disabled", label:"手动 / 无 AI"}, {id:"provider", label:"普通 LLM API"}, {id:"codex", label:"Codex"}]
                         textRole: "label"
@@ -587,9 +650,9 @@ Item {
                         visible: leftPanel.setupVisible && aiMode.currentValue === "codex"
                         objectName: "personalizedInterviewCodexStatus"
                         text: app.aiStatusVariant === "connected"
-                              ? "Codex 面试官已连接。它会先生成当前一问，再根据你的回答逐步追问；Coding 题仍由本地规则决定。"
+                              ? "Codex 面试官已连接。确认后立即进入本地开场题；提交回答后再由 Codex 根据证据逐步追问。"
                               : (app.codexAvailable
-                                 ? "点击下方按钮连接 Codex 面试官；也可以先在设置中选择模型和推理强度。"
+                                 ? "确认后会先进入本地开场题；提交回答时再调用 Codex。你也可以先在设置中选择模型和推理强度。"
                                  : "尚未发现 Codex。请在 AI 连接页检查安装/登录状态；普通 LLM API 也可单独使用。")
                         color: app.aiStatusVariant === "connected" ? root.palette.success : root.palette.warning
                         wrapMode: Text.Wrap
@@ -771,39 +834,43 @@ Item {
                         objectName: "startConfiguredInterview"
                         width: parent.width
                         visible: leftPanel.setupVisible
-                        text: app.busy
-                              ? "正在准备第一问……"
-                              : aiMode.currentValue === "codex"
-                                ? (app.aiStatusVariant === "connecting"
-                                   ? "正在连接 Codex 面试官…"
-                                   : app.aiStatusVariant === "connected"
-                                   ? "开始动态模拟面试"
-                                   : "连接 Codex 面试官")
-                                : "开始动态模拟面试"
+                        text: app.busy ? "正在进入面试……" : "开始动态模拟面试"
                         highlighted: true
                         enabled: !!role.currentValue
                                  && !app.busy
                                  && ((aiMode.currentValue === "provider"
-                                     && planConnection.currentIndex >= 0
-                                     && root.providerIsReady(planConnection.currentValue))
-                                     || (aiMode.currentValue === "codex"
-                                         && app.codexAvailable
-                                         && app.aiStatusVariant !== "connecting"))
+                                      && planConnection.currentIndex >= 0
+                                      && root.providerIsReady(planConnection.currentValue))
+                                      || aiMode.currentValue === "codex")
                                  && (!useMaterial.checked
                                      || (material.currentIndex >= 0
                                          && app.materials[material.currentIndex].ai_access
                                          && consent.checked))
                         // Confirm only the explicit first-turn context. Future
                         // questions are generated after the current answer.
-                        onClicked: {
-                            if (aiMode.currentValue === "codex"
-                                    && app.aiStatusVariant !== "connected") {
-                                root.codexPlanPending = true
-                                app.connectCodex("interviewer")
-                                return
-                            }
-                            root.openPersonalizedPlanContext()
-                        }
+                        onClicked: root.openPersonalizedPlanContext()
+                    }
+                    Text {
+                        objectName: "dynamicInterviewStatus"
+                        width: parent.width
+                        visible: leftPanel.setupVisible
+                                 && aiMode.currentValue !== "disabled"
+                                 && app.interviewPlanPreview.status === "starting"
+                        text: app.interviewPlanPreview.user_message || "正在进入面试……"
+                        color: root.palette.accent
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 11
+                    }
+                    Text {
+                        objectName: "dynamicInterviewError"
+                        width: parent.width
+                        visible: leftPanel.setupVisible
+                                 && app.interviewPlanPreview.status === "error"
+                        text: (app.interviewPlanPreview.user_message || "第一问生成失败。")
+                              + "\n" + (app.interviewPlanPreview.recommended_action || "请检查连接后重试。")
+                        color: root.palette.danger
+                        wrapMode: Text.Wrap
+                        font.pixelSize: 12
                     }
                     Text {
                         objectName: "personalizedInterviewAlphaScope"
@@ -875,7 +942,9 @@ Item {
 
         LabCard {
             Layout.fillWidth: true
+            Layout.minimumWidth: 0
             Layout.fillHeight: true
+            clip: true
             cardColor: root.palette.surface
             prominent: !!activeQuestion
             accentColor: activeQuestion ? root.palette.accent : "transparent"
@@ -1223,15 +1292,14 @@ Item {
                         }
                         Button {
                             visible: app.interview.ai_mode === "codex"
-                                     && !(app.aiStatus.indexOf("已连接") >= 0
-                                          || app.aiStatus.indexOf("就绪") >= 0)
+                                      && app.aiStatusVariant !== "connected"
                             enabled: root.interviewCanEdit && !app.busy && !app.interview.assessment_recorded
                             text: "连接 Codex 面试官"
                             highlighted: true
                             onClicked: app.connectCodex("interviewer")
                         }
                         Button {
-                            visible: app.interview.ai_mode === "codex" && (app.aiStatus.indexOf("已连接") >= 0 || app.aiStatus.indexOf("就绪") >= 0)
+                            visible: app.interview.ai_mode === "codex" && app.aiStatusVariant === "connected"
                             enabled: root.interviewCanEdit && !app.busy && !app.interview.assessment_recorded
                             text: "请求 Codex 评分"
                             onClicked: root.previewAI("codex", "")
@@ -1590,10 +1658,44 @@ Item {
         id: contextDialog
         modal: true
         anchors.centerIn: parent
-        width: Math.min(560, root.width - 64)
-        height: Math.min(520, root.height - 64)
+        width: Math.min(560, Math.max(360, root.width - 48))
+        height: Math.min(420, Math.max(300, root.height - 40))
+        padding: 20
         title: "上下文预览（只读）"
-        standardButtons: Dialog.Ok | Dialog.Cancel
+        standardButtons: Dialog.NoButton
+        header: Item {
+            implicitHeight: 46
+            Text {
+                anchors.fill: parent
+                anchors.leftMargin: 20
+                anchors.rightMargin: 20
+                verticalAlignment: Text.AlignVCenter
+                text: contextDialog.title
+                color: root.palette.text
+                font.pixelSize: 20
+                font.bold: true
+                elide: Text.ElideRight
+            }
+        }
+        background: Rectangle {
+            color: root.palette.surface
+            radius: 12
+            border.color: root.palette.border
+            border.width: 1
+        }
+        footer: DialogButtonBox {
+            spacing: 8
+            alignment: Qt.AlignRight
+            Button {
+                text: "取消"
+                onClicked: contextDialog.reject()
+            }
+            Button {
+                text: "确认发送"
+                highlighted: true
+                onClicked: contextDialog.accept()
+            }
+        }
         onAccepted: {
             if (root.pendingAIAction === "provider")
                 app.assessInterviewWithProvider(
@@ -1617,39 +1719,72 @@ Item {
             spacing: 10
             Text {
                 Layout.fillWidth: true
-                text: "只有下面标记为“将发送”的内容会被发送；取消则不会发送任何内容。"
+                text: "只会发送下面标记为“发送”的内容。取消后不会发送任何内容。"
                 color: root.palette.text
                 wrapMode: Text.Wrap
             }
-            ScrollView {
+            Text {
+                Layout.fillWidth: true
+                text: "材料名称和完整 SHA 不会作为正文展示；底部摘要用于核对本次上下文。"
+                color: root.palette.muted
+                font.pixelSize: 11
+                wrapMode: Text.Wrap
+            }
+            ListView {
+                id: contextPartsView
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                Column {
-                    width: parent.width
-                    spacing: 8
-                    Repeater {
-                        model: root.aiPreview.parts || []
-                        delegate: RowLayout {
-                            required property var modelData
-                            width: parent.width
-                            StatusPill {
-                                text: modelData.selected ? "将发送" : "不发送"
-                                tone: modelData.selected ? root.palette.accent : root.palette.muted
-                            }
-                            Text {
-                                text: modelData.label
-                                color: root.palette.text
-                                Layout.fillWidth: true
-                                wrapMode: Text.Wrap
-                            }
-                            StatusPill {
-                                visible: modelData.sensitive
-                                text: "敏感内容"
-                                tone: root.palette.warning
-                            }
+                spacing: 8
+                model: root.aiPreview.parts || []
+                delegate: Item {
+                    required property var modelData
+                    width: contextPartsView.width
+                    height: 30 + ((modelData.sensitive || root.previewPartSha(modelData) !== "") ? 18 : 0)
+
+                    RowLayout {
+                        width: parent.width
+                        height: 30
+                        spacing: 8
+                        StatusPill {
+                            Layout.preferredWidth: 56
+                            Layout.minimumWidth: 56
+                            Layout.preferredHeight: 22
+                            Layout.alignment: Qt.AlignTop
+                            compact: true
+                            showDot: false
+                            text: modelData.selected ? "发送" : "不发送"
+                            tone: modelData.selected ? root.palette.accent : root.palette.muted
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                            Layout.alignment: Qt.AlignVCenter
+                            text: root.previewPartLabel(modelData)
+                            color: root.palette.text
+                            wrapMode: Text.NoWrap
+                            maximumLineCount: 1
+                            elide: Text.ElideRight
                         }
                     }
+                    Text {
+                        visible: modelData.sensitive || root.previewPartSha(modelData) !== ""
+                        x: 64
+                        y: 27
+                        width: Math.max(0, parent.width - 64)
+                        text: modelData.sensitive
+                              ? (root.previewPartSha(modelData) || "本场确认后发送")
+                              : root.previewPartSha(modelData)
+                        color: modelData.sensitive ? root.palette.warning : root.palette.muted
+                        font.pixelSize: 10
+                        elide: Text.ElideRight
+                    }
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: contextPartsView.count === 0
+                    text: "没有可发送的上下文"
+                    color: root.palette.muted
                 }
             }
             Text {
@@ -1665,11 +1800,96 @@ Item {
         objectName: "personalizedInterviewContextDialog"
         modal: true
         anchors.centerIn: parent
-        width: Math.min(620, root.width - 48)
-        height: Math.min(520, root.height - 48)
-        title: "确认本场设置并生成第一问"
-        standardButtons: Dialog.Cancel | Dialog.Ok
+        width: Math.min(600, Math.max(380, root.width - 40))
+        height: Math.min(460, Math.max(320, root.height - 36))
+        padding: 20
+        title: "确认设置并进入面试"
+        standardButtons: Dialog.NoButton
+        property bool submitting: false
+        onOpened: {
+            submitting = false
+            root.startingDynamicInterview = false
+        }
+        onRejected: {
+            submitting = false
+            root.startingDynamicInterview = false
+        }
+        header: Item {
+            implicitHeight: 52
+            Text {
+                anchors.fill: parent
+                anchors.leftMargin: 20
+                anchors.rightMargin: 20
+                verticalAlignment: Text.AlignVCenter
+                text: planContextDialog.title
+                color: root.palette.text
+                font.pixelSize: 21
+                font.bold: true
+                elide: Text.ElideRight
+            }
+        }
+        background: Rectangle {
+            color: root.palette.surface
+            radius: 12
+            border.color: root.palette.border
+            border.width: 1
+        }
+        footer: DialogButtonBox {
+            implicitHeight: 64
+            spacing: 8
+            alignment: Qt.AlignRight
+            background: Rectangle {
+                color: root.palette.surface
+                border.width: 0
+            }
+            Button {
+                id: cancelPlanContextButton
+                text: "取消"
+                flat: true
+                Layout.preferredWidth: 76
+                Layout.preferredHeight: 40
+                background: Rectangle {
+                    radius: 8
+                    color: cancelPlanContextButton.hovered
+                           ? root.palette.surfaceAlt
+                           : root.palette.surface
+                }
+                contentItem: Text {
+                    text: cancelPlanContextButton.text
+                    color: root.palette.text
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: planContextDialog.reject()
+            }
+            Button {
+                id: confirmPlanContextButton
+                text: "确认进入面试"
+                highlighted: true
+                enabled: !planContextDialog.submitting && !app.busy
+                Layout.preferredWidth: 140
+                Layout.preferredHeight: 40
+                background: Rectangle {
+                    radius: 8
+                    color: confirmPlanContextButton.enabled
+                           ? root.palette.accent
+                           : root.palette.border
+                }
+                contentItem: Text {
+                    text: confirmPlanContextButton.text
+                    color: confirmPlanContextButton.enabled ? "white" : root.palette.muted
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: planContextDialog.accept()
+            }
+        }
         onAccepted: {
+            if (planContextDialog.submitting)
+                return
+            planContextDialog.submitting = true
+            root.startingDynamicInterview = true
             app.startDynamicPersonalizedInterview(
                 role.currentValue,
                 seniority.currentValue,
@@ -1679,44 +1899,80 @@ Item {
                 useMaterial.checked ? consent.checked : false,
                 root.planContext.context_sha256 || ""
             )
+            // The current first-turn use case is synchronous: it persists the
+            // real opening question before returning.  Release the local gate
+            // after the call so a validation error remains retryable as well.
+            root.startingDynamicInterview = false
         }
         contentItem: ColumnLayout {
             spacing: 10
             Text {
                 Layout.fillWidth: true
-                text: "本次只发送岗位技能、面试流程、难度、你的求职意向，以及你明确授权的材料。AI 现在只生成第一问；后续问题会根据你的回答逐步生成，不会提前展示整场计划。"
+                text: "确认后立即进入开场题。面试流程、岗位技能、难度和你明确授权的材料会作为后续 AI 请求的上下文；不会在开始时等待模型，也不会提前生成整场计划。"
                 color: root.palette.text
                 wrapMode: Text.Wrap
             }
-            ScrollView {
+            Text {
+                Layout.fillWidth: true
+                text: "开场题由本地面试流程提供。提交回答后，Codex / 普通 LLM 才会根据你的证据评分并生成下一问。"
+                color: root.palette.muted
+                font.pixelSize: 11
+                wrapMode: Text.Wrap
+            }
+            ListView {
+                id: planContextPartsView
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                Column {
-                    width: parent.width
-                    spacing: 8
-                    Repeater {
-                        model: root.planContext.parts || []
-                        delegate: RowLayout {
-                            required property var modelData
-                            width: parent.width
-                            StatusPill {
-                                text: modelData.selected ? "将发送" : "不发送"
-                                tone: modelData.selected ? root.palette.accent : root.palette.muted
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                text: modelData.label
-                                color: root.palette.text
-                                wrapMode: Text.Wrap
-                            }
-                            StatusPill {
-                                visible: modelData.sensitive
-                                text: "敏感内容"
-                                tone: root.palette.warning
-                            }
-                        }
+                spacing: 8
+                model: root.planContext.parts || []
+                delegate: Item {
+                    required property var modelData
+                    width: planContextPartsView.width
+                    // Do not use StatusPill here.  Its implicit width is
+                    // intentionally content-driven and can paint over the
+                    // label when a narrow dialog applies a fixed layout
+                    // width.  This consent list uses explicit geometry.
+                    height: modelData.sensitive || root.previewPartSha(modelData) !== "" ? 54 : 42
+                    Rectangle {
+                        x: 2
+                        y: 10
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: modelData.selected ? root.palette.accent : root.palette.muted
                     }
+                    Text {
+                        x: 20
+                        y: 2
+                        width: Math.max(0, parent.width - 20)
+                        height: 24
+                        text: (modelData.selected ? "发送 · " : "不发送 · ")
+                              + root.previewPartLabel(modelData)
+                        color: root.palette.text
+                        verticalAlignment: Text.AlignVCenter
+                        wrapMode: Text.NoWrap
+                        elide: Text.ElideRight
+                    }
+                    Text {
+                        visible: modelData.sensitive || root.previewPartSha(modelData) !== ""
+                        x: 20
+                        y: 27
+                        width: Math.max(0, parent.width - 20)
+                        height: 18
+                        text: modelData.sensitive
+                              ? (root.previewPartSha(modelData) || "本场确认后发送")
+                              : root.previewPartSha(modelData)
+                        color: modelData.sensitive ? root.palette.warning : root.palette.muted
+                        font.pixelSize: 10
+                        elide: Text.ElideRight
+                    }
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: planContextPartsView.count === 0
+                    text: "没有可发送的上下文"
+                    color: root.palette.muted
                 }
             }
             Text {
@@ -1771,12 +2027,18 @@ Item {
                             width: parent.width
                             cardColor: root.palette.surfaceAlt
                             borderColor: modelData.source.kind === "catalog_problem"
+                                         || modelData.source.kind === "process_opening"
                                          ? root.palette.accent : root.palette.border
                             Text {
                                 width: parent.width
-                                text: (modelData.source.kind === "catalog_problem" ? "已验证题库 Coding" : "AI 生成 · " + root.roundTypeText(modelData.kind))
+                                text: modelData.source.kind === "catalog_problem"
+                                      ? "已验证题库 Coding"
+                                      : modelData.source.kind === "process_opening"
+                                        ? "本地流程开场题"
+                                        : "AI 生成 · " + root.roundTypeText(modelData.kind)
                                       + " · " + modelData.timebox_minutes + " 分钟"
                                 color: modelData.source.kind === "catalog_problem"
+                                       || modelData.source.kind === "process_opening"
                                        ? root.palette.accent : root.palette.muted
                                 font.pixelSize: 11
                                 font.bold: true

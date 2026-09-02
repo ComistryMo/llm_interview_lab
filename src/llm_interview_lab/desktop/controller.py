@@ -183,6 +183,42 @@ def _codex_terminal_outcome(params: Mapping[str, Any]) -> tuple[str, str]:
     return "completed", ""
 
 
+def _codex_agent_message_text(params: Mapping[str, Any]) -> str:
+    """Return the authoritative completed assistant text from an App Server event.
+
+    Current App Server releases do not guarantee that every assistant response
+    is delivered through ``item/agentMessage/delta``.  The completed item (or
+    the final turn's item list) is authoritative, so structured interview JSON
+    must also be read from those payloads.  Commentary is deliberately ignored
+    when a final-answer item exists.
+    """
+
+    candidates: list[Mapping[str, Any]] = []
+    item = params.get("item")
+    if isinstance(item, Mapping):
+        candidates.append(item)
+    turn = params.get("turn")
+    if isinstance(turn, Mapping):
+        items = turn.get("items")
+        if isinstance(items, list):
+            candidates.extend(value for value in items if isinstance(value, Mapping))
+
+    fallback = ""
+    for value in candidates:
+        if value.get("type") != "agentMessage":
+            continue
+        text_value = value.get("text")
+        if not isinstance(text_value, str) or not text_value.strip():
+            continue
+        message = text_value.strip()
+        phase = str(value.get("phase") or "").strip().lower()
+        if phase in {"final_answer", "finalanswer", "final"}:
+            return message
+        if phase != "commentary":
+            fallback = message
+    return fallback
+
+
 def _demo_dashboard() -> dict[str, Any]:
     return {
         "profile_id": "demo",
@@ -257,6 +293,17 @@ def _demo_dashboard() -> dict[str, Any]:
 
 
 class AppController(QObject):
+    # A first question should normally arrive well before this deadline.  A
+    # bounded deadline is important for App Server transports that keep
+    # retrying a model request without ever emitting a terminal turn event:
+    # the UI must become retryable instead of remaining stuck forever.
+    _CODEX_DYNAMIC_INITIAL_TIMEOUT_MS = 20_000
+    # A later assessment/follow-up is useful only while the answer screen is
+    # still actionable.  App Server can emit retry notices without ever
+    # closing a turn, so bound this wait as well and return control to the
+    # learner instead of leaving a permanent spinner.
+    _CODEX_INTERVIEW_TURN_TIMEOUT_MS = 30_000
+
     stateChanged = Signal()
     busyChanged = Signal()
     pageChanged = Signal()
@@ -3952,13 +3999,118 @@ class AppController(QObject):
             self._interview_plan_preview = {}
             self._load_interview(session["interview_id"])
             self.navigate("interview")
-            self.toast.emit("第一问已准备好；后续问题会根据你的回答逐步生成")
+            self.toast.emit("已进入面试；提交开场回答后，AI 会根据证据逐步追问")
         except Exception as caught:
-            self._interview_plan_preview = {
-                "status": "error",
-                "user_message": friendly_error(caught),
-            }
-            self._show_error(caught)
+            request = self._interview_plan_request or {}
+            self._set_dynamic_initial_error(
+                caught,
+                operation_id=str(request.get("operation_id") or ""),
+                code="FIRST_QUESTION_INIT_FAILED",
+            )
+            # A local session-creation failure must be immediately retryable.
+            # Keeping the request object would make the next click look like a
+            # duplicate operation even though no background work is running.
+            self._interview_plan_request = None
+
+    @staticmethod
+    def _dynamic_opening_question(
+        *, round_type: str, role_title: str, difficulty: str
+    ) -> dict[str, str]:
+        """Return the deterministic opening turn for a dynamic interview.
+
+        Starting a real session must not depend on model latency.  The opening
+        turn establishes the shared interview process and gathers candidate
+        evidence; Codex/the selected provider is invoked only after the answer
+        is locked, when it can generate one evidence-based follow-up.
+        """
+
+        focus = {
+            "product_case": "产品或项目经历",
+            "system_design": "系统或工程经历",
+            "evaluation_case": "评测、数据或安全经历",
+            "project_deep_dive": "项目、实习或论文经历",
+            "behavioral": "最能体现你承担责任的一段经历",
+            "debugging": "定位并解决复杂问题的一段经历",
+            "oral": "项目、实习或论文经历",
+        }.get(round_type, "项目、实习或论文经历")
+        pressure = {
+            "easy": "可以按背景、职责、行动和结果的顺序回答。",
+            "medium": "请说明你亲自负责的部分、关键取舍和结果。",
+            "hard": "请控制在两分钟内，并明确你亲自完成的工作、关键取舍和可核对结果。",
+        }.get(difficulty, "请说明你亲自负责的部分、关键取舍和结果。")
+        return {
+            "kind": round_type,
+            "title": "自我介绍与经历概述",
+            "prompt": (
+                f"请先做一个简洁的自我介绍，并选择一段与你申请的“{role_title}”最相关的"
+                f"{focus}作为后续深挖入口。{pressure}"
+            ),
+            # Persist the provenance truthfully: this wording comes from the
+            # local interview process, not from an AI response.
+            "source_kind": "process_opening",
+        }
+
+    @staticmethod
+    def _dynamic_initial_user_message(error: BaseException | str) -> str:
+        """Keep first-question failures actionable instead of generic."""
+
+        raw = " ".join(str(error).split())
+        lowered = raw.lower()
+        if (
+            "reconnecting" in lowered
+            or "sampling request" in lowered
+            or "timed out" in lowered
+            or "timeout" in lowered
+            or "超时" in raw
+        ):
+            return (
+                "Codex 连接模型服务超时或反复重试未完成。请检查网络和 Codex 登录状态后重试；"
+                "也可以改用普通 LLM。"
+            )
+        if "not signed" in lowered or "登录" in raw or "account" in lowered:
+            return "Codex 尚未完成登录。请先在 Codex 中登录，再点击“开始动态模拟面试”重试。"
+        if "json" in lowered or "当前问题" in raw or "required" in lowered:
+            return (
+                "Codex 已连接，但没有返回可解析的第一问。请重试；若仍失败，请更新 Codex CLI，"
+                "或改用普通 LLM。"
+            )
+        if "codex" in lowered:
+            return "Codex 第一问生成失败。请检查 Codex 连接后重试；也可以改用普通 LLM。"
+        return "第一问生成失败。请检查 AI 连接后重试；本地训练仍可继续。"
+
+    def _set_dynamic_initial_error(
+        self,
+        error: BaseException | str,
+        *,
+        operation_id: str = "",
+        code: str = "FIRST_QUESTION_FAILED",
+    ) -> None:
+        """Publish and log one first-question failure without leaking content."""
+
+        detail = " ".join(str(error).split())
+        for private_path in (str(self.repo_root), str(Path.home())):
+            if private_path:
+                detail = detail.replace(private_path, "<local-path>")
+        detail = detail[:400]
+        user_message = self._dynamic_initial_user_message(error)
+        logging.getLogger("llm_interview_lab.desktop").error(
+            "dynamic_interview_failed code=%s stage=first_question operation_id=%s "
+            "error_type=%s detail=%s",
+            code,
+            operation_id[:40],
+            type(error).__name__,
+            detail,
+        )
+        self._interview_plan_preview = {
+            "status": "error",
+            "error_code": code,
+            "user_message": user_message,
+            "technical_message": detail,
+            "recommended_action": "检查 Codex/AI 连接后重试，或改用普通 LLM。",
+            "operation_id": operation_id,
+        }
+        self.stateChanged.emit()
+        self.toast.emit(user_message)
 
     @Slot(str, str, str, str, str, bool, str)
     def startDynamicPersonalizedInterview(
@@ -3971,7 +4123,12 @@ class AppController(QObject):
         consent: bool,
         approved_context_sha256: str,
     ) -> None:
-        """Start a personalized interview by generating one question only."""
+        """Start a personalized interview with a local opening turn.
+
+        Only future turns are provider-authored.  This keeps the first usable
+        screen immediate and preserves the product contract that questions are
+        generated one at a time after the candidate supplies evidence.
+        """
 
         if self._profile_id == "demo":
             return
@@ -3979,11 +4136,7 @@ class AppController(QObject):
             self._show_error("已有面试请求正在处理，请等待当前第一问完成")
             return
         ai_mode = "codex" if connection_id == "codex" else "provider"
-        if ai_mode == "codex":
-            if self._codex_backend is None or not self._codex_thread_id or self._codex_loop is None:
-                self._show_error("请先连接 Codex 面试官，再开始生成第一问")
-                return
-        else:
+        if ai_mode == "provider":
             config = next(
                 (item for item in list_connections(self.repo_root, self._profile_id)
                  if item.connection_id == connection_id),
@@ -4005,6 +4158,7 @@ class AppController(QObject):
             if current_sha != approved_context_sha256:
                 raise RuntimeError("面试上下文在确认后发生变化，请重新预览")
             blueprint = self.service.roles.blueprint_for(role_id, seniority)
+            role_profile = self.service.roles.resolve_role(role_id)
             non_coding_rounds = [
                 round_value for round_value in blueprint.rounds
                 if round_value.type != "coding"
@@ -4013,7 +4167,7 @@ class AppController(QObject):
             if not allowed:
                 raise RuntimeError("当前岗位没有可生成的非 coding 面试环节")
         except Exception as error:
-            self._show_error(error)
+            self._set_dynamic_initial_error(error, code="DYNAMIC_CONTEXT_INVALID")
             return
         profile_id = self._profile_id
         operation_id = uuid4().hex
@@ -4030,92 +4184,42 @@ class AppController(QObject):
             "allowed_kinds": allowed,
         }
         self._interview_plan_preview = {
-            "status": "generating",
-            "user_message": "正在生成第一问；不会预生成或展示后续问题",
+            "status": "starting",
+            "user_message": "正在创建本场面试；不会预生成后续问题",
         }
         self.stateChanged.emit()
-        instruction = (
-            "只生成当前第一问，返回 JSON 且只能包含 kind、title、prompt。"
-            f"kind 必须是以下之一：{allowed}。优先从自我介绍或经历展开，"
-            "一次只问一个主问题，不要输出计划、评分、答案或 coding 题。"
-        )
-        if ai_mode == "provider":
-            def operation() -> dict[str, str]:
-                key = KeyringCredentialStore().load(config.key_reference) if config.key_reference else None
-                provider = create_chat_provider(config, api_key=key)
-
-                async def collect() -> str:
-                    chunks: list[str] = []
-                    async for event in provider.stream_chat(
-                        [{"role": "system", "content": preview.selected_text}, {"role": "user", "content": instruction}]
-                    ):
-                        if event.text:
-                            chunks.append(event.text)
-                    return "".join(chunks)
-
-                return decode_dynamic_question(asyncio.run(collect()), set(allowed))
-
-            def complete(value: Mapping[str, Any]) -> None:
-                if self._interview_plan_request and self._interview_plan_request.get("operation_id") == operation_id:
-                    self._finish_dynamic_initial_question(value)
-                    self._interview_plan_request = None
-
-            def failed(message: str) -> None:
-                if self._interview_plan_request and self._interview_plan_request.get("operation_id") == operation_id:
-                    self._interview_plan_preview = {"status": "error", "user_message": friendly_error(message)}
-                    self._show_error(message)
-                    self._interview_plan_request = None
-
-            self._background(operation, complete, failed)
-            return
-
-        # Codex uses the existing read-only interviewer thread and event gate.
-        self._codex_dynamic_initial_pending = True
-        self._codex_interview_identity = (profile_id, "__dynamic_initial__", "", operation_id, "codex")
-        self._codex_interview_buffer = ""
-        self._codex_interview_operation_id = operation_id
-        self._begin_codex_turn("interview", operation_id)
-        self._background_operations.add(operation_id)
-        self._set_busy(True)
-        self.stateChanged.emit()
-        output_schema = {
-            "type": "object",
-            "properties": {
-                "kind": {"type": "string", "enum": allowed},
-                "title": {"type": "string"},
-                "prompt": {"type": "string"},
-            },
-            "required": ["kind", "title", "prompt"],
-            "additionalProperties": False,
-        }
-        try:
-            future = asyncio.run_coroutine_threadsafe(
-                self._codex_backend.start_turn(
-                    self._codex_thread_id,
-                    preview.selected_text + "\n\n" + instruction,
-                    model=self._codex_model or None,
-                    effort=self._codex_reasoning_effort or None,
-                    output_schema=output_schema,
-                ),
-                self._codex_loop,
+        self._finish_dynamic_initial_question(
+            self._dynamic_opening_question(
+                round_type=allowed[0],
+                role_title=role_profile.title,
+                difficulty=difficulty,
             )
-        except Exception as error:
-            self._finish_codex_interview_assessment(self._codex_interview_identity, error=str(error))
+        )
+
+    def _expire_codex_dynamic_initial(self, operation_id: str) -> None:
+        """Close a Codex first-question turn that never reaches a terminal event."""
+
+        request = self._interview_plan_request
+        identity = self._codex_interview_identity
+        if (
+            not self._codex_dynamic_initial_pending
+            or not request
+            or request.get("operation_id") != operation_id
+            or not identity
+            or identity[3] != operation_id
+        ):
             return
-
-        def on_started(value: Any, token=self._codex_interview_identity) -> None:
-            try:
-                caught = value.exception()
-                if caught:
-                    self._codexTurnStarted.emit({"kind": "interview", "identity": token, "error": str(caught)})
-                    return
-                response = value.result() or {}
-                turn = response.get("turn") if isinstance(response, Mapping) else None
-                self._codexTurnStarted.emit({"kind": "interview", "identity": token, "turn_id": (turn or {}).get("id") if isinstance(turn, Mapping) else None})
-            except Exception as caught:
-                self._codexTurnStarted.emit({"kind": "interview", "identity": token, "error": str(caught)})
-
-        future.add_done_callback(on_started)
+        logging.getLogger("llm_interview_lab.desktop").warning(
+            "dynamic_interview_timeout stage=first_question operation_id=%s",
+            operation_id[:40],
+        )
+        # A timed-out stream is not trustworthy for a subsequent turn.  The
+        # existing transport invalidation path fences late events and marks
+        # Codex offline so the next click performs an explicit reconnect.
+        timeout_seconds = self._CODEX_DYNAMIC_INITIAL_TIMEOUT_MS // 1000
+        self._invalidate_codex_transport(
+            f"Codex 第一问请求超过 {timeout_seconds} 秒仍未完成，模型服务没有返回结果"
+        )
 
     @Slot(str, str, str, str, str, bool, str)
     def generatePersonalizedInterviewPlan(
@@ -6011,7 +6115,80 @@ class AppController(QObject):
         elif not self._codex_unscoped_allowed:
             return
 
-        if method == "item/agentMessage/delta":
+        if method == "error":
+            raw_error = params.get("error") or params.get("message") or "Codex 请求失败"
+            if isinstance(raw_error, Mapping):
+                raw_error = (
+                    raw_error.get("message")
+                    or raw_error.get("detail")
+                    or raw_error.get("code")
+                    or "Codex 请求失败"
+                )
+            detail = " ".join(str(raw_error).split())[:400]
+            for private_path in (str(self.repo_root), str(Path.home())):
+                if private_path:
+                    detail = detail.replace(private_path, "<local-path>")
+            will_retry = bool(params.get("willRetry"))
+            operation_id = (
+                self._codex_coach_identity[2]
+                if active_kind == "coach" and self._codex_coach_identity
+                else self._codex_interview_identity[3]
+                if active_kind == "interview" and self._codex_interview_identity
+                else ""
+            )
+            logging.getLogger("llm_interview_lab.desktop").warning(
+                "codex_turn_error kind=%s operation_id=%s will_retry=%s detail=%s",
+                active_kind,
+                operation_id[:40],
+                will_retry,
+                detail,
+            )
+            if will_retry:
+                # Codex may emit several retry notices before either a delta
+                # or a terminal event.  Keep the operation busy, but expose
+                # the real stage so the learner is not staring at a silent
+                # spinner.
+                if active_kind == "interview" and self._codex_dynamic_initial_pending:
+                    self._interview_plan_preview = {
+                        "status": "generating",
+                        "user_message": "Codex 正在重试连接模型服务；请稍候，超时后可重新开始。",
+                        "technical_message": detail,
+                        "operation_id": operation_id,
+                    }
+                    self.stateChanged.emit()
+                elif active_kind == "interview" and self._codex_interview_identity is not None:
+                    self._interview["ai_assessment_state"] = "retrying"
+                    self._interview["ai_error"] = (
+                        "Codex 正在重试连接模型服务；如果仍未返回，系统会在超时后释放本次请求。"
+                    )
+                    self.stateChanged.emit()
+                elif active_kind == "coach":
+                    self._coach_error = "Codex 正在重试连接模型服务；请稍候。"
+                    self.coachErrorChanged.emit()
+                return
+            # ``error`` is terminal on current App Server versions when
+            # ``willRetry`` is false.  Route it through the same cleanup as
+            # the explicit turn failure methods so busy state and retry UI
+            # are released immediately.
+            terminal_error = f"Codex 返回错误：{detail}"
+            if active_kind == "coach" and self._codex_coach_identity is not None:
+                self._coach_worker_failed(self._codex_coach_identity, terminal_error)
+            elif active_kind == "interview" and self._codex_interview_identity is not None:
+                self._finish_codex_interview_assessment(
+                    self._codex_interview_identity,
+                    error=terminal_error,
+                )
+            self._finish_codex_event_gate()
+        elif method == "item/completed":
+            # Newer App Server versions may omit deltas and publish the
+            # authoritative assistant message only when the item completes.
+            # Keep it as the structured-response buffer for interview turns;
+            # otherwise a successful turn would be decoded as an empty string.
+            completed_text = _codex_agent_message_text(params)
+            if completed_text and active_kind == "interview":
+                self._codex_interview_buffer = completed_text
+                self.stateChanged.emit()
+        elif method == "item/agentMessage/delta":
             delta = params.get("delta", "")
             if isinstance(delta, str):
                 if self._codex_coach_identity is not None:
@@ -6026,6 +6203,11 @@ class AppController(QObject):
                 # of truth and the user must still approve the actual request.
                 self._codex_diff = (self._codex_diff + delta)[-100_000:]
         elif method == "turn/completed":
+            completed_text = _codex_agent_message_text(params)
+            if completed_text and active_kind == "interview":
+                # ``turn.items`` is authoritative and can include the final
+                # message even when no item-completed notification was sent.
+                self._codex_interview_buffer = completed_text
             outcome, detail = _codex_terminal_outcome(params)
             # A transport can stay healthy even when one turn is interrupted
             # or rejected. Keep the connection status truthful while making
@@ -6317,6 +6499,29 @@ class AppController(QObject):
             self._codex_interview_turn_id = None
             self._codex_interview_message_id = ""
 
+    def _expire_codex_interview_turn(self, operation_id: str) -> None:
+        """Release a non-terminating assessment turn without accepting late data."""
+
+        identity = self._codex_interview_identity
+        if (
+            identity is None
+            or identity[3] != operation_id
+            or self._codex_interview_operation_id != operation_id
+        ):
+            return
+        logging.getLogger("llm_interview_lab.desktop").warning(
+            "codex_interview_timeout stage=assessment operation_id=%s",
+            operation_id[:40],
+        )
+        self._finish_codex_interview_assessment(
+            identity,
+            error="Codex 评分请求超时，模型服务没有返回结果；请重试或改用人工评分。",
+        )
+        # Fence late deltas/terminal events from this timed-out turn.  The
+        # identity check above makes the timer harmless after a successful
+        # response or an explicit cancellation.
+        self._finish_codex_event_gate()
+
     def _finish_codex_personalized_plan(
         self,
         identity: tuple[str, str, str, str, str],
@@ -6403,11 +6608,11 @@ class AppController(QObject):
             )
             self._finish_dynamic_initial_question(question)
         except Exception as caught:
-            self._interview_plan_preview = {
-                "status": "error",
-                "user_message": friendly_error(caught),
-            }
-            self._show_error(caught)
+            self._set_dynamic_initial_error(
+                caught,
+                operation_id=operation_id,
+                code="CODEX_FIRST_QUESTION_FAILED",
+            )
         finally:
             self._codex_dynamic_initial_pending = False
             self._interview_plan_request = None
@@ -6778,6 +6983,10 @@ class AppController(QObject):
                 )
 
         future.add_done_callback(on_started)
+        QTimer.singleShot(
+            self._CODEX_INTERVIEW_TURN_TIMEOUT_MS,
+            lambda expected=operation_id: self._expire_codex_interview_turn(expected),
+        )
         return True
 
     @Slot(str, str)

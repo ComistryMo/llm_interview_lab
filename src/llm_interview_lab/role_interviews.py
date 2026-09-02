@@ -552,7 +552,7 @@ def _generated_non_coding_question(
     skills: tuple[str, ...],
     plan_context_sha256: str,
 ) -> dict[str, Any]:
-    """Freeze AI wording against the Blueprint's local skills contract."""
+    """Freeze one provider/process turn against local skills and rubric facts."""
 
     if generated_value.get("kind") != round_type:
         raise RoleInterviewError(
@@ -564,6 +564,9 @@ def _generated_non_coding_question(
         raise RoleInterviewError("generated question title is invalid")
     if not isinstance(prompt, str) or not 10 <= len(prompt.strip()) <= 5000:
         raise RoleInterviewError("generated question prompt is invalid")
+    source_kind = str(generated_value.get("source_kind") or "ai_generated")
+    if source_kind not in {"ai_generated", "process_opening"}:
+        raise RoleInterviewError("generated question source kind is invalid")
     rubric = {
         "dimensions": {
             "skill_depth": {
@@ -611,7 +614,7 @@ def _generated_non_coding_question(
         "round_weight": round_weight,
         "skills": list(skills),
         "source": {
-            "kind": "ai_generated",
+            "kind": source_kind,
             "id": source_id,
             "sha256": hashlib.sha256(
                 json.dumps(
