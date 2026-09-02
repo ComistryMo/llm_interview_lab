@@ -52,6 +52,21 @@ ApplicationWindow {
     readonly property bool compactShell: layoutMode !== "wide"
     readonly property int sidebarWidth: layoutMode === "wide" ? 224
                                         : layoutMode === "standard" ? 72 : 64
+    // Keep the command surface intentionally small: every entry maps to an
+    // existing controller action, so keyboard navigation never exposes a
+    // promise the desktop backend cannot fulfill.
+    property string paletteQuery: ""
+    property var paletteActions: [
+        {id: "home", label: "打开首页", hint: "继续训练或开始模拟面试"},
+        {id: "learn", label: "打开刷题训练", hint: "按课程前置选择题目"},
+        {id: "interview", label: "打开模拟面试", hint: "开始或恢复结构化面试"},
+        {id: "coach", label: "打开 AI 教练", hint: "查看上下文并请求只读帮助"},
+        {id: "career", label: "打开求职材料", hint: "管理当前 Profile 的材料"},
+        {id: "progress", label: "打开学习进度", hint: "查看当前 Profile 的进度"},
+        {id: "connections", label: "打开 AI 连接", hint: "配置或测试普通 LLM"},
+        {id: "settings", label: "打开设置", hint: "外观、本地目录与 Codex"},
+        {id: "run-tests", label: "运行公开测试", hint: "保存当前编辑器并运行测试", exerciseOnly: true}
+    ]
     // A Codex request is owned by the shell, not by an individual page.  The
     // map is intentionally kept here so navigation cannot hide a pending
     // safety decision.
@@ -98,6 +113,32 @@ ApplicationWindow {
             settings: backend.uiText("nav.settings")
         }
         return titles[pageId] || "LLM Interview Lab"
+    }
+
+    function paletteItems() {
+        var query = paletteQuery.trim().toLowerCase()
+        var result = []
+        for (var i = 0; i < paletteActions.length; ++i) {
+            var action = paletteActions[i]
+            if (action.exerciseOnly
+                    && (backend.currentPage !== "exercise" || backend.busy))
+                continue
+            var haystack = (action.label + " " + action.hint).toLowerCase()
+            if (!query || haystack.indexOf(query) >= 0)
+                result.push(action)
+        }
+        return result
+    }
+
+    function triggerPaletteAction(actionId) {
+        if (actionId === "run-tests") {
+            if (backend.currentPage === "exercise" && !backend.busy)
+                backend.runTests()
+            commandPalette.close()
+            return
+        }
+        backend.navigate(actionId)
+        commandPalette.close()
     }
 
     font.pixelSize: appTheme.scaledPx(14)
@@ -150,6 +191,18 @@ ApplicationWindow {
         sequences: ["Ctrl+R", "Meta+R"]
         enabled: backend.currentPage === "exercise" && !backend.busy
         onActivated: backend.runTests()
+    }
+
+    // A small command palette keeps navigation discoverable for keyboard
+    // users without introducing another router or command implementation.
+    Shortcut {
+        sequences: ["Ctrl+K", "Meta+K"]
+        enabled: !backend.onboardingRequired
+        onActivated: {
+            commandPalette.open()
+            paletteSearch.forceActiveFocus()
+            paletteSearch.selectAll()
+        }
     }
 
     onClosing: backend.shutdown()
@@ -490,6 +543,139 @@ ApplicationWindow {
         palette: window.colors
         theme: appTheme
         layoutMode: window.layoutMode
+    }
+
+    Popup {
+        id: commandPalette
+        objectName: "commandPalette"
+        enabled: !backend.onboardingRequired
+        x: Math.max(24, Math.round((window.width - width) / 2))
+        y: 76
+        width: Math.min(560, window.width - 48)
+        height: Math.min(410, window.height - 112)
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        onOpened: {
+            if (backend.onboardingRequired) {
+                commandPalette.close()
+                return
+            }
+            paletteList.currentIndex = paletteList.count > 0 ? 0 : -1
+            paletteSearch.forceActiveFocus()
+            paletteSearch.selectAll()
+        }
+        onClosed: {
+            window.paletteQuery = ""
+            paletteSearch.text = ""
+        }
+        background: Rectangle {
+            color: window.colors.surface
+            radius: 12
+            border.color: window.colors.border
+            border.width: 1
+        }
+        contentItem: ColumnLayout {
+            spacing: 8
+            LabText {
+                theme: appTheme
+                text: "快速操作"
+                variant: "section"
+                strong: true
+                Layout.fillWidth: true
+            }
+            TextField {
+                id: paletteSearch
+                objectName: "commandPaletteSearch"
+                Layout.fillWidth: true
+                placeholderText: "搜索页面或动作…"
+                selectByMouse: true
+                onTextChanged: window.paletteQuery = text
+                onAccepted: {
+                    var items = window.paletteItems()
+                    if (items.length > 0)
+                        window.triggerPaletteAction(items[0].id)
+                }
+                Keys.onDownPressed: {
+                    if (paletteList.count > 0) {
+                        paletteList.forceActiveFocus()
+                        paletteList.currentIndex = Math.max(0, paletteList.currentIndex)
+                    }
+                }
+                background: Rectangle {
+                    color: window.colors.surfaceAlt
+                    radius: 8
+                    border.color: paletteSearch.activeFocus ? window.colors.accent : window.colors.border
+                    border.width: paletteSearch.activeFocus ? 2 : 1
+                }
+            }
+            ListView {
+                id: paletteList
+                objectName: "commandPaletteList"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                spacing: 3
+                model: window.paletteItems()
+                onCountChanged: {
+                    currentIndex = count > 0
+                                   ? Math.min(Math.max(currentIndex, 0), count - 1)
+                                   : -1
+                }
+                Keys.onReturnPressed: {
+                    if (currentIndex >= 0 && currentIndex < count)
+                        window.triggerPaletteAction(window.paletteItems()[currentIndex].id)
+                }
+                delegate: Button {
+                    required property var modelData
+                    required property int index
+                    property bool selected: index === paletteList.currentIndex
+                    width: paletteList.width
+                    height: 48
+                    flat: true
+                    focusPolicy: Qt.StrongFocus
+                    onClicked: window.triggerPaletteAction(modelData.id)
+                    background: Rectangle {
+                        radius: 8
+                        color: parent.selected || parent.hovered || parent.activeFocus
+                               ? window.colors.surfaceAlt
+                               : "transparent"
+                    }
+                    contentItem: RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        spacing: 10
+                        LabText {
+                            theme: appTheme
+                            text: modelData.label
+                            strong: true
+                            Layout.preferredWidth: 142
+                        }
+                        LabText {
+                            theme: appTheme
+                            text: modelData.hint
+                            tone: "muted"
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                    }
+                }
+                LabText {
+                    anchors.centerIn: parent
+                    visible: paletteList.count === 0
+                    text: "没有匹配的操作"
+                    theme: appTheme
+                    tone: "muted"
+                }
+            }
+            LabText {
+                text: "Enter 执行 · Esc 关闭 · Ctrl/⌘ K 打开"
+                theme: appTheme
+                tone: "muted"
+                variant: "caption"
+            }
+        }
     }
 
     Popup {
