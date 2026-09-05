@@ -39,6 +39,7 @@ from ..coach_sessions import (
     write_coach_sessions,
 )
 from ..lifecycle import ReviewInput
+from ..interview_flow import dialogue_instruction, flow_coverage, question_stage, STAGE_LABELS
 from ..roles import RoleCatalogError
 from ..workspace import (
     WorkspaceError,
@@ -107,7 +108,7 @@ class StreamingWorker(QRunnable):
 
 
 def _decode_ai_assessment(
-    text: str, dimensions: set[str], fatal_issues: set[str]
+    text: str, dimensions: set[str], fatal_issues: set[str], *, dynamic: bool = False,
 ) -> dict[str, Any]:
     """Validate provider JSON; polished prose alone never becomes a score."""
 
@@ -118,13 +119,16 @@ def _decode_ai_assessment(
         value = json.loads(text[start : end + 1])
     except json.JSONDecodeError as error:
         raise RuntimeError("AI interviewer returned invalid JSON") from error
-    if not isinstance(value, dict) or set(value) != {
+    fields = {
         "scores",
         "evidence",
         "confidence",
         "fatal_issues",
         "follow_up",
-    }:
+    }
+    if dynamic:
+        fields |= {"next_stage", "coding_problem_id", "next_skill_ids"}
+    if not isinstance(value, dict) or set(value) != fields:
         raise RuntimeError("AI scorecard fields do not match the public rubric contract")
     scores = value["scores"]
     if not isinstance(scores, dict) or set(scores) != dimensions:
@@ -144,6 +148,13 @@ def _decode_ai_assessment(
         raise RuntimeError("AI follow-up is invalid")
     value["evidence"] = evidence.strip()
     value["follow_up"] = follow_up.strip()
+    if dynamic:
+        if value["next_stage"] not in {"experience", "theory", "coding", "finish"}:
+            raise RuntimeError("AI 返回了未知面试阶段；回答已保留，请重试")
+        if not isinstance(value["coding_problem_id"], str):
+            raise RuntimeError("AI 手撕题 ID 格式错误；请重试")
+        if value["next_stage"] in {"experience", "theory"} and not 10 <= len(value["follow_up"]) <= 2000:
+            raise RuntimeError("AI 没有返回有效下一问；回答已保留，请重试")
     return value
 
 
@@ -466,6 +477,8 @@ class AppController(QObject):
             if stored_effort in {"", "low", "medium", "high", "xhigh"}
             else ""
         )
+        self._interview_context_confirmation = None
+        self._codex_interview_include_materials = True
         self._codex_available = False
         self._codex_probe_running = False
         self._codex_discovery_state = "idle"
@@ -2752,6 +2765,9 @@ class AppController(QObject):
             ),
             **current,
         }
+        if session.get("delivery_mode") == "dynamic_ai":
+            self._interview["flow_coverage"] = flow_coverage(session)
+            self._interview["stage_label"] = STAGE_LABELS[question_stage(current["question"])] if current.get("question") else "本场复盘"
         if session.get("status") in {"completed", "incomplete"}:
             result_view = self._interview.get("result") or {}
             if isinstance(result_view, Mapping):
@@ -3323,6 +3339,11 @@ class AppController(QObject):
         if not connection_id:
             self._show_error("请选择一个已保存且测试通过的 AI 连接；也可以使用人工评分。")
             return
+        try:
+            preview = self._confirmed_interview_context(include_materials)
+        except Exception as error:
+            self._show_error(error)
+            return
         operation_id = uuid4().hex
         self._interview_provider_operation_id = operation_id
         self._interview["ai_assessment_state"] = "streaming"
@@ -3347,13 +3368,6 @@ class AppController(QObject):
                 if config.key_reference
                 else None
             )
-            preview = build_role_interview_context_preview(
-                self.repo_root,
-                profile_id,
-                interview_id,
-                candidate_answer=locked_answer,
-                include_materials=include_materials,
-            )
             provider = create_chat_provider(config, api_key=key)
             instruction = (
                 "Return JSON only with exactly these fields: scores (one integer 1-5 for "
@@ -3361,15 +3375,10 @@ class AppController(QObject):
                 "the candidate answer), confidence (low|medium|high), fatal_issues (only "
                 f"from {sorted(fatal_issues)}), and follow_up (one concise adaptive question "
                 "or an empty string). Do not infer missing career facts."
-                + (
-                    " This is a dynamic interview: when the session is still active, "
-                    "return a non-empty follow_up so the next single question can be "
-                    "generated from this answer; use an empty string only when the "
-                    "interview should close."
-                    if self._interview.get("delivery_mode") == "dynamic_ai"
-                    else ""
-                )
             )
+
+            if session.get("delivery_mode") == "dynamic_ai":
+                instruction = dialogue_instruction(dimensions, fatal_issues)
 
             async def collect() -> str:
                 chunks: list[str] = []
@@ -3384,7 +3393,8 @@ class AppController(QObject):
                 return "".join(chunks)
 
             return _decode_ai_assessment(
-                asyncio.run(collect()), dimensions, fatal_issues
+                asyncio.run(collect()), dimensions, fatal_issues,
+                dynamic=session.get("delivery_mode") == "dynamic_ai",
             )
 
         def release() -> None:
@@ -3407,35 +3417,8 @@ class AppController(QObject):
                     "assessments", {}
                 ):
                     return
-                if result["follow_up"] and self._interview.get("delivery_mode") == "dynamic_ai":
-                    # Dynamic interviews advance one turn at a time.  The
-                    # follow-up returned by the assessment becomes the next
-                    # question immediately; it must not be shown once here
-                    # and then appended a second time after another answer.
-                    self.service.score_interview(
-                        profile_id,
-                        interview_id,
-                        question_id,
-                        result["scores"],
-                        evidence=result["evidence"],
-                        source="ai",
-                        confidence=result["confidence"],
-                        fatal_issues=result["fatal_issues"],
-                    )
-                    latest = self.service.interview_session(profile_id, interview_id)
-                    self.service.append_dynamic_interview_question(
-                        profile_id,
-                        interview_id,
-                        question={
-                            "kind": question.get("kind", "oral"),
-                            "title": "根据上一回答继续追问",
-                            "prompt": result["follow_up"],
-                        },
-                        context_sha256=str(latest["plan_context_sha256"]),
-                    )
-                    self._interview["ai_assessment_state"] = "complete"
-                    self._interview["ai_error"] = ""
-                    self._load_interview(interview_id)
+                if self._interview.get("delivery_mode") == "dynamic_ai":
+                    self._advance_dynamic_answer(result, include_materials)
                     return
                 elif result["follow_up"]:
                     self._pending_ai_assessment = {
@@ -3486,6 +3469,16 @@ class AppController(QObject):
             self.stateChanged.emit()
 
         self._background(operation, complete, failed)
+
+    def _advance_dynamic_answer(self, result: dict[str, Any], include_materials: bool) -> None:
+        interview_id = self._interview["interview_id"]
+        question_id = self._interview["question"]["question_id"]
+        preview = self._confirmed_interview_context(include_materials)
+        self.service.advance_dynamic_interview(
+            self._profile_id, interview_id, question_id, result,
+            context_sha256=hashlib.sha256(preview.selected_text.encode("utf-8")).hexdigest(),
+        )
+        self._load_interview(interview_id)
 
     @Slot(str)
     def answerAIFollowup(self, answer: str) -> None:
@@ -3550,7 +3543,7 @@ class AppController(QObject):
             session = self.service.finish_interview(
                 self._profile_id,
                 interview_id,
-                summary="本地结构化模拟面试已完成。",
+                summary="本场面试已结束；完成情况以实际回答、评估和本地 Grader 证据为准。",
                 confirm_incomplete=True,
             )
             self._load_interview(session["interview_id"])
@@ -3845,7 +3838,9 @@ class AppController(QObject):
                 self._interview["interview_id"],
                 candidate_answer=answer,
                 include_materials=include_materials,
+                catalog=self.service.catalog, role_catalog=self.service.roles,
             )
+            self._interview_context_confirmation = self._interview_context_identity(preview, include_materials)
             return {
                 "estimated_tokens": preview.estimated_tokens,
                 "parts": [
@@ -3862,6 +3857,21 @@ class AppController(QObject):
         except Exception as error:
             self._show_error(error)
             return {"estimated_tokens": 0, "parts": []}
+
+    def _interview_context_identity(self, preview, include_materials: bool) -> tuple:
+        return (self._profile_id, self._interview.get("interview_id"),
+                (self._interview.get("question") or {}).get("question_id"), include_materials,
+                hashlib.sha256(preview.selected_text.encode("utf-8")).hexdigest())
+
+    def _confirmed_interview_context(self, include_materials: bool):
+        preview = build_role_interview_context_preview(
+            self.repo_root, self._profile_id, self._interview["interview_id"],
+            candidate_answer=self._interview["answer_text"], include_materials=include_materials,
+            catalog=self.service.catalog, role_catalog=self.service.roles,
+        )
+        if self._interview.get("delivery_mode") == "dynamic_ai" and self._interview_context_confirmation != self._interview_context_identity(preview, include_materials):
+            raise RuntimeError("本轮上下文尚未确认或已发生变化；请重新预览后再发送。回答已保留。")
+        return preview
 
     @Slot(str, str, str, str, bool, result="QVariantMap")
     def personalizedInterviewPlanContext(
@@ -3935,7 +3945,7 @@ class AppController(QObject):
                 ],
             }
         try:
-            selected = (material_id,) if material_id and consent else ()
+            selected = self._interview_material_ids(material_id, consent)
             preview = self.service.dynamic_interview_context(
                 self._profile_id,
                 role_id=role_id,
@@ -3962,6 +3972,17 @@ class AppController(QObject):
             self._show_error(error)
             return {"estimated_tokens": 0, "context_sha256": "", "parts": []}
 
+    @staticmethod
+    def _interview_material_ids(selection: str, consent: bool) -> tuple[str, ...]:
+        # Preserve the public single-ID slot; the GUI also passes a JSON list
+        # for an explicitly selected resume + JD combination.
+        if not consent or not selection:
+            return ()
+        values = json.loads(selection) if selection.startswith("[") else [selection]
+        if not isinstance(values, list) or any(not isinstance(value, str) for value in values):
+            raise RuntimeError("材料选择格式无效；请重新选择简历和 JD")
+        return tuple(dict.fromkeys(values))
+
     def _finish_dynamic_initial_question(
         self, question: Mapping[str, Any], *, error: str = ""
     ) -> None:
@@ -3976,7 +3997,7 @@ class AppController(QObject):
                 role_id=str(request["role_id"]),
                 seniority=str(request["seniority"]),
                 difficulty=str(request["difficulty"]),
-                material_ids=((str(request["material_id"]),) if request.get("consent") else ()),
+                material_ids=self._interview_material_ids(str(request["material_id"]), bool(request.get("consent"))),
                 consent_materials=bool(request.get("consent")),
             )
             current_sha = hashlib.sha256(context.selected_text.encode("utf-8")).hexdigest()
@@ -3990,7 +4011,7 @@ class AppController(QObject):
                 ai_mode=str(request["ai_mode"]),
                 initial_question=question,
                 context_sha256=current_sha,
-                material_ids=((str(request["material_id"]),) if request.get("consent") else ()),
+                material_ids=self._interview_material_ids(str(request["material_id"]), bool(request.get("consent"))),
                 consent_materials=bool(request.get("consent")),
             )
             self.service.start_interview(self._profile_id, session["interview_id"])
@@ -4150,7 +4171,7 @@ class AppController(QObject):
                 role_id=role_id,
                 seniority=seniority,
                 difficulty=difficulty,
-                material_ids=((material_id,) if material_id and consent else ()),
+                material_ids=self._interview_material_ids(material_id, consent),
                 consent_materials=bool(material_id and consent),
             )
             current_sha = hashlib.sha256(preview.selected_text.encode("utf-8")).hexdigest()
@@ -4923,6 +4944,8 @@ class AppController(QObject):
             return
 
         if active == identity:
+            if kind == "interview" and payload.get("thread_id"):
+                self._codex_thread_id = str(payload["thread_id"])
             self._codex_start_ready = True
             # The response to ``turn/start`` is the strongest correlation
             # available on the App Server protocol.  Bind a concrete id here
@@ -4958,6 +4981,8 @@ class AppController(QObject):
         # Stop may have cleared the live identity while ``turn/start`` was in
         # flight.  Bind/interrupt only this operation, never a later turn.
         if self._codex_cancel_pending_operation == operation_id:
+            if kind == "interview" and payload.get("thread_id"):
+                self._codex_thread_id = str(payload["thread_id"])
             self._release_pending_codex_cancel(operation_id, turn_id)
 
     def _start_codex_coach_turn(
@@ -6789,35 +6814,13 @@ class AppController(QObject):
                 self._codex_interview_buffer,
                 set(question.get("rubric", {}).get("dimensions", {})),
                 set(question.get("rubric", {}).get("fatal_issues", [])),
+                dynamic=self._interview.get("delivery_mode") == "dynamic_ai",
             )
             latest = self.service.interview_session(profile_id, interview_id)
             if latest.get("status") != "active" or question_id in latest.get("assessments", {}):
                 raise RuntimeError("当前问题已经评分或面试已经结束，未重复写入 Codex 结果。")
-            if result["follow_up"] and self._interview.get("delivery_mode") == "dynamic_ai":
-                self.service.score_interview(
-                    profile_id,
-                    interview_id,
-                    question_id,
-                    result["scores"],
-                    evidence=result["evidence"],
-                    source="ai",
-                    confidence=result["confidence"],
-                    fatal_issues=result["fatal_issues"],
-                )
-                latest = self.service.interview_session(profile_id, interview_id)
-                self.service.append_dynamic_interview_question(
-                    profile_id,
-                    interview_id,
-                    question={
-                        "kind": question.get("kind", "oral"),
-                        "title": "根据上一回答继续追问",
-                        "prompt": result["follow_up"],
-                    },
-                    context_sha256=str(latest["plan_context_sha256"]),
-                )
-                self._interview["ai_assessment_state"] = "complete"
-                self._interview["ai_error"] = ""
-                self._load_interview(interview_id)
+            if self._interview.get("delivery_mode") == "dynamic_ai":
+                self._advance_dynamic_answer(result, self._codex_interview_include_materials)
             elif result["follow_up"]:
                 self._pending_ai_assessment = {
                     **result,
@@ -6895,13 +6898,7 @@ class AppController(QObject):
             self._show_error("Codex 尚未连接。请先连接 Codex，或改用人工评分；本地训练仍可继续。")
             return False
         try:
-            preview = build_role_interview_context_preview(
-                self.repo_root,
-                self._profile_id,
-                self._interview["interview_id"],
-                candidate_answer=str(self._interview.get("answer_text") or answer),
-                include_materials=include_materials,
-            )
+            preview = self._confirmed_interview_context(include_materials)
         except Exception as caught:
             self._show_error(caught)
             return False
@@ -6917,6 +6914,7 @@ class AppController(QObject):
             "codex",
         )
         self._codex_interview_identity = identity
+        self._codex_interview_include_materials = include_materials
         self._begin_codex_turn("interview", operation_id)
         self._codex_interview_buffer = ""
         self._codex_interview_dimensions = dimensions
@@ -6935,24 +6933,25 @@ class AppController(QObject):
             f"(only from {sorted(fatal_issues)}), and follow_up (one concise adaptive "
             "question or an empty string). Do not invent career facts, do not modify "
             "the answer, and do not claim Practice mastery."
-            + (
-                " This is a dynamic interview: while the session remains active, "
-                "return a non-empty follow_up so the next single question can be "
-                "generated from this answer; use an empty string only when the "
-                "interview should close."
-                if self._interview.get("delivery_mode") == "dynamic_ai"
-                else ""
-            )
         )
+        if self._interview.get("delivery_mode") == "dynamic_ai":
+            instruction = dialogue_instruction(dimensions, fatal_issues)
         prompt = preview.selected_text + "\n\n## Frozen scorecard contract\n" + instruction
+        backend = self._codex_backend
+        model, effort = self._codex_model or None, self._codex_reasoning_effort or None
+
+        async def start_interview_turn():
+            # A new transport thread cannot retain a material deselected this
+            # turn, or facts from another session. All multi-turn context is
+            # rebuilt explicitly from this interview and previewed by the user.
+            thread = await backend.start_thread(mode="interviewer", model=model)
+            thread_id = thread["thread"]["id"]
+            result = await backend.start_turn(thread_id, prompt, model=model, effort=effort)
+            return {**result, "thread_id": thread_id}
+
         try:
             future = asyncio.run_coroutine_threadsafe(
-                self._codex_backend.start_turn(
-                    self._codex_thread_id,
-                    prompt,
-                    model=self._codex_model or None,
-                    effort=self._codex_reasoning_effort or None,
-                ),
+                start_interview_turn(),
                 self._codex_loop,
             )
         except Exception as caught:
@@ -6972,7 +6971,7 @@ class AppController(QObject):
                 turn = response.get("turn") if isinstance(response, Mapping) else None
                 turn_id = (turn or {}).get("id") if isinstance(turn, Mapping) else None
                 self._codexTurnStarted.emit(
-                    {"kind": "interview", "identity": token, "turn_id": turn_id}
+                    {"kind": "interview", "identity": token, "turn_id": turn_id, "thread_id": response.get("thread_id")}
                 )
             except Exception as caught:
                 self._codexTurnStarted.emit(

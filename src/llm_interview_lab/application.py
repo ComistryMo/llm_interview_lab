@@ -30,6 +30,7 @@ from .ai.context_builder import (
 from .role_interviews import (
     RoleInterviewError,
     append_dynamic_role_question,
+    advance_dynamic_role_interview,
     create_dynamic_role_interview,
     create_role_interview,
     current_role_question,
@@ -1412,6 +1413,15 @@ class ApplicationService:
             interview_id,
             question=question,
             plan_context_sha256=context_sha256,
+        )
+
+    def advance_dynamic_interview(
+        self, profile_id: str, interview_id: str, question_id: str,
+        assessment: Mapping[str, Any], *, context_sha256: str,
+    ) -> dict[str, Any]:
+        return advance_dynamic_role_interview(
+            self.repo_root, profile_id, interview_id, self.catalog, self.roles,
+            question_id, assessment, context_sha256=context_sha256,
         )
 
     def preview_personalized_interview(

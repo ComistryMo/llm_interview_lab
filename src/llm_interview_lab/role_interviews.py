@@ -22,6 +22,7 @@ from jsonschema import Draft202012Validator
 
 from .catalog import Catalog, Problem, compute_problem_fingerprint
 from .grader import GraderResult, run_public_tests
+from .interview_flow import STAGE_LABELS, STAGE_WEIGHTS, flow_coverage, next_stages, question_stage
 from .materials import MaterialError, get_material
 from .roles import InterviewItem, RoleCatalog, RoleCatalogError
 from .submissions import SubmissionError, inspect_submission
@@ -985,6 +986,7 @@ def create_dynamic_role_interview(
         skills=round_value.skills,
         plan_context_sha256=plan_context_sha256,
     )
+    question["stage"] = "introduction"
     if not material_refs:
         material_refs = []
     return _create_session_from_plan(
@@ -1060,6 +1062,79 @@ def append_dynamic_role_question(
             "timestamp": _timestamp(now),
         }
     )
+    _save(repo_root, profile_id, session)
+    return session
+
+
+def dynamic_coding_candidates(
+    catalog: Catalog, role_catalog: RoleCatalog, session: Mapping[str, Any],
+) -> tuple[tuple[Problem, tuple[str, ...]], ...]:
+    """Public metadata only; pressure does not require a level-5 exercise."""
+    role = role_catalog.resolve_role(session["role_id"])
+    # Coding difficulty follows seniority; pressure lives in the interview
+    # prompt. An intern choosing high pressure must still have runnable tasks.
+    band = {"intern": "easy", "new_grad": "medium", "mid": "hard"}[session["seniority"]]
+    return _coding_candidates(
+        catalog, role_catalog, tuple(role.required_tracks), band,
+        tuple(role.skill_weights), torch_available=importlib.util.find_spec("torch") is not None,
+    )
+
+
+def advance_dynamic_role_interview(
+    repo_root: Path, profile_id: str, interview_id: str,
+    catalog: Catalog, role_catalog: RoleCatalog, question_id: str,
+    assessment: Mapping[str, Any], *, context_sha256: str,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Validate one AI decision and commit its score + next turn together."""
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    if session.get("delivery_mode") != "dynamic_ai":
+        raise RoleInterviewError("this operation requires a dynamic interview")
+    candidates = dynamic_coding_candidates(catalog, role_catalog, session)
+    stage = assessment.get("next_stage")
+    if stage not in next_stages(session, coding_available=bool(candidates)):
+        raise RoleInterviewError("AI 返回的面试阶段不符合当前流程；回答已保留，请重试")
+    next_id = f"q-{len(session['questions']) + 1:03d}"
+    appended = None
+    problem = None
+    if stage == "coding":
+        chosen = next((value for value in candidates if value[0].id == assessment.get("coding_problem_id")), None)
+        if chosen is None:
+            raise RoleInterviewError("AI 选择的手撕题不在本地已验证候选中；请重试")
+        problem, skills = chosen
+        appended = _coding_question(
+            repo_root, problem, question_id=next_id, round_index=3,
+            round_weight=STAGE_WEIGHTS["coding"], timebox_minutes=20, skills=skills,
+        )
+    elif stage != "finish":
+        role = role_catalog.resolve_role(session["role_id"])
+        skills = assessment.get("next_skill_ids")
+        if not isinstance(skills, list) or not 1 <= len(skills) <= 3 or any(s not in role.skill_weights for s in skills):
+            raise RoleInterviewError("AI 下一问的技能不属于目标岗位；请重试")
+        appended = _generated_non_coding_question(
+            {"kind": "oral", "title": STAGE_LABELS[stage], "prompt": assessment["follow_up"]},
+            question_id=next_id, round_index=1 if stage == "experience" else 2,
+            round_type="oral", round_weight=STAGE_WEIGHTS[stage], timebox_minutes=5,
+            skills=tuple(skills), plan_context_sha256=context_sha256,
+        )
+    if appended is not None:
+        appended["stage"] = stage
+    # Reuse all existing answer/rubric/identity checks. Defer persistence so a
+    # malformed next question cannot leave an assessed, unresumable last turn.
+    session = record_role_assessment(
+        repo_root, profile_id, interview_id, question_id, assessment["scores"],
+        evidence=assessment["evidence"], source="ai", confidence=assessment["confidence"],
+        fatal_issues=assessment["fatal_issues"], now=now, _persist=False,
+    )
+    if appended is not None:
+        if problem is not None:
+            target = _session_root(repo_root, profile_id, interview_id) / "coding" / next_id
+            target.mkdir(exist_ok=True)
+            submission = target / "submission.py"
+            if not submission.exists():
+                _atomic_write(submission, (problem.problem_dir / "starter.py").read_bytes())
+        session["questions"].append(appended)
+        session["timeline"].append({"event": "question_generated", "question_id": next_id, "timestamp": _timestamp(now)})
     _save(repo_root, profile_id, session)
     return session
 
@@ -1797,6 +1872,7 @@ def record_role_assessment(
     fatal_issues: Iterable[str] = (),
     now: datetime | None = None,
     followup_ids: Iterable[str] = (),
+    _persist: bool = True,
 ) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
     if session["status"] != "active":
@@ -1891,7 +1967,8 @@ def record_role_assessment(
     if answer_sha256:
         assessment["answer_sha256"] = answer_sha256
     session["assessments"][question_id] = assessment
-    _save(repo_root, profile_id, session)
+    if _persist:
+        _save(repo_root, profile_id, session)
     return session
 
 
@@ -1937,6 +2014,9 @@ def finish_role_interview(
     skill_values: dict[str, list[tuple[float, str]]] = {}
     weighted_total = 0.0
     completed_weight = 0.0
+    dynamic = session.get("delivery_mode") == "dynamic_ai"
+    stage_counts = {stage: sum(question_stage(q) == stage for q in session["questions"])
+                    for stage in STAGE_WEIGHTS} if dynamic else {}
     for question in session["questions"]:
         question_id = question["question_id"]
         assessment = session["assessments"].get(question_id)
@@ -1962,7 +2042,9 @@ def finish_role_interview(
             )
         score = _question_score(question, assessment)
         question_scores[question_id] = score
-        weight = float(question["round_weight"])
+        stage = question_stage(question)
+        weight = (STAGE_WEIGHTS[stage] / max(1, stage_counts[stage])
+                  if dynamic else float(question["round_weight"]))
         weighted_total += score * weight
         completed_weight += weight
         for skill_id in question["skills"]:
@@ -1970,7 +2052,8 @@ def finish_role_interview(
     evidence_complete = not paused and not unanswered and not unscored
     completed = (
         evidence_complete
-        and session.get("delivery_mode", "full_blueprint") == "full_blueprint"
+        and (flow_coverage(session)["complete"] if dynamic else
+             session.get("delivery_mode", "full_blueprint") == "full_blueprint")
     )
     # Missing rounds contribute zero; partial evidence is never re-normalized.
     overall = round(weighted_total, 1)

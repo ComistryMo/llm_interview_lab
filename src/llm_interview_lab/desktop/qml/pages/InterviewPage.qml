@@ -67,6 +67,13 @@ Item {
     }
 
     function finishDialogMessage() {
+        if (root.dynamicInterview) {
+            var coverage = app.interview.flow_coverage || ({})
+            return coverage.complete === true
+                ? "自我介绍、经历追问、岗位原理和手撕均已有实际证据。确认后结束并生成本场报告。"
+                : "尚未完成：" + (coverage.missing_labels || []).join("、")
+                  + "。确认后将保留已有证据并标记未完成，不会生成完整面试结论。"
+        }
         var completed = Number(app.interview.completed_questions || 0)
         var total = Number(app.interview.total_questions || 0)
         var unanswered = Number(app.interview.unanswered_questions || 0)
@@ -132,11 +139,26 @@ Item {
             role.currentValue,
             seniority.currentValue,
             difficulty.currentValue,
-            useMaterial.checked ? material.currentValue : "",
+            root.selectedMaterials(),
             useMaterial.checked ? consent.checked : false
         )
         if ((root.planContext.parts || []).length > 0)
             planContextDialog.open()
+    }
+
+    function selectedMaterials() {
+        if (!useMaterial.checked) return ""
+        var ids = material.currentValue ? [material.currentValue] : []
+        if (useJD.checked && jd.currentValue && ids.indexOf(jd.currentValue) < 0)
+            ids.push(jd.currentValue)
+        return JSON.stringify(ids)
+    }
+
+    function materialsReady() {
+        if (!useMaterial.checked) return true
+        return consent.checked && material.currentIndex >= 0
+            && app.materials[material.currentIndex].ai_access
+            && (!useJD.checked || (jd.currentIndex >= 0 && app.materials[jd.currentIndex].ai_access))
     }
 
     // Keep long material titles and hashes out of the layout's primary row.
@@ -368,8 +390,8 @@ Item {
     }
 
     function resultAssessmentSources(result) {
-        var evidence = result && Array.isArray(result.assessment_evidence)
-                       ? result.assessment_evidence : []
+        // Python QVariantList is a QML sequence, not necessarily a JS Array.
+        var evidence = result ? (result.assessment_evidence || []) : []
         var sources = []
         for (var i = 0; i < evidence.length; ++i) {
             var source = evidence[i].source || ""
@@ -737,6 +759,7 @@ Item {
                     }
                     CheckBox {
                         id: useMaterial
+                        objectName: "interviewUseMaterials"
                         width: parent.width
                         visible: leftPanel.setupVisible
                         enabled: aiMode.currentValue !== "disabled" && app.materials.length > 0
@@ -753,11 +776,39 @@ Item {
                     LabComboBox {
                         theme: root.theme
                         id: material
+                        objectName: "interviewPrimaryMaterial"
                         width: parent.width
                         visible: leftPanel.setupVisible && useMaterial.checked
                         model: app.materials
                         textRole: "title"
                         valueRole: "id"
+                    }
+                    CheckBox {
+                        id: useJD
+                        objectName: "interviewUseAdditionalMaterial"
+                        width: parent.width
+                        visible: leftPanel.setupVisible && useMaterial.checked
+                        text: "再选择一份 JD / 补充经历材料"
+                    }
+                    LabComboBox {
+                        id: jd
+                        objectName: "interviewAdditionalMaterial"
+                        theme: root.theme
+                        width: parent.width
+                        visible: leftPanel.setupVisible && useMaterial.checked && useJD.checked
+                        model: app.materials
+                        textRole: "title"
+                        valueRole: "id"
+                    }
+                    Text {
+                        width: parent.width
+                        visible: leftPanel.setupVisible && useMaterial.checked && useJD.checked && jd.currentIndex >= 0
+                        text: jd.currentIndex >= 0 ? "补充材料：" + app.materials[jd.currentIndex].id
+                              + " · SHA " + app.materials[jd.currentIndex].sha256.slice(0, 12)
+                              + (app.materials[jd.currentIndex].ai_access ? "" : "\n请先在求职材料页允许此材料供 AI 使用。") : ""
+                        color: root.palette.muted
+                        wrapMode: Text.WrapAnywhere
+                        font.pixelSize: 12
                     }
                     Text {
                         width: parent.width
@@ -792,6 +843,7 @@ Item {
                     }
                     CheckBox {
                         id: consent
+                        objectName: "interviewMaterialConsent"
                         width: parent.width
                         visible: leftPanel.setupVisible && useMaterial.checked
                         text: "允许本场面试使用所选材料"
@@ -930,10 +982,7 @@ Item {
                                   && planConnection.currentIndex >= 0
                                   && root.providerIsReady(planConnection.currentValue))
                                   || aiMode.currentValue === "codex")
-                             && (!useMaterial.checked
-                                 || (material.currentIndex >= 0
-                                     && app.materials[material.currentIndex].ai_access
-                                     && consent.checked))
+                             && root.materialsReady()
                     // Confirm only the explicit first-turn context. Future
                     // questions are generated after the current answer.
                     onClicked: root.openPersonalizedPlanContext()
@@ -1339,6 +1388,7 @@ Item {
                         Text { width: parent.width; text: "本场评估"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
                         Text {
                             width: parent.width
+                            objectName: "interviewResultSummary"
                             text: root.resultScoreLabel(root.interviewResult) + "：" + root.resultScoreText(root.interviewResult)
                                   + "\n完成状态：" + root.statusText(root.interviewResult.completion_status)
                             color: root.palette.text
@@ -1494,9 +1544,10 @@ Item {
                     ColumnLayout {
                         visible: !!activeQuestion && activeQuestion.kind === "coding"
                         width: parent.width; spacing: 10
-                        Text { text: "本场冻结的代码答案"; color: root.palette.text; font.bold: true }
+                        Text { text: "本场手撕代码"; color: root.palette.text; font.bold: true }
                         LabTextArea {
                             id: codingEditor
+                            objectName: "interviewCodingEditor"
                             theme: root.theme
                             Layout.fillWidth: true; Layout.preferredHeight: root.compactInterviewLayout ? 210 : 260
                             text: app.interview.coding_text || ""
@@ -1529,6 +1580,7 @@ Item {
                             }
                             Button {
                                 text: "运行 Grader"
+                                objectName: "runInterviewGrader"
                                 highlighted: true
                                 enabled: root.interviewCanEdit && !app.busy
                                 onClicked: {
@@ -1707,7 +1759,9 @@ Item {
                     Layout.fillWidth: true
                     Layout.minimumHeight: 40
                     Text {
-                        text: activeQuestion ? "一次只完成一个主问题" : ""
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                        text: root.dynamicInterview ? (app.interview.stage_label || "本场复盘") : activeQuestion ? "一次只完成一个主问题" : ""
                         color: root.palette.muted
                         font.pixelSize: 12
                     }
@@ -1970,7 +2024,7 @@ Item {
                 seniority.currentValue,
                 difficulty.currentValue,
                 aiMode.currentValue === "codex" ? "codex" : planConnection.currentValue,
-                useMaterial.checked ? material.currentValue : "",
+                root.selectedMaterials(),
                 useMaterial.checked ? consent.checked : false,
                 root.planContext.context_sha256 || ""
             )

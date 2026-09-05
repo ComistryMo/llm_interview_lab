@@ -29,7 +29,7 @@ MIGRATION_MARKER = ".llm-lab-desktop-migration.json"
 # Keep a small explicit revision in the standalone marker so an existing app
 # data directory receives that public-asset update without ever touching the
 # private ``workspace/profiles`` tree.
-PUBLIC_ASSET_REVISION = "role-interview-source-kind-v2"
+PUBLIC_ASSET_REVISION = "role-interview-dynamic-stages-v3"
 
 # Error messages can contain paths that are not one of the well-known roots
 # (for example a pytest temporary directory).  Keep bootstrap diagnostics

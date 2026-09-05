@@ -203,6 +203,7 @@
       "additionalProperties": false,
       "required": ["question_id", "round_index", "kind", "title", "timebox_minutes", "round_weight", "skills", "source", "prompt", "rubric"],
       "properties": {
+        "stage": {"enum": ["introduction", "experience", "theory", "coding"]},
         "question_id": {"type": "string", "pattern": "^q-[0-9]{3}$"},
         "round_index": {"type": "integer", "minimum": 0},
         "kind": {"enum": ["coding", "debugging", "product_case", "system_design", "evaluation_case", "project_deep_dive", "behavioral", "oral"]},

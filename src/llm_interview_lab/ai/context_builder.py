@@ -9,15 +9,18 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .base import ContextPart, ContextPreview
-from ..catalog import Catalog
+from ..catalog import Catalog, load_catalog
+from ..interview_flow import STAGES, dialogue_instruction, next_stages, question_stage
 from ..events import read_events, reduce_events
 from ..materials import MaterialError, get_material, resolve_material_text_path
 from ..role_interviews import (
     current_role_question,
     load_role_interview,
     role_interview_state,
+    role_interview_answer_text,
+    dynamic_coding_candidates,
 )
-from ..roles import RoleCatalog, RoleCatalogError
+from ..roles import RoleCatalog, RoleCatalogError, load_role_catalog
 from ..submissions import inspect_submission
 from ..workspace import event_schema_path, load_profile, profile_paths
 
@@ -383,6 +386,8 @@ def build_role_interview_context_preview(
     candidate_answer: str | None = None,
     include_materials: bool = True,
     now: datetime | None = None,
+    catalog: Catalog | None = None,
+    role_catalog: RoleCatalog | None = None,
 ) -> ContextPreview:
     """Build one current-question interview context from frozen, consented facts."""
 
@@ -424,6 +429,45 @@ def build_role_interview_context_preview(
         _part("policy", "Interviewer policy", policy),
         _part("question", "Frozen current question and rubric", contract),
     ]
+    if session.get("delivery_mode") == "dynamic_ai":
+        catalog = catalog or load_catalog(repo_root)
+        role_catalog = role_catalog or load_role_catalog(repo_root, curriculum=catalog)
+        base = build_dynamic_role_interview_context_preview(
+            repo_root, profile_id, role_catalog, role_id=session["role_id"],
+            seniority=session["seniority"], difficulty=session["difficulty"],
+        )
+        # Include role prose, difficulty and background on EVERY request.
+        # Ordinary APIs are stateless; a Codex thread is not the truth source.
+        frozen_contract = json.loads(next(p.content for p in base.parts if p.id == "interview_contract"))
+        frozen_contract.pop("current_turn", None)
+        frozen_contract.pop("output_schema", None)
+        candidates = dynamic_coding_candidates(catalog, role_catalog, session)
+        frozen_contract.update({
+            "current_stage": question_stage(question),
+            "stage_sequence": list(STAGES),
+            "allowed_next_stages": next_stages(session, coding_available=bool(candidates)),
+            "coding_candidates": [{"id": p.id, "title": p.title, "skills": list(skills)} for p, skills in candidates],
+            "coding_unavailable": not bool(candidates),
+            "stage_guidance": "经历与八股各至少一个主问题及一次针对回答的追问，最多各四问；覆盖后再进入本地手撕。不要因个人材料未提到论文或实习就捏造经历。",
+        })
+        parts[0] = _part("policy", "动态面试与评分规则", dialogue_instruction(
+            set(question["rubric"]["dimensions"]), set(question["rubric"]["fatal_issues"]),
+        ) + paused_note)
+        parts.extend([
+            _part("interview_contract", "岗位技能、难度、流程与可用手撕范围", json.dumps(frozen_contract, ensure_ascii=False)),
+            next(p for p in base.parts if p.id == "profile_context"),
+        ])
+        history = []
+        for previous in session["questions"]:
+            if previous["question_id"] == question["question_id"]:
+                break
+            item = {"question_id": previous["question_id"], "stage": question_stage(previous), "question": previous["prompt"]}
+            if previous["question_id"] in session["answers"]:
+                item["answer"] = role_interview_answer_text(repo_root, profile_id, interview_id, previous["question_id"])
+            elif previous["kind"] == "coding":
+                item["coding_evidence"] = session["coding_evidence"].get(previous["question_id"])
+            history.append(item)
+        parts.append(_part("dialogue_history", "本场已发生的问答（不包含未来问题）", json.dumps(history, ensure_ascii=False), sensitive=True))
     for reference in session["material_refs"] if include_materials else ():
         if reference["allowed_use"] != "role_interview":
             raise ContextBuilderError("interview material has an invalid consent purpose")

@@ -52,8 +52,9 @@ def public_repo(tmp_path_factory):
 
 @pytest.fixture
 def controller(qapp, public_repo, tmp_path, monkeypatch):
-    QSettings.setDefaultFormat(QSettings.IniFormat)
-    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
+    # The explicit organization/application constructor uses NativeFormat on
+    # Windows even after setDefaultFormat. Redirect that constructor as well.
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.QSettings", lambda *args: QSettings(str(tmp_path / "settings.ini"), QSettings.IniFormat))
     monkeypatch.setattr(AppController, "refreshCodexAvailability", lambda self: None)
     profile = "input-" + uuid4().hex[:10]
     controller = AppController(public_repo, profile_id=profile, log_root=tmp_path / "logs")
@@ -138,9 +139,76 @@ def test_long_toast_grows_without_clipping(scene, size):
     _capture(window, f"long-error-{size[0]}")
 
 
+def test_settings_saves_model_and_reasoning_from_the_same_edit(scene):
+    window, controller = scene
+    controller.setCodexModel("")
+    controller.setCodexReasoningEffort("")
+    controller.navigate("settings")
+    QTest.qWait(100)
+    _find(window, "codexModelField").setProperty("text", "selected-model")
+    _find(window, "codexReasoningEffort").setProperty("currentIndex", 1)
+    button = _find(window, "saveCodexModelPreferences")
+    ancestor = button.parentItem()
+    while ancestor:
+        if ancestor.property("contentY") is not None:
+            ancestor.setProperty("contentY", button.mapToItem(ancestor, QPointF()).y() - 50)
+        ancestor = ancestor.parentItem()
+    QTest.qWait(50)
+    _click(window, button)
+    assert controller.codexModel == "selected-model"
+    assert controller.codexReasoningEffort == "low"
+    controller.navigate("home")
+    controller.navigate("settings")
+    QTest.qWait(50)
+    assert _find(window, "codexReasoningEffort").property("currentValue") == "low"
+
+
+def test_setup_requires_consent_for_resume_and_jd(scene, tmp_path):
+    window, controller = scene
+    for name, kind in (("resume", "resume"), ("jd", "job_description")):
+        source = tmp_path / (name + ".txt")
+        source.write_text("合成材料：后训练实习岗位，偏好数据与实验评估。", encoding="utf-8")
+        assert controller.addMaterial(str(source), kind, name, True)
+    controller.finishInterview()
+    QTest.qWait(80)
+    _click(window, _find(window, "configureAnotherInterview"))
+    _find(window, "interviewAiModeSelector").setProperty("currentIndex", 2)
+    _find(window, "interviewUseMaterials").setProperty("checked", True)
+    _find(window, "interviewPrimaryMaterial").setProperty("currentIndex", 0)
+    _find(window, "interviewUseAdditionalMaterial").setProperty("checked", True)
+    _find(window, "interviewAdditionalMaterial").setProperty("currentIndex", 1)
+    QTest.qWait(80)
+    button = _find(window, "startConfiguredInterview")
+    assert not button.isEnabled()
+    _find(window, "interviewMaterialConsent").setProperty("checked", True)
+    assert button.isEnabled()
+    _click(window, button)
+    QTest.qWait(100)
+    _click(window, _find(window, "confirmInterviewSetupContext"))
+    QTest.qWait(100)
+    session = controller.service.interview_session(controller.profileId, controller.interview["interview_id"])
+    assert session["status"] == "active" and len(session["questions"]) == 1
+    assert {ref["kind"] for ref in session["material_refs"]} == {"resume", "job_description"}
+
+
+def test_report_recognizes_qvariant_evidence_as_scored(scene):
+    window, controller = scene
+    controller.lockInterviewAnswer("合成回答：明确说明了独立留出评估与数据去重过程。")
+    question = controller.interview["question"]
+    controller.service.score_interview(
+        controller.profileId, controller.interview["interview_id"], question["question_id"],
+        {name: 3 for name in question["rubric"]["dimensions"]},
+        evidence="回答描述了独立留出评估和数据去重过程，缺少具体量化结果。", source="ai", confidence="medium",
+    )
+    controller.finishInterview()
+    QTest.qWait(80)
+    summary = _find(window, "interviewResultSummary").property("text")
+    assert "部分证据分数" in summary and "尚未评分" not in summary
+    assert format(controller.interview["result"]["overall_score"], "g") in summary
+
+
 def test_onboarding_does_not_preview_a_nonexistent_practice_task(qapp, public_repo, tmp_path, monkeypatch):
-    QSettings.setDefaultFormat(QSettings.IniFormat)
-    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "fresh-settings"))
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.QSettings", lambda *args: QSettings(str(tmp_path / "fresh-settings.ini"), QSettings.IniFormat))
     monkeypatch.setattr(AppController, "refreshCodexAvailability", lambda self: None)
     profile = "fresh-" + uuid4().hex[:10]
     controller = AppController(public_repo, profile_id=profile)
@@ -179,6 +247,9 @@ def test_codex_request_can_stop_without_losing_the_locked_answer(scene, action):
         closed = False
         interrupts = []
 
+        async def start_thread(self, **kwargs):
+            return {"thread": {"id": "thread-stop-test"}}
+
         async def start_turn(self, *args, **kwargs):
             return {"turn": {"id": "turn-stop-test"}}
 
@@ -198,6 +269,7 @@ def test_codex_request_can_stop_without_losing_the_locked_answer(scene, action):
     controller._codex_thread_mode = "interviewer"
     controller._ensure_codex_loop()
     controller.aiStateChanged.emit()
+    controller.interviewContextPreview(saved_answer, False)
     assert controller.sendCodexInterviewAnswer(saved_answer, False)
     for _ in range(50):
         QTest.qWait(20)
@@ -300,6 +372,9 @@ def test_ui_lock_preview_codex_response_enters_next_question(scene, size):
     class FakeCodex:
         calls = []
 
+        async def start_thread(self, **kwargs):
+            return {"thread": {"id": "thread-input-fresh"}}
+
         async def start_turn(self, *args, **kwargs):
             self.calls.append((args, kwargs))
             return {"turn": {"id": "turn-input-test"}}
@@ -354,6 +429,8 @@ def test_ui_lock_preview_codex_response_enters_next_question(scene, size):
         "evidence": "候选人说明了先测量失败率，并使用独立验证集核对改动效果。",
         "confidence": "medium", "fatal_issues": [],
         "follow_up": "你怎样选择验证集，并排除训练数据泄漏？",
+        "next_stage": "experience", "coding_problem_id": "",
+        "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))],
     }
     for method, extra in (
         ("turn/started", {}),
@@ -378,11 +455,14 @@ def test_dynamic_followups_advance_once_without_duplicate_scoring(controller, mo
     for index in (1, 2):
         question_id = f"q-{index:03d}"
         controller.lockInterviewAnswer("I measured the failure rate and tested a held-out baseline.")
+        controller.interviewContextPreview(controller.interview["answer_text"], False)
         result = {
             "scores": {name: 3 for name in controller.interview["question"]["rubric"]["dimensions"]},
             "evidence": "The answer describes measuring failure rates and testing a held-out baseline.",
             "confidence": "medium", "fatal_issues": [],
             "follow_up": f"第 {index + 1} 问：你怎样验证这次改动的效果？",
+            "next_stage": "experience", "coding_problem_id": "",
+            "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))],
         }
         if mode == "codex":
             operation = f"test-followup-{index}"
@@ -390,6 +470,7 @@ def test_dynamic_followups_advance_once_without_duplicate_scoring(controller, mo
             controller._codex_interview_identity = identity
             controller._codex_interview_operation_id = operation
             controller._codex_interview_buffer = json.dumps(result)
+            controller._codex_interview_include_materials = False
             controller._finish_codex_interview_assessment(identity)
         else:
             monkeypatch.setattr(controller, "_background", lambda operation, complete, failed=None: complete(result))

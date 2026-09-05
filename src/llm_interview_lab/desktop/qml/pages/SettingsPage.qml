@@ -304,8 +304,12 @@ Flickable {
                     objectName: "saveCodexModelPreferences"
                     text: "保存模型设置"
                     onClicked: {
-                        app.setCodexModel(codexModelField.text)
-                        app.setCodexReasoningEffort(codexEffort.currentValue)
+                        // Saving either preference refreshes the bound form.
+                        // Capture both edits before the first refresh.
+                        const model = codexModelField.text
+                        const effort = codexEffort.currentValue
+                        app.setCodexModel(model)
+                        app.setCodexReasoningEffort(effort)
                     }
                 }
                 Text {
