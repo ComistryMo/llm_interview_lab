@@ -321,8 +321,9 @@ Item {
                                 Text { text: app.submissionDirty ? "本地草稿 · 尚未保存" : "本地草稿 · 已保存"; color: app.submissionDirty ? root.palette.warning : root.palette.muted; font.pixelSize: 11 }
                             }
                         }
-                        TextArea {
+                        LabTextArea {
                             id: editor
+                            theme: root.theme
                             Layout.fillWidth: true; Layout.fillHeight: true
                             text: app.submissionText
                             enabled: root.hasTask
@@ -597,9 +598,9 @@ Item {
         ColumnLayout {
             width: parent.width; spacing: 10
                 Text { text: "这里记录你的自我复盘（source=self），用于准备后续正式审查；不会代替导师或 AI 评审，也不会直接授予“已掌握”。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
-                TextArea { id: explanation; Layout.fillWidth: true; Layout.preferredHeight: 80; placeholderText: "解释实现思路与不变式"; wrapMode: Text.Wrap }
+                LabTextArea { id: explanation; theme: root.theme; Layout.fillWidth: true; Layout.preferredHeight: 80; placeholderText: "解释实现思路与不变式" }
                 LabTextField { id: complexity; theme: root.theme; Layout.fillWidth: true; placeholderText: "时间与空间复杂度" }
-                TextArea { id: boundaries; Layout.fillWidth: true; Layout.preferredHeight: 70; placeholderText: "边界情况、异常和输入不变性"; wrapMode: Text.Wrap }
+                LabTextArea { id: boundaries; theme: root.theme; Layout.fillWidth: true; Layout.preferredHeight: 70; placeholderText: "边界情况、异常和输入不变性" }
             RowLayout {
                     CheckBox { id: contractPassed; text: "我已完成契约自检" }
                     CheckBox { id: oralPassed; text: "我已完成口述自答" }

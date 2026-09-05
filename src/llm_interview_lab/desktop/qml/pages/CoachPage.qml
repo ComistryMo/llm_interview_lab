@@ -608,8 +608,9 @@ Item {
                     onCurrentTextChanged: root.refreshPreview()
                 }
 
-                    TextArea {
+                    LabTextArea {
                     id: prompt
+                    theme: root.theme
                     objectName: "coachPrompt"
                     Layout.fillWidth: true
                     Layout.preferredHeight: root.compactLayout ? 84 : 96
@@ -641,7 +642,7 @@ Item {
                         anchors.leftMargin: 12
                         anchors.rightMargin: 12
                         anchors.topMargin: 16
-                        visible: prompt.text.length === 0
+                        visible: prompt.text.length === 0 && !prompt.activeFocus && !prompt.inputMethodComposing
                         text: app.coachStreaming ? "正在生成回答……" : "输入问题；Enter 发送，Shift+Enter 换行"
                         color: root.palette.muted
                         font: prompt.font

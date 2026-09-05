@@ -526,7 +526,7 @@ ApplicationWindow {
                     layoutMode: window.layoutMode
                 }
                 ExercisePage { app: backend; palette: window.colors; theme: appTheme }
-                InterviewPage { app: backend; palette: window.colors }
+                InterviewPage { app: backend; palette: window.colors; theme: appTheme }
                 CoachPage { app: backend; palette: window.colors; theme: appTheme }
                 ProgressPage { app: backend; palette: window.colors }
                 ConnectionsPage { app: backend; palette: window.colors; theme: appTheme }

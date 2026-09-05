@@ -3438,6 +3438,7 @@ class AppController(QObject):
                     self._interview["ai_assessment_state"] = "complete"
                     self._interview["ai_error"] = ""
                     self._load_interview(interview_id)
+                    return
                 elif result["follow_up"]:
                     self._pending_ai_assessment = {
                         **result,

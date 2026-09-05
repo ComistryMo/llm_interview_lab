@@ -7,6 +7,9 @@ Item {
     id: root
     required property var app
     required property var palette
+    property var theme: null
+    readonly property bool dynamicInterview: app.interview.delivery_mode === "dynamic_ai"
+    property bool showVoiceOptions: false
     property var activeQuestion: app.interview.question || null
     property var rubricScores: ({})
     property var aiPreview: ({"parts": [], "estimated_tokens": 0})
@@ -50,11 +53,7 @@ Item {
     property var configuration: ({"available": true, "user_message": "", "missing_rounds": [], "missing_environment": []})
     property string codeFontFamily: Qt.platform.os === "windows" ? "Cascadia Mono"
                                     : Qt.platform.os === "osx" ? "Menlo" : "monospace"
-    onActiveQuestionKeyChanged: {
-        rubricScores = ({})
-        answerDraft = ""
-        Qt.callLater(root.syncQuestionEditors)
-    }
+    onActiveQuestionKeyChanged: Qt.callLater(root.resetQuestionEditors)
     onAnswerLockedChanged: Qt.callLater(root.syncQuestionEditors)
     onVisibleChanged: if (visible && leftPanel.setupVisible) Qt.callLater(root.initializeSetup)
 
@@ -91,6 +90,15 @@ Item {
             codingEditor.text = app.interview.coding_text || ""
         root.codingEditorDirty = false
         root.syncingQuestionEditors = false
+    }
+
+    function resetQuestionEditors() {
+        root.rubricScores = ({})
+        root.answerDraft = ""
+        root.pendingLockAnswer = ""
+        evidence.text = ""
+        followupAnswer.text = ""
+        root.syncQuestionEditors()
     }
 
     function providerIsReady(itemOrId) {
@@ -138,6 +146,10 @@ Item {
         // metadata on their own bounded lines below it.
         if (id === "policy")
             return "面试流程与 AI 使用规则"
+        if (id === "question")
+            return "本轮问题、岗位技能与评分要求"
+        if (id === "candidate_answer")
+            return "你已提交并锁定的回答"
         if (id === "interview_contract" || id === "blueprint")
             return "岗位技能与面试流程"
         if (id === "profile_context")
@@ -901,10 +913,14 @@ Item {
                                 + "\n选题档位  " + root.difficultyText(app.interview.difficulty)
                                 + (app.interview.delivery_mode === "non_coding_fallback"
                                    ? "\n范围  非代码专项（部分证据）" : "")
-                                + "\n进度  " + (app.interview.completed_questions || 0)
-                                + " / " + (app.interview.total_questions || 0)
+                                + (root.dynamicInterview
+                                   ? "\n已展示 " + (app.interview.total_questions || 0) + " 问 · 后续逐问生成"
+                                   : "\n进度  " + (app.interview.completed_questions || 0)
+                                     + " / " + (app.interview.total_questions || 0))
                               : "暂无进行中的面试"
                         color: root.palette.muted
+                        font.family: root.theme ? root.theme.uiFontFamily : ""
+                        font.pixelSize: root.theme ? root.theme.fontCaption : 12
                         wrapMode: Text.Wrap
                         lineHeight: 1.5
                     }
@@ -946,9 +962,7 @@ Item {
             Layout.fillHeight: true
             clip: true
             cardColor: root.palette.surface
-            prominent: !!activeQuestion
-            accentColor: activeQuestion ? root.palette.accent : "transparent"
-            borderColor: activeQuestion ? root.palette.accent : root.palette.border
+            borderColor: root.palette.border
             // The question viewport and the persistent finish action need real
             // remaining-space allocation.  LabCard intentionally uses a plain
             // Column for simple cards, so this interview panel owns a local
@@ -967,6 +981,7 @@ Item {
                     Text { Layout.fillWidth: true; text: activeQuestion ? activeQuestion.title : "按岗位蓝图开始一场面试"; color: root.palette.text; font.pixelSize: 22; font.bold: true; wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight }
                 }
                 StatusPill {
+                    theme: root.theme
                     // Keep the existing test/accessibility hook while moving
                     // the phase marker next to the question title.
                     objectName: "interviewPhasePill"
@@ -977,15 +992,18 @@ Item {
                     tone: root.answerLocked ? root.palette.accent : root.palette.muted
                 }
                 StatusPill {
+                    objectName: "interviewTimerPill"
+                    theme: root.theme
                     text: app.interview.status === "active"
                           ? root.timerText(app.interview.remaining_seconds)
                           : root.statusText(app.interview.status)
                     tone: app.interview.status === "active" ? root.palette.warning : root.palette.muted
                 }
-                Button {
+                LabButton {
+                    theme: root.theme
+                    variant: "ghost"
                     visible: app.interview.status === "active" || app.interview.status === "paused"
                     text: app.interview.status === "paused" ? "恢复计时" : "暂停"
-                    flat: true
                     enabled: !app.busy
                     onClicked: app.interview.status === "paused"
                                ? app.resumeInterview() : pauseInterviewDialog.open()
@@ -994,6 +1012,7 @@ Item {
                 Rectangle { Layout.fillWidth: true; height: 1; color: root.palette.border }
                 ScrollView {
                 id: questionScroll
+                objectName: "interviewQuestionScroll"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
@@ -1005,12 +1024,39 @@ Item {
                 Column {
                     width: questionScroll.availableWidth
                     spacing: root.compactInterviewLayout ? 12 : 16
-                    Text { width: parent.width; text: activeQuestion ? activeQuestion.prompt : "选择岗位、求职阶段与难度。AI 会先生成当前一问，之后根据你的回答逐步追问；客观代码证据与 Rubric 主观判断分开记录。"; color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
-                    TextArea { id: answer; objectName: "interviewAnswerEditor"; width: parent.width; height: root.compactInterviewLayout ? 140 : 180; visible: !!activeQuestion && activeQuestion.kind !== "coding"; text: root.answerLocked ? (app.interview.answer_text || "") : root.answerDraft; readOnly: root.answerLocked || !root.interviewCanEdit; onTextChanged: if (!root.answerLocked && !root.syncingQuestionEditors) root.answerDraft = text; placeholderText: root.answerLocked ? "回答已锁定" : !root.interviewCanEdit ? "面试已暂停或结束" : "输入你的回答……"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.answerLocked ? root.palette.accent : root.palette.border } }
+                    Text {
+                        width: parent.width
+                        text: activeQuestion ? activeQuestion.prompt : "选择岗位、求职阶段与难度，先完成自我介绍，再由 AI 根据回答逐步追问。"
+                        color: root.palette.text
+                        font.family: root.theme ? root.theme.uiFontFamily : ""
+                        font.pixelSize: root.theme ? root.theme.fontBody : 14
+                        wrapMode: Text.Wrap
+                        textFormat: Text.MarkdownText
+                        lineHeight: 1.4
+                    }
+                    LabTextArea {
+                        id: answer
+                        objectName: "interviewAnswerEditor"
+                        theme: root.theme
+                        width: parent.width
+                        height: root.compactInterviewLayout ? 140 : 180
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding"
+                        text: root.answerLocked ? (app.interview.answer_text || "") : root.answerDraft
+                        readOnly: root.answerLocked || !root.interviewCanEdit
+                        onTextChanged: if (!root.answerLocked && !root.syncingQuestionEditors) root.answerDraft = text
+                        placeholderText: root.answerLocked ? "回答已锁定" : !root.interviewCanEdit ? "面试已暂停或结束" : "输入你的回答……"
+                    }
+                    LabButton {
+                        theme: root.theme
+                        variant: "ghost"
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && !root.answerLocked
+                        text: root.showVoiceOptions ? "收起语音回答" : "语音回答（可选）"
+                        onClicked: root.showVoiceOptions = !root.showVoiceOptions
+                    }
                     LabCard {
                         objectName: "interviewVoiceCard"
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
-                                 && !root.answerLocked && root.interviewCanEdit
+                                 && !root.answerLocked && root.interviewCanEdit && root.showVoiceOptions
                         width: parent.width
                         cardColor: root.palette.surfaceAlt
                         borderColor: app.interviewVoice.state === "recording"
@@ -1134,36 +1180,39 @@ Item {
                         objectName: "interviewPhaseGuidance"
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                         width: parent.width
-                        height: root.compactInterviewLayout ? 48 : 42
+                        height: phaseActions.implicitHeight + 24
                         radius: 8
                         color: root.palette.surfaceAlt
                         border.color: root.answerLocked ? root.palette.accent : root.palette.border
-                        RowLayout {
+                        GridLayout {
+                            id: phaseActions
                             anchors.fill: parent
-                            anchors.leftMargin: 12
-                            anchors.rightMargin: 10
-                            spacing: 10
+                            anchors.margins: 12
+                            columns: width < 600 ? 1 : 2
+                            rowSpacing: 12
+                            columnSpacing: 16
                             Text {
-                                text: root.answerLocked ? "阶段 B · 评估" : "阶段 A · 回答"
-                                color: root.answerLocked ? root.palette.accent : root.palette.muted
-                                font.bold: true
-                                font.pixelSize: 12
-                            }
-                            Text {
+                                objectName: "interviewAnswerActionHint"
                                 text: root.answerLocked
-                                      ? "回答已锁定；先记录证据，再选择评分来源。"
-                                      : "完成回答后提交并锁定，评分维度才会显示。"
+                                      ? (root.dynamicInterview ? "回答已保存。请点击下方按钮，让 AI 根据本轮回答继续提问。" : "回答已锁定；先记录证据，再选择评分来源。")
+                                      : (root.dynamicInterview ? "完成回答后提交，再由 AI 根据你的回答继续提问。" : "完成回答后提交并锁定，评分维度才会显示。")
                                 color: root.palette.muted
+                                font.family: root.theme ? root.theme.uiFontFamily : ""
+                                font.pixelSize: root.theme ? root.theme.fontCaption : 12
                                 wrapMode: Text.Wrap
                                 Layout.fillWidth: true
+                                Layout.minimumWidth: 0
                             }
-                                Button {
-                                    objectName: "lockInterviewAnswer"
-                                    visible: !root.answerLocked
-                                    text: "提交并锁定回答"
-                                    highlighted: true
-                                    enabled: root.interviewCanEdit && answer.text.trim().length > 0 && !app.busy
-                                    Layout.preferredHeight: 36
+                            LabButton {
+                                objectName: "lockInterviewAnswer"
+                                theme: root.theme
+                                variant: "primary"
+                                topInset: 0
+                                bottomInset: 0
+                                visible: !root.answerLocked
+                                text: "提交并锁定回答"
+                                enabled: root.interviewCanEdit && answer.text.trim().length > 0 && !app.busy
+                                Layout.alignment: Qt.AlignRight
                                 onClicked: {
                                     root.pendingLockAnswer = answer.text
                                     lockAnswerDialog.open()
@@ -1179,7 +1228,7 @@ Item {
                         font.pixelSize: 11
                     }
                     Column {
-                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted && !root.dynamicInterview
                         width: parent.width
                         spacing: 6
                         Text { text: "候选人自评 Rubric（每个维度 1–5 分）"; color: root.palette.muted; font.bold: true }
@@ -1214,14 +1263,23 @@ Item {
                     }
                     Text {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
-                                 && root.answerLocked && !app.interview.answer_corrupted
+                                 && root.answerLocked && !app.interview.answer_corrupted && !root.dynamicInterview
                         text: "回答证据 · 必填"
                         color: root.palette.text
                         font.bold: true
                         font.pixelSize: 13
                         width: parent.width
                     }
-                    TextArea { id: evidence; width: parent.width; height: 86; visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted; enabled: root.interviewCanEdit; placeholderText: root.interviewCanEdit ? "请引用回答中的具体证据（必填）" : "面试已暂停或结束"; wrapMode: Text.Wrap; padding: 12; clip: true; background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.palette.border } }
+                    LabTextArea {
+                        id: evidence
+                        objectName: "interviewEvidenceEditor"
+                        theme: root.theme
+                        width: parent.width
+                        height: 86
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted && !root.dynamicInterview
+                        enabled: root.interviewCanEdit
+                        placeholderText: root.interviewCanEdit ? "请引用回答中的具体证据（必填）" : "面试已暂停或结束"
+                    }
                     ComboBox {
                         id: providerConnection
                         visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted && app.interview.ai_mode === "provider"
@@ -1233,10 +1291,13 @@ Item {
                     Text {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                                  && root.answerLocked && !app.interview.answer_corrupted
+                                 && app.interview.ai_mode === "provider"
                                  && providerConnection.currentIndex >= 0
                                  && !root.providerIsReady(providerConnection.currentValue)
                         width: parent.width
-                        text: "当前连接尚未测试通过。请到“AI 连接”测试后再请求评估，或改用人工评分。"
+                        text: root.dynamicInterview
+                              ? "当前连接尚未测试通过。请到“AI 连接”完成测试，再返回生成下一问。"
+                              : "当前连接尚未测试通过。请到“AI 连接”测试后再请求评估，或改用人工评分。"
                         color: root.palette.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
@@ -1247,7 +1308,9 @@ Item {
                                  && app.interview.ai_mode === "provider"
                                  && providerConnection.currentIndex < 0
                         width: parent.width
-                        text: "还没有可用的已测试连接；可以去 AI 连接页配置，或直接记录人工评分。"
+                        text: root.dynamicInterview
+                              ? "还没有可用的已测试连接。请到“AI 连接”保存并测试服务，再返回继续面试。"
+                              : "还没有可用的已测试连接；可以去 AI 连接页配置，或直接记录人工评分。"
                         color: root.palette.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
@@ -1267,18 +1330,23 @@ Item {
                         spacing: 8
                         Button {
                             objectName: "recordSelfAssessment"
+                            visible: !root.dynamicInterview
                             text: "记录自评结果"
                             enabled: root.interviewCanEdit && root.rubricComplete() && evidence.text.trim().length > 0
                                      && !app.busy && !app.interview.assessment_recorded
                             onClicked: app.answerInterviewDetailed(answer.text, JSON.stringify(root.rubricScores), evidence.text)
                         }
-                        Button {
+                        LabButton {
+                            theme: root.theme
+                            variant: "primary"
+                            topInset: 0
+                            bottomInset: 0
                             visible: app.interview.ai_mode === "provider"
                             enabled: root.interviewCanEdit && providerConnection.currentIndex >= 0
                                      && root.providerIsReady(providerConnection.currentValue)
                                      && !app.busy
                                      && !app.interview.assessment_recorded
-                            text: "预览 AI 评分上下文"
+                            text: root.dynamicInterview ? "生成下一问" : "预览 AI 评分上下文"
                             highlighted: true
                             onClicked: root.previewAI("provider", providerConnection.currentValue)
                         }
@@ -1295,13 +1363,17 @@ Item {
                                       && app.aiStatusVariant !== "connected"
                             enabled: root.interviewCanEdit && !app.busy && !app.interview.assessment_recorded
                             text: "连接 Codex 面试官"
-                            highlighted: true
                             onClicked: app.connectCodex("interviewer")
                         }
-                        Button {
+                        LabButton {
+                            theme: root.theme
+                            variant: "primary"
+                            topInset: 0
+                            bottomInset: 0
+                            objectName: "continueCodexInterview"
                             visible: app.interview.ai_mode === "codex" && app.aiStatusVariant === "connected"
                             enabled: root.interviewCanEdit && !app.busy && !app.interview.assessment_recorded
-                            text: "请求 Codex 评分"
+                            text: root.dynamicInterview ? "让 Codex 继续提问" : "请求 Codex 评分"
                             onClicked: root.previewAI("codex", "")
                         }
                     }
@@ -1310,7 +1382,7 @@ Item {
                                  && app.interview.ai_assessment_state !== "complete"
                         width: parent.width
                         text: app.interview.ai_assessment_state === "streaming"
-                              ? "Codex 正在按冻结 Rubric 生成评分证据……"
+                              ? (root.dynamicInterview ? "AI 正在阅读你的回答并生成下一问……" : "AI 正在根据回答生成评分证据……")
                               : app.interview.ai_error || "Codex 评分尚未完成；可以检查连接后重试。"
                         color: app.interview.ai_assessment_state === "streaming"
                                ? root.palette.accent : root.palette.warning
@@ -1323,7 +1395,7 @@ Item {
                         cardColor: root.palette.surfaceAlt
                         borderColor: root.palette.accent
                         Text { width: parent.width; text: "自适应追问\n" + (app.interview.pending_followup || ""); color: root.palette.text; wrapMode: Text.Wrap; font.bold: true }
-                        TextArea { id: followupAnswer; width: parent.width; height: 100; enabled: root.interviewCanEdit; placeholderText: root.interviewCanEdit ? "回答这一个追问" : "面试已暂停或结束"; wrapMode: Text.Wrap; padding: 12; clip: true }
+                        LabTextArea { id: followupAnswer; objectName: "interviewFollowupEditor"; theme: root.theme; width: parent.width; height: 100; enabled: root.interviewCanEdit; placeholderText: root.interviewCanEdit ? "回答这一个追问" : "面试已暂停或结束" }
                         Text {
                             width: parent.width
                             text: "追问回答会留档并关联到本题评估；当前评分仍采用主回答生成的 AI 评估，不会根据这次追问自动重算。"
@@ -1503,8 +1575,9 @@ Item {
                         visible: !!activeQuestion && activeQuestion.kind === "coding"
                         width: parent.width; spacing: 10
                         Text { text: "本场冻结的代码答案"; color: root.palette.text; font.bold: true }
-                        TextArea {
+                        LabTextArea {
                             id: codingEditor
+                            theme: root.theme
                             Layout.fillWidth: true; Layout.preferredHeight: root.compactInterviewLayout ? 210 : 260
                             text: app.interview.coding_text || ""
                             readOnly: !root.interviewCanEdit
@@ -1656,7 +1729,9 @@ Item {
 
     Dialog {
         id: contextDialog
+        objectName: "interviewAnswerContextDialog"
         modal: true
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.45) }
         anchors.centerIn: parent
         width: Math.min(560, Math.max(360, root.width - 48))
         height: Math.min(420, Math.max(300, root.height - 40))
@@ -1686,13 +1761,20 @@ Item {
         footer: DialogButtonBox {
             spacing: 8
             alignment: Qt.AlignRight
-            Button {
+            background: Rectangle { color: root.palette.surface }
+            LabButton {
+                theme: root.theme
+                variant: "ghost"
                 text: "取消"
                 onClicked: contextDialog.reject()
             }
-            Button {
+            LabButton {
+                objectName: "confirmInterviewAnswerContext"
+                theme: root.theme
+                variant: "primary"
+                topInset: 0
+                bottomInset: 0
                 text: "确认发送"
-                highlighted: true
                 onClicked: contextDialog.accept()
             }
         }
@@ -1725,7 +1807,7 @@ Item {
             }
             Text {
                 Layout.fillWidth: true
-                text: "材料名称和完整 SHA 不会作为正文展示；底部摘要用于核对本次上下文。"
+                text: "以下列出本次请求的内容范围；授权材料另显示短 SHA 以供核对。"
                 color: root.palette.muted
                 font.pixelSize: 11
                 wrapMode: Text.Wrap

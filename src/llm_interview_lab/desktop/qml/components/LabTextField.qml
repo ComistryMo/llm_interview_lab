@@ -1,7 +1,7 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Basic as Basic
 
-TextField {
+Basic.TextField {
     id: control
 
     property var theme: null
@@ -25,10 +25,8 @@ TextField {
     topPadding: 8
     bottomPadding: 8
     color: theme ? theme.text : "#2c2e29"
-    // Qt's Material style may keep its floating placeholder in the same
-    // content rectangle after input starts.  Draw the hint ourselves and
-    // make the native placeholder transparent so hint and user text can
-    // never overlap.
+    // Basic has no floating label or style-owned top inset. Keep the existing
+    // focus/IME-aware hint without Material moving the background underneath it.
     placeholderTextColor: "transparent"
     selectionColor: theme ? theme.accent : "#315ec7"
     selectedTextColor: theme ? theme.accentForeground : "#ffffff"
