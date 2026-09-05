@@ -335,12 +335,19 @@ def friendly_error(error: BaseException | str) -> str:
         return "Codex 已发现，但当前版本协议不兼容。请更新 Codex CLI 后重试；本地训练和 No-AI 不受影响。"
     if "codex" in message and ("could not be started" in message or "winerror 193" in message):
         return "Codex 已找到，但 Windows 无法直接启动该命令包装器。请在设置中重新测试；若仍失败，请选择 codex.exe 或更新 Codex CLI。"
+    if "codex" in message and "requires a newer version" in message:
+        return (
+            "当前模型要求更新版本的 Codex，连接成功不代表模型可用。"
+            "请到设置中选择新版 Codex，或换用当前 Codex 支持的模型，再重新连接。回答已保留。"
+        )
     if "codex" in message and ("sign" in message or "account" in message):
         return TEXT["error.codex_login"]
+    if "codex" in message and any(token in message for token in ("已取消", "已停止", "cancelled", "interrupted")):
+        return "已停止本次 Codex 请求，回答已保留。可以修改连接设置后重试，或稍后继续面试。"
     if "评分请求超时" in raw or "score request timed out" in message:
         return (
-            "Codex 评分请求超时，模型服务没有返回结果。请检查网络后重试，"
-            "或改用人工评分；本地训练仍可继续。"
+            "Codex 请求超时，未取得完整结果，回答已保留。请检查网络及 Codex 版本/模型设置，"
+            "重新连接后重试；本地训练仍可继续。"
         )
     if any(token in message for token in ("401", "429", "500", "provider", "connection", "timeout")):
         return TEXT["error.provider"]

@@ -18,6 +18,7 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtCore import QCoreApplication, QMetaObject, QObject, QPoint, QPointF, QSettings, Qt, QUrl
 from PySide6.QtGui import QFont, QGuiApplication, QInputMethodEvent
+from PySide6.QtWidgets import QApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickWindow
 from PySide6.QtTest import QTest
@@ -31,7 +32,7 @@ QML = REPO / "src/llm_interview_lab/desktop/qml/Main.qml"
 
 @pytest.fixture(scope="module")
 def qapp():
-    app = QGuiApplication.instance() or QGuiApplication(["interview-input-tests"])
+    app = QGuiApplication.instance() or QApplication(["interview-input-tests"])
     if os.name == "nt":
         app.setFont(QFont("Microsoft YaHei UI", 10))
     return app
@@ -118,6 +119,109 @@ def _capture(window, name):
         destination = Path(directory)
         destination.mkdir(parents=True, exist_ok=True)
         assert window.grabWindow().save(str(destination / f"{name}.png"))
+
+
+@pytest.mark.parametrize("size", [(900, 620), (1280, 800)])
+def test_long_toast_grows_without_clipping(scene, size):
+    window, controller = scene
+    window.resize(*size)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    controller.toast.emit("当前模型要求更新版本的 Codex，连接成功不代表模型可用。请到设置中选择新版 Codex，或换用当前 Codex 支持的模型，再重新连接。回答已保留。")
+    QTest.qWait(200)
+    popup = window.findChild(QObject, "globalToast")
+    content = popup.property("contentItem")
+    assert popup.property("visible")
+    assert content.property("contentHeight") <= content.height() + 1
+    assert popup.property("height") >= content.property("implicitHeight") + 28
+    _capture(window, f"long-error-{size[0]}")
+
+
+def test_onboarding_does_not_preview_a_nonexistent_practice_task(qapp, public_repo, tmp_path, monkeypatch):
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "fresh-settings"))
+    monkeypatch.setattr(AppController, "refreshCodexAvailability", lambda self: None)
+    profile = "fresh-" + uuid4().hex[:10]
+    controller = AppController(public_repo, profile_id=profile)
+    messages = []
+    controller.toast.connect(messages.append)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("backend", controller)
+    engine.load(QUrl.fromLocalFile(str(QML)))
+    window = engine.rootObjects()[0]
+    try:
+        window.show()
+        QTest.qWait(80)
+        assert controller.completeOnboarding(profile, "post_training_engineer", "intern", "disabled", "{}")
+        QTest.qWait(80)
+        assert controller.currentTask.get("problem_id")
+        assert not messages, messages
+        controller.navigate("coach")
+        QTest.qWait(80)
+        coach = window.findChild(QObject, "coachPage")
+        assert coach.property("preview")["parts"], "An opened task still has a usable Coach preview"
+    finally:
+        controller.shutdown()
+        window.close()
+        engine.deleteLater()
+        QCoreApplication.sendPostedEvents()
+
+
+@pytest.mark.parametrize("action", ["stop", "timeout"])
+def test_codex_request_can_stop_without_losing_the_locked_answer(scene, action):
+    window, controller = scene
+    controller.lockInterviewAnswer("合成回答：我先划分训练集与验证集，再检查相互之间的数据泄漏。")
+    interview_id = controller.interview["interview_id"]
+    saved_answer = controller.interview["answer_text"]
+
+    class Transport:
+        closed = False
+        interrupts = []
+
+        async def start_turn(self, *args, **kwargs):
+            return {"turn": {"id": "turn-stop-test"}}
+
+        async def interrupt(self, thread_id, turn_id):
+            self.interrupts.append((thread_id, turn_id))
+            controller._codexEventReceived.emit(CodexEvent("turn/completed", {
+                "turnId": turn_id, "turn": {"id": turn_id, "status": "interrupted"},
+            }))
+            return {}
+
+        async def close(self):
+            self.closed = True
+
+    backend = Transport()
+    controller._codex_backend = backend
+    controller._codex_thread_id = "thread-stop-test"
+    controller._codex_thread_mode = "interviewer"
+    controller._ensure_codex_loop()
+    controller.aiStateChanged.emit()
+    assert controller.sendCodexInterviewAnswer(saved_answer, False)
+    for _ in range(50):
+        QTest.qWait(20)
+        if controller._codex_interview_turn_id == "turn-stop-test":
+            break
+    operation = controller._codex_interview_operation_id
+    if action == "stop":
+        _click(window, _find(window, "stopCodexInterviewRequest"))
+    else:
+        controller._expire_codex_interview_turn("old-operation")
+        assert controller.busy and controller._codex_backend is backend
+        controller._expire_codex_interview_turn(operation)
+    for _ in range(50):
+        QTest.qWait(20)
+        if not controller.busy and (backend.interrupts if action == "stop" else backend.closed):
+            break
+    assert not controller.busy
+    assert controller.interview["question"]["question_id"] == "q-001"
+    assert controller.service.interview_answer_text(controller.profileId, interview_id, "q-001") == saved_answer
+    assert not controller.service.interview_session(controller.profileId, interview_id)["assessments"]
+    assert "回答已保留" in controller.interview["ai_error"]
+    assert _find(window, "globalAiStatus").property("text") == ("AI 已停止" if action == "stop" else "AI 请求失败")
+    if action == "stop":
+        assert backend.interrupts == [("thread-stop-test", "turn-stop-test")]
+    else:
+        assert backend.closed and controller._codex_backend is None
 
 
 def test_answer_hint_hides_on_focus_ime_and_committed_text(scene):

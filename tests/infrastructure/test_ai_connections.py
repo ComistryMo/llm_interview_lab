@@ -457,6 +457,17 @@ def test_codex_protocol_error_has_actionable_message() -> None:
     assert "更新 Codex CLI" in message
 
 
+def test_codex_model_version_rejection_has_actionable_message() -> None:
+    message = friendly_error(
+        'Codex 返回错误：{"detail":"The requested model requires a newer version of Codex. '
+        'Please upgrade to the latest app or CLI and try again."}'
+    )
+    assert "当前模型要求更新版本" in message
+    assert "设置" in message
+    assert "回答已保留" in message
+    assert "操作未完成" not in message
+
+
 def test_codex_request_send_failure_does_not_leave_pending_future(
     tmp_path: Path,
 ) -> None:

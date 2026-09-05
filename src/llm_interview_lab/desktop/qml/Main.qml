@@ -432,12 +432,20 @@ ApplicationWindow {
                     }
                     Item { Layout.fillWidth: true }
                     StatusPill {
+                        objectName: "globalAiStatus"
+                        readonly property string interviewRequestState: backend.currentPage === "interview"
+                            ? (backend.interview.ai_assessment_state || "") : ""
                         theme: appTheme
                         compact: window.layoutMode === "compact"
-                        text: backend.aiStatusVariant === "connected" ? "AI 已连接"
+                        text: interviewRequestState === "error" ? "AI 请求失败"
+                              : interviewRequestState === "cancelled" ? "AI 已停止"
+                              : interviewRequestState === "retrying" ? "AI 正在重连"
+                              : interviewRequestState === "streaming" ? "AI 正在响应"
+                              : backend.aiStatusVariant === "connected" ? "AI 已连接"
                               : backend.aiStatusVariant === "connecting" ? "AI 连接中"
                               : "No-AI 可用"
-                        tone: backend.aiStatusVariant === "connected" ? appTheme.success
+                        tone: interviewRequestState === "error" || interviewRequestState === "retrying" ? appTheme.warning
+                              : backend.aiStatusVariant === "connected" ? appTheme.success
                               : backend.aiStatusVariant === "connecting" ? appTheme.warning
                               : appTheme.muted
                     }
@@ -687,8 +695,9 @@ ApplicationWindow {
         y: codexApprovalBanner.visible
            ? codexApprovalBanner.y + codexApprovalBanner.height + 10
            : 82
-        width: Math.min(440, message.implicitWidth + 40)
-        height: 52
+        width: Math.min(440, window.width - 48)
+        padding: 14
+        height: message.implicitHeight + topPadding + bottomPadding
         modal: false
         closePolicy: Popup.NoAutoClose
         background: Rectangle {
@@ -702,9 +711,8 @@ ApplicationWindow {
             color: appTheme.toastForeground
             font.pixelSize: appTheme.fontBody
             wrapMode: Text.Wrap
+            textFormat: Text.PlainText
             verticalAlignment: Text.AlignVCenter
-            anchors.fill: parent
-            anchors.margins: 14
         }
         Timer { id: toastTimer; interval: 3600; onTriggered: toastPopup.close() }
     }

@@ -5,6 +5,7 @@ import "../components"
 
 Item {
     id: root
+    objectName: "coachPage"
     required property var app
     required property var palette
     // The shared token object keeps primary actions visually consistent with
@@ -153,6 +154,10 @@ Item {
     }
 
     function refreshPreview() {
+        if (!root.visible || app.onboardingRequired || !app.currentTask.problem_id) {
+            root.preview = {"parts": [], "estimated_tokens": 0}
+            return
+        }
         var modeId = mode.currentValue || root.activeSession.mode || "coach"
         root.preview = app.practiceContextPreview(
             modeId,
@@ -237,7 +242,10 @@ Item {
         root.syncSession(false)
         root.refreshPreview()
     }
-    onVisibleChanged: if (visible) Qt.callLater(root.syncSession)
+    onVisibleChanged: if (visible) Qt.callLater(function() {
+        root.syncSession()
+        root.refreshPreview()
+    })
 
     RowLayout {
         anchors.fill: parent

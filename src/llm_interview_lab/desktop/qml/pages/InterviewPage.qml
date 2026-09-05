@@ -576,23 +576,13 @@ Item {
                         width: parent.width
                         text: {
                             if (!role.currentValue)
-                                return "先选择岗位，系统会检查该难度是否有完整题目。"
-                            if (aiMode.currentValue === "provider")
-                                return "AI 将按岗位 Blueprint、skills 和所选强度生成非代码问题；可运行的本地 Coding 环节会单独加入。"
-                            if (root.configuration.available !== false)
-                                return "当前难度可用；开始后题目组合会冻结。"
-                            if (root.fallbackAvailable())
-                                return "完整蓝图需要 PyTorch 代码环节；当前可开始明确标记的非代码专项。"
-                            if ((root.configuration.missing_environment || []).length > 0)
-                                return "当前配置无法形成可信的非代码专项；请补齐 PyTorch 环境或切换岗位 / 难度。"
-                            return "当前岗位在此难度没有完整固定题；请切换到“标准”或更换岗位。"
+                                return "请选择这次准备面试的岗位。"
+                            if (aiMode.currentValue !== "disabled")
+                                return "难度用于调整 AI 追问强度；不要求该档位有完整固定题单。"
+                            return "选择面试官后即可开始；不连接 AI 仍可继续刷题。"
                         }
-                        color: root.configuration.available === false
-                               && aiMode.currentValue !== "provider"
-                               ? root.palette.warning : root.palette.muted
+                        color: root.palette.muted
                         wrapMode: Text.Wrap
-                        maximumLineCount: 2
-                        elide: Text.ElideRight
                         font.pixelSize: 11
                     }
                     Text { visible: leftPanel.setupVisible; text: "面试官"; color: root.palette.muted; font.pixelSize: 12 }
@@ -670,7 +660,7 @@ Item {
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
                     }
-                    RowLayout {
+                    ColumnLayout {
                         width: parent.width
                         visible: leftPanel.setupVisible && aiMode.currentValue === "codex"
                         spacing: 8
@@ -681,12 +671,13 @@ Item {
                                   + " · 推理强度：" + (app.codexReasoningEffort || "默认")
                             color: root.palette.muted
                             font.pixelSize: 11
-                            elide: Text.ElideRight
+                            wrapMode: Text.Wrap
                         }
-                        Button {
+                        LabButton {
                             objectName: "openCodexPreferencesFromInterview"
-                            text: "打开设置 → Codex"
-                            flat: true
+                            theme: root.theme
+                            variant: "secondary"
+                            text: "设置模型与推理强度"
                             onClicked: app.navigate("settings")
                         }
                     }
@@ -723,7 +714,15 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible
                         enabled: aiMode.currentValue !== "disabled" && app.materials.length > 0
-                        text: "使用一份逐场授权的求职材料（可选）"
+                        text: "使用求职材料（可选）"
+                        contentItem: Text {
+                            text: useMaterial.text
+                            font: useMaterial.font
+                            color: useMaterial.enabled ? root.palette.text : root.palette.muted
+                            leftPadding: useMaterial.indicator.width + useMaterial.spacing
+                            wrapMode: Text.Wrap
+                            verticalAlignment: Text.AlignVCenter
+                        }
                     }
                     ComboBox {
                         id: material
@@ -768,7 +767,15 @@ Item {
                         id: consent
                         width: parent.width
                         visible: leftPanel.setupVisible && useMaterial.checked
-                        text: "我同意本场面试读取这个精确 ID / SHA 的材料"
+                        text: "允许本场面试使用所选材料"
+                        contentItem: Text {
+                            text: consent.text
+                            font: consent.font
+                            color: root.palette.text
+                            leftPadding: consent.indicator.width + consent.spacing
+                            wrapMode: Text.Wrap
+                            verticalAlignment: Text.AlignVCenter
+                        }
                     }
                     Text {
                         objectName: "personalizedInterviewConsentNotice"
@@ -795,17 +802,6 @@ Item {
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
                     }
-                    Text {
-                        objectName: "personalizedInterviewCodexCoverageHint"
-                        width: parent.width
-                        visible: leftPanel.setupVisible
-                                 && aiMode.currentValue === "codex"
-                                 && root.configuration.available === false
-                        text: "高压设置不会阻止 Codex 个性化面试。Codex 会根据岗位技能生成非 coding 主问题；本地 coding 题仅在已验证资产可用时加入。"
-                        color: root.palette.muted
-                        wrapMode: Text.Wrap
-                        font.pixelSize: 11
-                    }
                     Button {
                         objectName: "startNonCodingInterview"
                         width: parent.width
@@ -824,6 +820,7 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible
                                  && aiMode.currentValue !== "provider"
+                                 && aiMode.currentValue !== "codex"
                                  && (root.configuration.missing_environment || []).indexOf("pytorch") >= 0
                         text: "完整蓝图需要源码 PyTorch 环境。桌面应用不会自行安装依赖。需先克隆源码并进入仓库根目录，再运行：\npython -m pip install -e \".[torch,dev]\""
                         color: root.palette.muted
@@ -835,6 +832,7 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible
                                  && aiMode.currentValue !== "provider"
+                                 && aiMode.currentValue !== "codex"
                                  && (root.configuration.missing_environment || []).indexOf("pytorch") >= 0
                         text: "<a href=\"https://github.com/ComistryMo/llm_interview_lab/blob/main/docs/desktop-app.md\">查看源码环境说明</a>"
                         textFormat: Text.RichText
@@ -842,12 +840,13 @@ Item {
                         font.pixelSize: 11
                         onLinkActivated: Qt.openUrlExternally(link)
                     }
-                    Button {
+                    LabButton {
                         objectName: "startConfiguredInterview"
+                        theme: root.theme
+                        variant: "primary"
                         width: parent.width
                         visible: leftPanel.setupVisible
                         text: app.busy ? "正在进入面试……" : "开始动态模拟面试"
-                        highlighted: true
                         enabled: !!role.currentValue
                                  && !app.busy
                                  && ((aiMode.currentValue === "provider"
@@ -897,7 +896,7 @@ Item {
                         objectName: "dynamicInterviewScope"
                         width: parent.width
                         visible: leftPanel.setupVisible && aiMode.currentValue !== "disabled"
-                        text: "AI 只接收面试流程、岗位技能、难度、求职意向和你明确授权的材料；先生成一问，后续问题根据你的回答逐步追问。Coding 题仍由本地已验证题库决定。"
+                        text: "确认后先自我介绍。提交回答后，AI 读取当前问题、已锁定回答、岗位与难度及本次确认的材料，再生成一条追问。当前动态模式尚未自动衔接代码题。"
                         color: root.palette.muted
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
@@ -994,6 +993,7 @@ Item {
                 StatusPill {
                     objectName: "interviewTimerPill"
                     theme: root.theme
+                    visible: !!app.interview.interview_id
                     text: app.interview.status === "active"
                           ? root.timerText(app.interview.remaining_seconds)
                           : root.statusText(app.interview.status)
@@ -1375,6 +1375,24 @@ Item {
                             enabled: root.interviewCanEdit && !app.busy && !app.interview.assessment_recorded
                             text: root.dynamicInterview ? "让 Codex 继续提问" : "请求 Codex 评分"
                             onClicked: root.previewAI("codex", "")
+                        }
+                        LabButton {
+                            objectName: "stopCodexInterviewRequest"
+                            theme: root.theme
+                            variant: "secondary"
+                            visible: app.interview.ai_mode === "codex" && app.busy
+                                     && (app.interview.ai_assessment_state === "streaming"
+                                         || app.interview.ai_assessment_state === "retrying")
+                            text: "停止请求"
+                            onClicked: app.cancelCodex()
+                        }
+                        LabButton {
+                            theme: root.theme
+                            variant: "secondary"
+                            visible: app.interview.ai_mode === "codex"
+                                     && app.interview.ai_assessment_state === "error" && !app.busy
+                            text: "检查 Codex 设置"
+                            onClicked: app.navigate("settings")
                         }
                     }
                     Text {
@@ -1881,6 +1899,7 @@ Item {
         id: planContextDialog
         objectName: "personalizedInterviewContextDialog"
         modal: true
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.45) }
         anchors.centerIn: parent
         width: Math.min(600, Math.max(380, root.width - 40))
         height: Math.min(460, Math.max(320, root.height - 36))

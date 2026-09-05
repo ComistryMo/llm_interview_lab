@@ -298,11 +298,9 @@ class AppController(QObject):
     # retrying a model request without ever emitting a terminal turn event:
     # the UI must become retryable instead of remaining stuck forever.
     _CODEX_DYNAMIC_INITIAL_TIMEOUT_MS = 20_000
-    # A later assessment/follow-up is useful only while the answer screen is
-    # still actionable.  App Server can emit retry notices without ever
-    # closing a turn, so bound this wait as well and return control to the
-    # learner instead of leaving a permanent spinner.
-    _CODEX_INTERVIEW_TURN_TIMEOUT_MS = 30_000
+    # Real App Server retries took about two minutes before returning text
+    # on Windows. Allow that bounded retry cycle; the user can interrupt it.
+    _CODEX_INTERVIEW_TURN_TIMEOUT_MS = 180_000
 
     stateChanged = Signal()
     busyChanged = Signal()
@@ -6240,6 +6238,9 @@ class AppController(QObject):
                     self._finish_codex_interview_assessment(identity)
                 else:
                     self._finish_codex_interview_assessment(identity, error=detail)
+                    if outcome == "cancelled":
+                        self._interview["ai_assessment_state"] = "cancelled"
+                        self.stateChanged.emit()
             self._finish_codex_event_gate()
         elif method in {"turn/failed", "turn/aborted", "turn/cancelled"}:
             if self._codex_coach_identity is not None:
@@ -6514,14 +6515,9 @@ class AppController(QObject):
             "codex_interview_timeout stage=assessment operation_id=%s",
             operation_id[:40],
         )
-        self._finish_codex_interview_assessment(
-            identity,
-            error="Codex 评分请求超时，模型服务没有返回结果；请重试或改用人工评分。",
-        )
-        # Fence late deltas/terminal events from this timed-out turn.  The
-        # identity check above makes the timer harmless after a successful
-        # response or an explicit cancellation.
-        self._finish_codex_event_gate()
+        # Close this owned transport too: merely clearing UI state leaves
+        # the old model request running while the user retries.
+        self._invalidate_codex_transport("Codex 评分请求超时")
 
     def _finish_codex_personalized_plan(
         self,

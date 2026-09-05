@@ -1439,12 +1439,13 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert 'height: modelData.sensitive' in dialog_body
     assert 'objectName: "personalizedInterviewCodexPreferences"' in interview
     assert 'objectName: "openCodexPreferencesFromInterview"' in interview
-    assert 'text: "打开设置 → Codex"' in interview
+    assert 'text: "设置模型与推理强度"' in interview
     assert 'objectName: "personalizedInterviewMaterialAccessNotice"' in interview
     assert 'objectName: "openMaterialsForInterviewAuthorization"' in interview
     assert "app.setMaterialAiAccess(material.currentValue, true)" in interview
     assert 'objectName: "personalizedInterviewConsentNotice"' in interview
-    assert 'objectName: "personalizedInterviewCodexCoverageHint"' in interview
+    assert "难度用于调整 AI 追问强度" in interview
+    assert "高压设置不会阻止" not in interview  # no duplicate, misleading coding promise
     assert 'property bool codexPlanPending: false' in interview
     assert 'function onAiStateChanged()' in interview
     assert 'Qt.callLater(root.openPersonalizedPlanContext)' in interview
