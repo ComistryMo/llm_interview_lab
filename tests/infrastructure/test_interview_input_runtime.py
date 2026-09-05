@@ -581,6 +581,8 @@ def test_small_home_and_coach_keep_text_inside_controls(scene, theme):
                 assert item.mapToItem(card, QPointF(0, item.height())).y() <= card.height(), item.property("text")
     controller.navigate("coach")
     QTest.qWait(100)
+    start = _find(window, "coachEmptyStart")
+    assert start.property("resolvedBackground") != start.property("resolvedForeground")
     editor = _find(window, "coachPrompt")
     _click(window, editor)
     QCoreApplication.sendEvent(editor, QInputMethodEvent("zhong", []))

@@ -386,7 +386,9 @@ Item {
                         enabled: !app.coachStreaming
                         onClicked: sessionDrawer.open()
                     }
-                    Button {
+                    LabButton {
+                        theme: root.theme
+                        variant: "ghost"
                         visible: root.compactLayout && !root.hasSession
                         text: "新建会话"
                         highlighted: true
@@ -529,7 +531,10 @@ Item {
                                 color: root.palette.muted
                                 wrapMode: Text.Wrap
                             }
-                            Button {
+                            LabButton {
+                                objectName: "coachEmptyStart"
+                                theme: root.theme
+                                variant: "primary"
                                 visible: !root.hasSession
                                 text: "打开 AI 辅助"
                                 highlighted: true
