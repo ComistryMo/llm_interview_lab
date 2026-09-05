@@ -1,0 +1,85 @@
+{
+  "version": "0.4.0a3",
+  "language": "zh-CN",
+  "platform": "Windows",
+  "qt_platform": "windows",
+  "rendering": "software",
+  "synthetic_data": true,
+  "production_qml": true,
+  "demo_controller": false,
+  "release_artifact": false,
+  "window_size_units": "Qt logical pixels",
+  "device_pixel_ratio": 1.5,
+  "files": [
+    {
+      "name": "interview-light.png",
+      "bytes": 106803,
+      "sha256": "8fab824bdfb58e0acc152660d2237854b7c1c36e7f50197351b2dcfeadb6b590",
+      "captured_at": "2026-09-05T07:38:13.5967899Z",
+      "window_size": [
+        1280,
+        800
+      ],
+      "theme": "light",
+      "font_scale": 1,
+      "transport": "none",
+      "source_commit": "2e9b0837036fe6fac3e0d5ad63a60db2ab6e5f84"
+    },
+    {
+      "name": "interview-dark.png",
+      "bytes": 105109,
+      "sha256": "97110ae9dfd52db8206c99fb60a9ea4f6f9ce22fbf070a88a65c96d6dd2c91dc",
+      "captured_at": "2026-09-05T07:38:14.0362021Z",
+      "window_size": [
+        1280,
+        800
+      ],
+      "theme": "dark",
+      "font_scale": 1,
+      "transport": "none",
+      "source_commit": "2e9b0837036fe6fac3e0d5ad63a60db2ab6e5f84"
+    },
+    {
+      "name": "context-dark.png",
+      "bytes": 195679,
+      "sha256": "77f2a079f05e6d0ff9eca11a1c3f5bd04fdded703d704f0f98ebc2faf1569a33",
+      "captured_at": "2026-09-05T07:40:28.7520687Z",
+      "window_size": [
+        1280,
+        800
+      ],
+      "theme": "dark",
+      "font_scale": 1.25,
+      "transport": "fake_codex",
+      "source_commit": "2a6cca15a131d58bf54dc7b90c24a7d0cd6849f6"
+    },
+    {
+      "name": "home-small-light.png",
+      "bytes": 96059,
+      "sha256": "1d6dc73927a3580a71722f5a78fb2f7e64791ca3ab558e5bd9e5e7dcef8c9d47",
+      "captured_at": "2026-09-05T07:38:17.5397343Z",
+      "window_size": [
+        900,
+        620
+      ],
+      "theme": "light",
+      "font_scale": 1.25,
+      "transport": "none",
+      "source_commit": "2e9b0837036fe6fac3e0d5ad63a60db2ab6e5f84"
+    },
+    {
+      "name": "coach-small-light.png",
+      "bytes": 95713,
+      "sha256": "442e546bfe093058510e879383bc18f546f1c14427c215bed3fde8b513b630ae",
+      "captured_at": "2026-09-05T07:46:53.3137624Z",
+      "window_size": [
+        900,
+        620
+      ],
+      "theme": "light",
+      "font_scale": 1.25,
+      "transport": "none",
+      "source_commit": "ff6ebaaac891b473c37f937b8e70e51c75e7ef12"
+    }
+  ]
+}

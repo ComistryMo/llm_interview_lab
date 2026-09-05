@@ -1,8 +1,72 @@
 # Luna Max 动态面试当前状态报告
 
+## 2026-09-05 再次迭代：ChatGPT 风格与实际排版验证
+
+本节是最新 UI 结果；下节保留此前的真实 Codex 传输记录。此次不修改面试状态机、材料权限、Provider 或掌握规则，不把 UI 更新描述为完整动态面试引擎完成。
+
+### 基线与源码
+
+- 分支：`fix/desktop-input-interview-20260905`；本轮起点 `04f87c7f7bbef1c125cc2ad0e1a2c45839fd91c8`。
+- `2e9b083`：中性色、扁平导航、面试单列视图、底部主动作、内容自适应布局和目标测试。
+- `2a6cca1`：消除确认弹窗继承 Material 底栏造成的贴边；增加按钮底部留白检查。
+- `ff6ebaa`：最终浅色截图发现 Coach 两处旧按钮白字浅底，改用既有中性按钮，并补充入口颜色检查。
+- 版本仍为 `0.4.0a3`，没有更新 main、Tag 或桌面发布包。两个 deploy spec 仅补齐新 QML 文件清单，没有执行构建。
+
+### 实际改善与发现
+
+1. **视觉收敛**：参考 ChatGPT 的中性色与内容优先原则，将紫色主按钮改为深浅反差的中性主按钮，蓝色用于焦点和链接；设置、作答不再并排占用两个大框。使用 OpenAI Docs 技能核对了 [官方 UI 指南](https://developers.openai.com/plugins/concepts/ui-guidelines)；该页面面向 ChatGPT 插件，借鉴的是原则，不宣称完整复刻官方桌面规范。
+2. **输入区**：保留上一轮 Basic 输入控件的获焦/IME 提示隐藏逻辑；本轮统一输入内边距，删除 Coach 额外叠加的提示层。实际发送中文组字事件和提交文本，检查提示不可见、光标位于输入区内。
+3. **题面行高**：运行中发现 Markdown 文本实际 `contentHeight=64`，控件高度却只有 `52`；现在题面按实际内容高度布局，标题、题面和回答框不交叠。
+4. **首页越界**：900×620、125% 字号下，“继续面试”的文字底部位于卡片内 `y=229`，卡片高度只有 `226`，截图可见按钮越界。首页主要任务卡现在由内容撑高；学习证据仍按内容高度布局，短窗口通过页面滚动查看下方内容。
+5. **主按钮可达**：初版迭代中，锁定回答后的“让 Codex 继续提问”仍在滚动区域边缘，真实点击测试失败。已将这组现有动作和请求状态移到底部，与回答前的提交动作统一留在可操作区域；没有复制请求方法。
+6. **确认弹窗**：上下文标签、材料说明和摘要不再使用固定行高；两处弹窗共用一个内容高度驱动的列表，长材料可滚动。最后截图检查还发现 Material 底栏导致按钮贴边，统一为 Basic 后，按钮距弹窗底部至少 12px 的检查通过。
+7. **层级与可读性**：岗位、难度与状态收纳到“本场信息”；结束后可以查看原结果或“再面试一场”。导航在合适宽度显示文字，档案区域不使用固定 70px 高度。文字、主要按钮、输入边界、焦点环的既有对比度要求保留并通过。
+8. **浅色入口**：最后逐图查看时发现 AI 辅助页的新建入口仍继承旧高亮样式，白字落在浅色背景上。改用相同的 LabButton 后，文字和按钮可见；没有把这张有缺陷的图片作为最终证据提交。
+
+### 验证方法与实际命令
+
+`I` = `tests/infrastructure/test_interview_input_runtime.py`；`D` = `tests/infrastructure/test_desktop.py`；`S` = `tests/infrastructure/test_desktop_design_system.py`；`O` = `tests/infrastructure/test_onboarding_qml_hotfix.py`。下表均使用 `.venv\Scripts\python.exe -m pytest`，参数中的别名表示相应完整路径。
+
+真实窗口组使用 `PYTHONPATH=src`、`PYTHONNOUSERSITE=1`、`PYTHONUTF8=1`、`QT_QPA_PLATFORM=windows`、`QT_QUICK_BACKEND=software`、`QT_QUICK_CONTROLS_STYLE=Material`；证据输出到 ignored 的 `workspace/maintainer/chatgpt-ui-20260905/`。不是 offscreen 截图，不调用真实账户，不读取已有 UAT 档案。
+
+| 实际参数 | 结果 / 修订原因 |
+|---|---|
+| `I -k answer_geometry_at_supported_sizes -q` | 初次 4 errors：NavItem 的 contentItem 同时使用对象与分组赋值；修正后 QML 编译通过 |
+| `I -k "answer_geometry_at_supported_sizes and size0" -q` | 1 passed；首次小窗口检查 |
+| `I -k "answer_geometry_at_supported_sizes or context_dialog_long_labels or session_details_and_reconfigure or ui_lock_preview_codex_response" -q` | 4 failed / 4 passed；定位题面实际行高超出控件高度 |
+| `I -k answer_geometry_at_supported_sizes -q` | 修正后 4 passed；四种尺寸，每种含深浅主题 × 100%/125% 字号 |
+| `I D -k "shell_setup_home_coach_and_settings or answer_hint_hides or long_toast_grows or interview_setup_uses_profile_role_availability or no_ai_interview_setup_explains" -q` | 7 passed |
+| `I -k small_home_and_coach -q` | 初次 2 failed；实测首页按钮越出固定高度卡片 |
+| `I -k "small_home_and_coach or context_dialog_long_labels or (answer_geometry_at_supported_sizes and size2)" -q` | 高度修正后 5 passed；同时检查长材料末行可滚动到达 |
+| `S -k "theme_pairs or semantic_and_legacy or shell_breakpoints or shell_and_legacy_home or exactly_cover" -q` | 11 passed / 1 failed；断点测试仍匹配旧表达式，随后按实际新断点更新 |
+| `S I O -k "shell_breakpoints or (answer_geometry_at_supported_sizes and size2) or ui_lock_preview_codex_response or role_picker_and_primary_action_remain_visible" -q` | 6 passed / 1 failed；实际点击发现锁定回答后的继续按钮被滚动区域裁切 |
+| `I -k ui_lock_preview_codex_response -q` | 底部操作区修正后 2 passed；900×620 与 1280×800，均为 125% 字号 |
+| `I -k "(answer_geometry_at_supported_sizes and size2) or (ui_lock_preview_codex_response and size1) or (small_home_and_coach and light)" -q` | 3 passed；代码收敛后保存正式页面证据 |
+| `I -k "context_dialog_long_labels or (ui_lock_preview_codex_response and size1)" -q` | Basic 底栏修订后 3 passed；上下文内容、底部留白和实际确认发送 |
+| `I -k small_home_and_coach -q` | 浅色入口修正后 2 passed；重新保存深浅主题的小窗口截图 |
+
+共 **34 个不同的定向用例最终通过**：正式 Controller 的窗口交互 16 个、Desktop 静态契约 2 个、主题/对比度/资源清单 12 个、既有岗位列表几何检查 4 个。最后一组岗位列表使用已有测试 fixture，只证明布局，不替代真实建档验收。没有将分组测试说成完整 pytest 通过。
+
+真实交互路径：输入合成中文回答 → 点击提交 → 确认锁定 → 点击继续提问 → 查看上下文 → 确认发送 → **Fake Codex** 返回 → 正式 Controller 保存并显示 `q-002`。本轮不增加真实 Codex 账号或网络性能验证结论。
+
+### 截图与边界
+
+- [深色面试](../../docs/images/chatgpt-ui-20260905/interview-dark.png)、[浅色面试](../../docs/images/chatgpt-ui-20260905/interview-light.png)：1280×800、100% 字号。
+- [上下文弹窗](../../docs/images/chatgpt-ui-20260905/context-dark.png)：1280×800、125% 字号；连接状态来自明确的 Fake Codex 测试。
+- [小窗口首页](../../docs/images/chatgpt-ui-20260905/home-small-light.png)、[小窗口 AI 输入](../../docs/images/chatgpt-ui-20260905/coach-small-light.png)：900×620、125% 字号。
+- [截图清单](../../docs/images/chatgpt-ui-20260905/manifest.json)逐图记录源码 Commit、时间和 SHA-256；这些是隔离合成数据的正式页面，不是 Phase 0 原型，也不是新发布包。上述图片均实际查看；另查看了设置、长材料和提交后状态的本地截图。
+- 文档收尾检查：5 张图片的 SHA-256 / 大小与清单一致，两个修改文档中的 16 个相对链接存在；`git diff --check` 通过。
+- 本轮没有运行完整 pytest、RC CI、Windows/macOS 打包、真实 API/Codex 网络调用或 macOS 实机验收。没有宣称所有页面与所有系统绝无排版问题。
+- 既有未跟踪反馈、原始图标、计划和 UAT 数据全部保留；只提交本轮源码、目标测试和经检查的合成截图。README 的发布截图不替换为尚未发布的分支界面。
+- 动态面试完整上下文连续性、阶段推进、自动 Coding 衔接和网络重试时延仍是上一轮列出的限制，不因这次外观更新而视为解决。
+
+状态：`UI_TARGETED_VERIFICATION_PASSED / WAITING_FOR_USER_UAT`。
+
+---
+
 ## 2026-09-05 补充：正常启动入口与真实 Codex 交互
 
-**这是最新结果。** 下节“版本核对与输入 / 追问修复”记录的是此前 Fake 验证；本节增加实际 App Server 传输证据，不把它扩大成完整动态面试或 Release 验收。
+本节保留上一轮的真实传输结果。下节“版本核对与输入 / 追问修复”记录的是更早的 Fake 验证；本节增加实际 App Server 传输证据，不把它扩大成完整动态面试或 Release 验收。
 
 ### 基线与本轮范围
 
