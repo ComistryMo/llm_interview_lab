@@ -259,8 +259,8 @@ Item {
             Layout.minimumWidth: 190
             Layout.fillHeight: true
             padding: 12
-            cardColor: root.palette.surface
-            borderColor: root.palette.border
+            cardColor: "transparent"
+            borderColor: "transparent"
             ColumnLayout {
                 // LabCard already places this child inside its padded content
                 // column.  Use dimensions instead of anchors so the shared
@@ -286,7 +286,6 @@ Item {
                     variant: "primary"
                     text: "新建 Coach 会话"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 38
                     enabled: !app.coachStreaming
                     onClicked: root.createSession()
                 }
@@ -372,9 +371,9 @@ Item {
             Layout.fillHeight: true
             Layout.minimumWidth: 0
             padding: root.compactLayout ? 12 : 16
-            cardColor: root.palette.surface
-            borderColor: root.palette.border
-            prominent: true
+            cardColor: "transparent"
+            borderColor: "transparent"
+            prominent: false
             ColumnLayout {
                 width: parent.width
                 height: parent.height
@@ -416,6 +415,8 @@ Item {
                         }
                     }
                     StatusPill {
+                        theme: root.theme
+                        style: "plain"
                         text: root.statusLabel(root.activeSession.status)
                         tone: root.statusTone(root.activeSession.status)
                     }
@@ -467,11 +468,11 @@ Item {
                             implicitHeight: bubbleColumn.implicitHeight + 20
                             radius: 10
                             color: modelData.role === "user"
-                                   ? Qt.rgba(root.palette.accent.r, root.palette.accent.g, root.palette.accent.b, 0.12)
+                                   ? root.palette.surfaceAlt
                                    : modelData.role === "error"
                                      ? Qt.rgba(root.palette.danger.r, root.palette.danger.g, root.palette.danger.b, 0.10)
-                                     : root.palette.surfaceAlt
-                            border.color: modelData.role === "error" ? root.palette.danger : root.palette.border
+                                     : "transparent"
+                            border.color: modelData.role === "error" ? root.palette.danger : "transparent"
                             ColumnLayout {
                                 id: bubbleColumn
                                 anchors.fill: parent
@@ -514,8 +515,8 @@ Item {
                         height: emptyColumn.implicitHeight + 26
                         visible: messageList.count === 0
                         radius: 10
-                        color: root.palette.surfaceAlt
-                        border.color: root.palette.border
+                        color: "transparent"
+                        border.color: "transparent"
                         ColumnLayout {
                             id: emptyColumn
                             anchors.fill: parent
@@ -543,8 +544,9 @@ Item {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
-                    ComboBox {
+                    LabComboBox {
                         id: mode
+                        theme: root.theme
                         Layout.preferredWidth: root.compactLayout ? 104 : 92
                         Layout.minimumWidth: 88
                         model: [{id: "coach", label: "教练"}, {id: "teacher", label: "讲解"}, {id: "reviewer", label: "审查"}]
@@ -556,8 +558,9 @@ Item {
                                 root.refreshPreview()
                         }
                     }
-                    ComboBox {
+                    LabComboBox {
                         id: provider
+                        theme: root.theme
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
                         model: root.providerItems()
@@ -593,8 +596,7 @@ Item {
                 Text {
                     objectName: "coachModelLabel"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 16
-                    Layout.minimumHeight: 16
+                    Layout.preferredHeight: implicitHeight
                     visible: provider.currentIndex >= 0
                     text: {
                         var item = root.selectedProviderItem()
@@ -607,8 +609,9 @@ Item {
                     elide: Text.ElideRight
                 }
 
-                ComboBox {
+                LabComboBox {
                     id: helpLevel
+                    theme: root.theme
                     visible: mode.currentValue === "teacher"
                     Layout.fillWidth: true
                     model: ["H1", "H2", "H3"]
@@ -616,48 +619,16 @@ Item {
                     onCurrentTextChanged: root.refreshPreview()
                 }
 
-                    LabTextArea {
+                LabTextArea {
                     id: prompt
                     theme: root.theme
+                    composer: true
                     objectName: "coachPrompt"
                     Layout.fillWidth: true
                     Layout.preferredHeight: root.compactLayout ? 84 : 96
                     enabled: !app.coachStreaming
-                    // Qt's native TextArea placeholder is positioned by the
-                    // platform style and can float above the border on
-                    // compact Windows layouts.  Keep the hint in our own
-                    // content area so it never collides with the model line.
-                    placeholderText: ""
+                    placeholderText: app.coachStreaming ? "正在生成回答……" : "输入问题；Enter 发送，Shift+Enter 换行"
                     wrapMode: Text.Wrap
-                    color: root.palette.text
-                    // Keep the hint vertically centred below the model line.
-                    // A single `padding` value leaves the native TextArea
-                    // baseline too close to the border on compact windows.
-                    leftPadding: 12
-                    rightPadding: 12
-                    topPadding: 16
-                    bottomPadding: 12
-                    background: Rectangle {
-                        color: root.palette.background
-                        radius: 8
-                        border.color: prompt.activeFocus ? root.palette.accent : root.palette.border
-                        border.width: prompt.activeFocus ? 2 : 1
-                    }
-                    Text {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.top: parent.top
-                        anchors.leftMargin: 12
-                        anchors.rightMargin: 12
-                        anchors.topMargin: 16
-                        visible: prompt.text.length === 0 && !prompt.activeFocus && !prompt.inputMethodComposing
-                        text: app.coachStreaming ? "正在生成回答……" : "输入问题；Enter 发送，Shift+Enter 换行"
-                        color: root.palette.muted
-                        font: prompt.font
-                        wrapMode: Text.Wrap
-                        elide: Text.ElideRight
-                        maximumLineCount: 2
-                    }
                     onTextChanged: if (!root.syncingDraft && root.activeSession.session_id) app.updateCoachDraft(text)
                     Keys.onPressed: function(event) {
                         if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
@@ -697,7 +668,9 @@ Item {
                         text: "复制全部"
                         onClicked: root.copyAll()
                     }
-                    Button {
+                    LabButton {
+                        theme: root.theme
+                        variant: "primary"
                         objectName: "sendCoachTurn"
                         text: "发送"
                         highlighted: true

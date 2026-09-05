@@ -49,9 +49,8 @@ ApplicationWindow {
                                        : "Noto Sans SC"
     readonly property string layoutMode: width < 1040 ? "compact"
                                          : width < 1400 ? "standard" : "wide"
-    readonly property bool compactShell: layoutMode !== "wide"
-    readonly property int sidebarWidth: layoutMode === "wide" ? 224
-                                        : layoutMode === "standard" ? 72 : 64
+    readonly property bool compactShell: width < 1180 || height < 700
+    readonly property int sidebarWidth: compactShell ? 64 : 220
     // Keep the command surface intentionally small: every entry maps to an
     // existing controller action, so keyboard navigation never exposes a
     // promise the desktop backend cannot fulfill.
@@ -230,8 +229,8 @@ ApplicationWindow {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.leftMargin: window.layoutMode === "wide" ? 16 : 10
-                anchors.rightMargin: window.layoutMode === "wide" ? 16 : 10
+                anchors.leftMargin: window.compactShell ? 10 : 12
+                anchors.rightMargin: window.compactShell ? 10 : 12
                 anchors.topMargin: 14
                 anchors.bottomMargin: 12
                 spacing: 4
@@ -239,7 +238,7 @@ ApplicationWindow {
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.bottomMargin: 12
-                    Layout.alignment: window.layoutMode === "wide"
+                    Layout.alignment: !window.compactShell
                                       ? Qt.AlignLeft : Qt.AlignHCenter
                     Image {
                         source: Qt.resolvedUrl("../resources/app-icon.png")
@@ -251,13 +250,13 @@ ApplicationWindow {
                         Accessible.name: "LLM Interview Lab"
                     }
                     ColumnLayout {
-                        visible: window.layoutMode === "wide"
+                        visible: !window.compactShell
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
                         Text {
                             id: brandTitle
-                            text: "LLM Interview Lab"
+                            text: "Interview Lab"
                             color: window.colors.text
                             font.weight: Font.DemiBold
                             font.pixelSize: appTheme.scaledPx(14)
@@ -295,21 +294,21 @@ ApplicationWindow {
                     NavItem {
                         required property var modelData
                         theme: appTheme
-                        compact: window.layoutMode !== "wide"
+                        compact: window.compactShell
                         label: modelData.label
                         iconSource: Qt.resolvedUrl(modelData.icon)
                         selected: backend.currentPage === modelData.id
-                        Layout.fillWidth: window.layoutMode === "wide"
+                        Layout.fillWidth: !window.compactShell
                         Layout.alignment: Qt.AlignHCenter
-                        Layout.preferredWidth: window.layoutMode === "wide" ? -1 : 44
-                        Layout.preferredHeight: window.layoutMode === "wide" ? 40 : 44
+                        Layout.preferredWidth: window.compactShell ? 44 : -1
+                        Layout.preferredHeight: implicitHeight
                         onClicked: backend.navigate(modelData.id)
                     }
                 }
 
                 LabText {
                     theme: appTheme
-                    visible: window.layoutMode === "wide"
+                    visible: !window.compactShell
                     text: "主要"
                     variant: "caption"
                     tone: "muted"
@@ -334,7 +333,7 @@ ApplicationWindow {
                 }
                 LabText {
                     theme: appTheme
-                    visible: window.layoutMode === "wide"
+                    visible: !window.compactShell
                     text: "复盘与辅助"
                     variant: "caption"
                     tone: "muted"
@@ -367,16 +366,17 @@ ApplicationWindow {
                 LabSurface {
                     objectName: "sidebarProfileSwitcher"
                     theme: appTheme
-                    visible: window.layoutMode === "wide"
-                    level: "sunken"
+                    visible: !window.compactShell
+                    level: "chrome"
                     outlined: false
                     padding: 0
                     interactive: true
                     accessibleName: "切换学习档案"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 70
+                    Layout.preferredHeight: profileSummary.implicitHeight + 24
                     onActivated: backend.navigate("settings")
                     ColumnLayout {
+                        id: profileSummary
                         anchors.fill: parent
                         anchors.margins: 12
                         spacing: 3
@@ -386,7 +386,7 @@ ApplicationWindow {
                     }
                 }
                 LabIconButton {
-                    visible: window.layoutMode !== "wide"
+                    visible: window.compactShell
                     theme: appTheme
                     iconSource: Qt.resolvedUrl("../resources/icons/user.svg")
                     accessibleName: backend.profileDisplayName || backend.profileId || "学习档案"
@@ -405,12 +405,12 @@ ApplicationWindow {
 
             LabSurface {
                 theme: appTheme
-                level: "surface"
+                level: "canvas"
                 outlined: false
                 padding: 0
                 cornerRadius: 0
                 Layout.fillWidth: true
-                Layout.preferredHeight: 56
+                Layout.preferredHeight: Math.max(56, appTheme.controlHeight + 16)
                 LabDivider {
                     theme: appTheme
                     anchors.left: parent.left
@@ -436,6 +436,7 @@ ApplicationWindow {
                         readonly property string interviewRequestState: backend.currentPage === "interview"
                             ? (backend.interview.ai_assessment_state || "") : ""
                         theme: appTheme
+                        style: "plain"
                         compact: window.layoutMode === "compact"
                         text: interviewRequestState === "error" ? "AI 请求失败"
                               : interviewRequestState === "cancelled" ? "AI 已停止"
@@ -592,8 +593,9 @@ ApplicationWindow {
                 strong: true
                 Layout.fillWidth: true
             }
-            TextField {
+            LabTextField {
                 id: paletteSearch
+                theme: appTheme
                 objectName: "commandPaletteSearch"
                 Layout.fillWidth: true
                 placeholderText: "搜索页面或动作…"
@@ -883,7 +885,7 @@ ApplicationWindow {
         anchors.centerIn: parent
         width: 440
         message: "LLM Interview Lab " + Qt.application.version
-        detailText: "本地优先、岗位感知、AI 辅助的面试训练工作台。\n无需连接 AI 也可完整使用固定课程与手动模拟面试。"
+        detailText: "本地面试训练工作台。\n无需连接 AI 即可刷题和复盘；个性化模拟面试需要连接 AI。"
         primaryText: "知道了"
         showSecondary: false
     }

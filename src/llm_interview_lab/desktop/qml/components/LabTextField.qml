@@ -24,7 +24,7 @@ Basic.TextField {
     rightPadding: busy ? 38 : 12
     topPadding: 8
     bottomPadding: 8
-    color: theme ? theme.text : "#2c2e29"
+    color: theme ? theme.textStrong : "#2c2e29"
     // Basic has no floating label or style-owned top inset. Keep the existing
     // focus/IME-aware hint without Material moving the background underneath it.
     placeholderTextColor: "transparent"

@@ -16,20 +16,20 @@ Rectangle {
     readonly property color labelColor: style === "solid"
                                         ? (theme ? theme.accentForeground : "#ffffff") : tone
     readonly property color fillColor: style === "solid" ? tone
-                                       : style === "outline" ? "transparent"
+                                       : style === "outline" || style === "plain" ? "transparent"
                                        : Qt.rgba(tone.r, tone.g, tone.b,
                                                  theme && theme.darkMode ? 0.18 : 0.11)
 
     Accessible.name: text
     Accessible.role: Accessible.StaticText
     implicitWidth: contentRow.implicitWidth + (compact ? 16 : 22)
-    implicitHeight: compact ? 22 : 26
+    implicitHeight: Math.max(compact ? 22 : 26, contentRow.implicitHeight + 8)
     radius: height / 2
     color: fillColor
     border.color: style === "solid" ? tone
                   : Qt.rgba(tone.r, tone.g, tone.b,
                             theme && theme.darkMode ? 0.52 : 0.34)
-    border.width: 1
+    border.width: style === "plain" ? 0 : 1
 
     Row {
         id: contentRow
@@ -61,7 +61,7 @@ Rectangle {
             color: pill.labelColor
             font.pixelSize: pill.theme ? pill.theme.scaledPx(12) : 12
             font.family: pill.theme ? pill.theme.uiFontFamily : ""
-            font.weight: Font.DemiBold
+            font.weight: Font.Normal
             font.letterSpacing: 0.1
             anchors.verticalCenter: parent.verticalCenter
         }

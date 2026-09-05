@@ -16,6 +16,8 @@ Rectangle {
     default property alias content: contentHost.data
 
     readonly property color baseColor: {
+        if (level === "canvas")
+            return theme ? theme.canvas : "#fafaf9"
         if (level === "raised")
             return theme ? theme.surfaceRaised : "#ffffff"
         if (level === "sunken")

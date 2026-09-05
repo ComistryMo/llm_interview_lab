@@ -6,8 +6,9 @@ import QtQuick.Controls.Basic as Basic
 Basic.TextArea {
     id: control
     property var theme: null
+    property bool composer: false
 
-    padding: 12
+    padding: composer ? 16 : 12
     leftPadding: padding
     rightPadding: padding
     topInset: 0
@@ -26,10 +27,10 @@ Basic.TextArea {
     Accessible.name: placeholderText
 
     background: Rectangle {
-        color: control.theme ? control.theme.surfaceSunken : control.palette.base
-        radius: control.theme ? control.theme.radiusMedium : 8
+        color: control.theme ? (control.composer ? control.theme.surfaceRaised : control.theme.surfaceSunken) : control.palette.base
+        radius: control.composer ? 16 : control.theme ? control.theme.radiusMedium : 8
         border.color: control.activeFocus
-                      ? control.selectionColor
+                      ? (control.theme ? control.theme.focusRing : control.selectionColor)
                       : control.theme ? control.theme.borderDefault : control.palette.mid
         border.width: control.activeFocus ? 2 : 1
     }

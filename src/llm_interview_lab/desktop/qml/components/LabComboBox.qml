@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.Basic as Basic
 
-ComboBox {
+Basic.ComboBox {
     id: control
 
     property var theme: null
@@ -10,6 +11,10 @@ ComboBox {
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
     implicitHeight: theme ? theme.controlHeight : 40
+    topInset: 0
+    bottomInset: 0
+    topPadding: 8
+    bottomPadding: 8
     leftPadding: 12
     rightPadding: 34
     font.pixelSize: theme ? theme.scaledPx(14) : 14
@@ -72,7 +77,7 @@ ComboBox {
         }
     }
 
-    delegate: ItemDelegate {
+    delegate: Basic.ItemDelegate {
         required property var modelData
         required property int index
         width: control.width - 8

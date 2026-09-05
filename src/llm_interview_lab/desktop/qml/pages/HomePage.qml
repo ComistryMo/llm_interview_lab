@@ -247,9 +247,10 @@ Flickable {
                 y: 0
                 width: root.compactLayout ? overviewGrid.width
                                            : (overviewGrid.width - 14) * 0.72
-                height: root.compactLayout ? 226 : Math.max(
-                    272,
-                    evidenceContent.implicitHeight + evidenceRail.evidencePadding * 2
+                height: Math.max(
+                    root.compactLayout ? 226 : 272,
+                    focusContent.implicitHeight + padding * 2,
+                    root.compactLayout ? 0 : evidenceContent.implicitHeight + evidenceRail.evidencePadding * 2
                 )
                 level: "raised"
                 outlined: true
@@ -268,6 +269,7 @@ Flickable {
                 }
 
                 ColumnLayout {
+                    id: focusContent
                     anchors.fill: parent
                     anchors.leftMargin: 10
                     spacing: root.compactLayout ? 8 : 10

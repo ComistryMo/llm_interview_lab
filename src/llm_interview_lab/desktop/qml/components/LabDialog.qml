@@ -1,8 +1,9 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
 
-Dialog {
+Basic.Dialog {
     id: dialog
 
     property var theme: null
@@ -19,6 +20,9 @@ Dialog {
     signal secondaryTriggered()
 
     modal: true
+    Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.45) }
+    header: null
+    footer: null
     focus: true
     closePolicy: Popup.CloseOnEscape
     padding: theme ? theme.space6 : 24
@@ -26,7 +30,8 @@ Dialog {
     rightMargin: 24
     topMargin: 24
     bottomMargin: 24
-    implicitWidth: Math.min(520, Math.max(360, contentBody.implicitWidth + leftPadding + rightPadding))
+    implicitWidth: 520
+    implicitHeight: contentBody.implicitHeight + topPadding + bottomPadding
     background: Rectangle {
         radius: dialog.theme ? dialog.theme.radiusLarge : 12
         color: dialog.theme ? dialog.theme.surfaceRaised : "#ffffff"

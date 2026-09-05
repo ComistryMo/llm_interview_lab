@@ -76,6 +76,8 @@ def test_app_theme_exposes_semantic_and_legacy_palette_contracts() -> None:
         "muted",
         "subtle",
         "accentForeground",
+        "primary",
+        "primaryForeground",
         "dangerForeground",
         "borderSubtle",
         "borderDefault",
@@ -132,6 +134,7 @@ def test_app_theme_exposes_semantic_and_legacy_palette_contracts() -> None:
         ("text", "surface", 4.5),
         ("muted", "canvas", 4.5),
         ("accentForeground", "accent", 4.5),
+        ("primaryForeground", "primary", 7.0),
         ("dangerForeground", "danger", 4.5),
         ("focusRing", "surface", 3.0),
         ("controlBorder", "surface", 3.0),
@@ -199,8 +202,8 @@ def test_shell_breakpoints_and_exercise_route_are_permanent() -> None:
     source = _read(MAIN_QML_PATH)
     assert 'width < 1040 ? "compact"' in source
     assert 'width < 1400 ? "standard" : "wide"' in source
-    assert 'layoutMode === "wide" ? 224' in source
-    assert 'layoutMode === "standard" ? 72 : 64' in source
+    assert 'property bool compactShell: width < 1180 || height < 700' in source
+    assert 'sidebarWidth: compactShell ? 64 : 220' in source
     assert source.count('{id: "exercise"') == 1
     assert "ExercisePage { app: backend; palette: window.colors; theme: appTheme }" in source
     assert "exercise:3" in source
@@ -215,7 +218,7 @@ def test_shell_and_legacy_home_actions_use_accessible_theme_foregrounds() -> Non
     shell_source = _read(MAIN_QML_PATH)
 
     assert "readonly property color accentForeground: theme.accentForeground" in theme_source
-    assert "return theme ? theme.accentForeground" in button_source
+    assert "return theme ? theme.primaryForeground" in button_source
     assert "color: control.resolvedForeground" in button_source
     assert 'id: continueTrainingButton' in home_source
     assert 'variant: "primary"' in home_source

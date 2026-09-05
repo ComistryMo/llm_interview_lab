@@ -71,9 +71,11 @@ def controller(qapp, public_repo, tmp_path, monkeypatch):
 @pytest.fixture
 def scene(controller):
     engine = QQmlApplicationEngine()
+    qml_errors = []
+    engine.warnings.connect(lambda values: qml_errors.extend(value.toString() for value in values))
     engine.rootContext().setContextProperty("backend", controller)
     engine.load(QUrl.fromLocalFile(str(QML)))
-    assert engine.rootObjects(), "Production Main.qml failed to load"
+    assert engine.rootObjects(), qml_errors
     window = engine.rootObjects()[0]
     assert isinstance(window, QQuickWindow)
     window.show()
@@ -287,8 +289,11 @@ def test_question_switch_clears_drafts_without_touching_saved_answer(scene):
     assert controller.service.interview_answer_text(controller.profileId, interview_id, "q-001") == draft
 
 
-def test_ui_lock_preview_codex_response_enters_next_question(scene):
+@pytest.mark.parametrize("size", [(900, 620), (1280, 800)])
+def test_ui_lock_preview_codex_response_enters_next_question(scene, size):
     window, controller = scene
+    window.resize(*size)
+    window.setProperty("displayFontScaleOverride", 1.25)
     errors = []
     controller.toast.connect(errors.append)
 
@@ -323,6 +328,10 @@ def test_ui_lock_preview_codex_response_enters_next_question(scene):
     assert not _find(window, "recordSelfAssessment").isVisible()
     continuation = _find(window, "continueCodexInterview")
     assert continuation.isVisible() and continuation.isEnabled()
+    pos = continuation.mapToScene(QPointF())
+    assert 0 <= pos.y() and pos.y() + continuation.height() <= window.height()
+    viewport = _find(window, "interviewQuestionScroll")
+    assert pos.y() >= viewport.mapToScene(QPointF(0, viewport.height())).y()
     clicks = []
     continuation.clicked.connect(lambda: clicks.append("clicked"))
     _capture(window, "dynamic-answer-locked-dark")
@@ -396,7 +405,7 @@ def test_dynamic_followups_advance_once_without_duplicate_scoring(controller, mo
 def test_answer_geometry_at_supported_sizes(scene, size):
     window, controller = scene
     window.resize(*size)
-    for theme, scale in (("light", 1.0), ("dark", 1.25)):
+    for theme, scale in (("light", 1.0), ("dark", 1.0), ("light", 1.25), ("dark", 1.25)):
         controller.setTheme(theme)
         window.setProperty("displayFontScaleOverride", scale)
         QTest.qWait(50)
@@ -420,17 +429,162 @@ def test_answer_geometry_at_supported_sizes(scene, size):
         ), "Submit button must not overlap its explanation"
         assert button.isEnabled()
         assert button.property("resolvedBackground") != button.property("resolvedForeground")
-        _capture(window, f"interview-{size[0]}x{size[1]}-{theme}")
+        title = _find(window, "interviewQuestionTitle")
+        prompt = _find(window, "interviewQuestionPrompt")
+        assert title.property("contentHeight") <= title.height() + 1
+        assert prompt.property("contentHeight") <= prompt.height() + 1
+        assert title.mapToScene(QPointF(0, title.height())).y() <= prompt.mapToScene(QPointF()).y()
+        assert prompt.mapToScene(QPointF(0, prompt.height())).y() <= answer.mapToScene(QPointF()).y()
+        _capture(window, f"interview-{size[0]}x{size[1]}-{theme}-{scale}")
         viewport = _find(window, "interviewQuestionScroll")
         flickable = viewport.property("contentItem")
-        # Small windows must allow scrolling the complete submit action into view.
+        # The primary action stays below the question viewport, even when a
+        # long question or enlarged text requires scrolling the reading area.
+        assert button_start.y() >= viewport.mapToScene(QPointF(0, viewport.height())).y()
         flickable.setProperty("contentY", max(0, flickable.property("contentHeight") - flickable.height()))
         QTest.qWait(30)
         point = button.mapToScene(QPointF(button.width() / 2, button.height() / 2))
-        local = viewport.mapFromScene(point)
-        assert 0 <= local.x() <= viewport.width()
-        assert 0 <= local.y() - button.height() / 2
-        assert local.y() + button.height() / 2 <= viewport.height()
+        assert 0 <= point.x() - button.width() / 2
+        assert point.x() + button.width() / 2 <= window.width()
+        assert 0 <= point.y() - button.height() / 2
+        assert point.y() + button.height() / 2 <= window.height()
         if size == (900, 620):
-            _capture(window, f"interview-900x620-{theme}-submit")
+            _capture(window, f"interview-900x620-{theme}-{scale}-submit")
         flickable.setProperty("contentY", 0)
+
+
+@pytest.mark.parametrize("size", [(900, 620), (1280, 800)])
+def test_context_dialog_long_labels_scale_without_overlap(scene, size):
+    window, controller = scene
+    window.resize(*size)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    controller.setTheme("dark")
+    controller.lockInterviewAnswer("合成回答：在独立验证集上评估，不能使用训练数据证明效果。")
+    page = _find(window, "interviewAnswerEditor")
+    while page.property("aiPreview") is None:
+        page = page.parentItem()
+    parts = [
+        {"id": "policy", "selected": True},
+        {"id": "candidate_answer", "selected": True},
+        {"id": "material:synthetic", "label": "授权材料：合成测试材料 · 后训练实习项目与评测记录（多行长标题用于排版验证，不含真实材料）" * 2,
+         "selected": True, "sensitive": True, "sha256": "a" * 64},
+    ]
+    for property_name, dialog_name, list_name in (
+        ("aiPreview", "interviewAnswerContextDialog", "interviewAnswerContextList"),
+        ("planContext", "personalizedInterviewContextDialog", "interviewSetupContextList"),
+    ):
+        page.setProperty(property_name, {"parts": parts, "estimated_tokens": 1500})
+        dialog = window.findChild(QObject, dialog_name)
+        QMetaObject.invokeMethod(dialog, "open")
+        QTest.qWait(180)
+        listing = _find(window, list_name)
+        rows = sorted((item for item in _items(listing) if item.objectName() == "contextPreviewRow"), key=lambda item: item.y())
+        assert len(rows) == 3
+        for row in rows:
+            labels = [item for item in _items(row) if item.objectName() in ("contextPreviewLabel", "contextPreviewDetail") and item.isVisible()]
+            for label in labels:
+                assert label.property("contentHeight") <= label.height() + 1
+                assert label.mapToItem(row, QPointF(0, label.height())).y() <= row.height()
+            if len(labels) == 2:
+                assert labels[0].mapToScene(QPointF(0, labels[0].height())).y() <= labels[1].mapToScene(QPointF()).y()
+        assert all(a.y() + a.height() <= b.y() for a, b in zip(rows, rows[1:]))
+        assert dialog.property("height") <= window.height()
+        _capture(window, f"context-{property_name}-{size[0]}-dark-1.25")
+        listing.setProperty("contentY", max(0, listing.property("contentHeight") - listing.height()))
+        QTest.qWait(50)
+        last = rows[-1]
+        bottom = last.mapToItem(listing, QPointF(0, last.height())).y()
+        assert bottom <= listing.height() + 1, "The complete material row must be reachable by scrolling"
+        QMetaObject.invokeMethod(dialog, "reject")
+        QTest.qWait(150)
+
+
+def test_interview_session_details_and_reconfigure_preserve_results(scene):
+    window, controller = scene
+    _click(window, _find(window, "openInterviewSessionInfo"))
+    dialog = window.findChild(QObject, "interviewSessionInfoDialog")
+    assert dialog.property("visible")
+    assert "实习" in dialog.property("message")
+    QMetaObject.invokeMethod(dialog, "accept")
+    QTest.qWait(150)
+    controller.finishInterview()
+    QTest.qWait(100)
+    previous_id = controller.interview["interview_id"]
+    assert _find(window, "interviewConversation").isVisible()
+    _click(window, _find(window, "configureAnotherInterview"))
+    assert _find(window, "interviewRoleSelector").isVisible()
+    back = next(item for item in _items(window.contentItem()) if item.isVisible() and item.property("text") == "返回上一场结果" and hasattr(item, "clicked"))
+    back.clicked.emit()
+    QTest.qWait(50)
+    assert _find(window, "interviewConversation").isVisible()
+    assert controller.interview["interview_id"] == previous_id
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_shell_setup_home_coach_and_settings_have_readable_controls(scene, theme):
+    window, controller = scene
+    window.resize(1280, 800)
+    window.setProperty("displayFontScaleOverride", 1.0)
+    controller.setTheme(theme)
+    for page_id in ("home", "coach", "settings"):
+        controller.navigate(page_id)
+        QTest.qWait(150)
+        if page_id == "coach":
+            editor = _find(window, "coachPrompt")
+            _click(window, editor)
+            QCoreApplication.sendEvent(editor, QInputMethodEvent("zhong", []))
+            assert not _visible_hints(editor)
+            event = QInputMethodEvent()
+            event.setCommitString("这是用于检查中文输入的合成文本")
+            QCoreApplication.sendEvent(editor, event)
+            assert not _visible_hints(editor)
+            assert editor.property("cursorRectangle").y() >= editor.property("topPadding") - 1
+        title = _find(window, "shellRouteTitle")
+        assert title.width() > 0 and title.height() >= title.property("contentHeight") - 1
+        _capture(window, f"{page_id}-1280x800-{theme}")
+    controller.navigate("interview")
+    controller.finishInterview()
+    QTest.qWait(80)
+    _click(window, _find(window, "configureAnotherInterview"))
+    selector = _find(window, "interviewAiModeSelector")
+    selector.setProperty("currentIndex", 2)
+    for size in ((900, 620), (1280, 800)):
+        window.resize(*size)
+        window.setProperty("displayFontScaleOverride", 1.25 if size[0] == 900 else 1.0)
+        QTest.qWait(100)
+        start = _find(window, "startConfiguredInterview")
+        pos = start.mapToScene(QPointF())
+        assert start.isVisible() and start.isEnabled()
+        assert pos.y() >= 0 and pos.y() + start.height() <= window.height()
+        assert pos.x() >= 0 and pos.x() + start.width() <= window.width()
+        _capture(window, f"setup-{size[0]}x{size[1]}-{theme}")
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_small_home_and_coach_keep_text_inside_controls(scene, theme):
+    window, controller = scene
+    window.resize(900, 620)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    controller.setTheme(theme)
+    controller.navigate("home")
+    QTest.qWait(100)
+    _capture(window, f"home-900x620-{theme}-1.25")
+    for name in ("homeTodayFocus", "homeEvidenceRail"):
+        card = _find(window, name)
+        for item in _items(card):
+            if item.isVisible() and item.property("text") and item.property("contentHeight") is not None:
+                assert item.property("contentHeight") <= item.height() + 1, item.property("text")
+                assert item.mapToItem(card, QPointF(0, item.height())).y() <= card.height(), item.property("text")
+    controller.navigate("coach")
+    QTest.qWait(100)
+    editor = _find(window, "coachPrompt")
+    _click(window, editor)
+    QCoreApplication.sendEvent(editor, QInputMethodEvent("zhong", []))
+    assert not _visible_hints(editor)
+    event = QInputMethodEvent()
+    event.setCommitString("放大字体和窄窗口下的中文输入检查")
+    QCoreApplication.sendEvent(editor, event)
+    assert editor.property("cursorRectangle").bottom() < editor.height()
+    send = _find(window, "sendCoachTurn")
+    assert send.mapToScene(QPointF(0, send.height())).y() <= window.height()
+    _capture(window, f"coach-900x620-{theme}-1.25")

@@ -1435,8 +1435,10 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
         'objectName: "personalizedInterviewPlanDialog"', 1
     )[0]
     assert 'StatusPill {' not in dialog_body
-    assert 'width: planContextPartsView.width' in dialog_body
-    assert 'height: modelData.sensitive' in dialog_body
+    assert 'ContextPreviewList {' in dialog_body
+    context_list = (REPO_ROOT / "src/llm_interview_lab/desktop/qml/components/ContextPreviewList.qml").read_text(encoding="utf-8")
+    assert 'height: rowContent.implicitHeight + 24' in context_list
+    assert 'wrapMode: Text.Wrap' in context_list
     assert 'objectName: "personalizedInterviewCodexPreferences"' in interview
     assert 'objectName: "openCodexPreferencesFromInterview"' in interview
     assert 'text: "设置模型与推理强度"' in interview
@@ -1515,7 +1517,7 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert 'contentWidth: availableWidth' in interview
     assert 'width: questionScroll.availableWidth' in interview
     assert 'objectName: "interviewPhasePill"' in interview
-    assert "不会改变刷题训练的掌握状态" in interview
+    assert "不改变刷题训练的掌握状态" in interview
     assert 'font.family: "Cascadia Mono, Consolas, monospace"' not in interview
 
 

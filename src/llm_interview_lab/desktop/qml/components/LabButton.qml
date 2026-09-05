@@ -1,8 +1,9 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.Basic as Basic
 import QtQuick.Controls.impl
 
-Button {
+Basic.Button {
     id: control
 
     property var theme: null
@@ -17,19 +18,19 @@ Button {
         if (!enabled)
             return theme ? theme.subtle : "#858880"
         if (variant === "primary")
-            return theme ? theme.accentForeground : "#ffffff"
+            return theme ? theme.primaryForeground : "#ffffff"
         if (variant === "danger")
             return theme ? theme.dangerForeground : "#ffffff"
-        return theme ? theme.text : "#2c2e29"
+        return theme ? theme.textStrong : "#2c2e29"
     }
     readonly property color resolvedBackground: {
         if (!enabled)
             return theme ? theme.surfaceSunken : "#eeede8"
         if (variant === "primary") {
             if (down)
-                return theme ? theme.accentPressed : "#23489e"
-            return hovered ? (theme ? theme.accentHover : "#2852b4")
-                           : (theme ? theme.accent : "#315ec7")
+                return theme ? theme.primaryPressed : "#484848"
+            return hovered ? (theme ? theme.primaryHover : "#363636")
+                           : (theme ? theme.primary : "#202020")
         }
         if (variant === "danger") {
             var danger = theme ? theme.danger : "#b44249"
@@ -55,11 +56,16 @@ Button {
     enabled: !busy
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
-    implicitHeight: compact ? (theme ? theme.controlHeightCompact : 34)
-                            : (theme ? theme.controlHeight : 40)
+    implicitHeight: Math.max(contentItem.implicitHeight + topPadding + bottomPadding,
+                            compact ? (theme ? theme.controlHeightCompact : 34)
+                                    : (theme ? theme.controlHeight : 40))
     implicitWidth: Math.max(compact ? 72 : 96, contentItem.implicitWidth + leftPadding + rightPadding)
     leftPadding: compact ? 12 : 16
     rightPadding: compact ? 12 : 16
+    topPadding: 8
+    bottomPadding: 8
+    topInset: 0
+    bottomInset: 0
     spacing: 8
     font.pixelSize: theme ? theme.scaledPx(14) : 14
     font.family: theme ? theme.uiFontFamily : ""
@@ -79,7 +85,8 @@ Button {
     Accessible.pressed: down
 
     background: Rectangle {
-        radius: control.theme ? control.theme.radiusMedium : 9
+        radius: control.variant === "primary" ? Math.min(20, height / 2)
+                                             : control.theme ? control.theme.radiusMedium : 10
         color: control.resolvedBackground
         border.color: control.resolvedBorder
         border.width: control.activeFocus ? 2 : 1

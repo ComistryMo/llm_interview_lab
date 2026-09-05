@@ -1,7 +1,9 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.Basic as Basic
+import QtQuick.Controls.impl
 
-Button {
+Basic.Button {
     id: control
 
     property var theme: null
@@ -19,7 +21,11 @@ Button {
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
     implicitWidth: compact ? 44 : 184
-    implicitHeight: compact ? 44 : 40
+    implicitHeight: Math.max(compact ? 44 : 40, contentItem.implicitHeight + 16)
+    topInset: 0
+    bottomInset: 0
+    topPadding: 8
+    bottomPadding: 8
     leftPadding: compact ? 10 : 12
     rightPadding: compact ? 10 : 12
     spacing: 10
@@ -28,9 +34,7 @@ Button {
     font.weight: selected ? Font.DemiBold : Font.Normal
     display: compact ? AbstractButton.IconOnly : AbstractButton.TextBesideIcon
     icon.source: iconSource
-    icon.color: selected
-                ? (theme ? theme.accent : "#315ec7")
-                : (theme ? theme.muted : "#666961")
+    icon.color: theme ? theme.textStrong : "#303030"
     icon.width: 18
     icon.height: 18
     palette.buttonText: selected
@@ -49,7 +53,7 @@ Button {
         color: control.down
                ? (control.theme ? control.theme.surfaceSunken : "#eeede8")
                : control.selected
-                 ? (control.theme ? control.theme.accentSoft : "#e7e9fa")
+                 ? (control.theme ? control.theme.surfaceHover : "#e8e8e5")
                : control.hovered
                  ? (control.theme ? control.theme.surfaceHover : "#f1f0eb")
                  : "transparent"
@@ -58,16 +62,17 @@ Button {
                       : "transparent"
         border.width: control.activeFocus ? 2 : 1
 
-        Rectangle {
-            visible: control.selected
-            width: 2
-            height: Math.max(16, parent.height - 16)
-            radius: 2
-            anchors.left: parent.left
-            anchors.leftMargin: 2
-            anchors.verticalCenter: parent.verticalCenter
-            color: control.theme ? control.theme.accent : "#315ec7"
-        }
+    }
+
+    contentItem: IconLabel {
+        opacity: control.busy ? 0 : 1
+        spacing: control.spacing
+        display: control.display
+        alignment: control.compact ? Qt.AlignCenter : Qt.AlignLeft
+        icon: control.icon
+        text: control.text
+        font: control.font
+        color: control.theme ? control.theme.textStrong : "#303030"
     }
 
     Rectangle {
@@ -96,7 +101,6 @@ Button {
         running: control.busy
     }
 
-    contentItem.opacity: busy ? 0 : 1
     ToolTip.visible: compact && hovered && label.length > 0
     ToolTip.text: label
     ToolTip.delay: 450

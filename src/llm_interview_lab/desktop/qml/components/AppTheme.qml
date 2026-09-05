@@ -16,39 +16,44 @@ QtObject {
     readonly property real resolvedMotionScale: Math.max(0.0, Math.min(2.0, motionScale))
     readonly property bool reducedMotion: resolvedMotionScale <= 0.01
 
-    // Quiet Forge uses warm neutral surfaces and one restrained blue accent.
+    // Conversation-first neutrals. Blue identifies focus and links, not every
+    // action or panel; opaque reading surfaces stay separate from chrome.
     // The aliases below deliberately describe purpose rather than a page.
-    readonly property color canvas: darkMode ? "#0d0e10" : "#f4f3ef"
-    readonly property color chrome: darkMode ? "#111316" : "#eceae4"
-    readonly property color surface: darkMode ? "#16181c" : "#fcfbf8"
-    readonly property color surfaceRaised: darkMode ? "#1c1f24" : "#ffffff"
-    readonly property color surfaceSunken: darkMode ? "#101215" : "#eeece6"
-    readonly property color surfaceHover: darkMode ? "#20242a" : "#e9e7e1"
+    readonly property color canvas: darkMode ? "#212121" : "#fafaf9"
+    readonly property color chrome: darkMode ? "#171717" : "#f0f0ee"
+    readonly property color surface: darkMode ? "#262626" : "#ffffff"
+    readonly property color surfaceRaised: darkMode ? "#303030" : "#ffffff"
+    readonly property color surfaceSunken: darkMode ? "#292929" : "#f3f3f1"
+    readonly property color surfaceHover: darkMode ? "#363636" : "#e8e8e5"
     readonly property color surfaceAlt: surfaceSunken
     readonly property color elevated: surfaceRaised
 
-    readonly property color textStrong: darkMode ? "#f3f2ee" : "#202227"
-    readonly property color text: darkMode ? "#a8adb6" : "#646870"
-    readonly property color muted: darkMode ? "#a8adb6" : "#646870"
-    readonly property color subtle: darkMode ? "#838a95" : "#6f737b"
+    readonly property color textStrong: darkMode ? "#ececec" : "#202020"
+    readonly property color text: darkMode ? "#c7c7c7" : "#484848"
+    readonly property color muted: darkMode ? "#ababab" : "#666666"
+    readonly property color subtle: darkMode ? "#939393" : "#707070"
+    readonly property color primary: darkMode ? "#ececec" : "#202020"
+    readonly property color primaryHover: darkMode ? "#d8d8d8" : "#363636"
+    readonly property color primaryPressed: darkMode ? "#c4c4c4" : "#484848"
+    readonly property color primaryForeground: darkMode ? "#202020" : "#ffffff"
     // QML reserves property names shaped like onSignal. Use explicit
     // foreground names rather than the CSS-style onAccent/onDanger spelling.
     readonly property color accentForeground: darkMode ? "#11131a" : "#ffffff"
     readonly property color dangerForeground: darkMode ? "#11131a" : "#ffffff"
 
-    readonly property color borderSubtle: darkMode ? "#24282e" : "#e3e0d8"
-    readonly property color borderDefault: darkMode ? "#30353d" : "#d2cfc6"
-    readonly property color borderStrong: darkMode ? "#454b55" : "#b7b3aa"
+    readonly property color borderSubtle: darkMode ? "#333333" : "#e7e7e3"
+    readonly property color borderDefault: darkMode ? "#404040" : "#dcdcd7"
+    readonly property color borderStrong: darkMode ? "#9c9c9c" : "#62625f"
     readonly property color border: borderDefault
-    readonly property color controlBorder: darkMode ? "#686e78" : "#8b877e"
-    readonly property color focusRing: darkMode ? "#92a6ff" : "#5263d8"
+    readonly property color controlBorder: darkMode ? "#808080" : "#8d8d89"
+    readonly property color focusRing: darkMode ? "#8baacf" : "#4a6f98"
 
-    readonly property color accent: darkMode ? "#92a6ff" : "#5263d8"
-    readonly property color accentHover: darkMode ? "#a8b8ff" : "#4656c2"
-    readonly property color accentPressed: darkMode ? "#748bee" : "#3948aa"
-    readonly property color accentSoft: darkMode ? "#202947" : "#e7e9fa"
-    readonly property color toastBackground: darkMode ? "#eceae4" : "#1c1f24"
-    readonly property color toastForeground: darkMode ? "#202227" : "#f3f2ee"
+    readonly property color accent: darkMode ? "#93b4dc" : "#3c638e"
+    readonly property color accentHover: darkMode ? "#afc7e4" : "#315478"
+    readonly property color accentPressed: darkMode ? "#7e9fc7" : "#294665"
+    readonly property color accentSoft: darkMode ? "#293645" : "#e9eff5"
+    readonly property color toastBackground: darkMode ? "#303030" : "#ffffff"
+    readonly property color toastForeground: textStrong
     readonly property color success: darkMode ? "#68cda4" : "#18795a"
     readonly property color warning: darkMode ? "#e4b86f" : "#8b5a0a"
     readonly property color danger: darkMode ? "#f0838d" : "#b53f4b"
@@ -65,7 +70,7 @@ QtObject {
     readonly property int space8: 32
 
     readonly property int radiusSmall: 6
-    readonly property int radiusMedium: 9
+    readonly property int radiusMedium: 10
     readonly property int radiusLarge: 12
     readonly property int radiusRound: 999
 
@@ -74,8 +79,8 @@ QtObject {
     readonly property int fontBodyLarge: scaledPx(15)
     readonly property int fontSection: scaledPx(18)
     readonly property int fontTitle: scaledPx(26)
-    readonly property int controlHeight: 40
-    readonly property int controlHeightCompact: 34
+    readonly property int controlHeight: Math.max(40, scaledPx(28) + 12)
+    readonly property int controlHeightCompact: Math.max(34, scaledPx(24) + 10)
     readonly property int pagePadding: 24
 
     readonly property int breakpointCompact: 1040
