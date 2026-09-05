@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
 import "../components"
 
@@ -1788,7 +1789,7 @@ Item {
                     + "\n面试结果用于复盘，不改变刷题训练的掌握状态。"
     }
 
-    Dialog {
+    Basic.Dialog {
         id: contextDialog
         objectName: "interviewAnswerContextDialog"
         modal: true
@@ -1819,7 +1820,7 @@ Item {
             border.color: root.palette.border
             border.width: 1
         }
-        footer: DialogButtonBox {
+        footer: Basic.DialogButtonBox {
             padding: 16
             spacing: 8
             alignment: Qt.AlignRight
@@ -1894,7 +1895,7 @@ Item {
         }
     }
 
-    Dialog {
+    Basic.Dialog {
         id: planContextDialog
         objectName: "personalizedInterviewContextDialog"
         modal: true
@@ -1934,7 +1935,7 @@ Item {
             border.color: root.palette.border
             border.width: 1
         }
-        footer: DialogButtonBox {
+        footer: Basic.DialogButtonBox {
             padding: 16
             spacing: 8
             alignment: Qt.AlignRight

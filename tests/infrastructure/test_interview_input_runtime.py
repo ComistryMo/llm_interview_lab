@@ -489,6 +489,10 @@ def test_context_dialog_long_labels_scale_without_overlap(scene, size):
                 assert labels[0].mapToScene(QPointF(0, labels[0].height())).y() <= labels[1].mapToScene(QPointF()).y()
         assert all(a.y() + a.height() <= b.y() for a, b in zip(rows, rows[1:]))
         assert dialog.property("height") <= window.height()
+        button_name = "confirmInterviewAnswerContext" if property_name == "aiPreview" else "confirmInterviewSetupContext"
+        button = _find(window, button_name)
+        background = dialog.property("background")
+        assert button.mapToItem(background, QPointF(0, button.height())).y() <= background.height() - 12
         _capture(window, f"context-{property_name}-{size[0]}-dark-1.25")
         listing.setProperty("contentY", max(0, listing.property("contentHeight") - listing.height()))
         QTest.qWait(50)
