@@ -1,5 +1,103 @@
 # Luna Max 动态面试当前状态报告
 
+## 2026-09-06：真实 Codex 整场面试与修复结果（最新）
+
+本节覆盖本次实际执行；下方旧记录保留，不代表当前仍只有首题。**本次完成了一场真实 Codex + Windows 正式 QML 的六题面试，并重启恢复报告。** 不是 DemoController，不是用 Fake 返回冒充真实模型，也没有发布新的桌面包。
+
+### 基线与修改范围
+
+- 起始 SHA：`972e85c6b06a83114f0b49cb2c8fc20426e4fc82`。
+- 分支：`fix/dynamic-interview-full-flow-20260905`。
+- 实现提交：`ec46bba32a475b6ca4217903bc3ef7d44445459a`，11 个源码、Schema、目标测试文件。
+- 原有未跟踪反馈、产品计划、原始图标与 `.uat-*` 目录全部保留；没有提交真实档案、材料、Secret 或本次手撕实现。
+
+解决的实际缺口：
+
+1. 每轮补齐完整岗位技能说明、难度、求职背景和本场历史问答；普通 API 不再只能看到孤立的当前回答。
+2. 新增薄的流程约束：自我介绍 → 经历深挖及追问 → 岗位原理及追问 → 本地手撕。经历与八股各 2–4 问；模型根据实际回答决定问题及何时进入下一阶段，不生成未来题单。
+3. 一个 Application Use Case 校验并原子提交本轮评分和下一问；无效阶段、技能或代码题 ID 不会留下“已评分但无法继续”的半成品。
+4. 正式面试设置可以同时选简历与 JD / 补充材料；逐场许可、每次上下文确认及 SHA 校验继续生效。
+5. Codex 每次使用新的传输 Thread，显式带入本场已发生的历史。不是丢掉上下文，而是不让其他场次或本轮取消授权的材料从旧 Thread 隐式进入请求。
+6. 动态面试完整性与评分按阶段计算；只有问答、追问与本地代码证据均完成才标记 `completed`，缺代码时不伪装完整。
+7. 真实点击发现模型保存会触发 QML 重绑定，抹掉尚未保存的推理强度；现先捕获两项输入再保存。
+8. 真实报告截图发现有六条评分证据却显示“尚未评分”；原因是 `Array.isArray` 不识别 Python 传入的 QML sequence。已按 Schema 的列表直接读取，修复后显示分数及 AI / 本地 Grader 来源。
+
+### 真实试验：不是预置 AI 回复
+
+运行目录：`workspace/maintainer/dynamic-full-20260905/`（Git ignored）。
+
+- 通过正常 `desktop.main.main()` 启动 Windows 窗口，Qt Test 实际点击、输入、滚动、锁定、确认发送、运行测试和结束；没有使用演示控制器。
+- 新档案通过真实 Onboarding 创建：`profile-c88b4397`。所有简历、JD、回答均为明确标注的合成案例，不对应用户本人。
+- `resume.txt` / `jd.txt` 通过正式材料接口导入并授权；未读取用户真实 PDF、DOCX、历史 UAT 档案或系统 Keyring。
+- 岗位为后训练、求职阶段为实习、难度为高压。背景是偏好数据清洗、DPO 对照与合成比赛经历，明确没有真实论文和企业实习；模型没有编造这些经历。
+- 实际 `model/list` 确认可用模型后，在正式设置页保存 `gpt-5.6-sol` / `low`；五次 `turn/start` 实际传参均为该模型和强度。
+
+| 已发生的问题 | 来源与真实内容 | 结果 |
+|---|---|---|
+| q-001 自我介绍 | 本地通用开场；回答说明合成比赛、个人贡献、结果缺口 | Codex 评估后生成 q-002 |
+| q-002 经历深挖 | Codex 根据简历和首轮回答问用户/语义图划分、巨大连通分量与泄漏统计 | 锁定回答后继续 |
+| q-003 经历追问 | Codex 针对刚回答的“低信息桥接边”追问处置规则、统计证据 | 明确区分实际证据与假设方案 |
+| q-004 岗位八股 | Codex 根据后训练技能与上下文询问 DPO 目标、beta、长度捷径 | 锁定回答后继续 |
+| q-005 八股追问 | Codex 追问 beta 的方向、初始化梯度、饱和和控制变量消融 | AI 选择下一环节的本地题目 |
+| q-006 手撕 | 模型选择已验证 `FND-002`，本地冻结原题与接口；正式编辑器输入代码 | 真实公开测试 `10 passed in 0.08s`；Grader 记录耗时 633 ms |
+
+本场只按发生顺序写入 6 道题和 6 条评估，没有提前写入未来问题。首题是本地开场，不宣称它来自 Codex；后续四条口述问题是实时生成，代码题是 AI 从本地候选中选择，**不是临时生成未验证的代码题**。
+
+最终 `role-interview-0001`：`status=completed`，`flow_coverage.complete=true`，没有缺失阶段，AI 证据与 Grader 证据分别记录；样例总分 84.8 只属于这份合成回答，不是用户能力、Offer 概率或 mastery。
+
+五次实际等待：127.05 / 125.09 / 136.19 / 129.73 / 126.17 秒。当前模型与线路仍然很慢；没有凭猜测归因，也没有声称延迟已解决。面试开始于 `2026-09-05T16:19:08Z`，结束于 `16:36:46Z`，期间包括测试者阅读、输入和截图。请求仍可停止，180 秒超时后保留回答。
+
+### 重启与截图复核
+
+新进程正常加载同一档案、同一已完成 Session、6 道问题和 6 条评分证据；模型及 `low` 偏好保留。读取报告不需要重新连接 AI。
+
+实际打开检查了作答、上下文、手撕结果及深浅主题报告截图。以下文件都在上述 ignored 运行目录，不进入公开题库或 Release：
+
+| 文件 | 用途 / SHA-256 |
+|---|---|
+| `q-001-typed.png` | 正式中文输入，提示已隐藏、文字位于输入框内 |
+| `q-003-question.png` | 真实针对上一回答的追问；`7da6aada13847eac582f4fad012130ec9899e61df405bb0a990c244722bf88c9` |
+| `q-004-context.png` | 本轮上下文确认，列表可滚动、按钮独立 |
+| `q-006-grader.png` | 真实编辑器及可记录的代码证据；`2aca2f58af18ef3f830524c1326cb495bb182e1602b681558171d3cf85c540ab` |
+| `report-restarted-dark.png` | 重启后报告与评分来源；`c1519380e8056b94524e9b318d666465015f10c3ba12e331024387f249069a91` |
+| `report-restarted-light.png` | 浅色报告；`449e460fe9aa1d524efb6bb7f29d7d26a99753f2b3dd629c2d4fe16a8d633830` |
+
+测试隔离也发现并修正一处问题：Windows 的 `QSettings(organization, application)` 不使用 `setDefaultFormat(IniFormat)` 设置的目录。早期测试写到了非敏感的全局模型偏好，使重启读到测试占位值 `selected-model`；不是产品保存不落盘。目标测试已改为显式私有 INI 构造器，本次运行也将仅属于合成档案的指针与已知模型偏好复制到其私有 INI，并复验恢复。占位模型已改回本次真实选择的 `gpt-5.6-sol / low`，主题恢复为深色；没有读取或改写真实档案/材料/Key。不能把初次设置隔离失败隐去，也不声称恢复了测试前未知的模型偏好。
+
+### 实际测试命令与结果
+
+使用当前仓库 `src` 的 `PYTHONPATH`，`.venv/Scripts/python.exe`，`PYTHONNOUSERSITE=1`、`PYTHONUTF8=1`；Qt 目标测试为 Windows 平台。以下缩写 `F` 为 `tests/infrastructure/test_dynamic_interview_flow.py`，`I` 为 `tests/infrastructure/test_interview_input_runtime.py`。
+
+- `pytest F -q`：首轮 1 passed / 4 errors，测试材料类型误写为 `jd`；改用现有 `job_description`，对应四例重跑通过。不是新增材料类型。
+- `pytest I -k "ui_lock_preview or followups" -q`：4 passed；随后加入每轮确认与隔离 Thread 后，连同 `api_wire` 合计 7 passed。
+- 模型保存与 Stop/Timeout：先发现旧 fixture 未调用新的上下文确认；补齐确认和 Fake `start_thread` 后 Stop/Timeout 2 passed。没有放松生产确认条件来使测试通过。
+- `pytest I -k setup_requires_consent -q`：1 passed；简历+JD 未许可不能启动，许可后真实创建仅含首题的 Session。
+- 模型保存与报告：模型保存用例通过；报告断言由 Python `5.0` 调整为 QML 实际显示 `5` 后通过，不改评分值。
+- 真实 Windows 命令：`.venv/Scripts/python.exe workspace/maintainer/dynamic-full-20260905/live.py`；初次脚本有滚动/点击定位问题，修正测试驱动后实际完成上述六题。等待文件只用于人工逐题提供合成回答，不预置任何 AI 回复。
+- 重启命令：`.venv/Scripts/python.exe workspace/maintainer/dynamic-full-20260905/restart.py`；在修正测试设置隔离及报告派生字段的比较方式后，输出 `RESTART_OK profile-c88b4397 completed 6 6`。
+
+最终代码收敛后的唯一组合验证：
+
+```text
+.venv/Scripts/python.exe -m pytest tests/infrastructure/test_dynamic_interview_flow.py tests/infrastructure/test_interview_input_runtime.py -k "context_keeps or revoked_material or invalid_ai_stage or full_flow or stage_bounds or api_wire or settings_saves_model or setup_requires_consent or report_recognizes or codex_request_can_stop or ui_lock_preview or dynamic_followups or answer_hint_hides or answer_geometry or context_dialog_long" -q
+24 passed, 9 deselected in 71.74s
+```
+
+覆盖真实核心流程、材料权限、逐轮历史、非法结果不半提交、模型/强度、Stop/Timeout、中文 IME、上下文弹窗与 900×620 / 1080×680 / 1280×800 / 1440×900 的目标布局（深浅、100%/125% 字号）。`git diff --check` 通过。
+
+### 能力边界与未验证项
+
+- **真实云端已验证：** Codex 的 `gpt-5.6-sol / low`，本场后训练实习高压场景。其他 Codex 模型可配置，但没有逐个进行同等实测。
+- **普通 API：** OpenAI、OpenAI-compatible、Ollama 的现有 HTTP/SSE 适配器通过 MockTransport 验证模型、推理参数和完整上下文；Controller 的 Provider 后续问题通路通过 Fake 结果验证。没有可供本次独立使用的 API Key，也没有读取用户 Keyring，因此不声称真实普通云 API 已端到端验证。
+- 本次合成材料是 UTF-8 文本，未复测 PDF/DOCX 提取、扫描 PDF/OCR、真实用户材料、录音或 STT。
+- 代码候选由现有题库和求职阶段限定；本次选中的 `FND-002` 是基础数据校验，不代表已验证高难 DPO/PPO 手撕质量。题面保留冻结英文原题，尚未统一成中文。
+- 本次不是所有岗位、所有简历类型的面试效度评估；没有新增岗位或题库，没有修改 mastery。
+- 未运行完整 pytest、完整 CLI/课程回归、CI、Windows/macOS 打包、macOS 实机或 Release 验收。代码已修复不代表已发布桌面包自动更新。
+
+裁决：`REAL_CODEX_INTERVIEW_COMPLETED / TARGETED_24_PASSED / WAITING_FOR_USER_UAT`。
+
+---
+
 ## 2026-09-05 再次迭代：ChatGPT 风格与实际排版验证
 
 本节是最新 UI 结果；下节保留此前的真实 Codex 传输记录。此次不修改面试状态机、材料权限、Provider 或掌握规则，不把 UI 更新描述为完整动态面试引擎完成。
