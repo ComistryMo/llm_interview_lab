@@ -168,6 +168,11 @@ def _bundle_root() -> Path:
     override = os.environ.get("LLM_LAB_BUNDLE_ROOT")
     if override:
         return Path(override).resolve()
+    if not is_packaged_desktop():
+        try:
+            return find_repository_root(Path(__file__))
+        except WorkspaceError:
+            pass  # An installed wheel can still carry runtime_assets below.
     # Nuitka/PySide can place data beside the executable (standalone app) or
     # under ``Contents/Resources`` (macOS bundle).  Do not assume that the
     # compiled module's ``__file__`` points at either location.

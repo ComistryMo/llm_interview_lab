@@ -42,6 +42,25 @@ def test_qstandardpaths_is_the_default_for_packaged_desktop(
     assert runtime.desktop_data_root() == expected
 
 
+def test_source_data_override_seeds_from_checkout_without_bundle_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    destination = tmp_path / "交互验证 数据"
+    monkeypatch.setenv("LLM_LAB_PACKAGED", "0")
+    monkeypatch.delenv("LLM_LAB_BUNDLE_ROOT", raising=False)
+    monkeypatch.setenv("LLM_LAB_DESKTOP_DATA_ROOT", str(destination))
+    monkeypatch.chdir(tmp_path)
+    root = runtime.prepare_desktop_repository()
+    assert root == destination.resolve()
+    assert (root / "curriculum").is_dir()
+    assert (root / "coach/POLICY.md").is_file()
+    assert list((root / "workspace/profiles").iterdir()) == []
+    sentinel = root / "workspace/profiles/local-sentinel.txt"
+    sentinel.write_text("retain local data", encoding="utf-8")
+    assert runtime.prepare_desktop_repository() == root
+    assert sentinel.read_text(encoding="utf-8") == "retain local data"
+
+
 def test_alpha1_migration_is_explicit_sha_verified_and_non_destructive(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
