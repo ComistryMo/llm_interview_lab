@@ -1,8 +1,86 @@
 # Luna Max 动态面试当前状态报告
 
+## 2026-09-05 补充：正常启动入口与真实 Codex 交互
+
+**这是最新结果。** 下节“版本核对与输入 / 追问修复”记录的是此前 Fake 验证；本节增加实际 App Server 传输证据，不把它扩大成完整动态面试或 Release 验收。
+
+### 基线与本轮范围
+
+- 分支：`fix/desktop-input-interview-20260905`；起点 `d486a7540cb9086465d3506c3d09788878df3a16`。
+- 再次用 `git ls-remote` 核对，GitHub `main` 仍为 `01f6b99836730d06fbf6b6a76c81b7942578db90`；公开包仍是 Alpha.3，没有被这些源码提交更新。
+- 两个源码提交：`1dbcf81`（隔离源码启动资产）与 `4408f62`（真实 Codex 故障、界面与针对性测试）。不合并 main、不创建 Tag、不构建应用、不触发 CI。
+- 使用正常 `desktop.main.main()`、`QApplication` 和正式 QML，通过 Qt QTest 向 Windows 窗口发送鼠标、滚轮和输入事件。这是**真实窗口自动交互**，不是维护者手工逐项验收，也不是 demo / screenshot controller。
+- 所有问答均明确标为合成教学经历；没有导入、读取或发送用户简历、材料和已有 UAT 面试。应用及 Codex 的合成测试数据留在 ignored 维护者目录；没有更改全局 Codex 账号、模型设置或 CLI 安装。
+
+### 实际发现和修复
+
+1. **正常源码隔离启动直接失败**：仅设置 `LLM_LAB_DESKTOP_DATA_ROOT` 时，`runtime._bundle_root()` 原先只寻找编译包资源，正常 Python 安装旁没有 `curriculum`，因而退出。之前测试额外指定了 Bundle Root，掩盖了问题。源码模式现在从当前模块所在 checkout 取得公共资源；打包与显式 Bundle Root 行为不变，也不复制真实 Profile。
+2. **建档成功仍弹“操作未完成”**：实际堆栈是 `CoachPage.refreshPreview()` → `AppController._practice_context_preview()` → `build_practice_context_preview()` 的 `current Practice task is unavailable`。隐藏的 Coach 页在首题建立之前就请求预览。现在仅在页面可见且已有当前题目时读取；打开 Coach 后仍正常刷新预览。
+3. **Codex 发现 / 握手成功，却没有下一问**：PATH 对应 Codex CLI `0.146.1`。将诊断窗口截止时间临时放宽后，获得真实终态错误：`The 'gpt-6-astra' model requires a newer version of Codex.` 原来的 30 秒硬超时和 `friendly_error()` 通用分支掩盖了这个原因。现在版本拒绝有明确中文说明，保留回答，并提供设置入口。
+4. **收到正文时又被硬超时截断**：本机已有 VS Code Insiders 附带的 Codex `0.153.0`；仅在隔离应用设置中通过既有可执行文件配置选用它。实际连接发生五次重试，约两分钟后才开始返回文本。面试请求现在有 180 秒上限和“停止请求”按钮；超时关闭本应用拥有的传输，避免旧请求继续占用连接。没有新增自动重试框架或改动用户的模型 / 推理强度偏好。
+5. **界面错位与误导**：全局浮条由固定 52px 改为按文字高度布局；入场弹窗使用深色遮罩；材料复选框允许换行；模型摘要与设置按钮上下排列；开始按钮使用既有 LabButton；没有 Session 时不显示“未知”计时状态。Codex 高压配置不再同时显示“缺少完整固定题，不能开始”，也不暗示当前动态路径会自动加入 Coding。
+6. **失败仍显示绿色“AI 已连接”**：面试期间顶部读取结构化请求状态，分别显示响应中、重连、失败、已停止。停止使用现有 `turn/interrupt`，等实际终态后恢复操作；不从提示文字推断状态。协议核对参考 [官方 App Server 生命周期与中断说明](https://developers.openai.com/codex/app-server/)。
+
+### 真实窗口操作结果
+
+| 流程 | 实际结果 |
+|---|---|
+| 新目录 → 中文名称 → 后训练岗位 → No-AI | 正常建档并进入真实 `FND-001` 作答页；最终重验没有通用错误 |
+| 关闭后同目录重启 | 恢复原档案，没有再次建档 |
+| 首页“继续训练” → 首题 | 真实题面与本地 starter 可见，不是演示代码 |
+| 后训练 / 实习 / 高压 / Codex → 确认上下文 | 立即进入本地开场题 `q-001`，尚未发送模型请求 |
+| 锁定合成回答 → 再次确认发送 → 实际 Codex | **123.41 秒后收到成功终态，保存本轮证据并进入 `q-002`**；正式代码截止时间为 180 秒，没有诊断覆盖 |
+| 再次重启 | 恢复同一 Session 的 `q-002`；真实问题询问按来源划分数据与近重复泄漏检查，回应了前一回答 |
+| q-002 提交后发起请求 → 点击停止 | 取得真实 `turn/completed: interrupted`；从发起到终态 1.48 秒，停留 q-002，已锁定回答保留，没有生成假评分 |
+
+用于诊断的两次截止时间覆盖明确不作为最终通过证据：旧 CLI 在约 112 秒返回版本拒绝；新 CLI 的首次诊断在 120 秒截止时仍在流式输出。随后才以正式 180 秒逻辑获得上述成功结果。网络重试开销没有被解决，不能承诺快速响应。
+
+### 本轮定向测试
+
+前缀均为 `.venv\Scripts\python.exe -m pytest`，没有运行完整 pytest。
+
+| 参数 | 结果 |
+|---|---|
+| `tests/infrastructure/test_desktop_platform.py -k "source_data_override or packaged_workspace_accepts" -q` | 2 passed |
+| `tests/infrastructure/test_ai_connections.py -k "codex_model_version_rejection or codex_protocol_error" -q` | 2 passed |
+| `tests/infrastructure/test_interview_input_runtime.py -k "long_toast or answer_hint_hides" -q` | 3 passed |
+| 同文件 `-k "nonexistent_practice or request_can_stop" -q` | 初次 2 failed / 1 passed；发现取消消息仍泛化，以及测试未持有 Qt window 包装器 |
+| 同文件 `-k "nonexistent_practice or (request_can_stop and stop and not timeout)" -q` | 修订中 1 failed / 1 passed；取消提示已通过，测试窗口生命周期问题继续定位 |
+| 同文件 `-k nonexistent_practice -q` | 单项修订两次失败（Qt 包装器生命周期、将 dict 当作 QJSValue），最终 1 passed；测试设置目录已显式隔离 |
+| 同文件 `-k "geometry_at_supported_sizes or ui_lock_preview or (request_can_stop and not timeout)" -q` | 6 passed |
+| `tests/infrastructure/test_desktop.py::test_interview_setup_uses_profile_role_availability_and_real_report -q` | 1 passed |
+
+共 16 个不同的相关用例按上述分组最终通过，不把分组结果冒充全量通过。布局覆盖 900×620、1080×680、1280×800、1440×900，浅色 100% 与深色 125% 字体；获焦 / 中文组字提示、浮条自动高度、按钮可达、停止 / 超时保留回答、旧超时不影响新请求均有直接检查。`git diff --check` 通过。
+
+真实窗口驱动位于 ignored 的 `workspace/maintainer/live-interview-20260905/drive.py`，实际调用参数包括 `--entry-only`、`--diagnose-timeout`、`--new-codex --diagnose-timeout`、无参数的正常请求、`--stop-request`、`--fresh-entry`、`--fresh-entry-final`。启动诊断初次报缺公共资产；驱动曾因 Popup 动画未结束漏点、已有面试时首页 CTA 已变化而中止，这些被修正为正常窗口操作，没有为驱动改动业务规则。
+
+已查看的本地截图包括：
+
+```text
+workspace/maintainer/live-interview-20260905/07-current-question.png
+workspace/maintainer/live-interview-20260905/08-answer-input.png
+workspace/maintainer/live-interview-20260905/11-after-real-response.png
+workspace/maintainer/live-interview-20260905/fresh-entry-final/06-setup-context.png
+workspace/maintainer/live-interview-20260905/verified-ui/long-error-900.png
+workspace/maintainer/live-interview-20260905/verified-ui/interview-900x620-dark-submit.png
+```
+
+前四项来自正常启动的隔离应用；`07` 是真实第二问重启恢复，`11` 是停止请求后的状态。`verified-ui` 来自定向测试，不代表实际账号连接。截图留在本机，不替换 README 发布截图。
+
+### 未解决项与终局
+
+- 本机 Codex 连接重试仍约两分钟；仅验证了已安装 `0.153.0` 与当前账号默认模型这一组合，不声称所有版本 / 模型可用。日常应用若仍选择旧 CLI，需从已提供的设置入口选择兼容版本；本轮没有偷偷修改用户的全局选择。
+- 当前动态面试仍缺完整跨轮背景组装、阶段推进与自动 Coding 衔接；本轮只证明真实 `q-001 → q-002` 及恢复 / 停止。没有把局部可用冒充完整产品目标完成。
+- 没有使用真实材料、真实 Keyring 条目，也没有验收完整评分报告、Windows 发布包或 macOS；未运行全量、RC CI 和打包。
+- 所有既有用户未跟踪文件及 UAT 资料保留。源码与文档显式分批提交，ignored 问答、日志、截图与诊断脚本不进入 Git。
+
+状态：`REAL_WINDOWS_CODEX_NEXT_QUESTION_VERIFIED / WAITING_FOR_USER_UAT`。
+
+---
+
 ## 2026-09-05 更新：版本核对与输入 / 追问修复
 
-本节是当前状态；后面的 2026-09-02 记录保留为历史证据，不再代表最新修复状态。
+本节保留本日较早的版本核对与 Fake 验证结果；后续真实交互以本文件顶部补充为准。后面的 2026-09-02 记录保留为历史证据。
 
 ### 版本差异
 
