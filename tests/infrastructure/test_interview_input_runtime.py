@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import time
 from uuid import uuid4
 
@@ -154,6 +155,189 @@ def _within_window(window, item):
     return (start.x() >= 0 and start.y() >= 0
             and start.x() + item.width() <= window.width() + 1
             and start.y() + item.height() <= window.height() + 1)
+
+
+def test_recording_start_reaches_recorder_with_profile_local_path(controller, monkeypatch):
+    destinations = []
+    errors = []
+    monkeypatch.setattr(controller._voice_recorder, "start", destinations.append)
+    monkeypatch.setattr(controller, "_show_error", errors.append)
+    assert controller.startInterviewRecording(), [
+        f"{type(error).__name__}: {error}" for error in errors
+    ]
+    assert len(destinations) == 1
+    from llm_interview_lab.workspace import profile_paths
+    expected = profile_paths(controller.repo_root, controller.profileId).interviews_root
+    assert destinations[0].parent == expected / controller.interview["interview_id"] / "audio"
+    assert destinations[0].name.startswith("q-001-")
+    assert destinations[0].suffix == ".wav"
+
+
+@pytest.mark.parametrize("failure,expected", [
+    (RuntimeError("未检测到可用麦克风；你仍可直接输入文字回答"), "麦克风"),
+    (PermissionError("private-path-must-not-leak"), "目录不可写"),
+    (NameError("private-path-must-not-leak"), "RECORDING_FAILED"),
+])
+def test_recording_failure_is_inline_and_logged(controller, monkeypatch, caplog, failure, expected):
+    def fail(_path):
+        raise failure
+    monkeypatch.setattr(controller._voice_recorder, "start", fail)
+    assert not controller.startInterviewRecording()
+    assert controller.interviewVoice["state"] == "error"
+    assert expected in controller.interviewVoice["error"]
+    assert "error_type=" + type(failure).__name__ in caplog.text
+    assert "private-path-must-not-leak" not in caplog.text + controller.interviewVoice["error"]
+    assert "操作未完成" not in controller.interviewVoice["error"]
+    assert not controller.busy
+
+
+def test_interview_preferences_survive_process_restart_and_stay_profile_local(controller, tmp_path):
+    from llm_interview_lab.workspace import init_profile
+    # Existing users inherit their actual last session, then changes are saved
+    # before starting another one. No materials/consent/secret belong in this map.
+    assert controller.interviewPreferences()["difficulty"] == "hard"
+    assert controller.interviewPreferences()["seniority"] == "intern"
+    saved = dict(role_id="ai_product_manager", seniority="mid", difficulty="easy",
+                 ai_mode="provider", connection_id="second-api", transcription_connection_id="speech-api")
+    controller.saveInterviewPreferences({**saved, "consent": True, "api_key": "do-not-store"})
+    assert controller.interviewPreferences() == saved
+    controller.setCodexModel("persisted-synthetic-model")
+    controller.setCodexReasoningEffort("low")
+    controller._settings.sync()
+    code = """
+import json, sys
+from pathlib import Path
+from PySide6.QtCore import QSettings
+from PySide6.QtWidgets import QApplication
+import llm_interview_lab.desktop.controller as module
+app = QApplication(['preference-restart'])
+module.QSettings = lambda *args: QSettings(sys.argv[2], QSettings.IniFormat)
+module.AppController.refreshCodexAvailability = lambda self: None
+controller = module.AppController(Path(sys.argv[1]))
+print(json.dumps({'profile': controller.profileId, 'preferences': controller.interviewPreferences(),
+                  'model': controller.codexModel, 'effort': controller.codexReasoningEffort}))
+controller.shutdown()
+"""
+    env = {**os.environ, "PYTHONPATH": str(REPO / "src"), "QT_QPA_PLATFORM": "offscreen"}
+    result = subprocess.run([sys.executable, "-c", code, str(controller.repo_root), controller._settings.fileName()],
+                            env=env, capture_output=True, text=True, timeout=40)
+    assert result.returncode == 0, result.stderr
+    restored = json.loads(result.stdout.strip().splitlines()[-1])
+    assert restored == dict(profile=controller.profileId, preferences=saved,
+                            model="persisted-synthetic-model", effort="low")
+    previous_profile = controller.profileId
+    other = "prefs-other-" + uuid4().hex[:8]
+    init_profile(controller.repo_root, other)
+    assert controller.switchProfile(other)
+    assert controller.interviewPreferences()["ai_mode"] == "disabled"
+    assert controller.interviewPreferences()["connection_id"] == ""
+    controller.saveInterviewPreferences({"difficulty": "medium", "ai_mode": "codex"})
+    assert controller.switchProfile(previous_profile)
+    assert controller.interviewPreferences() == saved
+    assert "do-not-store" not in Path(controller._settings.fileName()).read_text(encoding="utf-8")
+
+
+def test_interview_setup_remembers_user_choices_after_navigation_and_connection_refresh(scene):
+    window, controller = scene
+    assert controller.saveConnection("first-api", "ollama", "synthetic-a", "第一个连接", "http://localhost:11434", "", "")
+    assert controller.saveConnection("second-api", "ollama", "synthetic-b", "第二个连接", "http://localhost:11434", "", "")
+    controller.finishInterview()
+    QTest.qWait(80)
+    _click(window, _find(window, "configureAnotherInterview"))
+    QTest.qWait(60)
+
+    def select(name, index):
+        item = _find(window, name)
+        item.forceActiveFocus()
+        QTest.keyClick(window, Qt.Key_Space)
+        QTest.keyClick(window, Qt.Key_Home)
+        for _ in range(index):
+            QTest.keyClick(window, Qt.Key_Down)
+        QTest.keyClick(window, Qt.Key_Return)
+        QTest.qWait(30)
+        assert item.property("currentIndex") == index
+
+    select("interviewSenioritySelector", 2)
+    select("interviewDifficultySelector", 0)
+    select("interviewAiModeSelector", 1)
+    select("personalizedInterviewConnection", 1)
+    connection = _find(window, "personalizedInterviewConnection").property("currentValue")
+    saved = controller.interviewPreferences()
+    assert (saved["seniority"], saved["difficulty"], saved["ai_mode"], saved["connection_id"]) == ("mid", "easy", "provider", connection)
+    controller.navigate("home")
+    QTest.qWait(50)
+    controller.navigate("interview")
+    QTest.qWait(100)
+    assert _find(window, "interviewSenioritySelector").property("currentValue") == "mid"
+    assert _find(window, "interviewDifficultySelector").property("currentValue") == "easy"
+    assert _find(window, "interviewAiModeSelector").property("currentValue") == "provider"
+    controller.refresh()
+    QTest.qWait(100)
+    assert _find(window, "personalizedInterviewConnection").property("currentValue") == connection
+    assert controller.deleteConnection(connection)
+    QTest.qWait(100)
+    assert _find(window, "personalizedInterviewConnection").property("currentIndex") == -1
+    assert controller.interviewPreferences()["connection_id"] == connection
+    assert not _find(window, "interviewMaterialConsent").property("checked")
+
+
+@pytest.mark.parametrize("size", [(900, 620), (1280, 800)])
+def test_voice_error_and_transcription_choices_use_real_capabilities(scene, monkeypatch, size):
+    window, controller = scene
+    monkeypatch.setattr("llm_interview_lab.ai.credentials.KeyringCredentialStore.save",
+                        lambda self, profile, connection, key: "synthetic-reference-" + connection)
+    assert controller.saveConnection("text-api", "deepseek", "synthetic-text-model", "DeepSeek", "", "synthetic-key", "none")
+    assert controller.transcriptionConnections == []
+    window.resize(*size)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    QTest.qWait(150)
+    _click(window, _find(window, "toggleInterviewVoice"))
+    QTest.qWait(120)
+    from llm_interview_lab.desktop import voice as voice_module
+    monkeypatch.setattr(voice_module.QMediaDevices, "audioInputs", staticmethod(lambda: []))
+    _click(window, _find(window, "startInterviewRecording"))
+    QTest.qWait(100)
+    assert _find(window, "interviewVoiceState").property("text") == "录音失败"
+    error = _find(window, "interviewVoiceError")
+    assert error.isVisible() and "麦克风" in error.property("text")
+    assert error.property("contentHeight") <= error.height() + 1
+    viewport = _find(window, "interviewQuestionScroll")
+    assert 0 <= error.mapToItem(viewport, QPointF()).y()
+    assert error.mapToItem(viewport, QPointF(0, error.height())).y() <= viewport.height()
+    assert "本地录音不需要 AI" in _find(window, "interviewTranscriptionAvailability").property("text")
+    assert _find(window, "interviewVoiceConnection").property("count") == 0
+    assert not _find(window, "transcribeInterviewRecording").isEnabled()
+    _capture(window, f"voice-missing-microphone-{size[0]}")
+    assert controller.saveConnection("speech-api", "openai-compatible", "synthetic-chat-model", "语音连接", "http://localhost:8080/v1", "synthetic-key", "")
+    assert [c["connection_id"] for c in controller.transcriptionConnections] == ["speech-api"]
+
+
+@pytest.mark.skipif(os.environ.get("LLM_LAB_TEST_MICROPHONE") != "1", reason="Explicit opt-in required for real microphone capture")
+def test_real_microphone_start_stop_from_production_page(scene):
+    import wave
+    window, controller = scene
+    window.resize(1280, 800)
+    _click(window, _find(window, "toggleInterviewVoice"))
+    QTest.qWait(150)
+    _click(window, _find(window, "startInterviewRecording"))
+    assert controller.interviewVoice["state"] == "recording", controller.interviewVoice
+    assert not controller.startInterviewRecording(), "Duplicate start must not replace the active recorder"
+    QTest.qWait(3500)
+    _capture(window, "voice-recording-windows")
+    _click(window, _find(window, "stopInterviewRecording"))
+    for _ in range(100):
+        QTest.qWait(50)
+        if controller.interviewVoice["state"] != "recording":
+            break
+    assert controller.interviewVoice["audio_ready"], controller.interviewVoice
+    path = controller._voice_recorder.path
+    with wave.open(str(path), "rb") as audio:
+        duration = audio.getnframes() / audio.getframerate()
+        assert duration >= 2, duration
+        print(f"REAL_MICROPHONE_OK duration={duration:.2f}s bytes={path.stat().st_size} channels={audio.getnchannels()} rate={audio.getframerate()}")
+    assert not controller.busy and not controller.interview["answer_locked"]
+    assert not _find(window, "interviewVoiceRemoteConsent").property("checked")
+    _capture(window, "voice-recorded-windows")
 
 
 def test_corrected_coding_selection_opens_editor_and_shows_notice(scene):

@@ -29,7 +29,7 @@ from ..ai.context_builder import (
 from ..ai.credentials import KeyringCredentialStore
 from ..ai.interview_planner import decode_dynamic_question, decode_personalized_questions
 from ..ai.providers import create_chat_provider
-from ..ai.transcription import OpenAICompatibleTranscriber
+from ..ai.transcription import OpenAICompatibleTranscriber, TRANSCRIPTION_PROVIDERS
 from ..application import ApplicationError, ApplicationService
 from ..coach_sessions import (
     CoachSessionError,
@@ -43,6 +43,7 @@ from ..interview_flow import dialogue_instruction, flow_coverage, question_stage
 from ..roles import RoleCatalogError
 from ..workspace import (
     WorkspaceError,
+    ensure_profile_path_is_safe,
     profile_id_for_display_name,
     profile_paths,
     profile_summaries,
@@ -825,6 +826,40 @@ class AppController(QObject):
     ) -> dict[str, Any]:
         return self.service.interview_configuration(role_id, seniority, difficulty)
 
+    def _interview_preferences_key(self) -> str:
+        identity = f"{self.repo_root}:{self._profile_id}"
+        return "interviewPreferences/" + hashlib.sha256(identity.encode("utf-8")).hexdigest()[:24]
+
+    @Slot(result="QVariantMap")
+    def interviewPreferences(self) -> dict[str, str]:
+        """Restore this Profile's form choices, never material or audio consent."""
+        role = self._dashboard.get("role") or {}
+        defaults = {
+            "role_id": self._interview.get("role_id") or role.get("primary_role", ""),
+            "seniority": self._interview.get("seniority") or role.get("seniority", "new_grad"),
+            "difficulty": self._interview.get("difficulty", "medium"),
+            "ai_mode": self._interview.get("ai_mode", "disabled"),
+            "connection_id": (self._interview.get("connection_id", "")
+                              if self._interview.get("ai_mode") == "provider" else ""),
+            "transcription_connection_id": "",
+        }
+        return {**defaults, **self._settings.value(self._interview_preferences_key(), {})}
+
+    @Slot("QVariantMap")
+    def saveInterviewPreferences(self, preferences: Mapping[str, Any]) -> None:
+        # Only selection IDs belong here. Models/effort stay in existing AI
+        # settings, credentials in Keyring, and authorization in each session.
+        saved = self.interviewPreferences()
+        for key in ("role_id", "seniority", "difficulty", "ai_mode", "connection_id",
+                    "transcription_connection_id"):
+            if key in preferences:
+                if key == "connection_id" and preferences[key] == "codex":
+                    continue  # Keep the last ordinary API choice when switching to Codex.
+                saved[key] = str(preferences[key])
+        if not self._demo_mode:
+            self._settings.setValue(self._interview_preferences_key(), saved)
+            self._settings.sync()
+
     @Property("QVariantMap", notify=stateChanged)
     def dashboard(self) -> dict[str, Any]:
         return self._dashboard
@@ -897,6 +932,10 @@ class AppController(QObject):
     @Property("QVariantList", notify=stateChanged)
     def connections(self) -> list[dict[str, Any]]:
         return self._connections
+
+    @Property("QVariantList", notify=stateChanged)
+    def transcriptionConnections(self) -> list[dict[str, Any]]:
+        return [item for item in self._connections if item["provider_id"] in TRANSCRIPTION_PROVIDERS]
 
     @Property(str, notify=stateChanged)
     def connectionError(self) -> str:
@@ -1272,8 +1311,24 @@ class AppController(QObject):
         self.stateChanged.emit()
 
     def _voice_failed(self, message: str) -> None:
-        self._voice_transcription_error = friendly_error(message)
+        self._voice_transcription_error = message
         self.stateChanged.emit()
+
+    def _recording_failed(self, error: Exception) -> None:
+        operation_id = uuid4().hex[:8]
+        logging.getLogger("llm_interview_lab.desktop").error(
+            "interview_recording_failed error_type=%s operation_id=%s",
+            type(error).__name__, operation_id,
+        )
+        if isinstance(error, PermissionError):
+            message = "无法保存录音：当前档案目录不可写。请检查目录权限后重试，或直接输入文字回答。"
+        elif isinstance(error, WorkspaceError):
+            message = "录音目录未通过档案路径检查。请在设置中检查数据完整性；你仍可直接输入文字回答。"
+        elif isinstance(error, RuntimeError):
+            message = str(error)  # Local recorder errors already contain the next action.
+        else:
+            message = f"无法开始或停止录音（RECORDING_FAILED · {operation_id}）。请重试；仍失败时可从设置打开日志，或直接输入文字回答。"
+        self._voice_recorder._error_message(message)
 
     def _active_profile_settings_key(self) -> str:
         """Return a stable, non-sensitive QSettings key for this data root."""
@@ -3045,6 +3100,7 @@ class AppController(QObject):
             self._settings.setValue(key, scope)
             self._settings.setValue(key + "/connection", connection_id)
             self._interview["connection_id"] = connection_id
+            self.saveInterviewPreferences({"connection_id": connection_id})
             self._settings.sync()
             return True
         except Exception as error:
@@ -3132,6 +3188,8 @@ class AppController(QObject):
     def startInterviewRecording(self) -> bool:
         """Start a real profile-local recording for the current text round."""
 
+        if self._voice_recorder.state == "recording" or self._voice_transcription_operation_id:
+            return False
         question = self._interview.get("question") or {}
         if (
             self._profile_id == "demo"
@@ -3140,7 +3198,7 @@ class AppController(QObject):
             or question.get("kind") == "coding"
             or self._interview.get("answer_locked")
         ):
-            self._show_error("当前问题不能开始录音；你仍可直接输入文字回答。")
+            self._voice_failed("当前问题不能开始录音；请回到正在作答的文字题，也可以直接输入文字回答。")
             return False
         try:
             interview_id = str(self._interview["interview_id"])
@@ -3161,7 +3219,7 @@ class AppController(QObject):
             self._voice_recorder.start(destination)
             return True
         except Exception as error:
-            self._show_error(error)
+            self._recording_failed(error)
             return False
 
     @Slot(result=bool)
@@ -3170,7 +3228,7 @@ class AppController(QObject):
             self._voice_recorder.stop()
             return True
         except Exception as error:
-            self._show_error(error)
+            self._recording_failed(error)
             return False
 
     @Slot(str, bool)
@@ -3246,9 +3304,8 @@ class AppController(QObject):
                 return
             self._voice_transcription_operation_id = ""
             self._voice_transcription_state = "error"
-            self._voice_transcription_error = friendly_error(message)
+            self._voice_transcription_error = message
             self.stateChanged.emit()
-            self._show_error(message)
 
         self._background(operation, complete, failed)
 
@@ -4234,6 +4291,10 @@ class AppController(QObject):
             self._settings.setValue(key, scope)
             self._settings.setValue(key + "/connection", str(request.get("connection_id") or "codex"))
             self._interview["connection_id"] = str(request.get("connection_id") or "codex")
+            self.saveInterviewPreferences({
+                field: self._interview[field]
+                for field in ("role_id", "seniority", "difficulty", "ai_mode", "connection_id")
+            })
             self._settings.sync()
             self.stateChanged.emit()
         except Exception as caught:

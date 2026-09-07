@@ -40,6 +40,13 @@ Item {
     // sessions.
     property bool startingDynamicInterview: false
     property var pendingConnectionCheck: null
+    property string setupConnectionId: ""
+    property string transcriptionConnectionId: ""
+    readonly property string setupProfileId: app.profileId
+    onSetupProfileIdChanged: {
+        Qt.callLater(root.initializeSetup)
+        Qt.callLater(root.clearSetupConsent)
+    }
     // A coding round can only be recorded when the visible editor still
     // matches the revision that the local Grader tested. TextArea bindings are
     // intentionally broken after typing, so track edits explicitly.
@@ -125,6 +132,7 @@ Item {
         root.pendingLockAnswer = ""
         root.showCodingPrompt = true
         root.showEnglishQuestion = app.language === "en"
+        voiceConsent.checked = false
         var savedConnection = String(app.interview.connection_id || "")
         var selectedIndex = providerConnection.indexOfValue(savedConnection)
         if (selectedIndex >= 0)
@@ -356,10 +364,6 @@ Item {
         return -1
     }
 
-    function seniorityIndex(value) {
-        return value === "intern" ? 0 : value === "mid" ? 2 : 1
-    }
-
     function refreshConfiguration() {
         var roleId = role.currentValue || ""
         if (!roleId) {
@@ -377,10 +381,43 @@ Item {
     }
 
     function initializeSetup() {
-        var rolePreference = (app.dashboard.role && app.dashboard.role.primary_role) || ""
-        role.currentIndex = root.roleIndex(rolePreference)
-        seniority.currentIndex = root.seniorityIndex((app.dashboard.role && app.dashboard.role.seniority) || "new_grad")
+        var saved = app.interviewPreferences()
+        role.currentIndex = root.roleIndex(saved.role_id)
+        seniority.currentIndex = seniority.indexOfValue(saved.seniority)
+        difficulty.currentIndex = difficulty.indexOfValue(saved.difficulty)
+        aiMode.currentIndex = aiMode.indexOfValue(saved.ai_mode)
+        root.setupConnectionId = saved.connection_id || ""
+        root.transcriptionConnectionId = saved.transcription_connection_id || ""
+        root.restoreSetupConnection()
+        root.restoreTranscriptionConnection()
         root.refreshConfiguration()
+    }
+
+    function saveSetup() {
+        root.setupConnectionId = planConnection.currentValue || root.setupConnectionId
+        app.saveInterviewPreferences({
+            role_id: role.currentValue || "", seniority: seniority.currentValue || "",
+            difficulty: difficulty.currentValue || "", ai_mode: aiMode.currentValue || "disabled",
+            connection_id: root.setupConnectionId
+        })
+        root.refreshConfiguration()
+    }
+
+    function restoreSetupConnection() {
+        planConnection.currentIndex = root.setupConnectionId
+            ? planConnection.indexOfValue(root.setupConnectionId) : (planConnection.count ? 0 : -1)
+    }
+
+    function restoreTranscriptionConnection() {
+        voiceConnection.currentIndex = root.transcriptionConnectionId
+            ? voiceConnection.indexOfValue(root.transcriptionConnectionId) : (voiceConnection.count ? 0 : -1)
+    }
+
+    function clearSetupConsent() {
+        useMaterial.checked = false
+        useJD.checked = false
+        consent.checked = false
+        voiceConsent.checked = false
     }
 
     function configurationMessage() {
@@ -695,7 +732,7 @@ Item {
                     LabDivider { width: parent.width; theme: root.theme }
                     LabText { theme: root.theme; text: "面试目标"; variant: "section"; strong: true }
                     LabText { theme: root.theme; text: "目标岗位"; variant: "caption"; tone: "muted" }
-                    LabComboBox { theme: root.theme; id: role; objectName: "interviewRoleSelector"; width: parent.width; textRole: "title"; valueRole: "id"; model: app.roles; currentIndex: -1; onActivated: root.refreshConfiguration() }
+                    LabComboBox { theme: root.theme; id: role; objectName: "interviewRoleSelector"; width: parent.width; textRole: "title"; valueRole: "id"; model: app.roles; currentIndex: -1; onActivated: root.saveSetup() }
                     GridLayout {
                         width: parent.width
                         columns: 2
@@ -703,8 +740,8 @@ Item {
                         rowSpacing: 8
                         LabText { theme: root.theme; text: "求职阶段"; variant: "caption"; tone: "muted" }
                         LabText { theme: root.theme; text: "难度"; variant: "caption"; tone: "muted" }
-                        LabComboBox { theme: root.theme; id: seniority; objectName: "interviewSenioritySelector"; Layout.fillWidth: true; Layout.minimumWidth: 0; model: [{id:"intern", label:"实习"}, {id:"new_grad", label:"校招"}, {id:"mid", label:"有经验"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.refreshConfiguration() }
-                        LabComboBox { theme: root.theme; id: difficulty; objectName: "interviewDifficultySelector"; Layout.fillWidth: true; Layout.minimumWidth: 0; model: [{id:"easy", label:"基础"}, {id:"medium", label:"标准"}, {id:"hard", label:"高压"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.refreshConfiguration() }
+                        LabComboBox { theme: root.theme; id: seniority; objectName: "interviewSenioritySelector"; Layout.fillWidth: true; Layout.minimumWidth: 0; model: [{id:"intern", label:"实习"}, {id:"new_grad", label:"校招"}, {id:"mid", label:"有经验"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.saveSetup() }
+                        LabComboBox { theme: root.theme; id: difficulty; objectName: "interviewDifficultySelector"; Layout.fillWidth: true; Layout.minimumWidth: 0; model: [{id:"easy", label:"基础"}, {id:"medium", label:"标准"}, {id:"hard", label:"高压"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.saveSetup() }
                     }
                     Text {
                         objectName: "interviewDifficultyHint"
@@ -733,6 +770,7 @@ Item {
                         textRole: "label"
                         valueRole: "id"
                         onActivated: {
+                            root.saveSetup()
                             if (currentValue === "codex"
                                     && !app.codexAvailable
                                     && !app.codexProbeRunning)
@@ -839,6 +877,8 @@ Item {
                         model: app.connections
                         textRole: "display_name"
                         valueRole: "connection_id"
+                        onActivated: root.saveSetup()
+                        onModelChanged: Qt.callLater(root.restoreSetupConnection)
                     }
                     Text {
                         width: parent.width
@@ -846,7 +886,9 @@ Item {
                                  && (planConnection.currentIndex < 0
                                      || !root.providerIsReady(planConnection.currentValue))
                         text: planConnection.currentIndex < 0
-                              ? "尚未选择 AI 连接。"
+                              ? (root.setupConnectionId
+                                 ? "上次使用的连接已删除或不在当前档案中。请选择其他连接，或到 AI 连接页重新配置。"
+                                 : "尚未选择 AI 连接，请先到 AI 连接页保存一个连接。")
                               : "已保存的连接可以直接复用；点击开始后会先检测，无需重新填写 Key。"
                         color: root.colors.warning
                         wrapMode: Text.Wrap
@@ -1335,7 +1377,8 @@ Item {
                                     text: app.interviewVoice.state === "recording"
                                           ? "录音中"
                                           : app.interviewVoice.transcription_state === "transcribing"
-                                            ? "转录中" : app.interviewVoice.audio_ready ? "已录音" : "未开始"
+                                            ? "转录中" : app.interviewVoice.state === "error" ? "录音失败"
+                                            : app.interviewVoice.audio_ready ? "已录音" : "未开始"
                                     tone: app.interviewVoice.state === "recording"
                                           ? root.colors.warning : root.colors.muted
                                 }
@@ -1347,6 +1390,15 @@ Item {
                                 font.pixelSize: 11
                                 wrapMode: Text.Wrap
                             }
+                            Text {
+                                objectName: "interviewVoiceError"
+                                visible: !!app.interviewVoice.error
+                                Layout.fillWidth: true
+                                text: app.interviewVoice.error || ""
+                                color: root.colors.danger
+                                font.pixelSize: 12
+                                wrapMode: Text.Wrap
+                            }
                             RowLayout {
                                 Layout.fillWidth: true
                                 Button {
@@ -1355,7 +1407,10 @@ Item {
                                     enabled: app.interviewVoice.state !== "recording"
                                              && app.interviewVoice.transcription_state !== "transcribing"
                                              && !app.busy
-                                    onClicked: app.startInterviewRecording()
+                                    onClicked: {
+                                        voiceConsent.checked = false
+                                        app.startInterviewRecording()
+                                    }
                                 }
                                 Button {
                                     objectName: "stopInterviewRecording"
@@ -1375,23 +1430,33 @@ Item {
                                 }
                                 Item { Layout.fillWidth: true }
                             }
-                            RowLayout {
+                            GridLayout {
                                 Layout.fillWidth: true
+                                columns: root.compactInterviewLayout ? 1 : 3
                                 ComboBox {
                                     id: voiceConnection
                                     objectName: "interviewVoiceConnection"
                                     Layout.fillWidth: true
-                                    model: app.connections
+                                    Layout.minimumWidth: 0
+                                    model: app.transcriptionConnections
                                     textRole: "display_name"
                                     valueRole: "connection_id"
+                                    displayText: currentIndex < 0 ? "请选择语音转录连接" : currentText
                                     enabled: app.interviewVoice.audio_ready
                                              && app.interviewVoice.transcription_state !== "transcribing"
+                                    onModelChanged: Qt.callLater(root.restoreTranscriptionConnection)
+                                    onActivated: {
+                                        voiceConsent.checked = false
+                                        root.transcriptionConnectionId = currentValue || ""
+                                        app.saveInterviewPreferences({transcription_connection_id: root.transcriptionConnectionId})
+                                    }
                                 }
                                 CheckBox {
                                     id: voiceConsent
                                     objectName: "interviewVoiceRemoteConsent"
                                     text: "本次允许远程转录"
                                     enabled: app.interviewVoice.audio_ready
+                                             && voiceConnection.currentIndex >= 0
                                              && app.interviewVoice.transcription_state !== "transcribing"
                                 }
                                 Button {
@@ -1409,18 +1474,12 @@ Item {
                                 }
                             }
                             Text {
-                                visible: (app.connections || []).length === 0
+                                objectName: "interviewTranscriptionAvailability"
                                 Layout.fillWidth: true
-                                text: "尚未配置可用的 AI 连接。你仍可直接输入文字回答；如需转录，请先在 AI 连接页保存并测试。"
+                                text: (app.transcriptionConnections || []).length === 0
+                                      ? "本地录音不需要 AI。当前没有语音转录连接：本应用的 DeepSeek 连接仅用于文字面试。转录需在 AI 连接页配置支持 /audio/transcriptions 的 OpenAI 或兼容服务；也可以直接输入文字回答。"
+                                      : "转录使用独立的 whisper-1 模型；所选服务需要支持 /audio/transcriptions，不使用文字面试的模型。音频仅在你本次授权并点击转录后发送。"
                                 color: root.colors.muted
-                                font.pixelSize: 11
-                                wrapMode: Text.Wrap
-                            }
-                            Text {
-                                visible: !!app.interviewVoice.error
-                                Layout.fillWidth: true
-                                text: app.interviewVoice.error || ""
-                                color: root.colors.danger
                                 font.pixelSize: 11
                                 wrapMode: Text.Wrap
                             }
@@ -2098,7 +2157,7 @@ Item {
                         variant: "primary"
                         visible: app.interview.status === "completed" || app.interview.status === "incomplete"
                         text: "再面试一场"
-                        onClicked: { root.configuringNewInterview = true; root.initializeSetup() }
+                        onClicked: { root.configuringNewInterview = true; root.clearSetupConsent(); root.initializeSetup() }
                     }
                 }
             }

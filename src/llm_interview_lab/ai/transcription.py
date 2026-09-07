@@ -11,6 +11,7 @@ from .providers import ProviderConfig, ProviderError
 
 
 MAX_AUDIO_BYTES = 25 * 1024 * 1024
+TRANSCRIPTION_PROVIDERS = frozenset({"openai", "openai-compatible"})
 
 
 class TranscriptionError(RuntimeError):
@@ -28,7 +29,7 @@ class OpenAICompatibleTranscriber:
         model: str = "whisper-1",
         client_factory: Callable[..., Any] | None = None,
     ) -> None:
-        if config.provider_id not in {"openai", "openai-compatible"}:
+        if config.provider_id not in TRANSCRIPTION_PROVIDERS:
             raise TranscriptionError(
                 "语音转录当前仅支持 OpenAI 或兼容的 /audio/transcriptions 服务"
             )
