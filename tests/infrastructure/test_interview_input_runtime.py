@@ -581,7 +581,7 @@ def test_question_switch_clears_drafts_without_touching_saved_answer(scene):
 
 
 @pytest.mark.parametrize("size", [(900, 620), (1280, 800)])
-def test_ui_lock_preview_codex_response_enters_next_question(scene, size):
+def test_ui_single_submit_codex_response_enters_next_question(scene, size):
     window, controller = scene
     window.resize(*size)
     window.setProperty("displayFontScaleOverride", 1.25)
@@ -602,6 +602,7 @@ def test_ui_lock_preview_codex_response_enters_next_question(scene, size):
     controller._codex_backend = backend
     controller._codex_thread_id = "thread-input-test"
     controller._codex_thread_mode = "interviewer"
+    controller._codex_pump_started = True
     controller._ai_status = "Codex 已连接"
     controller._ensure_codex_loop()
     controller.aiStateChanged.emit()
@@ -611,38 +612,28 @@ def test_ui_lock_preview_codex_response_enters_next_question(scene, size):
     answer.setProperty("text", draft)
     _click(window, _find(window, "lockInterviewAnswer"))
     dialog = window.findChild(QObject, "lockInterviewAnswerDialog")
-    assert dialog.property("opened") or dialog.property("visible")
-    QMetaObject.invokeMethod(dialog, "accept")
-    for _ in range(30):
-        QTest.qWait(20)
-        if not dialog.property("visible"):
-            break
-    assert not dialog.property("visible"), "Wait for the modal lock confirmation to close"
+    assert not dialog.property("visible"), "Submitting a dynamic answer must not require a second click"
     assert controller.interview["answer_locked"]
     assert not _find(window, "recordSelfAssessment").isVisible()
     continuation = _find(window, "continueCodexInterview")
-    assert continuation.isVisible() and continuation.isEnabled()
-    pos = continuation.mapToScene(QPointF())
-    assert 0 <= pos.y() and pos.y() + continuation.height() <= window.height()
+    assert not continuation.isVisible(), "No separate continue step for dynamic interviews"
+    submit = _find(window, "lockInterviewAnswer")
+    pos = submit.mapToScene(QPointF())
+    assert 0 <= pos.y() and pos.y() + submit.height() <= window.height()
     viewport = _find(window, "interviewQuestionScroll")
     assert pos.y() >= viewport.mapToScene(QPointF(0, viewport.height())).y()
-    clicks = []
-    continuation.clicked.connect(lambda: clicks.append("clicked"))
-    _capture(window, "dynamic-answer-locked-dark")
-    _click(window, continuation)
-    QTest.qWait(80)
-    _capture(window, "dynamic-answer-context-dark")
     preview = window.findChild(QObject, "interviewAnswerContextDialog")
-    assert clicks == ["clicked"]
-    assert preview.property("visible"), errors
-    assert not backend.calls, "Preview alone must not send the answer"
-    _click(window, _find(window, "confirmInterviewAnswerContext"))
+    assert not preview.property("visible"), errors
+    assert not submit.isEnabled()
+    assert not controller.submitInterviewAnswer(draft, "codex", True), "Double clicks must not send twice"
     for _ in range(30):
         QTest.qWait(20)
+        time.sleep(0.01)
         if controller._codex_interview_turn_id == "turn-input-test":
             break
     assert len(backend.calls) == 1
     assert draft in backend.calls[0][0][1]
+    assert backend.calls[0][1]["output_schema"]["properties"]["next_stage"]["enum"] == ["experience"]
     result = {
         "scores": {key: 3 for key in controller.interview["question"]["rubric"]["dimensions"]},
         "evidence": "候选人说明了先测量失败率，并使用独立验证集核对改动效果。",
@@ -664,6 +655,168 @@ def test_ui_lock_preview_codex_response_enters_next_question(scene, size):
     assert answer.property("text") == ""
     assert controller.busy is False
     _capture(window, "dynamic-second-question-dark")
+
+
+def test_single_submit_retries_saved_answer_after_malformed_response(controller):
+    captured = []
+    async def start_thread(**kwargs):
+        return {"thread": {"id": "retry-thread"}}
+    async def start_turn(*args, **kwargs):
+        captured.append(args)
+        return {"turn": {"id": "retry-turn"}}
+    from types import SimpleNamespace
+    controller._codex_backend = SimpleNamespace(start_thread=start_thread, start_turn=start_turn)
+    controller._codex_thread_id = "retry-thread"
+    controller._codex_thread_mode = "interviewer"
+    controller._codex_pump_started = True
+    controller._ensure_codex_loop()
+    draft = "合成回答：我负责按用户和语义簇隔离训练评测，避免数据泄漏。"
+    assert controller.submitInterviewAnswer(draft, "codex", False)
+    for _ in range(60):
+        QTest.qWait(10)
+        time.sleep(0.01)
+        if controller._codex_interview_turn_id == "retry-turn": break
+    controller._codex_interview_buffer = '{"follow_up":"missing required fields"}'
+    controller._finish_codex_interview_assessment(controller._codex_interview_identity)
+    assert "AI_RESPONSE_INVALID" in controller.interview["ai_error"]
+    assert "操作未完成" not in controller.interview["ai_error"]
+    assert controller.interview["answer_text"] == draft
+    assert not controller.busy
+    assert controller.submitInterviewAnswer("不能用重试篡改已提交回答", "codex", False)
+    for _ in range(60):
+        QTest.qWait(10)
+        time.sleep(0.01)
+        if len(captured) == 2: break
+    assert draft in captured[-1][1] and "不能用重试篡改" not in captured[-1][1]
+    session = controller.service.interview_session(controller.profileId, controller.interview["interview_id"])
+    assert list(session["answers"]) == ["q-001"] and session["assessments"] == {}
+    controller._finish_codex_interview_assessment(controller._codex_interview_identity, error="Codex 请求已停止")
+
+
+def test_single_submit_missing_consent_never_locks_or_sends(scene, monkeypatch):
+    window, controller = scene
+    key, _ = controller._interview_conversation_consent("codex", True)
+    controller._settings.remove(key)  # Old sessions did not grant the conversation scope.
+    sent = []
+    monkeypatch.setattr(controller, "sendCodexInterviewAnswer", lambda *args: sent.append(args) or True)
+    controller._codex_backend = object()
+    controller._codex_thread_id = "consent-thread"
+    controller._codex_thread_mode = "interviewer"
+    controller._codex_pump_started = True
+    editor = _find(window, "interviewAnswerEditor")
+    editor.setProperty("text", "合成回答：我负责训练数据去重与独立评测。")
+    _click(window, _find(window, "lockInterviewAnswer"))
+    dialog = window.findChild(QObject, "interviewAnswerContextDialog")
+    assert dialog.property("visible")
+    assert not controller.interview["answer_locked"] and not sent
+    QTest.qWait(150)
+    _click(window, _find(window, "confirmInterviewAnswerContext"))
+    assert len(sent) == 1 and controller.interview["answer_locked"]
+    assert controller._settings.value(key)
+
+
+def test_single_submit_connects_then_sends_and_cancel_never_sends(controller, monkeypatch):
+    connected, sent = [], []
+    monkeypatch.setattr(controller, "connectCodex", lambda mode: connected.append(mode))
+    monkeypatch.setattr(controller, "sendCodexInterviewAnswer", lambda *args: sent.append(args) or True)
+    assert controller.submitInterviewAnswer("合成回答：我负责数据清洗和实验对照。", "codex", False)
+    assert connected == ["interviewer"] and controller.busy and not sent
+    assert not controller.submitInterviewAnswer("重复点击", "codex", False)
+    controller.cancelCodex()
+    assert not controller.busy and controller._pending_interview_submission is None
+    controller._handle_codex_connect_ready({"backend": object(), "thread_id": "late", "mode": "interviewer"})
+    assert not sent
+    controller._codex_backend = None
+    controller._codex_thread_id = None
+    assert controller.submitInterviewAnswer("重试", "codex", False)
+    controller._handle_codex_connect_ready({"backend": object(), "thread_id": "current", "mode": "interviewer"})
+    assert len(sent) == 1 and sent[0][0] == controller.interview["answer_text"]
+    assert not controller.busy
+
+
+def test_single_submit_save_failure_keeps_editor_and_never_sends(scene, monkeypatch):
+    window, controller = scene
+    editor = _find(window, "interviewAnswerEditor")
+    editor.setProperty("text", "合成未保存回答：数据清洗和训练评测隔离。")
+    def fail(*args, **kwargs):
+        raise PermissionError("synthetic save denied")
+    monkeypatch.setattr(controller.service, "answer_interview", fail)
+    _click(window, _find(window, "lockInterviewAnswer"))
+    assert editor.property("text") == "合成未保存回答：数据清洗和训练评测隔离。"
+    assert not controller.interview["answer_locked"] and not controller.busy
+    assert "ANSWER_SAVE_FAILED" in controller.interview["ai_error"]
+    assert controller._pending_interview_submission is None
+
+
+def test_interview_send_preconditions_show_inline_action_not_generic_toast(controller):
+    errors = []
+    controller.toast.connect(errors.append)
+    controller.lockInterviewAnswer("合成回答：我负责数据清洗与独立评测，下一步解释验证方法。")
+    assert not controller.sendCodexInterviewAnswer("", False)
+    assert "Codex 尚未连接" in controller.interview["ai_error"]
+    assert "INTERVIEW_REQUEST_FAILED" in controller.interview["ai_error"]
+    assert not errors
+    controller._codex_thread_mode = "coach"
+    assert not controller.sendCodexInterviewAnswer("", False)
+    assert "面试官模式" in controller.interview["ai_error"]
+    assert "操作未完成" not in controller.interview["ai_error"]
+    assert not errors
+
+
+def test_single_submit_provider_preserves_selected_connection_and_advances(controller, monkeypatch):
+    from llm_interview_lab.ai.base import ChatEvent
+    assert controller.saveConnection("local-first", "ollama", "unused-model", "未选择服务", "http://127.0.0.1:11434", "", "low")
+    assert controller.saveConnection("local-selected", "ollama", "selected-model", "所选服务", "http://127.0.0.1:11434", "", "high")
+    controller.finishInterview()
+    preview = controller.dynamicInterviewContextPreview("post_training_engineer", "intern", "hard", "", False)
+    controller.startDynamicPersonalizedInterview("post_training_engineer", "intern", "hard", "local-selected", "", False, preview["context_sha256"])
+    assert controller.interview["connection_id"] == "local-selected"
+    calls = []
+    response = {
+        "scores": {d: 3 for d in controller.interview["question"]["rubric"]["dimensions"]},
+        "evidence": "合成测试：回答明确提到数据去重和按用户隔离训练评测。", "confidence": "medium", "fatal_issues": [],
+        "follow_up": "你如何核对按用户隔离后不存在语义重复？", "next_stage": "experience", "coding_problem_id": "",
+        "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))],
+    }
+    class Provider:
+        async def stream_chat(self, messages):
+            calls.append(messages)
+            yield ChatEvent("delta", text=json.dumps(response))
+    configs = []
+    def provider(config, **kwargs):
+        configs.append(config)
+        return Provider()
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.create_chat_provider", provider)
+    assert controller.submitInterviewAnswer("我负责数据去重，并按用户隔离训练和评测数据。", "local-selected", False)
+    for _ in range(150):
+        QTest.qWait(10)
+        time.sleep(0.01)
+        if not controller.busy: break
+    assert controller.interview["question"]["question_id"] == "q-002", controller.interview.get("ai_error")
+    assert len(calls) == 1 and configs[0].model == "selected-model" and configs[0].reasoning_effort == "high"
+    controller._load_interview(controller.interview["interview_id"])
+    assert controller.interview["connection_id"] == "local-selected"
+
+
+def test_single_submit_rejects_revoked_material_and_retains_scene_consent(controller, tmp_path, monkeypatch):
+    from llm_interview_lab.materials import set_material_ai_access
+    path = tmp_path / "synthetic-resume.txt"
+    path.write_text("合成简历：我负责 DPO 数据清洗，没有论文。", encoding="utf-8")
+    assert controller.addMaterial(str(path), "resume", "合成简历", True)
+    mid = controller.materials[0]["id"]
+    controller.finishInterview()
+    preview = controller.dynamicInterviewContextPreview("post_training_engineer", "intern", "hard", mid, True)
+    controller.startDynamicPersonalizedInterview("post_training_engineer", "intern", "hard", "codex", mid, True, preview["context_sha256"])
+    key, scope = controller._interview_conversation_consent("codex", True)
+    controller._settings.sync()
+    reopened = QSettings(controller._settings.fileName(), QSettings.IniFormat)
+    assert reopened.value(key) == scope, "Scene consent must survive application restart"
+    set_material_ai_access(controller.repo_root, controller.profileId, mid, False)
+    sent = []
+    monkeypatch.setattr(controller, "sendCodexInterviewAnswer", lambda *args: sent.append(args))
+    assert not controller.submitInterviewAnswer("我负责 DPO 数据清洗和独立验证。", "codex", True)
+    assert "MATERIAL_CONSENT_CHANGED" in controller.interview["ai_error"]
+    assert not controller.interview["answer_locked"] and not sent
 
 
 @pytest.mark.parametrize("mode", ["codex", "provider"])

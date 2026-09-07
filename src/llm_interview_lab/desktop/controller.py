@@ -158,6 +158,24 @@ def _decode_ai_assessment(
     return value
 
 
+def _dynamic_response_schema(preview, dimensions: set[str], fatal_issues: set[str]) -> dict[str, Any]:
+    """Constrain the existing Codex response, using this turn's actual scope."""
+    contract = json.loads(next(part.content for part in preview.parts if part.id == "interview_contract"))
+    fields = {
+        "scores": {"type": "object", "properties": {d: {"type": "integer", "minimum": 1, "maximum": 5} for d in sorted(dimensions)},
+                   "required": sorted(dimensions), "additionalProperties": False},
+        "evidence": {"type": "string", "minLength": 20, "maxLength": 4000},
+        "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+        "fatal_issues": {"type": "array", "items": {"type": "string", "enum": sorted(fatal_issues)}},
+        "follow_up": {"type": "string", "maxLength": 2000},
+        "next_stage": {"type": "string", "enum": contract["allowed_next_stages"]},
+        "coding_problem_id": {"type": "string", "enum": ["", *(p["id"] for p in contract["coding_candidates"])]},
+        "next_skill_ids": {"type": "array", "maxItems": 3,
+                           "items": {"type": "string", "enum": [s["id"] for s in contract["role_skills"]]}},
+    }
+    return {"type": "object", "properties": fields, "required": list(fields), "additionalProperties": False}
+
+
 def _codex_terminal_outcome(params: Mapping[str, Any]) -> tuple[str, str]:
     """Normalize App Server terminal metadata without treating failure as success.
 
@@ -479,6 +497,7 @@ class AppController(QObject):
             else ""
         )
         self._interview_context_confirmation = None
+        self._pending_interview_submission = None
         self._codex_interview_include_materials = True
         self._codex_available = False
         self._codex_probe_running = False
@@ -2780,6 +2799,9 @@ class AppController(QObject):
             ),
             **current,
         }
+        self._interview["connection_id"] = str(self._settings.value(
+            self._interview_consent_key(interview_id) + "/connection", "",
+        ))
         if session.get("delivery_mode") == "dynamic_ai":
             self._interview["flow_coverage"] = flow_coverage(session)
             self._interview["stage_label"] = STAGE_LABELS[question_stage(current["question"])] if current.get("question") else "本场复盘"
@@ -2967,6 +2989,128 @@ class AppController(QObject):
             self._load_interview(self._interview["interview_id"])
         except Exception as error:
             self._show_error(error)
+
+    def _interview_consent_key(self, interview_id: str) -> str:
+        identity = f"{self.repo_root}:{self._profile_id}:{interview_id}"
+        return "interviewConversationConsent/" + hashlib.sha256(identity.encode()).hexdigest()
+
+    def _interview_conversation_consent(self, connection_id: str, include_materials: bool) -> tuple[str, str]:
+        """Reuse the scene's material allowlist; store only a consent fingerprint."""
+        session = self.service.interview_session(self._profile_id, self._interview["interview_id"])
+        preview = self.service.dynamic_interview_context(
+            self._profile_id, role_id=session["role_id"], seniority=session["seniority"],
+            difficulty=session["difficulty"],
+            material_ids=tuple(ref["id"] for ref in session["material_refs"]) if include_materials else (),
+            consent_materials=include_materials,
+        )
+        recipient = "codex"
+        if session["ai_mode"] != "codex":
+            config = next((c for c in list_connections(self.repo_root, self._profile_id)
+                           if c.connection_id == connection_id), None)
+            if config is None:
+                raise RuntimeError("找不到所选 AI 连接，请在“AI 连接”保存后重试。")
+            recipient = f"{config.connection_id}:{config.provider_id}:{config.base_url}"
+        key = self._interview_consent_key(session["interview_id"])
+        scope = hashlib.sha256((recipient + "\n" + preview.selected_text).encode()).hexdigest()
+        return key, scope
+
+    @Slot(str, str, bool, result=bool)
+    def authorizeInterviewConversation(self, answer: str, connection_id: str, include_materials: bool) -> bool:
+        """Confirm the displayed scene scope, not arbitrary unseen material."""
+        try:
+            preview = build_role_interview_context_preview(
+                self.repo_root, self._profile_id, self._interview["interview_id"],
+                candidate_answer=answer, include_materials=include_materials,
+                catalog=self.service.catalog, role_catalog=self.service.roles,
+            )
+            if self._interview_context_confirmation != self._interview_context_identity(preview, include_materials):
+                raise RuntimeError("本轮上下文尚未确认或已发生变化；请重新预览后再发送。回答已保留。")
+            key, scope = self._interview_conversation_consent(connection_id, include_materials)
+            self._settings.setValue(key, scope)
+            self._settings.setValue(key + "/connection", connection_id)
+            self._interview["connection_id"] = connection_id
+            self._settings.sync()
+            return True
+        except Exception as error:
+            self._interview_request_failed(error, "consent")
+            return False
+
+    @Slot(str, str, bool, result=bool)
+    def submitInterviewAnswer(self, answer: str, connection_id: str, include_materials: bool) -> bool:
+        """One user action: validate consent, save once, send, then advance."""
+        if self._busy or self._pending_interview_submission:
+            return False
+        question = self._interview.get("question") or {}
+        if self._interview.get("delivery_mode") != "dynamic_ai" or question.get("kind") == "coding":
+            return False
+        try:
+            if self._interview.get("status") != "active" or self._interview.get("expired"):
+                raise RuntimeError("面试已暂停、超时或结束，请先恢复面试或开始新场次。")
+            # A retry reuses the saved answer; it never rewrites or scores it twice.
+            submitted = self._interview.get("answer_text") if self._interview.get("answer_locked") else answer
+            preview = build_role_interview_context_preview(
+                self.repo_root, self._profile_id, self._interview["interview_id"],
+                candidate_answer=submitted, include_materials=include_materials,
+                catalog=self.service.catalog, role_catalog=self.service.roles,
+            )
+            key, scope = self._interview_conversation_consent(connection_id, include_materials)
+            if self._settings.value(key, "") != scope:
+                self._interview["ai_assessment_state"] = "consent_required"
+                self._interview["ai_error"] = "请确认本场对话发送范围；同一范围的后续回答无需反复确认。"
+                self.stateChanged.emit()
+                return False
+            if not self._interview.get("answer_locked"):
+                self.service.answer_interview(self._profile_id, self._interview["interview_id"],
+                                              question["question_id"], submitted)
+                self._load_interview(self._interview["interview_id"])
+            self._interview_context_confirmation = self._interview_context_identity(preview, include_materials)
+            if self._interview["ai_mode"] == "provider":
+                self.assessInterviewWithProvider(submitted, connection_id, include_materials)
+            elif (self._codex_backend is not None and self._codex_thread_id
+                  and self._codex_thread_mode == "interviewer" and self._codex_pump_started):
+                return self.sendCodexInterviewAnswer(submitted, include_materials)
+            else:
+                self._pending_interview_submission = (
+                    self._profile_id, self._interview["interview_id"], question["question_id"], include_materials,
+                )
+                self._interview["ai_assessment_state"] = "connecting"
+                self._interview["ai_error"] = ""
+                self._background_operations.add("interview-connect")
+                self._set_busy(True)
+                self.connectCodex("interviewer")
+            return True
+        except Exception as error:
+            self._interview_request_failed(error, "submit")
+            return False
+
+    def _interview_request_failed(self, error: BaseException | str, stage: str, operation_id: str = "") -> None:
+        """Keep interview failures local and actionable; never log answer bodies."""
+        raw = str(error)
+        lower = raw.lower()
+        code, message = "INTERVIEW_REQUEST_FAILED", friendly_error(error)
+        if "scorecard" in lower or "ai interviewer" in lower or "ai rubric" in lower or "ai follow-up" in lower:
+            code, message = "AI_RESPONSE_INVALID", "AI 返回的下一问或评分格式不完整；回答已保存，请点击“重试生成下一问”。"
+        elif "material" in lower and any(s in lower for s in ("consent", "revoked", "stale", "access")):
+            code, message = "MATERIAL_CONSENT_CHANGED", "材料已变化或撤销授权，未发送本次请求。请取消包含材料后重试，或重新开始面试并授权当前材料。"
+        elif "candidate answer must" in lower:
+            code, message = "ANSWER_INVALID", "请填写回答后提交，最长 50000 字符。"
+        elif stage == "submit" and isinstance(error, OSError):
+            code, message = "ANSWER_SAVE_FAILED", "回答未能保存，因此没有发送。编辑框内容仍保留；请检查数据目录权限或剩余空间后重试。"
+        elif any(s in raw for s in ("请重试", "请重新", "请先", "请在", "回答已保留")):
+            message = raw[:400]
+        if message == text("error.generic"):
+            message = "本轮请求未完成，回答已保留。请检查模型与连接后点击“重试生成下一问”；错误编号可用于排查。"
+        if code == "AI_RESPONSE_INVALID":
+            # Decoder messages name a violated field, never the model response.
+            detail = raw if raw.startswith(("AI scorecard", "AI interviewer", "AI rubric", "AI follow-up")) else "invalid response"
+            logging.getLogger("llm_interview_lab.desktop").warning("interview_response_validation reason=%s", detail[:200])
+        operation_id = operation_id or uuid4().hex
+        self._interview.update(ai_assessment_state="error", ai_error=f"{message}（{code} · {operation_id[:8]}）")
+        logging.getLogger("llm_interview_lab.desktop").error(
+            "interview_request_failed stage=%s code=%s error_type=%s operation_id=%s",
+            stage, code, type(error).__name__, operation_id,
+        )
+        self.stateChanged.emit()
 
     @Slot(result=bool)
     def startInterviewRecording(self) -> bool:
@@ -3354,7 +3498,7 @@ class AppController(QObject):
             self.toast.emit("演示 AI 评分需要证据；不会改变刷题掌握状态。")
             return
         if self._busy or self._interview_provider_operation_id:
-            self._show_error("已有评估请求正在处理，请等待完成或检查错误后重试。")
+            self._interview_request_failed("已有评估请求正在处理，请等待完成后重试。", "provider_submit")
             return
         profile_id = self._profile_id
         interview_id = self._interview["interview_id"]
@@ -3362,20 +3506,20 @@ class AppController(QObject):
         locked_answer = str(self._interview.get("answer_text") or "").strip()
         session = self.service.interview_session(profile_id, interview_id)
         if question_id not in session.get("answers", {}) or not locked_answer:
-            self._show_error("请先提交并锁定当前回答，再请求 AI 评估。")
+            self._interview_request_failed("请先填写并提交当前回答，再请求 AI。", "provider_submit")
             return
         if session.get("status") != "active" or question_id in session.get("assessments", {}):
-            self._show_error("当前问题已经评分或面试已经结束，不能重复请求 AI 评估。")
+            self._interview_request_failed("当前问题已经评分或面试已经结束，请重新打开本场查看记录。", "provider_submit")
             return
         dimensions = set(question["rubric"]["dimensions"])
         fatal_issues = set(question["rubric"]["fatal_issues"])
         if not connection_id:
-            self._show_error("请选择一个已保存且测试通过的 AI 连接；也可以使用人工评分。")
+            self._interview_request_failed("请在“AI 连接”保存并测试服务，再选择该连接。回答已保留。", "provider_submit")
             return
         try:
             preview = self._confirmed_interview_context(include_materials)
         except Exception as error:
-            self._show_error(error)
+            self._interview_request_failed(error, "provider_context")
             return
         operation_id = uuid4().hex
         self._interview_provider_operation_id = operation_id
@@ -3485,9 +3629,7 @@ class AppController(QObject):
                     self._load_interview(interview_id)
             except Exception as error:
                 if self._interview_provider_operation_id == operation_id:
-                    self._interview["ai_assessment_state"] = "error"
-                    self._interview["ai_error"] = friendly_error(error)
-                self._show_error(error)
+                    self._interview_request_failed(error, "provider_response", operation_id)
             finally:
                 release()
                 self.stateChanged.emit()
@@ -3495,10 +3637,8 @@ class AppController(QObject):
         def failed(message: str) -> None:
             if self._interview_provider_operation_id != operation_id:
                 return
-            self._interview["ai_assessment_state"] = "error"
-            self._interview["ai_error"] = friendly_error(message)
+            self._interview_request_failed(message, "provider_response", operation_id)
             release()
-            self._show_error(message)
             self.stateChanged.emit()
 
         self._background(operation, complete, failed)
@@ -4053,6 +4193,14 @@ class AppController(QObject):
             self._load_interview(session["interview_id"])
             self.navigate("interview")
             self.toast.emit("已进入面试；提交开场回答后，AI 会根据证据逐步追问")
+            key, scope = self._interview_conversation_consent(
+                str(request.get("connection_id") or "codex"), bool(request.get("consent")),
+            )
+            self._settings.setValue(key, scope)
+            self._settings.setValue(key + "/connection", str(request.get("connection_id") or "codex"))
+            self._interview["connection_id"] = str(request.get("connection_id") or "codex")
+            self._settings.sync()
+            self.stateChanged.emit()
         except Exception as caught:
             request = self._interview_plan_request or {}
             self._set_dynamic_initial_error(
@@ -4234,6 +4382,7 @@ class AppController(QObject):
             "consent": bool(material_id and consent),
             "context_sha256": current_sha,
             "ai_mode": ai_mode,
+            "connection_id": connection_id,
             "allowed_kinds": allowed,
         }
         self._interview_plan_preview = {
@@ -6000,6 +6149,14 @@ class AppController(QObject):
         self.aiStateChanged.emit()
         if self._codex_loop is not None:
             self._codex_loop.call_soon_threadsafe(self._launch_codex_pump, backend)
+        pending = self._pending_interview_submission
+        if pending is not None:
+            self._pending_interview_submission = None
+            self._background_operations.discard("interview-connect")
+            self._set_busy(bool(self._background_operations))
+            if pending[:3] == (self._profile_id, self._interview.get("interview_id"),
+                               (self._interview.get("question") or {}).get("question_id")):
+                self.sendCodexInterviewAnswer(self._interview["answer_text"], pending[3])
 
     @Slot(object)
     def _handle_codex_connect_failed(self, error: Any) -> None:
@@ -6015,6 +6172,12 @@ class AppController(QObject):
         else:
             self._ai_status = text("status.ai_offline", language=self._language)
         self.aiStateChanged.emit()
+        if self._pending_interview_submission is not None:
+            self._pending_interview_submission = None
+            self._background_operations.discard("interview-connect")
+            self._set_busy(bool(self._background_operations))
+            self._interview_request_failed(error, "connect")
+            return
         self._show_error(error if isinstance(error, (BaseException, str)) else str(error))
 
     @Slot(object)
@@ -6880,9 +7043,7 @@ class AppController(QObject):
                 self._load_interview(interview_id)
             self._interview["ai_error"] = ""
         except Exception as caught:
-            self._interview["ai_assessment_state"] = "error"
-            self._interview["ai_error"] = friendly_error(caught)
-            self._show_error(caught)
+            self._interview_request_failed(caught, "codex_response", operation_id)
         finally:
             self._codex_interview_buffer = ""
             self._codex_interview_identity = None
@@ -6901,39 +7062,39 @@ class AppController(QObject):
         """
 
         if not self._interview.get("interview_id"):
-            self._show_error("请先开始一场模拟面试。")
+            self._interview_request_failed("请先开始一场模拟面试。", "codex_submit")
             return False
         if self._codex_interview_identity is not None or self._codex_interview_operation_id:
-            self._show_error("Codex 评分仍在生成，请等待完成或结束本次请求。")
+            self._interview_request_failed("Codex 仍在响应，请先等待完成或停止本次请求。", "codex_submit")
             return False
         if self._codex_coach_identity is not None:
-            self._show_error("Codex Coach 回答仍在生成，请先等待或停止后再请求面试评分。")
+            self._interview_request_failed("AI 辅助页的 Codex 请求仍在运行，请先等待或停止该请求。", "codex_submit")
             return False
         if self._codex_thread_mode not in {None, "interviewer"}:
-            self._show_error(
-                "当前 Codex 连接属于其他工作流；请先连接“面试官模式”后再评分。"
+            self._interview_request_failed(
+                "当前 Codex 连接属于其他工作流；请先连接“面试官模式”后重试。", "codex_submit"
             )
             return False
         if self._codex_drain_pending:
-            self._show_error("Codex 正在确认上一次停止，请收到确认后再请求面试评分。")
+            self._interview_request_failed("Codex 正在确认上一次停止，请先等待停止确认后重试。", "codex_submit")
             return False
         question = self._interview.get("question") or {}
         if self._interview.get("status") != "active" or self._interview.get("expired"):
-            self._show_error("当前面试已暂停、超时或结束，不能请求 Codex 评分。请先恢复计时或开始新场次。")
+            self._interview_request_failed("当前面试已暂停、超时或结束。请先恢复计时或开始新场次。", "codex_submit")
             return False
         if question.get("kind") == "coding":
-            self._show_error("coding 面试只接受本地 Grader 证据，不能请求文本评分。")
+            self._interview_request_failed("代码环节请先在编辑器作答并运行本地测试，不使用文本评分。", "codex_submit")
             return False
         if self._interview.get("answer_corrupted") or not str(self._interview.get("answer_text") or "").strip():
-            self._show_error("请先提交并锁定当前回答，再请求 Codex 评估。")
+            self._interview_request_failed("请先填写并提交当前回答，再请求 Codex。", "codex_submit")
             return False
         if self._codex_backend is None or not self._codex_thread_id or self._codex_loop is None:
-            self._show_error("Codex 尚未连接。请先连接 Codex，或改用人工评分；本地训练仍可继续。")
+            self._interview_request_failed("Codex 尚未连接。请先在“AI 连接”连接面试官，回答已保留。", "codex_submit")
             return False
         try:
             preview = self._confirmed_interview_context(include_materials)
         except Exception as caught:
-            self._show_error(caught)
+            self._interview_request_failed(caught, "codex_context")
             return False
         dimensions = set(question.get("rubric", {}).get("dimensions", {}))
         fatal_issues = set(question.get("rubric", {}).get("fatal_issues", []))
@@ -6972,6 +7133,10 @@ class AppController(QObject):
         prompt = preview.selected_text + "\n\n## Frozen scorecard contract\n" + instruction
         backend = self._codex_backend
         model, effort = self._codex_model or None, self._codex_reasoning_effort or None
+        output_options = (
+            {"output_schema": _dynamic_response_schema(preview, dimensions, fatal_issues)}
+            if self._interview.get("delivery_mode") == "dynamic_ai" else {}
+        )
 
         async def start_interview_turn():
             # A new transport thread cannot retain a material deselected this
@@ -6979,7 +7144,7 @@ class AppController(QObject):
             # rebuilt explicitly from this interview and previewed by the user.
             thread = await backend.start_thread(mode="interviewer", model=model)
             thread_id = thread["thread"]["id"]
-            result = await backend.start_turn(thread_id, prompt, model=model, effort=effort)
+            result = await backend.start_turn(thread_id, prompt, model=model, effort=effort, **output_options)
             return {**result, "thread_id": thread_id}
 
         try:
@@ -7082,6 +7247,12 @@ class AppController(QObject):
 
     @Slot()
     def cancelCodex(self) -> None:
+        if self._pending_interview_submission is not None:
+            self._pending_interview_submission = None
+            self._background_operations.discard("interview-connect")
+            self._set_busy(bool(self._background_operations))
+            self._interview_request_failed("Codex 请求已停止，回答已保留；连接完成后可重试。", "cancel")
+            return
         turn_id = self._codex_coach_turn_id or self._codex_interview_turn_id or self._codex_turn_id
         if not turn_id or str(turn_id).startswith("pending:"):
             # ``pending:<operation>`` is a local fence, never a server turn

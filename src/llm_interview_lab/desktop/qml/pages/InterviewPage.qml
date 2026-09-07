@@ -116,6 +116,10 @@ Item {
         root.answerDraft = ""
         root.pendingLockAnswer = ""
         root.showCodingPrompt = true
+        var savedConnection = String(app.interview.connection_id || "")
+        var selectedIndex = providerConnection.indexOfValue(savedConnection)
+        if (selectedIndex >= 0)
+            providerConnection.currentIndex = selectedIndex
         evidence.text = ""
         followupAnswer.text = ""
         root.syncQuestionEditors()
@@ -268,6 +272,13 @@ Item {
         root.pendingAIAction = action
         root.pendingConnection = connectionId || ""
         contextDialog.open()
+    }
+
+    function submitAnswer() {
+        var connectionId = app.interview.ai_mode === "codex" ? "codex" : providerConnection.currentValue
+        if (!app.submitInterviewAnswer(answer.text, connectionId || "", includeInterviewMaterials.checked)
+                && app.interview.ai_assessment_state === "consent_required")
+            root.previewAI("submit", connectionId)
     }
 
     function rubricComplete() {
@@ -1344,7 +1355,9 @@ Item {
                     }
                     ComboBox {
                         id: providerConnection
-                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted && app.interview.ai_mode === "provider"
+                        objectName: "interviewActiveProvider"
+                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && (root.answerLocked || root.dynamicInterview) && !app.interview.answer_corrupted && app.interview.ai_mode === "provider"
+                        enabled: !app.busy
                         width: parent.width
                         model: app.connections
                         textRole: "display_name"
@@ -1379,12 +1392,13 @@ Item {
                     }
                     CheckBox {
                         id: includeInterviewMaterials
-                        visible: !!activeQuestion && root.answerLocked && !app.interview.answer_corrupted
+                        visible: !!activeQuestion && (root.answerLocked || root.dynamicInterview) && !app.interview.answer_corrupted
                                  && activeQuestion.kind !== "coding"
                                  && app.interview.ai_mode !== "disabled"
                                  && (app.interview.material_refs || []).length > 0
                         checked: true
-                        text: "在本次 AI 请求中包含已授权材料"
+                        enabled: !app.busy
+                        text: "发送时包含本场已授权的简历 / JD"
                     }
                     LabCard {
                         visible: !!app.interview.pending_followup
@@ -1701,8 +1715,8 @@ Item {
                         Text {
                             objectName: "interviewAnswerActionHint"
                             text: root.answerLocked
-                                  ? (root.dynamicInterview ? "回答已保存。确认本轮上下文后，再让 AI 继续提问。" : "回答已锁定；先记录证据，再选择评分来源。")
-                                  : (root.dynamicInterview ? "完成回答后提交，再由 AI 根据你的回答继续提问。" : "完成回答后提交并锁定，评分维度才会显示。")
+                                  ? (root.dynamicInterview ? "回答已保存，AI 将结合本场背景和前序对话继续提问。失败后可直接重试，不必再次作答。" : "回答已锁定；先记录证据，再选择评分来源。")
+                                  : (root.dynamicInterview ? "提交会保存并发送本轮回答；AI 将结合岗位、前序对话和已授权材料，直接提出下一问。" : "完成回答后提交并锁定，评分维度才会显示。")
                             color: root.palette.muted
                             font.family: root.theme ? root.theme.uiFontFamily : ""
                             font.pixelSize: root.theme ? root.theme.fontCaption : 12
@@ -1716,14 +1730,29 @@ Item {
                             variant: "primary"
                             topInset: 0
                             bottomInset: 0
-                            visible: !root.answerLocked
-                            text: "提交并锁定回答"
+                            visible: !root.answerLocked || root.dynamicInterview
+                            text: root.dynamicInterview
+                                  ? (app.busy ? "正在接续面试…" : root.answerLocked ? "重试生成下一问" : "提交并继续")
+                                  : "提交并锁定回答"
                             enabled: root.interviewCanEdit && answer.text.trim().length > 0 && !app.busy
                             Layout.alignment: Qt.AlignRight
                             onClicked: {
+                                if (root.dynamicInterview) {
+                                    root.submitAnswer()
+                                    return
+                                }
                                 root.pendingLockAnswer = answer.text
                                 lockAnswerDialog.open()
                             }
+                        }
+                        LabButton {
+                            theme: root.theme
+                            variant: "ghost"
+                            visible: root.dynamicInterview
+                            enabled: !app.busy && answer.text.trim().length > 0
+                            text: "查看发送范围"
+                            Layout.alignment: Qt.AlignLeft
+                            onClicked: root.previewAI("inspect", "")
                         }
                     }
                 }
@@ -1744,7 +1773,7 @@ Item {
                         variant: "primary"
                         topInset: 0
                         bottomInset: 0
-                        visible: app.interview.ai_mode === "provider"
+                        visible: !root.dynamicInterview && app.interview.ai_mode === "provider"
                         enabled: root.interviewCanEdit && providerConnection.currentIndex >= 0
                                  && root.providerIsReady(providerConnection.currentValue)
                                  && !app.busy
@@ -1762,7 +1791,7 @@ Item {
                         onClicked: app.navigate("connections")
                     }
                     Button {
-                        visible: app.interview.ai_mode === "codex"
+                        visible: !root.dynamicInterview && app.interview.ai_mode === "codex"
                                   && app.aiStatusVariant !== "connected"
                         enabled: root.interviewCanEdit && !app.busy && !app.interview.assessment_recorded
                         text: "连接 Codex 面试官"
@@ -1774,7 +1803,7 @@ Item {
                         topInset: 0
                         bottomInset: 0
                         objectName: "continueCodexInterview"
-                        visible: app.interview.ai_mode === "codex" && app.aiStatusVariant === "connected"
+                        visible: !root.dynamicInterview && app.interview.ai_mode === "codex" && app.aiStatusVariant === "connected"
                         enabled: root.interviewCanEdit && !app.busy && !app.interview.assessment_recorded
                         text: root.dynamicInterview ? "让 Codex 继续提问" : "请求 Codex 评分"
                         onClicked: root.previewAI("codex", "")
@@ -1785,6 +1814,7 @@ Item {
                         variant: "secondary"
                         visible: app.interview.ai_mode === "codex" && app.busy
                                  && (app.interview.ai_assessment_state === "streaming"
+                                     || app.interview.ai_assessment_state === "connecting"
                                      || app.interview.ai_assessment_state === "retrying")
                         text: "停止请求"
                         onClicked: app.cancelCodex()
@@ -1802,7 +1832,9 @@ Item {
                     visible: !!app.interview.ai_assessment_state
                              && app.interview.ai_assessment_state !== "complete"
                     Layout.fillWidth: true
-                    text: app.interview.ai_assessment_state === "streaming"
+                    text: app.interview.ai_assessment_state === "connecting"
+                          ? "正在连接 Codex 面试官，连接后会自动发送，无需再点一次。"
+                          : app.interview.ai_assessment_state === "streaming"
                           ? (root.dynamicInterview ? "AI 正在阅读你的回答并生成下一问……" : "AI 正在根据回答生成评分证据……")
                           : app.interview.ai_error || "Codex 评分尚未完成；可以检查连接后重试。"
                     color: app.interview.ai_assessment_state === "streaming"
@@ -1939,7 +1971,7 @@ Item {
             LabButton {
                 theme: root.theme
                 variant: "ghost"
-                text: "取消"
+                text: root.pendingAIAction === "inspect" ? "关闭" : "取消"
                 onClicked: contextDialog.reject()
             }
             LabButton {
@@ -1949,11 +1981,15 @@ Item {
                 topInset: 0
                 bottomInset: 0
                 text: "确认发送"
+                visible: root.pendingAIAction !== "inspect"
                 onClicked: contextDialog.accept()
             }
         }
         onAccepted: {
-            if (root.pendingAIAction === "provider")
+            if (root.pendingAIAction === "submit") {
+                if (app.authorizeInterviewConversation(answer.text, root.pendingConnection, includeInterviewMaterials.checked))
+                    root.submitAnswer()
+            } else if (root.pendingAIAction === "provider")
                 app.assessInterviewWithProvider(
                     answer.text,
                     root.pendingConnection,
@@ -1975,7 +2011,9 @@ Item {
             spacing: 10
             Text {
                 Layout.fillWidth: true
-                text: "只会发送下面标记为“发送”的内容。取消后不会发送任何内容。"
+                text: root.pendingAIAction === "submit"
+                      ? "授权本场对话：点击提交时发送当前回答、前序问答、岗位背景和下列材料。相同范围只需确认一次；材料、背景或服务改变后会重新确认。"
+                      : "这里只列出发送范围。关闭预览不会发送任何内容。"
                 color: root.palette.text
                 wrapMode: Text.Wrap
             }
@@ -2100,7 +2138,7 @@ Item {
             }
             Text {
                 Layout.fillWidth: true
-                text: "开场题由本地面试流程提供。提交回答后，Codex / 普通 LLM 才会根据你的证据评分并生成下一问。"
+                text: "本场授权包含你主动提交的回答及前序问答。每次点击“提交并继续”会直接发送，不再逐轮弹窗；材料、背景或服务改变时重新确认。AI 只生成当前下一问，不预排整场题单。"
                 color: root.palette.muted
                 font.pixelSize: 11
                 wrapMode: Text.Wrap

@@ -1,6 +1,72 @@
 # Luna Max 动态面试当前状态报告
 
-## 2026-09-07：操作体验迭代与源码验收（最新）
+## 2026-09-07：一次提交自动接续与真实 Codex 验证（最新）
+
+基线 `d7570dd4fd778a3a999f8425e72fef1a67a0b0e9`；分支 `fix/dynamic-interview-full-flow-20260905`。本轮只处理用户指出的多次确认、发送失败无具体原因及下一问验证，不改变阶段、题库、Grader 或 mastery，不构建、不触发 CI、不跑全量。
+
+### 诊断与改动
+
+- **多次操作是原界面的真实设计问题**：`InterviewPage.qml` 把保存、请求 AI、确认上下文拆成不同入口。现在动态面试只有“提交并继续”，复用现有保存、Codex / Provider 请求和下一问提交链路；不再要求先自评，也不再弹锁定确认。
+- **授权按本场范围确认**：开场明确列出岗位、背景、材料及以后主动提交的回答/历史。相同范围后续不重复确认；旧会话补一次许可，材料、背景或接收服务变化后重新确认。只存 QSettings 指纹和所选连接，不保存正文或 Secret。每次发送仍校验材料 SHA / 授权，未确认不锁定、不发送。
+- **失败可继续**：保存失败不发送；已经保存的回答不会因网络/格式错误丢失或在重试时被覆写。连接未建立时自动连接并发送；请求中阻止重复点击，保留停止入口。错误显示在面试页，区分格式、保存、授权和连接，带操作编号。普通 API 会保留所选连接，不在进入下一问时跳回列表第一项。
+- **真实失败的证据边界**：未修改基线在 Windows 正式界面上完成了 `q-001 → q-002`，用时 **125.83 秒**，复现了繁琐操作和明显延迟，但没有复现用户那一次相同的通用错误。原来的解码/上下文失败分支确实会经 `friendly_error` 隐藏具体原因；不能据此断言用户那次错误一定是某个字段缺失。针对性试验注入缺少字段的返回，验证现在显示 `AI_RESPONSE_INVALID`，并能用原回答重试。
+- **Codex 返回约束**：实际 `turn/start` 使用官方 `outputSchema`，只允许本轮阶段、岗位技能、本地代码候选；本地校验和原子提交仍保留。普通 API 未强行增加不兼容参数。官方接口参考：[Codex App Server](https://developers.openai.com/codex/app-server/)。
+- **慢请求不是已修好的性能项**：本机 Codex RPC 初始化/创建 Thread/启动 Turn 通常不足 0.5 秒；模型响应之前多次 `responseStreamDisconnected`、`request timed out`、`Reconnecting 2/5…5/5`，之后才成功。没有修改用户 Codex 配置、代理或认证。曾在隔离进程验证关闭 websocket 的配置候选，但 CLI 拒绝覆盖内置 `openai` provider，该参数未进入产品代码。
+
+### 实际测试与证据
+
+使用当前仓库 `src`、真实 Windows `Main.qml` / `AppController`，新建合成档案 `profile-ef2c6a37`、合成简历和 JD；岗位后训练、实习、高压，真实 Codex **gpt-5.6-sol / low**。不是 DemoController，不预置未来题目，不读取真实用户 Profile / 简历。键入和点击由 Qt Windows 事件驱动；后续回答针对实时返回的问题输入，不注入 AI 响应。
+
+定向命令均先设置 `PYTHONPATH=<当前仓库>/src`、`QT_QPA_PLATFORM=windows`：
+
+```powershell
+# 第一组：一次提交、重试、旧会话授权、连接与输入
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k 'single_submit or answer_hint_hides' -q
+# 6 passed, 32 deselected in 27.27s（当时版本；后补充的用例在下一组验证）
+
+# 集成组：新增提交用例、四尺寸、上下文、停止及多轮去重
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k 'single_submit or answer_geometry or codex_request_can_stop or context_dialog_long_labels or dynamic_followups_advance_once' -q
+# 18 passed, 23 deselected in 77.88s
+
+# 仅补验最后改动的前置错误分支
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k 'send_preconditions' -q
+# 1 passed, 41 deselected in 7.08s
+
+# 既有固定评分兼容与界面绑定契约
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_desktop.py -k 'interview_setup_uses_profile_role_availability_and_real_report or provider_assessment_scores_the_locked_answer_once' -q
+# 2 passed, 36 deselected in 5.76s
+```
+
+以上分组有重叠，不相加冒充独立测试数量；没有运行 `pytest -q` 全量。18 项集成检查覆盖 900×620、1080×680、1280×800、1440×900，浅/深色与 100% / 125% 字号。已亲自查看小窗口浅色放大输入/提交、真实 Codex 等待及第三问截图；文字、提示和主按钮未重叠，长内容通过滚动阅读。
+
+隔离证据位于 ignored `workspace/maintainer/interview-submit-20260907/`：`before-repro.log`、`after-live-4.log`、`after-live-5-coding.log`、`restart.log`、`live.py`、`restart.py`、`after-q-*-*.png`、`ui-final/`。运行命令为 `.\.venv\Scripts\python.exe workspace/maintainer/interview-submit-20260907/live.py`；初始探针曾因组合框/滚动/勾选事件操作错误退出，修正的是私有探针，不把这些当成产品成功。第六题时探针引用了旧按钮名 `startInterviewCodingAnswer`，修为现有 `toggleInterviewCodingPrompt` 后重新启动同一目录，从已保存第六题继续，没有重建 Session 或重复五次模型请求。这不是一次无中断的机器人脚本成功；下面结果来自实际持久化的同一场面试。
+
+真实结果：
+
+| 问题 | 实际内容 / 结果 | 提交到下一问 |
+|---|---|---:|
+| q-001 | 本地自我介绍；明确竞赛数据清洗、DPO 对照与个人贡献 | 124.67 秒 |
+| q-002 | Codex 根据回答询问 chosen/rejected 长度捷径、切分与可核对结果 | 126.53 秒 |
+| q-003 | 根据上一轮继续追问长度定义、分组连通性、实际记录与重建设想的区别 | 127.88 秒 |
+| q-004 | 自动进入 DPO 损失、reference、beta 与长度偏差的岗位原理 | 127.98 秒 |
+| q-005 | 针对上轮 beta 解释的缺口，追问 KL 方向、饱和及诊断量 | 125.31 秒 |
+| q-006 | 从本地有效候选选择 FND-002，打开真实编辑器并运行 Grader | 0 通过 / 10 失败 |
+
+五个口述回答均通过真实按钮单次提交，没有锁定弹窗或每轮上下文弹窗；没有提前写入未来题目。代码测试刻意使用未实现 starter，revision `06df2e7b…`，记录 0 分而非伪造 PASS；它是当前本地可运行的基础 Python 题，不冒充新生成的高阶 DPO 手撕题。结束后 `status=completed`、`flow_coverage.complete=true`、六条评分证据，其中五条真实 AI、一条真实 Grader；没有缺失阶段，也没有修改 Practice mastery。**完成流程不等于面试通过。**
+
+再次运行 `.\.venv\Scripts\python.exe workspace/maintainer/interview-submit-20260907/restart.py`，输出 `RESTART_OK profile-ef2c6a37 completed 6 6 consent retained`。确认恢复同一档案、六题、六条证据、报告、材料范围、所选连接、模型和推理强度；解释器加载的是当前仓库的 `desktop/controller.py`。
+
+已实际查看 `after-q-001-sending.png`、`after-q-003-question.png`、`after-final-report.png` 和 `after-restart-light.png`，以及 `ui-final/interview-900x620-light-1.25-submit.png`。真实服务截图使用合成候选人，Fake 模型布局截图仅证明布局，不混淆为真实服务验证。没有替换 README 的 Release 截图。
+
+### 收尾状态
+
+`REAL_CODEX_SINGLE_SUBMIT_FLOW_COMPLETED / WAITING_FOR_USER_UAT`。
+
+- 真实 Codex 整场和重启验证已完成；**125–128 秒的网络重连延迟仍未解决**。目前下一问在完整 JSON 校验后显示，不是逐 token 渲染问题。
+- 普通云 API 本轮只有 Fake Provider 的传参/回调验证，没有真实 Key 调用；没有 macOS 实机、完整回归、CI、打包或 Release。
+- 用户原有窗口和未跟踪 UAT/反馈全部保留，避免关闭尚未保存的回答。已运行的旧窗口不会热更新 Python；保存/处理原回答并关闭后，按[源码运行](../../docs/desktop-app.md#源码运行)重启，继续使用原数据目录，不要重置档案。
+
+## 2026-09-07：操作体验迭代与源码验收（历史）
 
 基线 `ef336e448ef1f5eb7228bd446ea7c42580fb853f`，分支 `fix/dynamic-interview-full-flow-20260905`。本轮不改变动态面试流程与评分规则，不构建应用，不触发 CI，不运行全量测试。
 
