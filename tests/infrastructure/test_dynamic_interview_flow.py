@@ -112,6 +112,9 @@ def test_conversation_strategy_and_selected_role_reach_each_turn(interview):
             assert "从自我介绍进入经历" in contract["conversation_strategy"]
             assert "不是我负责" in contract["conversation_strategy"]
             assert "不要把答案塞进问题" in contract["conversation_strategy"]
+            assert "级别决定责任范围" in contract["conversation_strategy"]
+            assert "改变一个约束" in contract["conversation_strategy"]
+            assert "温和指出两处实际表述" in contract["conversation_strategy"]
             assert "未来问题" not in contract
     advance(service, profile, iid, "experience")
     lock(service, profile, iid, "我记不清 beta，这不是我负责的部分。我只做过偏好数据去重。")
@@ -121,6 +124,18 @@ def test_conversation_strategy_and_selected_role_reach_each_turn(interview):
     assert "答不上来与换角度" in parts["policy"]
     assert "不知道或非本人负责时换一个实际接触过的角度" in parts["interview_contract"]
     assert "chosen" not in parts["dialogue_history"]  # No invented candidate facts.
+
+
+@pytest.mark.parametrize(("role_id", "expected"), [
+    ("post_training_engineer", {"OPT-003", "LOSS-002", "PT-019"}),
+    ("ai_algorithm_research_engineer", {"LOSS-002", "ATT-003"}),
+])
+def test_new_handwriting_is_reachable_as_real_interview_candidates(interview, role_id, expected):
+    service, profile, iid, _ = interview
+    session = service.interview_session(profile, iid)
+    session = {**session, "role_id": role_id, "seniority": "mid"}
+    candidates = {p.id for p, _ in dynamic_coding_candidates(service.catalog, service.roles, session)}
+    assert expected.issubset(candidates)
 
 
 def test_revoked_material_blocks_send_not_answer_recovery(interview):

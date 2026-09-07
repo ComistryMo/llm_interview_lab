@@ -1,5 +1,28 @@
 # 大模型后训练与 Agent 面试来源审计
 
+## 2026-09-07：实际面试策略的小范围复核
+
+本轮改动的是每轮真实发送的 `coach/prompts/dynamic-interviewer.md` 和 `interview_flow.ROLE_PROBE_FOCUS`，不是新增固定题单，也不是声称复刻任何公司的面试。以下为本次实际访问的来源；不自动延续下方历史链接的有效性结论。
+
+| 来源 | 证据类型、日期与限制 | 本轮采用的设计判断 |
+|---|---|---|
+| [Amazon Applied Scientist 面试准备](https://www.amazon.jobs/content/en/how-we-hire/applied-scientist-interview-prep) | official；访问 2026-09-07，页面未标发布日期；限定该公司/岗位 | 同时重视技术深度、编码、研究讨论和过往行为。面试应核实本人决策与证据，不只背术语。 |
+| [百度大模型一面·实习面经](https://www.nowcoder.com/feed/main/detail/9817833f40f244e0b6163b984bffe9ab) | anecdotal / unverified；个人自报；页面显示 02-06，年份未确认 | 观察到实习介绍、模型原理/方法比较、场景题与编码并存。只支持流程候选，不证明公司统一流程或高频比例。 |
+| [腾讯大模型算法岗面经汇编](https://www.nowcoder.com/discuss/924823622970003456) | secondary / anecdotal / unverified；聚合多场自报日期，非官方；访问 2026-09-07 | 其中经历介绍→本人负责的问题→实验选择/验证的链路仅作低置信参考；不采用聚合答案，不将其统计成多份独立样本。 |
+
+另一个多模态实习原帖只返回标题，正文不可核验，因此不采纳其二手摘要。小样本不足以估计行业频率。本轮没有复制面经题目，也没有收集登录后/付费内容。
+
+**原创策略取舍**：先给候选人完整介绍一段经历的空间，再分别检验本人贡献、备选方案、证据缺口或反例；一问只选一条。按实习/校招/有经验校准责任范围，简单/标准/高压只改变追问方式。遇到不负责或没验证的部分换角度，不补造经历或强迫编造指标。八岗位的追问方向各不相同，仍只使用本场授权材料和 canonical skills。
+
+**手撕题来源**：新增的 Nesterov、标签平滑、因果/填充 mask、GSPO 来自已有 planned 节点的原创实现化，不来自上述面经的代码。
+
+- [PyTorch SGD](https://docs.pytorch.org/docs/stable/generated/torch.optim.SGD.html)：第一次 momentum buffer、Nesterov 约定；本机 Oracle 与已安装 PyTorch 对齐。
+- [PyTorch CrossEntropyLoss](https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html)：均匀标签平滑、忽略标签；本题明确额外约定全忽略时为可导零。
+- [PyTorch SDPA](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html)：布尔可见性和广播语义；绝对位置 mask 为本项目原创接口。
+- [GSPO v2 §4.1，2025-07-28](https://arxiv.org/html/2507.18071v2#S4.SS1)：序列级比率、裁剪和等权目标；本题不含 KL、不宣称复现训练收益。
+
+官方文档是可变页面，访问日为 2026-09-07；稳定性/数值实现由局部参考与梯度测试补充核验。正文只保留摘要和链接，不保存网页全文。
+
 > 审计日期：2026-08-30（UTC）。本页只登记公开网页的事实性摘要、题型信号和链接，**不复制面经原文、答案、付费内容或雇主内部资料**。页面会更新或下线；日期是页面显示的发布日期/岗位发布日期，无法确认时明确标注“未显示”。
 
 ## 如何使用
