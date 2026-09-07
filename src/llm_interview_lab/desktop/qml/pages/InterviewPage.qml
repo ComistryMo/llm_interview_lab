@@ -71,6 +71,8 @@ Item {
     // intentionally broken after typing, so track edits explicitly.
     property bool codingEditorDirty: false
     property bool showCodingPrompt: true
+    property bool showCodingStdin: false
+    property bool showPublicTestOutput: false
     property bool showEnglishQuestion: app.language === "en"
     readonly property string preferredQuestionLanguage: app.language
     onPreferredQuestionLanguageChanged: showEnglishQuestion = preferredQuestionLanguage === "en"
@@ -152,6 +154,9 @@ Item {
         root.answerDraft = ""
         root.pendingLockAnswer = ""
         root.showCodingPrompt = true
+        root.showCodingStdin = false
+        root.showPublicTestOutput = false
+        codingStdin.text = ""
         root.showEnglishQuestion = app.language === "en"
         voiceConsent.checked = false
         var savedConnection = String(app.interview.connection_id || "")
@@ -165,16 +170,30 @@ Item {
 
     function runCodingTests() {
         if (app.runInterviewCoding(codingEditor.text)) {
+            root.showPublicTestOutput = true
             root.codingEditorDirty = false
             root.showCodingPrompt = false
             questionScroll.contentItem.contentY = 0
         }
     }
 
+    function runCodingScript() {
+        if (app.runInterviewScript(codingEditor.text, codingStdin.text)) {
+            root.codingEditorDirty = false
+            root.showPublicTestOutput = false
+            root.showCodingPrompt = false
+            Qt.callLater(function() {
+                var view = questionScroll.contentItem
+                var top = codingOutputPanel.mapToItem(view, Qt.point(0, 0)).y + view.contentY
+                view.contentY = Math.max(0, Math.min(top, view.contentHeight - view.height))
+            })
+        }
+    }
+
     Shortcut {
         sequences: ["Ctrl+R", "Meta+R"]
-        enabled: root.visible && root.codingQuestion && root.interviewCanEdit && !app.busy
-        onActivated: root.runCodingTests()
+        enabled: root.visible && root.codingQuestion && root.interviewCanEdit && !root.answerLocked && !app.busy
+        onActivated: root.dynamicInterview ? root.runCodingScript() : root.runCodingTests()
     }
 
     function providerIsReady(itemOrId) {
@@ -326,7 +345,7 @@ Item {
 
     function previewAI(action, connectionId) {
         root.aiPreview = app.interviewContextPreview(
-            answer.text, includeInterviewMaterials.checked
+            root.codingQuestion ? app.interview.answer_text : answer.text, includeInterviewMaterials.checked
         )
         if ((root.aiPreview.parts || []).length === 0)
             return
@@ -337,7 +356,10 @@ Item {
 
     function submitAnswer() {
         var connectionId = app.interview.ai_mode === "codex" ? "codex" : providerConnection.currentValue
-        if (!app.submitInterviewAnswer(answer.text, connectionId || "", includeInterviewMaterials.checked)
+        var submitted = root.codingQuestion
+            ? app.submitInterviewCode(codingEditor.text, connectionId || "", includeInterviewMaterials.checked)
+            : app.submitInterviewAnswer(answer.text, connectionId || "", includeInterviewMaterials.checked)
+        if (!submitted
                 && app.interview.ai_assessment_state === "consent_required")
             root.previewAI("submit", connectionId)
     }
@@ -508,7 +530,7 @@ Item {
     }
 
     function assessmentSourceText(value) {
-        return ({self: "自评", human: "人工", ai: "AI", grader: "本地 Grader 客观", peer: "同伴", mentor: "导师"})[value]
+        return ({self: "自评", human: "人工", ai: "AI 主观评价", grader: "本地 Grader 客观", peer: "同伴", mentor: "导师"})[value]
                || "未标注"
     }
 
@@ -1825,6 +1847,13 @@ Item {
                                         wrapMode: Text.Wrap
                                         lineHeight: 1.45
                                     }
+                                    Text {
+                                        width: parent.width
+                                        visible: !!modelData.coding_execution_summary
+                                        text: modelData.coding_execution_summary || ""
+                                        color: root.colors.muted; wrapMode: Text.Wrap
+                                        font.pixelSize: root.theme.fontCaption
+                                    }
                                 }
                             }
                         }
@@ -1904,13 +1933,18 @@ Item {
                         visible: root.codingQuestion && !root.showCodingPrompt
                         width: parent.width; spacing: 10
                         Text { text: "本场手撕代码"; color: root.colors.text; font.bold: true }
+                        LabText {
+                            theme: root.theme; Layout.fillWidth: true; wrapMode: Text.Wrap
+                            text: "可以直接写样例、调用函数、print 查看输出；注释可说明思路和未完成部分。不必先通过单测才能交给面试官。"
+                            variant: "caption"; tone: "muted"
+                        }
                         LabTextArea {
                             id: codingEditor
                             objectName: "interviewCodingEditor"
                             theme: root.theme
                             Layout.fillWidth: true; Layout.preferredHeight: root.compactInterviewLayout ? 210 : 260
                             text: app.interview.coding_text || ""
-                            readOnly: !root.interviewCanEdit
+                            readOnly: !root.interviewCanEdit || root.answerLocked || app.busy
                             color: root.colors.text
                             font.family: root.codeFontFamily
                             font.pixelSize: 13
@@ -1923,11 +1957,18 @@ Item {
                         }
                         LabText {
                             theme: root.theme
-                            text: root.codingEditorDirty ? "上次测试输出（代码已修改）" : "测试输出"
+                            text: (root.showPublicTestOutput ? "公开测试输出" : "脚本执行输出")
+                                  + (root.codingEditorDirty || (root.showPublicTestOutput
+                                      ? !!app.interview.coding_tested_revision && !app.interview.coding_test_current
+                                      : !!(app.interview.coding_run || {}).submission_sha256
+                                        && app.interview.coding_run.submission_sha256 !== app.interview.coding_revision)
+                                     ? " · 代码已修改，结果仅供参考" : "")
                             variant: "caption"
                             tone: "muted"
                         }
                         Rectangle {
+                            id: codingOutputPanel
+                            objectName: "interviewCodingOutputPanel"
                             Layout.fillWidth: true; Layout.preferredHeight: 140; radius: 8
                             color: root.colors.surfaceAlt; border.color: root.colors.border
                             ScrollView {
@@ -1938,7 +1979,17 @@ Item {
                                 Text {
                                     objectName: "interviewCodingOutput"
                                     width: codingOutputScroll.availableWidth
-                                    text: app.interview.coding_test_output || "尚未运行。点击「保存并测试」，将测试当前编辑器中的代码。"
+                                    text: {
+                                        if (root.showPublicTestOutput) return app.interview.coding_test_output || "尚未运行公开测试。"
+                                        var run = app.interview.coding_run || ({})
+                                        if (run.status === "running") return "正在运行当前 Python 脚本…（最多 30 秒）"
+                                        if (!run.status) return "点击「运行代码」，执行当前脚本。自测结果不等同于单测通过或算法正确。"
+                                        return (run.status === "timed_out" ? "运行超时" : run.status === "output_limited" ? "输出过多，已停止"
+                                                : run.status === "error" ? "无法执行" : "退出码：" + run.exit_code)
+                                            + " · revision " + String(run.submission_sha256 || "").slice(0, 7)
+                                            + "\n" + (run.stdout || "（无标准输出，可用 print 查看结果）")
+                                            + (run.stderr ? "\n错误输出：\n" + run.stderr : "")
+                                    }
                                     textFormat: Text.PlainText
                                     color: root.colors.text
                                     wrapMode: Text.Wrap
@@ -1947,7 +1998,21 @@ Item {
                                 }
                             }
                         }
-                        Text { text: "面试进行中不会展示教学提示。代码记录只接受当前编辑器已复测的版本。"; color: root.colors.warning; font.pixelSize: 12; font.bold: true; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                        LabButton {
+                            theme: root.theme; variant: "ghost"; compact: true
+                            text: root.showCodingStdin ? "收起标准输入" : "设置标准输入（可选）"
+                            onClicked: root.showCodingStdin = !root.showCodingStdin
+                        }
+                        LabTextArea {
+                            id: codingStdin; objectName: "interviewCodingStdin"; theme: root.theme
+                            visible: root.showCodingStdin; Layout.fillWidth: true; Layout.preferredHeight: 75
+                            placeholderText: "使用 input() 时在这里填入输入数据；也可直接在脚本里构造样例。"
+                            readOnly: root.answerLocked || app.busy
+                        }
+                        LabText {
+                            theme: root.theme; Layout.fillWidth: true; wrapMode: Text.Wrap; variant: "caption"; tone: "muted"
+                            text: "在本机运行你信任的代码，不是安全沙箱。提交时冻结代码和当前版本运行记录；AI 评价逻辑，执行与单测事实单独保留。"
+                        }
                     }
                 }
                 }
@@ -1961,14 +2026,15 @@ Item {
                         Layout.fillWidth: true
                         wrapMode: Text.Wrap
                         variant: "caption"
-                        text: root.codingEditorDirty ? "代码已修改；请保存并测试，旧结果不能用于当前代码。"
+                        text: root.answerLocked ? "代码与执行记录已锁定。面试官将分别评价核心逻辑、解释和自测证据。"
+                              : root.codingEditorDirty ? "代码已修改；运行或提交会先保存当前内容，旧结果不会作为新版本证据。"
                               : app.interview.coding_test_status === "running" ? "正在测试已保存的代码…"
                               : app.interview.coding_test_current === true
                                 ? (app.interview.coding_test_status === "passed" ? "测试通过" : "测试未通过")
                                   + " · revision " + String(app.interview.coding_tested_revision).slice(0, 7)
                                   + " · 可以继续修改，也可记录本次结果。"
                               : app.interview.coding_test_status === "error" ? "测试未能完成，请查看输出后重试。"
-                                : "运行测试会先保存当前代码。"
+                                : "可运行自己的样例，也可直接提交未完成实现供面试官评逻辑。"
                         tone: root.codingEditorDirty ? "warning"
                               : app.interview.coding_test_current === true
                                 ? (app.interview.coding_test_status === "passed" ? "success" : "danger") : "muted"
@@ -1990,26 +2056,41 @@ Item {
                             theme: root.theme
                             text: "保存"
                             variant: "ghost"
-                            enabled: root.interviewCanEdit && !app.busy
+                            enabled: root.interviewCanEdit && !root.answerLocked && !app.busy
                             onClicked: if (app.saveInterviewCoding(codingEditor.text)) root.codingEditorDirty = false
+                        }
+                        LabButton {
+                            objectName: "runInterviewScript"; theme: root.theme
+                            text: (app.interview.coding_run || {}).status === "running" ? "运行中…" : "运行代码"
+                            enabled: root.interviewCanEdit && !root.answerLocked && !app.busy
+                            onClicked: root.runCodingScript()
+                            toolTip: "运行当前 Python 脚本 · Ctrl / Command + R"
                         }
                         LabButton {
                             objectName: "runInterviewGrader"
                             theme: root.theme
-                            variant: "primary"
-                            text: app.interview.coding_test_status === "running" ? "正在测试…" : "保存并测试"
-                            enabled: root.interviewCanEdit && !app.busy
+                            variant: "ghost"
+                            text: app.interview.coding_test_status === "running" ? "正在测试…" : "公开测试"
+                            enabled: root.interviewCanEdit && !root.answerLocked && !app.busy
                             onClicked: root.runCodingTests()
                             ToolTip.visible: hovered
-                            ToolTip.text: Qt.platform.os === "osx" ? "Command+R · 测试当前编辑器代码" : "Ctrl+R · 测试当前编辑器代码"
+                            ToolTip.text: "运行固定题库的单元测试，与自由脚本执行、AI 主观评价分开"
                         }
                         LabButton {
                             objectName: "recordInterviewCodingRound"
+                            visible: !root.dynamicInterview
                             theme: root.theme
                             text: "记录本轮并继续"
                             enabled: root.interviewCanEdit && !app.busy && !root.codingEditorDirty
                                      && app.interview.coding_test_current === true
                             onClicked: app.recordInterviewCodingRound()
+                        }
+                        LabButton {
+                            objectName: "submitInterviewCode"; theme: root.theme; variant: "primary"
+                            visible: root.dynamicInterview
+                            text: app.busy ? "正在处理…" : root.answerLocked ? "重试代码评价" : "提交给面试官"
+                            enabled: root.interviewCanEdit && !app.busy && codingEditor.text.trim().length > 0
+                            onClicked: root.submitAnswer()
                         }
                     }
                 }
@@ -2149,7 +2230,7 @@ Item {
                     }
                 }
                 Flow {
-                    visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted
+                    visible: !!activeQuestion && root.answerLocked && !app.interview.answer_corrupted
                              && (!root.dynamicInterview || app.busy || !!app.interview.ai_error)
                     Layout.fillWidth: true
                     spacing: 8
@@ -2228,7 +2309,7 @@ Item {
                     text: app.interview.ai_assessment_state === "connecting"
                           ? "正在连接 Codex 面试官，连接后会自动发送，无需再点一次。"
                           : app.interview.ai_assessment_state === "streaming"
-                          ? (root.dynamicInterview ? "AI 正在阅读你的回答并生成下一问……" : "AI 正在根据回答生成评分证据……")
+                          ? (root.codingQuestion ? "面试官正在审阅核心代码、注释和实际执行记录……" : root.dynamicInterview ? "AI 正在阅读你的回答并生成下一问……" : "AI 正在根据回答生成评分证据……")
                           : app.interview.ai_error || "Codex 评分尚未完成；可以检查连接后重试。"
                     color: app.interview.ai_assessment_state === "streaming"
                            ? root.colors.accent : root.colors.warning
@@ -2362,7 +2443,7 @@ Item {
         }
         onAccepted: {
             if (root.pendingAIAction === "submit") {
-                if (app.authorizeInterviewConversation(answer.text, root.pendingConnection, includeInterviewMaterials.checked))
+                if (app.authorizeInterviewConversation(root.codingQuestion ? app.interview.answer_text : answer.text, root.pendingConnection, includeInterviewMaterials.checked))
                     root.submitAnswer()
             } else if (root.pendingAIAction === "provider")
                 app.assessInterviewWithProvider(
@@ -2387,7 +2468,7 @@ Item {
             Text {
                 Layout.fillWidth: true
                 text: root.pendingAIAction === "submit"
-                      ? "授权本场对话：点击提交时发送当前回答、前序问答、岗位背景和下列材料。相同范围只需确认一次；材料、背景或服务改变后会重新确认。"
+                      ? "授权本场对话：点击提交时发送当前回答（手撕含代码与执行记录）、前序问答、岗位背景和下列材料。相同范围只需确认一次；材料、背景或服务改变后会重新确认。"
                       : "这里只列出发送范围。关闭预览不会发送任何内容。"
                 color: root.colors.text
                 wrapMode: Text.Wrap

@@ -10,7 +10,7 @@ from typing import Any, Mapping
 
 from .base import ContextPart, ContextPreview
 from ..catalog import Catalog, load_catalog
-from ..interview_flow import DIFFICULTY_DIRECTIVES, ROLE_PROBE_FOCUS, STAGES, dialogue_instruction, next_stages, question_stage
+from ..interview_flow import CODING_REVIEW_DIRECTIVE, DIFFICULTY_DIRECTIVES, ROLE_PROBE_FOCUS, STAGES, dialogue_instruction, next_stages, question_stage, stage_minimums
 from ..events import read_events, reduce_events
 from ..materials import MaterialError, get_material, resolve_material_text_path
 from ..role_interviews import (
@@ -441,25 +441,37 @@ def build_role_interview_context_preview(
         frozen_contract.pop("output_schema", None)
         strategy = frozen_contract.pop("conversation_strategy")
         candidates = dynamic_coding_candidates(catalog, role_catalog, session)
+        # A stable turn-start clock snapshot keeps consent/retry hashes stable.
+        # The live session clock still decides expiry on every mutation.
+        clock_event = next(e for e in reversed(session["timeline"])
+                           if e["event"] in {"started", "resumed", "question_generated"})
+        turn_clock = role_interview_state(repo_root, profile_id, interview_id,
+                                         now=datetime.fromisoformat(clock_event["timestamp"].replace("Z", "+00:00")))
         frozen_contract.update({
             "current_stage": question_stage(question),
             "stage_sequence": list(STAGES),
             "allowed_next_stages": next_stages(session, coding_available=bool(candidates)),
             "coding_candidates": [{"id": p.id, "title": p.title, "skills": list(skills)} for p, skills in candidates],
             "coding_unavailable": not bool(candidates),
-            "stage_guidance": "经历与八股各至少一个主问题及一次针对回答的追问，最多各四问；经历概述后优先再深入一到两轮，已讲清的内容不重问。答不上来要换角度；覆盖后再进入本地手撕，不捏造经历。",
+            "stage_counts": {stage: sum(question_stage(q) == stage for q in session["questions"]) for stage in STAGES},
+            "stage_minimums": stage_minimums(session),
+            "remaining_seconds_at_turn_start": turn_clock["remaining_seconds"],
+            "suggested_coding_reserve_seconds": min(900, session["duration_minutes"] * 60 // 4),
+            "stage_guidance": "轮数是最低覆盖，不是上限。经历先理解一个项目，再跨多个角度逐层核实机制、实现、实验和反例；讲清一个方向后换另一个有事实依据的方向。随后明确转场到原理：至少三道不同知识主题，困难至少四道，可继续追问。原理应源于实际经历、JD和岗位技能，而不是泛化题库。对照完整历史避免同义重复；结合剩余时间为八股和手撕留时间，不能为了继续单点追问漏掉后续环节。时间不足必须标记未完成，不把阶段计数当语义覆盖证明。",
             "turn_focus": (
                 "现在刚听完自我介绍。若回答只是履历概述，下一问只邀请介绍一段相关经历的目标与本人工作；"
                 "简历不算已经口头介绍过。只给一个开放的经历邀请，不列职责/方法/验证/效果清单；"
                 "先不问实现细节、方法原因、验证效果和反例。仅当本次回答已经讲清经历时才接一个深入问题。"
                 if question_stage(question) == "introduction" else
                 "对照刚才实际回答决定下一问：没有回答的问题不要换词重问；不知道或非本人负责时换一个实际接触过的角度。"
-                "从回答中的一个具体做法继续检验，已核实的前提不要重问；先核实做法，再问单个权衡或边界，不捏造技术机制。"
+                "从回答中的一个具体做法继续检验，已核实的前提不要重问；机制讲清后换到另一技术角度，不整场只问一个方向。"
+                "在原理阶段核对已问主题：先保证三个（困难四个）不同的相关主题，再按薄弱处追深；一次只问一个问题，不在一个问题里凑三个考点。"
             ),
         })
         parts[0] = _part("policy", "动态面试与评分规则", dialogue_instruction(
             set(question["rubric"]["dimensions"]), set(question["rubric"]["fatal_issues"]),
-        ) + "\n\n" + strategy + "\n\n本轮提问重点：" + frozen_contract["turn_focus"] + paused_note)
+        ) + "\n\n" + strategy + "\n\n本轮提问重点：" + frozen_contract["turn_focus"]
+            + ("\n\n" + CODING_REVIEW_DIRECTIVE if question["kind"] == "coding" else "") + paused_note)
         parts.extend([
             _part("interview_contract", "岗位技能、难度、流程与可用手撕范围", json.dumps(frozen_contract, ensure_ascii=False)),
             next(p for p in base.parts if p.id == "profile_context"),

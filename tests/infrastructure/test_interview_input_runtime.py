@@ -133,7 +133,7 @@ def _capture(window, name):
 
 def _enter_coding_round(controller, coding_id="FND-002"):
     """Prepare a real persisted session; replies here are fixture data, not AI evidence."""
-    for stage in ("experience", "experience", "theory", "theory", "coding"):
+    for stage in (["experience"] * 8 + ["theory"] * 4 + ["coding"]):
         question = controller.interview["question"]
         controller.lockInterviewAnswer("合成验收回答：我负责偏好数据去重，用独立留出集验证。")
         preview = controller.interviewContextPreview(controller.interview["answer_text"], False)
@@ -1050,7 +1050,7 @@ def test_coding_actions_stay_visible_while_reading_question(scene, size):
                 _click(window, _find(window, "toggleInterviewCodingPrompt"))
             viewport.setProperty("contentY", 0)
             QTest.qWait(80)
-            for name in ("runInterviewGrader", "recordInterviewCodingRound", "toggleInterviewCodingPrompt"):
+            for name in ("runInterviewGrader", "runInterviewScript", "submitInterviewCode", "toggleInterviewCodingPrompt"):
                 assert _within_window(window, _find(window, name)), name
             status = _find(window, "interviewCodingStatus")
             assert status.property("contentHeight") <= status.height() + 1
@@ -1110,8 +1110,7 @@ def test_saved_connection_card_fits_large_text_and_never_implies_ready(scene):
     _capture(window, "connection-saved-small")
 
 
-@pytest.mark.parametrize("entry", ["button", "shortcut"])
-def test_interview_coding_runs_visible_revision_and_shows_failure(scene, entry):
+def test_interview_coding_runs_visible_revision_and_shows_failure(scene):
     window, controller = scene
     window.resize(1080, 680)
     _enter_coding_round(controller)
@@ -1129,10 +1128,7 @@ def test_interview_coding_runs_visible_revision_and_shows_failure(scene, entry):
     latest = editor.property("text")
     assert "UAT latest editor revision" in latest
     digest = hashlib.sha256(latest.encode()).hexdigest()
-    if entry == "shortcut":
-        QTest.keyClick(window, Qt.Key_R, Qt.ControlModifier)
-    else:
-        _click(window, _find(window, "runInterviewGrader"))
+    _click(window, _find(window, "runInterviewGrader"))
     deadline = time.monotonic() + 30
     while controller.busy and time.monotonic() < deadline:
         QTest.qWait(50)
@@ -1144,28 +1140,12 @@ def test_interview_coding_runs_visible_revision_and_shows_failure(scene, entry):
     assert "测试未通过" in status.property("text") and digest[:7] in status.property("text")
     assert status.property("tone") == "danger"
     assert "FAILED" in _find(window, "interviewCodingOutput").property("text")
-    assert _find(window, "recordInterviewCodingRound").isEnabled()
+    assert not _find(window, "recordInterviewCodingRound").isVisible()
+    assert _find(window, "submitInterviewCode").isEnabled()
     viewport = _find(window, "interviewQuestionScroll").property("contentItem")
     viewport.setProperty("contentY", max(0, viewport.property("contentHeight") - viewport.height()))
     QTest.qWait(100)
-    _capture(window, f"coding-failed-{entry}")
-    if entry == "button":
-        _click(window, _find(window, "recordInterviewCodingRound"))
-        QTest.qWait(100)
-        assert not controller.interview.get("question")
-        assert controller.interview["status"] == "active"
-        assert _find(window, "interviewQuestionTitle").property("text") == "本场作答已完成"
-        assert _find(window, "finishInterviewButton").property("text") == "结束并查看复盘"
-        _capture(window, "interview-ready-to-finish")
-        _click(window, _find(window, "finishInterviewButton"))
-        dialog = window.findChild(QObject, "interviewFinishDialog")
-        assert dialog is not None and dialog.property("visible")
-        QMetaObject.invokeMethod(dialog, "accept")
-        QTest.qWait(100)
-        assert controller.interview["status"] == "completed"
-        assert not _find(window, "finishInterviewButton").isVisible()
-        _capture(window, "interview-completed-report")
-        return
+    _capture(window, "coding-public-tests-failed")
     editor.forceActiveFocus()
     edit.setCommitString("# modified after test\n")
     QCoreApplication.sendEvent(editor, edit)
@@ -1176,6 +1156,121 @@ def test_interview_coding_runs_visible_revision_and_shows_failure(scene, entry):
     controller._load_interview(controller.interview["interview_id"])
     assert controller.interview["coding_test_status"] == "failed"
     assert "unrelated" not in controller.interview["coding_test_output"]
+
+
+@pytest.mark.parametrize("mode", ["codex", "provider"])
+def test_real_coding_ui_runs_own_example_and_submits_to_interviewer(scene, monkeypatch, mode):
+    """Real QML, disk and Python execution; transport replies are synthetic."""
+    from llm_interview_lab.ai.base import ChatEvent
+
+    window, controller = scene
+    window.resize(1080, 680)
+    controller.setTheme("dark" if mode == "codex" else "light")
+    if mode == "provider":
+        assert controller.saveConnection("coding-api", "ollama", "selected-model", "合成 API", "http://127.0.0.1:11434", "", "high")
+        controller.finishInterview()
+        preview = controller.dynamicInterviewContextPreview("post_training_engineer", "intern", "hard", "", False)
+        controller.startDynamicPersonalizedInterview("post_training_engineer", "intern", "hard", "coding-api", "", False, preview["context_sha256"])
+    _enter_coding_round(controller)
+    _click(window, _find(window, "toggleInterviewCodingPrompt"))
+    editor = _find(window, "interviewCodingEditor")
+    code = "def total(xs):\n    return sum(xs)\n# 自己构造数据，不依赖测试框架\nprint(total([2, 3, 4]))\n"
+    editor.setProperty("text", code)
+    QTest.qWait(80)
+    # Button and shortcut execute the same real Python path.
+    if mode == "codex":
+        _click(window, _find(window, "runInterviewScript"))
+    else:
+        QTest.keyClick(window, Qt.Key_R, Qt.ControlModifier)
+    deadline = time.monotonic() + 10
+    while controller.busy and time.monotonic() < deadline:
+        QTest.qWait(30)
+        time.sleep(0.005)
+    run = controller.interview.get("coding_run", {})
+    assert run.get("stdout") == "9\n", run
+    assert run["exit_code"] == 0
+    assert run["submission_sha256"] == hashlib.sha256(code.encode()).hexdigest()
+    iid = controller.interview["interview_id"]
+    qid = controller.interview["question"]["question_id"]
+    assert not controller.service.interview_session(controller.profileId, iid)["coding_evidence"]
+    output = _find(window, "interviewCodingOutput")
+    assert "退出码：0" in output.property("text") and "9" in output.property("text")
+    assert _find(window, "submitInterviewCode").isEnabled()
+    # View-only regression setup: this is not a real Grader PASS claim.
+    old_sha = run["submission_sha256"]
+    controller._interview.update(coding_test_status="passed", coding_tested_revision=old_sha, coding_test_current=True)
+    controller.stateChanged.emit()
+    code += "# revision B\n"
+    editor.setProperty("text", code)
+    _click(window, _find(window, "runInterviewScript"))
+    deadline = time.monotonic() + 10
+    while controller.busy and time.monotonic() < deadline:
+        QTest.qWait(30)
+    assert controller.interview["coding_test_current"] is False
+    assert "测试通过" not in _find(window, "interviewCodingStatus").property("text")
+    assert controller.interview["coding_run"]["submission_sha256"] == hashlib.sha256(code.encode()).hexdigest()
+    viewport = _find(window, "interviewQuestionScroll")
+    panel = _find(window, "interviewCodingOutputPanel")
+    assert panel.mapToItem(viewport, QPointF(0, panel.height())).y() <= viewport.height() + 1
+    _capture(window, f"self-run-{mode}")
+
+    response = {"scores": {"core_logic": 3, "reasoning": 2, "validation": 3},
+                "evidence": "合成评分：return sum(xs) 与样例输出 9 一致，但没有实现完整题面；局部逻辑不能证明整题正确。",
+                "confidence": "medium", "fatal_issues": [], "next_stage": "finish",
+                "follow_up": "", "coding_problem_id": "", "next_skill_ids": []}
+    requests = []
+    if mode == "codex":
+        class Backend:
+            async def start_thread(self, **kwargs):
+                return {"thread": {"id": "coding-test-thread"}}
+            async def start_turn(self, *args, **kwargs):
+                requests.append((args, kwargs))
+                return {"turn": {"id": "coding-test-turn"}}
+        controller._codex_backend = Backend()
+        controller._codex_thread_id = "coding-test-thread"
+        controller._codex_thread_mode = "interviewer"
+        controller._codex_pump_started = True
+        controller._ensure_codex_loop()
+    else:
+        class Provider:
+            async def stream_chat(self, messages):
+                requests.append(messages)
+                yield ChatEvent("delta", text=json.dumps(response))
+        def provider(config, **kwargs):
+            assert config.model == "selected-model" and config.reasoning_effort == "high"
+            return Provider()
+        monkeypatch.setattr("llm_interview_lab.desktop.controller.create_chat_provider", provider)
+
+    _click(window, _find(window, "submitInterviewCode"))
+    QTest.qWait(50)
+    assert controller.interview.get("answer_locked") or controller.interview.get("question") is None
+    for _ in range(200):
+        QTest.qWait(10)
+        time.sleep(0.005)
+        if requests and (mode == "provider" and not controller.busy or controller._codex_interview_turn_id == "coding-test-turn"):
+            break
+    assert len(requests) == 1, controller.interview.get("ai_error")
+    if mode == "codex":
+        assert editor.property("readOnly")
+        assert not controller.submitInterviewCode(code, "codex", False)
+        sent = requests[0][0][1]
+        assert requests[0][1]["output_schema"]["properties"]["next_stage"]["enum"] == ["finish"]
+        for method, extra in (("turn/started", {}), ("item/agentMessage/delta", {"delta": json.dumps(response)}),
+                              ("turn/completed", {"status": "completed"})):
+            controller._handle_codex_event(CodexEvent(method, {"turnId": "coding-test-turn", **extra}))
+            QCoreApplication.processEvents()
+    else:
+        sent = str(requests[0])
+    assert "core_logic" in sent and "self_run" in sent and "不等于核心逻辑全错" in sent
+    QTest.qWait(100)
+    assert controller.interview.get("question") is None, controller.interview.get("ai_error")
+    controller.finishInterview()
+    final = controller.service.interview_session(controller.profileId, iid)
+    assert final["status"] == "completed"
+    assert final["assessments"][qid]["source"] == "ai"
+    assert final["coding_evidence"] == {}
+    assert "退出码 0" in controller.interview["result"]["assessment_evidence"][-1]["coding_execution_summary"]
+    _capture(window, f"self-run-report-{mode}")
 
 
 def test_interview_completion_copy_matches_session_state(scene):

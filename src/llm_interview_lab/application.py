@@ -12,6 +12,7 @@ from dataclasses import asdict, replace
 from datetime import datetime
 import hashlib
 import importlib.util
+import json
 import os
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -39,6 +40,9 @@ from .role_interviews import (
     list_role_interviews,
     load_role_interview,
     record_role_answer,
+    record_role_coding_answer,
+    role_coding_run,
+    run_role_coding_script,
     record_role_assessment,
     record_role_followup,
     role_interview_report,
@@ -1750,6 +1754,15 @@ class ApplicationService:
             "text": path.read_text(encoding="utf-8"),
         }
 
+    def run_interview_code(self, profile_id: str, interview_id: str, stdin: str = "") -> dict[str, Any]:
+        return run_role_coding_script(self.repo_root, profile_id, interview_id, stdin)
+
+    def interview_code_run(self, profile_id: str, interview_id: str, question_id: str) -> dict[str, Any]:
+        return role_coding_run(self.repo_root, profile_id, interview_id, question_id)
+
+    def lock_interview_code(self, profile_id: str, interview_id: str) -> dict[str, Any]:
+        return record_role_coding_answer(self.repo_root, profile_id, interview_id)
+
     def save_interview_coding_submission(
         self, profile_id: str, interview_id: str, text: str
     ) -> dict[str, str]:
@@ -1760,6 +1773,8 @@ class ApplicationService:
         current = self.current_interview(profile_id, interview_id)["question"]
         if current is None or current["kind"] != "coding":
             raise ApplicationError("the current interview question is not coding")
+        if current["question_id"] in self.interview_session(profile_id, interview_id)["answers"]:
+            raise ApplicationError("代码已提交并锁定；请重试本轮评分，不能覆盖已提交代码。")
         paths = profile_paths(self.repo_root, profile_id)
         root = paths.interviews_root / interview_id / "coding" / current["question_id"]
         path = ensure_profile_path_is_safe(
@@ -1918,6 +1933,16 @@ class ApplicationService:
                 "confidence": assessment["confidence"],
                 "score": result["question_scores"].get(question_id),
             }
+            if question["kind"] == "coding" and question_id in session["answers"]:
+                snapshot = json.loads(self.interview_answer_text(profile_id, interview_id, question_id))
+                run, tests = snapshot["self_run"], snapshot["public_tests"]
+                execution = "未运行" if run["status"] == "not_run" else (
+                    "超时" if run["status"] == "timed_out" else "输出过多，已停止" if run["status"] == "output_limited" else f"退出码 {run['exit_code']}")
+                test_status = {"not_run": "未运行", "passed": "通过", "failed": "未通过"}.get(tests["status"], tests["status"])
+                evidence_view["coding_execution_summary"] = (
+                    f"本地执行：{execution} · 公开测试：{test_status} · revision {snapshot['submission_sha256'][:7]}。"
+                    "以下为面试官主观评价，不将自测退出码或评分作为单测通过结论。"
+                )
             linked_followups = assessment.get("followup_ids", [])
             if linked_followups:
                 evidence_view["followup_ids"] = list(linked_followups)

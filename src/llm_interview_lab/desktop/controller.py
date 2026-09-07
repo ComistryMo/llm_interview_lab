@@ -178,6 +178,8 @@ def _dynamic_response_schema(preview, dimensions: set[str], fatal_issues: set[st
         "next_skill_ids": {"type": "array", "maxItems": 3,
                            "items": {"type": "string", "enum": [s["id"] for s in contract["role_skills"]]}},
     }
+    if not fatal_issues:
+        fields["fatal_issues"] = {"type": "array", "items": {"type": "string"}, "maxItems": 0}
     return {"type": "object", "properties": fields, "required": list(fields), "additionalProperties": False}
 
 
@@ -2945,8 +2947,7 @@ class AppController(QObject):
             for question in questions
             if (
                 question["question_id"] in session["coding_evidence"]
-                if question["kind"] == "coding"
-                else question["question_id"] in session["answers"]
+                or question["question_id"] in session["answers"]
             )
         }
         assessed = set(session["assessments"])
@@ -3081,6 +3082,8 @@ class AppController(QObject):
                 self._profile_id, interview_id
             )
             self._interview["coding_text"] = coding["text"]
+            self._interview["coding_revision"] = coding["sha256"]
+            self._interview["coding_run"] = self.service.interview_code_run(self._profile_id, interview_id, question["question_id"])
             # Coding evidence is keyed by the frozen question id.  Reading
             # the container itself made a restart look like an untested
             # editor even when the persisted grader result was valid.
@@ -3096,7 +3099,7 @@ class AppController(QObject):
                 if tested_sha else ""
             )
             self._interview["coding_test_operation_id"] = self._interview_coding_test_operation_id
-            self._interview["phase"] = "assessment" if self._interview["coding_test_current"] else "answering"
+            self._interview["phase"] = "assessment" if self._interview.get("answer_locked") or self._interview["coding_test_current"] else "answering"
         else:
             self._interview_coding_tested_revision = ""
             self._interview["coding_tested_revision"] = ""
@@ -3248,7 +3251,9 @@ class AppController(QObject):
         if self._busy or self._pending_interview_submission:
             return False
         question = self._interview.get("question") or {}
-        if self._interview.get("delivery_mode") != "dynamic_ai" or question.get("kind") == "coding":
+        if self._interview.get("delivery_mode") != "dynamic_ai":
+            return False
+        if question.get("kind") == "coding" and not self._interview.get("answer_locked"):
             return False
         try:
             if self._interview.get("status") != "active" or self._interview.get("expired"):
@@ -3479,6 +3484,8 @@ class AppController(QObject):
 
     @Slot(str, result=bool)
     def saveInterviewCoding(self, text: str) -> bool:
+        if self._busy:
+            return False
         if self._profile_id == "demo":
             self._interview["coding_text"] = text
             self._interview["coding_test_current"] = False
@@ -3490,11 +3497,8 @@ class AppController(QObject):
             saved = self.service.save_interview_coding_submission(
                 self._profile_id, self._interview["interview_id"], text
             )
-            self._interview["coding_text"] = saved.get("text", text)
+            self._update_interview_coding_revision(saved)
             self._interview_coding_identity = None
-            self._interview_coding_tested_revision = ""
-            self._interview["coding_tested_revision"] = ""
-            self._interview["coding_test_current"] = False
             self._interview["phase"] = "answering"
             self.stateChanged.emit()
             self.toast.emit("回答已保存到本机的本场面试记录。")
@@ -3502,6 +3506,13 @@ class AppController(QObject):
         except Exception as error:
             self._show_error(error)
             return False
+
+    def _update_interview_coding_revision(self, saved: Mapping[str, str]) -> None:
+        tested_sha = self._interview.get("coding_tested_revision", "")
+        test_current = bool(tested_sha and tested_sha == saved["sha256"])
+        self._interview.update(coding_text=saved["text"], coding_revision=saved["sha256"],
+                               coding_test_current=test_current)
+        self._interview_coding_tested_revision = tested_sha if test_current else ""
 
     @Slot(str, result=bool)
     def runInterviewCoding(self, text: str) -> bool:
@@ -3532,6 +3543,7 @@ class AppController(QObject):
             return False
         operation_id = uuid4().hex
         submission_sha = str(saved.get("sha256") or hashlib.sha256(text.encode("utf-8")).hexdigest())
+        self._update_interview_coding_revision(saved)
         identity = (profile_id, interview_id, question_id, operation_id, submission_sha)
         self._interview_coding_identity = identity
         self._interview_coding_test_operation_id = operation_id
@@ -3623,6 +3635,56 @@ class AppController(QObject):
         )
         return True
 
+    @Slot(str, str, result=bool)
+    def runInterviewScript(self, code: str, stdin: str) -> bool:
+        if self._busy or self._profile_id == "demo":
+            return False
+        profile_id, interview_id = self._profile_id, self._interview.get("interview_id")
+        try:
+            saved = self.service.save_interview_coding_submission(profile_id, interview_id, code)
+        except Exception as error:
+            self._show_error(error)
+            return False
+        identity = (profile_id, interview_id, saved["question_id"], uuid4().hex, saved["sha256"])
+        self._interview_coding_identity = identity
+        self._update_interview_coding_revision(saved)
+        self._interview["coding_run"] = {"status": "running", "submission_sha256": saved["sha256"]}
+        self.stateChanged.emit()
+
+        def current():
+            return (self._interview_coding_identity == identity and self._profile_id == profile_id
+                    and self._interview.get("interview_id") == interview_id
+                    and (self._interview.get("question") or {}).get("question_id") == saved["question_id"])
+
+        def complete(result):
+            if not current():
+                return
+            self._interview["coding_run"] = result
+            self.stateChanged.emit()
+
+        def failed(error):
+            if not current():
+                return
+            self._interview["coding_run"] = {"status": "error", "stderr": "运行未完成：" + friendly_error(error)}
+            self.stateChanged.emit()
+
+        self._background(lambda: self.service.run_interview_code(profile_id, interview_id, stdin), complete, failed)
+        return True
+
+    @Slot(str, str, bool, result=bool)
+    def submitInterviewCode(self, code: str, connection_id: str, include_materials: bool) -> bool:
+        if self._busy or self._pending_interview_submission:
+            return False
+        try:
+            if not self._interview.get("answer_locked"):
+                self.service.save_interview_coding_submission(self._profile_id, self._interview["interview_id"], code)
+                self.service.lock_interview_code(self._profile_id, self._interview["interview_id"])
+                self._load_interview(self._interview["interview_id"])
+            return self.submitInterviewAnswer(self._interview["answer_text"], connection_id, include_materials)
+        except Exception as error:
+            self._interview_request_failed(error, "submit")
+            return False
+
     @Slot()
     def recordInterviewCodingRound(self) -> None:
         if self._profile_id == "demo":
@@ -3663,7 +3725,7 @@ class AppController(QObject):
                 ),
                 source="grader",
                 confidence="high",
-                fatal_issues=() if passed else ("does_not_run",),
+                fatal_issues=("does_not_run",) if not passed and "does_not_run" in question["rubric"]["fatal_issues"] else (),
             )
             self._load_interview(self._interview["interview_id"])
         except Exception as error:
@@ -3733,7 +3795,7 @@ class AppController(QObject):
         self, answer: str, connection_id: str, include_materials: bool = True
     ) -> None:
         question = self._interview.get("question")
-        if not question or question.get("kind") == "coding":
+        if not question or (question.get("kind") == "coding" and self._interview.get("delivery_mode") != "dynamic_ai"):
             return
         if self._profile_id == "demo":
             self.toast.emit("演示 AI 评分需要证据；不会改变刷题掌握状态。")
@@ -7358,7 +7420,7 @@ class AppController(QObject):
         if self._interview.get("status") != "active" or self._interview.get("expired"):
             self._interview_request_failed("当前面试已暂停、超时或结束。请先恢复计时或开始新场次。", "codex_submit")
             return False
-        if question.get("kind") == "coding":
+        if question.get("kind") == "coding" and self._interview.get("delivery_mode") != "dynamic_ai":
             self._interview_request_failed("代码环节请先在编辑器作答并运行本地测试，不使用文本评分。", "codex_submit")
             return False
         if self._interview.get("answer_corrupted") or not str(self._interview.get("answer_text") or "").strip():

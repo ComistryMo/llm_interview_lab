@@ -13,6 +13,10 @@ import hashlib
 import importlib.util
 import json
 import os
+import subprocess
+import sys
+import tempfile
+import time
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 from uuid import uuid4
@@ -1041,8 +1045,6 @@ def append_dynamic_role_question(
     if not matching:
         raise RoleInterviewError("generated question kind is not allowed by this role")
     round_index, round_value = matching[0]
-    if len(session["questions"]) >= 20:
-        raise RoleInterviewError("dynamic interview reached its 20-question limit")
     question_id = f"q-{len(session['questions']) + 1:03d}"
     appended = _generated_non_coding_question(
         question,
@@ -1127,6 +1129,23 @@ def advance_dynamic_role_interview(
             repo_root, problem, question_id=next_id, round_index=3,
             round_weight=STAGE_WEIGHTS["coding"], timebox_minutes=20, skills=skills,
         )
+        appended["rubric"] = {
+            "dimensions": {
+                "core_logic": {"weight": 0.6, "anchors": {
+                    "1": "核心关系或算法逻辑存在实质错误。",
+                    "3": "核心思路合理且有部分正确实现，仍有具体缺失或错误。",
+                    "5": "核心实现正确，关键关系和边界自洽。"}},
+                "reasoning": {"weight": 0.25, "anchors": {
+                    "1": "无法从代码或注释说明选择依据。",
+                    "3": "能解释主要实现，但边界或复杂度分析不完整。",
+                    "5": "实现与解释一致，能分析边界、复杂度和取舍。"}},
+                "validation": {"weight": 0.15, "anchors": {
+                    "1": "没有有效自测或验证思路。",
+                    "3": "有典型样例或有效的验证设计，但证据不完整。",
+                    "5": "正常与边界样例充分，预期与实际一致并解释差异。"}},
+            },
+            "fatal_issues": [],
+        }
     elif stage != "finish":
         role = role_catalog.resolve_role(session["role_id"])
         skills = assessment.get("next_skill_ids")
@@ -1511,7 +1530,9 @@ def _remaining_seconds(session: Mapping[str, Any], now: datetime | None = None) 
 def _has_response(session: Mapping[str, Any], question: Mapping[str, Any]) -> bool:
     question_id = question["question_id"]
     if question["kind"] == "coding":
-        return question_id in session["coding_evidence"]
+        return question_id in session["coding_evidence"] or (
+            session.get("delivery_mode") == "dynamic_ai" and question_id in session["answers"]
+        )
     return question_id in session["answers"]
 
 
@@ -1654,9 +1675,15 @@ def record_role_answer(
         raise RoleInterviewError("only the current question may be answered")
     if current["kind"] == "coding":
         raise RoleInterviewError("run the coding grader instead of recording a text answer")
+    return _store_answer(repo_root, profile_id, session, question_id, answer, now=now)
+
+
+def _store_answer(repo_root, profile_id, session, question_id, answer, *, now=None):
     if question_id in session["answers"]:
         raise RoleInterviewError("the current question already has recorded answer evidence")
-    root = _session_root(repo_root, profile_id, interview_id)
+    if not answer.strip() or len(answer) > 50_000:
+        raise RoleInterviewError("请将代码与输出控制在 50000 字符以内后再提交；当前内容仍保留。")
+    root = _session_root(repo_root, profile_id, session["interview_id"])
     path = ensure_profile_path_is_safe(
         repo_root, profile_id, root / "answers" / f"{question_id}.md"
     )
@@ -1673,6 +1700,97 @@ def record_role_answer(
     )
     _save(repo_root, profile_id, session)
     return session
+
+
+def _coding_path(repo_root: Path, profile_id: str, interview_id: str, question_id: str) -> Path:
+    return ensure_profile_path_is_safe(
+        repo_root, profile_id,
+        _session_root(repo_root, profile_id, interview_id) / "coding" / question_id / "submission.py",
+        must_exist=True,
+    )
+
+
+def role_coding_run(repo_root: Path, profile_id: str, interview_id: str, question_id: str) -> dict[str, Any]:
+    path = _coding_path(repo_root, profile_id, interview_id, question_id).with_name("run.json")
+    ensure_profile_path_is_safe(repo_root, profile_id, path)
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+def run_role_coding_script(
+    repo_root: Path, profile_id: str, interview_id: str, stdin: str = "", *, timeout: float = 30,
+) -> dict[str, Any]:
+    """Execute the candidate's trusted Python script, not tests or a sandbox."""
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    question = current_role_question(repo_root, profile_id, interview_id)["question"]
+    if question is None or question["kind"] != "coding":
+        raise RoleInterviewError("请先进入手撕题再运行代码。")
+    qid = question["question_id"]
+    if qid in session["answers"]:
+        raise RoleInterviewError("代码已提交并锁定；不能覆盖本轮执行证据。")
+    path = _coding_path(repo_root, profile_id, interview_id, qid)
+    sha = inspect_submission(path, path.parent).sha256
+    started = time.monotonic()
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"}
+    # A common print-loop bug must not accumulate unlimited output in GUI memory.
+    with (tempfile.TemporaryFile(dir=path.parent) as source_input,
+          tempfile.TemporaryFile(dir=path.parent) as out, tempfile.TemporaryFile(dir=path.parent) as err):
+        source_input.write(stdin.encode("utf-8"))
+        source_input.seek(0)
+        with subprocess.Popen(
+            [os.environ.get("LLM_LAB_GRADER_EXECUTABLE") or sys.executable, str(path)],
+            stdin=source_input, stdout=out, stderr=err, cwd=path.parent, env=env,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+        ) as process:
+            status = "finished"
+            while True:
+                try:
+                    process.wait(timeout=0.05)
+                    break
+                except subprocess.TimeoutExpired:
+                    if os.fstat(out.fileno()).st_size + os.fstat(err.fileno()).st_size > 64 * 1024:
+                        status = "output_limited"
+                    elif time.monotonic() - started >= timeout:
+                        status = "timed_out"
+                    else:
+                        continue
+                    process.kill()
+                    process.wait()
+                    break
+            exit_code = process.returncode if status == "finished" else None
+        out.seek(0)
+        err.seek(0)
+        stdout, stderr = out.read(32 * 1024), err.read(32 * 1024)
+    def output(value):
+        value = value.decode("utf-8", errors="replace") if isinstance(value, bytes) else value
+        value = value.replace("\r\n", "\n")
+        value = value.replace(str(path.parent), "<coding>").replace(str(repo_root), "<app>")
+        return value[:8000] + ("\n[输出已截断]" if len(value) > 8000 else "")
+    result = {"question_id": qid, "submission_sha256": sha, "status": status,
+              "exit_code": exit_code, "stdin": stdin, "stdout": output(stdout), "stderr": output(stderr),
+              "duration_ms": round((time.monotonic() - started) * 1000), "recorded_at": _timestamp()}
+    if status == "output_limited":
+        result["stderr"] = "输出超过 64 KB，已停止脚本；请检查循环或减少打印后重试。\n" + result["stderr"]
+    target = ensure_profile_path_is_safe(repo_root, profile_id, path.with_name("run.json"))
+    _atomic_write(target, (json.dumps(result, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+    return result
+
+
+def record_role_coding_answer(repo_root: Path, profile_id: str, interview_id: str) -> dict[str, Any]:
+    """Freeze actual code and current-revision execution facts for subjective review."""
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    question = current_role_question(repo_root, profile_id, interview_id)["question"]
+    if session.get("delivery_mode") != "dynamic_ai" or not question or question["kind"] != "coding":
+        raise RoleInterviewError("只有动态面试的当前手撕题可以提交给 AI 面试官。")
+    qid = question["question_id"]
+    path = _coding_path(repo_root, profile_id, interview_id, qid)
+    sha = inspect_submission(path, path.parent).sha256
+    run = role_coding_run(repo_root, profile_id, interview_id, qid)
+    tests = session["coding_evidence"].get(qid, {})
+    snapshot = {"submission_sha256": sha, "code": path.read_text(encoding="utf-8"),
+                "self_run": run if run.get("submission_sha256") == sha else {"status": "not_run"},
+                "public_tests": tests if tests.get("submission_sha256") == sha else {"status": "not_run"},
+                "scope": "用户手撕代码与本地执行事实。自测退出码不是算法正确性结论；AI 仅提供有依据的主观评价。"}
+    return _store_answer(repo_root, profile_id, session, qid, json.dumps(snapshot, ensure_ascii=False, indent=2))
 
 
 def role_interview_answer_text(
@@ -1722,6 +1840,8 @@ def run_role_coding_test(
     current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
     if current is None or current["kind"] != "coding":
         raise RoleInterviewError("the current question is not coding")
+    if current["question_id"] in session["answers"]:
+        raise RoleInterviewError("代码已提交并锁定，不能重新测试覆盖评分依据。")
     problem = catalog.get(current["source"]["id"])
     if compute_problem_fingerprint(repo_root, problem) != current["source"]["sha256"]:
         raise RoleInterviewError("coding problem changed after the interview was planned")
@@ -1921,11 +2041,9 @@ def record_role_assessment(
         raise RoleInterviewError(
             "grader evidence is only valid for coding interview questions"
         )
-    if question["kind"] == "coding":
-        # A coding round has one deterministic source of truth: the public
-        # Grader result bound to the exact submission revision.  Accepting a
-        # manually supplied ``human``/``ai`` score here would let a failed or
-        # stale implementation become a fabricated high score.
+    subjective_coding = (question["kind"] == "coding" and source != "grader"
+                         and session.get("delivery_mode") == "dynamic_ai")
+    if question["kind"] == "coding" and not subjective_coding:
         coding_evidence = _validated_coding_assessment(
             repo_root,
             profile_id,
@@ -1948,7 +2066,7 @@ def record_role_assessment(
             f"submission_sha256={coding_evidence.get('submission_sha256')}"
         )
     answer_sha256 = ""
-    if question["kind"] != "coding":
+    if question["kind"] != "coding" or subjective_coding:
         role_interview_answer_text(
             repo_root, profile_id, interview_id, question_id
         )
@@ -2052,7 +2170,7 @@ def finish_role_interview(
         assessment = session["assessments"].get(question_id)
         if assessment is None:
             continue
-        if question["kind"] == "coding":
+        if question["kind"] == "coding" and (not dynamic or assessment["source"] == "grader"):
             _validated_coding_assessment(
                 repo_root,
                 profile_id,
@@ -2214,6 +2332,15 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
         lines.extend(f"- `{skill_id}`" for skill_id in result["critical_gaps"])
     if result["summary"]:
         lines.extend(["", "## Overall summary", "", result["summary"]])
+    if session.get("delivery_mode") == "dynamic_ai":
+        lines.extend(["", "## 本地代码执行事实（与 AI 主观评价分开）", ""])
+        for question in session["questions"]:
+            qid = question["question_id"]
+            if question["kind"] == "coding" and qid in session["answers"]:
+                snapshot = json.loads(role_interview_answer_text(repo_root, profile_id, session["interview_id"], qid))
+                lines.append(f"- {qid} · SHA `{snapshot['submission_sha256']}` · 自测 `{snapshot['self_run']['status']}`"
+                             f" · 退出码 `{snapshot['self_run'].get('exit_code', '未运行')}` · 公开测试 `{snapshot['public_tests']['status']}`")
+        lines.append("自测完成只说明脚本退出，不代表算法或公开测试通过。未完成实现也可根据已锁定代码获得有依据的主观评价。")
     lines.extend(
         [
             "",
@@ -2236,6 +2363,7 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
         **result,
         "score_scope": score_scope,
         "assessment_evidence": assessment_evidence,
+        "coding_test_evidence": dict(session["coding_evidence"]),
         "followups": list(followups),
     }
     if session.get("delivery_mode") == "non_coding_fallback":
