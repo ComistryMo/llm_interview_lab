@@ -10,7 +10,12 @@ Flickable {
     required property var colors
     required property var theme
     property bool compactLayout: width < 780
+    readonly property bool stackedAppearance: width < 600 || app.fontScale > 1.25
     property bool refreshRequested: false
+    function showCodexSettings() {
+        contentY = Math.max(0, Math.min(codexSettings.y + content.y - 16, contentHeight - height))
+        codexModelField.forceActiveFocus()
+    }
     function codexEffortIndex(value) {
         var values = ["", "low", "medium", "high", "xhigh"]
         var index = values.indexOf(String(value || ""))
@@ -59,41 +64,85 @@ Flickable {
         }
 
         LabCard {
+            objectName: "settingsAppearanceCard"
             Layout.fillWidth: true
             cardColor: root.colors.surface; borderColor: root.colors.border
-            Text { text: "外观"; color: root.colors.text; font.bold: true; font.pixelSize: 18 }
-            Flow {
+            LabText { theme: root.theme; text: "外观"; variant: "section"; strong: true }
+            GridLayout {
                 width: parent.width
-                spacing: 8
-                Repeater {
-                    model: [{id:"system", label:"跟随系统"}, {id:"light", label:"浅色"}, {id:"dark", label:"深色"}]
-                    delegate: Button {
-                        required property var modelData
-                        text: modelData.label
-                        checkable: true
-                        checked: app.theme === modelData.id
-                        onClicked: app.setTheme(modelData.id)
+                columns: root.stackedAppearance ? 1 : 2
+                rowSpacing: 8
+                columnSpacing: 20
+                LabText {
+                    theme: root.theme; text: "主题"; strong: true
+                    Layout.preferredWidth: root.stackedAppearance ? -1 : 100
+                }
+                Flow {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    Layout.preferredHeight: childrenRect.height
+                    spacing: 6
+                    Repeater {
+                        model: [{id:"system", label:"跟随系统"}, {id:"light", label:"浅色"}, {id:"dark", label:"深色"}]
+                        delegate: LabButton {
+                            required property var modelData
+                            objectName: "settingsTheme-" + modelData.id
+                            theme: root.theme
+                            compact: true
+                            text: modelData.label
+                            checkable: true
+                            checked: app.theme === modelData.id
+                            variant: checked ? "secondary" : "ghost"
+                            background: Rectangle {
+                                radius: root.theme.radiusMedium
+                                color: parent.checked ? root.theme.surfaceHover : parent.resolvedBackground
+                                border.color: parent.checked || parent.activeFocus ? root.theme.focusRing : "transparent"
+                                border.width: parent.activeFocus ? 2 : 1
+                            }
+                            onClicked: app.setTheme(modelData.id)
+                        }
                     }
                 }
-            }
-            Text { text: "文字大小"; color: root.colors.text; font.bold: true }
-            RowLayout {
-                width: parent.width
-                Slider { from: 0.85; to: 1.4; value: app.fontScale; stepSize: 0.05; Layout.fillWidth: true; onMoved: app.setFontScale(value) }
-                Text { text: Math.round(app.fontScale * 100) + "%"; color: root.colors.muted }
-            }
-            Text { text: "界面语言"; color: root.colors.text; font.bold: true }
-            Flow {
-                width: parent.width
-                spacing: 8
-                Repeater {
-                    model: [{id:"zh-CN", label:"简体中文"}, {id:"en", label:"English（实验性）"}]
-                    delegate: Button {
-                        required property var modelData
-                        text: modelData.label
-                        checkable: true
-                        checked: app.language === modelData.id
-                        onClicked: app.setLanguage(modelData.id)
+                LabText { theme: root.theme; text: "文字大小"; strong: true }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: root.theme.controlHeightCompact
+                    Slider {
+                        objectName: "settingsFontScale"
+                        from: 0.85; to: 1.4; value: app.fontScale; stepSize: 0.05
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 280
+                        implicitHeight: root.theme.controlHeightCompact
+                        onMoved: app.setFontScale(value)
+                    }
+                    LabText { theme: root.theme; text: Math.round(app.fontScale * 100) + "%"; variant: "caption"; tone: "muted" }
+                    Item { Layout.fillWidth: true }
+                }
+                LabText { theme: root.theme; text: "界面语言"; strong: true }
+                Flow {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    Layout.preferredHeight: childrenRect.height
+                    spacing: 6
+                    Repeater {
+                        model: [{id:"zh-CN", label:"简体中文"}, {id:"en", label:"English（实验性）"}]
+                        delegate: LabButton {
+                            required property var modelData
+                            objectName: "settingsLanguage-" + modelData.id
+                            theme: root.theme
+                            compact: true
+                            text: modelData.label
+                            checkable: true
+                            checked: app.language === modelData.id
+                            variant: checked ? "secondary" : "ghost"
+                            background: Rectangle {
+                                radius: root.theme.radiusMedium
+                                color: parent.checked ? root.theme.surfaceHover : parent.resolvedBackground
+                                border.color: parent.checked || parent.activeFocus ? root.theme.focusRing : "transparent"
+                                border.width: parent.activeFocus ? 2 : 1
+                            }
+                            onClicked: app.setLanguage(modelData.id)
+                        }
                     }
                 }
             }
@@ -104,7 +153,7 @@ Flickable {
                       : "简体中文是默认语言；选择会在下次启动时保留。"
                 color: root.colors.muted
                 wrapMode: Text.Wrap
-                font.pixelSize: 12
+                font.pixelSize: root.theme.fontCaption
             }
         }
 
@@ -222,6 +271,8 @@ Flickable {
         }
 
         LabCard {
+            id: codexSettings
+            objectName: "codexSettingsSection"
             Layout.fillWidth: true
             cardColor: root.colors.surface; borderColor: root.colors.border
             Text { text: "Codex 可执行文件"; color: root.colors.text; font.bold: true; font.pixelSize: 18 }

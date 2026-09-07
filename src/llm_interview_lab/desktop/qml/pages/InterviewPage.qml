@@ -9,6 +9,7 @@ Item {
     required property var app
     required property var colors
     property var theme: null
+    signal codexSettingsRequested()
     readonly property bool dynamicInterview: app.interview.delivery_mode === "dynamic_ai"
     readonly property bool conversationalAnswer: root.dynamicInterview && !!activeQuestion && !root.codingQuestion
     property bool showVoiceOptions: false
@@ -47,6 +48,19 @@ Item {
     property string setupConnectionId: ""
     property string transcriptionConnectionId: ""
     readonly property bool usingLocalStt: voiceConnection.currentValue === app.localStt.connection_id
+    readonly property string setupAiSummary: {
+        if (aiMode.currentValue === "disabled")
+            return "未接入 AI · 模拟面试需连接，刷题可离线使用。"
+        if (aiMode.currentValue === "codex")
+            return app.aiStatusVariant === "connected" ? "Codex · 面试官已连接"
+                 : app.codexProbeRunning ? "Codex · 正在查找"
+                 : app.codexAvailable ? "Codex · 已发现，提交回答时连接"
+                 : "Codex · 尚未发现，请先检查 AI 连接。"
+        if (planConnection.currentIndex < 0)
+            return "普通 LLM API · 请先添加 AI 连接。"
+        return planConnection.currentText + (root.providerIsReady(planConnection.currentValue)
+            ? " · 已就绪" : " · 开始前将检测已保存连接")
+    }
     readonly property string setupProfileId: app.profileId
     onSetupProfileIdChanged: {
         Qt.callLater(root.initializeSetup)
@@ -664,7 +678,8 @@ Item {
             // candidate typed while recognition was running.
             answer.text = answer.text.trim().length ? answer.text + "\n" + value : value
             root.answerDraft = answer.text
-            answer.forceActiveFocus()
+            if (root.visible)
+                answer.forceActiveFocus()
         }
     }
 
@@ -680,11 +695,6 @@ Item {
                 root.showVoiceSettings = false
             voiceConsent.checked = false
         }
-        Qt.callLater(function() {
-            questionContent.forceLayout()
-            questionScroll.contentItem.contentY = Math.min(voicePanel.y,
-                Math.max(0, questionContent.height - questionScroll.availableHeight))
-        })
     }
 
     Timer {
@@ -745,22 +755,10 @@ Item {
 
                 Column {
                     width: setupScroll.availableWidth - 12
-                    spacing: 14
-                    LabText { width: parent.width; theme: root.theme; text: "为下一次真实面试，做好准备。"; variant: "title"; strong: true; wrapMode: Text.Wrap }
-                    LabText { width: parent.width; theme: root.theme; text: "从你的经历出发，一问一答，逐步深入。"; tone: "muted"; wrapMode: Text.Wrap }
-                    Flow {
-                        width: parent.width
-                        spacing: 14
-                        Repeater {
-                            model: ["01  自我介绍", "02  经历深挖", "03  岗位原理", "04  手撕验证"]
-                            delegate: LabText {
-                                required property string modelData
-                                theme: root.theme; text: modelData; variant: "caption"; tone: "muted"
-                            }
-                        }
-                    }
+                    spacing: root.compactInterviewLayout ? 10 : 12
+                    LabText { width: parent.width; theme: root.theme; text: "开始新面试"; variant: "section"; strong: true; wrapMode: Text.Wrap }
+                    LabText { width: parent.width; theme: root.theme; text: "自我介绍 → 经历深挖 → 岗位原理 → 手撕验证"; variant: "caption"; tone: "muted"; wrapMode: Text.Wrap }
                     LabDivider { width: parent.width; theme: root.theme }
-                    LabText { theme: root.theme; text: "面试目标"; variant: "section"; strong: true }
                     LabText { theme: root.theme; text: "目标岗位"; variant: "caption"; tone: "muted" }
                     LabComboBox { theme: root.theme; id: role; objectName: "interviewRoleSelector"; width: parent.width; textRole: "title"; valueRole: "id"; model: app.roles; currentIndex: -1; onActivated: root.saveSetup() }
                     GridLayout {
@@ -786,7 +784,7 @@ Item {
                         }
                         color: root.colors.muted
                         wrapMode: Text.Wrap
-                        font.pixelSize: 11
+                        font.pixelSize: root.theme.fontCaption
                     }
                     LabDivider { width: parent.width; theme: root.theme }
                     LabText { visible: leftPanel.setupVisible; theme: root.theme; text: "面试官与背景"; variant: "section"; strong: true }
@@ -888,7 +886,7 @@ Item {
                             variant: "ghost"
                             compact: true
                             text: "设置模型与推理强度"
-                            onClicked: app.navigate("settings")
+                            onClicked: root.codexSettingsRequested()
                         }
                     }
                     Text {
@@ -1141,13 +1139,23 @@ Item {
                     Layout.fillWidth: true
                     spacing: 16
                     LabText {
+                        objectName: "interviewSetupAiSummary"
                         theme: root.theme
-                        text: setupScroll.contentItem.contentY + setupScroll.availableHeight < setupScroll.contentHeight - 8
-                              ? "向下滚动，查看其余设置 ↓"
-                              : aiMode.currentValue === "disabled" ? "接入 AI 后开始；刷题仍可离线使用。"
-                              : "开始前，你可以确认本场发送范围。"
+                        text: root.setupAiSummary
                         variant: "caption"; tone: "muted"; wrapMode: Text.Wrap
                         Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                    }
+                    LabButton {
+                        objectName: "interviewSetupConnectionShortcut"
+                        theme: root.theme
+                        compact: true
+                        variant: "ghost"
+                        visible: aiMode.currentValue === "disabled"
+                                 || (aiMode.currentValue === "codex" && !app.codexAvailable && !app.codexProbeRunning)
+                                 || (aiMode.currentValue === "provider" && planConnection.currentIndex < 0)
+                        text: "AI 连接"
+                        onClicked: app.navigate("connections")
                     }
                     LabButton {
                         objectName: "startConfiguredInterview"
@@ -1386,24 +1394,30 @@ Item {
                     LabCard {
                         id: voicePanel
                         objectName: "interviewVoiceCard"
+                        parent: root.dynamicInterview ? voiceStatusSlot : questionContent
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                                  && !root.answerLocked && root.interviewCanEdit && root.showVoiceOptions
                         width: parent.width
-                        cardColor: root.colors.surfaceAlt
-                        borderColor: app.interviewVoice.state === "recording"
-                                      ? root.colors.warning : root.colors.border
+                        padding: 0
+                        cardColor: "transparent"
+                        borderColor: "transparent"
                         ColumnLayout {
                             width: parent.width
-                            spacing: 8
+                            spacing: 4
                             RowLayout {
                                 Layout.fillWidth: true
-                                Text {
+                                LabText {
+                                    objectName: "interviewVoiceState"
+                                    theme: root.theme
                                     text: root.voiceRecording ? "正在听，请说话…"
                                           : root.voiceTranscribing ? "正在转成文字…"
+                                          : app.interviewVoice.error ? "语音输入未完成"
                                           : app.interviewVoice.transcription_state === "transcribed" ? "已添加到回答框" : "语音输入"
-                                    color: root.colors.text
-                                    font.bold: true
+                                    tone: root.voiceRecording ? "warning" : "muted"
+                                    variant: "caption"
+                                    wrapMode: Text.Wrap
                                     Layout.fillWidth: true
+                                    Layout.minimumWidth: 0
                                 }
                                 Text {
                                     objectName: "interviewVoiceDuration"
@@ -1413,36 +1427,24 @@ Item {
                                         return Math.floor(seconds / 60) + ":" + (seconds % 60 < 10 ? "0" : "") + seconds % 60
                                     }
                                     color: root.colors.muted
-                                    font.pixelSize: 12
+                                    font.pixelSize: root.theme.fontCaption
                                     font.family: root.codeFontFamily
                                 }
-                                StatusPill {
-                                    objectName: "interviewVoiceState"
-                                    text: app.interviewVoice.state === "recording"
-                                          ? "录音中"
-                                          : app.interviewVoice.transcription_state === "transcribing"
-                                            ? "转录中" : app.interviewVoice.transcription_state === "transcribed"
-                                              ? "已转录" : app.interviewVoice.state === "error" ? "录音失败"
-                                            : app.interviewVoice.audio_ready ? "已录音" : "未开始"
-                                    tone: app.interviewVoice.state === "recording"
-                                          ? root.colors.warning : root.colors.muted
+                                LabButton {
+                                    objectName: "finishInterviewDictation"
+                                    theme: root.theme; compact: true
+                                    visible: root.voiceRecording
+                                    text: "完成录音"
+                                    onClicked: root.toggleRecording()
                                 }
                                 LabButton {
                                     objectName: "interviewVoiceSettings"
                                     theme: root.theme; compact: true; variant: "ghost"
-                                    text: root.showVoiceSettings ? "收起设置" : "语音设置"
+                                    text: "语音设置"
                                     enabled: !root.voiceRecording && !root.voiceTranscribing
-                                    onClicked: root.showVoiceSettings = !root.showVoiceSettings
+                                    visible: !root.voiceRecording && !root.voiceTranscribing
+                                    onClicked: root.showVoiceSettings = true
                                 }
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.usingLocalStt
-                                      ? "结束录音后自动在本机转成文字，不上传音频。你可以修改后再提交。"
-                                      : "远程转录需本次授权，录音结束后自动转文字。文字追加到回答框，不会自动提交。"
-                                color: root.colors.muted
-                                font.pixelSize: 11
-                                wrapMode: Text.Wrap
                             }
                             Text {
                                 objectName: "interviewVoiceError"
@@ -1450,7 +1452,7 @@ Item {
                                 Layout.fillWidth: true
                                 text: app.interviewVoice.error || ""
                                 color: root.colors.danger
-                                font.pixelSize: 12
+                                font.pixelSize: root.theme.fontCaption
                                 wrapMode: Text.Wrap
                             }
                             LabButton {
@@ -1468,9 +1470,18 @@ Item {
                                 }
                             }
                             ColumnLayout {
+                                parent: voiceSettingsBody
+                                width: parent.width
                                 visible: root.showVoiceSettings
-                                Layout.fillWidth: true
                                 spacing: 8
+                                LabText {
+                                    theme: root.theme
+                                    Layout.fillWidth: true
+                                    variant: "caption"; tone: "muted"; wrapMode: Text.Wrap
+                                    text: root.usingLocalStt
+                                          ? "结束录音后自动在本机转成文字，不上传音频。文字会加入回答草稿，由你确认提交。"
+                                          : "远程转录需你明确授权。结束录音后自动转文字；不会自动提交回答。"
+                                }
                                 GridLayout {
                                     Layout.fillWidth: true
                                     columns: 1
@@ -1495,8 +1506,16 @@ Item {
                                         id: voiceConsent
                                         objectName: "interviewVoiceRemoteConsent"
                                         visible: !root.usingLocalStt
+                                        Layout.fillWidth: true
+                                        Layout.minimumWidth: 0
                                         text: "本次允许将录音发送到所选服务转录"
                                         enabled: voiceConnection.currentIndex >= 0 && !root.voiceTranscribing && !root.voiceRecording
+                                        contentItem: LabText {
+                                            theme: root.theme
+                                            leftPadding: voiceConsent.indicator.width + voiceConsent.spacing
+                                            text: voiceConsent.text
+                                            wrapMode: Text.Wrap
+                                        }
                                     }
                                 }
                                 ColumnLayout {
@@ -1994,6 +2013,14 @@ Item {
                         }
                     }
                 }
+                Item {
+                    id: voiceStatusSlot
+                    objectName: "interviewVoiceStatusSlot"
+                    visible: root.dynamicInterview && !!activeQuestion && !root.codingQuestion
+                             && !root.answerLocked && root.interviewCanEdit && root.showVoiceOptions
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: voicePanel.implicitHeight
+                }
                 Rectangle {
                     objectName: "interviewPhaseGuidance"
                     visible: !!activeQuestion && activeQuestion.kind !== "coding"
@@ -2091,7 +2118,7 @@ Item {
                                 theme: root.theme
                                 compact: true
                                 variant: "ghost"
-                                visible: !root.answerLocked
+                                visible: !root.answerLocked && !root.voiceRecording && !root.voiceTranscribing
                                 text: root.voiceActionText
                                 enabled: root.interviewCanEdit && !root.voiceTranscribing && (!app.busy || root.voiceRecording)
                                 onClicked: root.toggleRecording()
@@ -2191,7 +2218,7 @@ Item {
                         visible: app.interview.ai_mode === "codex"
                                  && app.interview.ai_assessment_state === "error" && !app.busy
                         text: "检查 Codex 设置"
-                        onClicked: app.navigate("settings")
+                        onClicked: root.codexSettingsRequested()
                     }
                 }
                 Text {
@@ -2805,6 +2832,67 @@ Item {
                         useMaterial.checked ? consent.checked : false
                     )
                 }
+            }
+        }
+    }
+
+    Basic.Dialog {
+        id: voiceSettingsDialog
+        objectName: "interviewVoiceSettingsDialog"
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        visible: root.showVoiceSettings
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        width: Math.min(560, root.width - 32)
+        height: Math.min(root.height - 32, voiceSettingsBody.implicitHeight
+                         + header.implicitHeight + footer.implicitHeight
+                         + topPadding + bottomPadding + spacing * 2)
+        padding: 20
+        spacing: 16
+        onClosed: root.showVoiceSettings = false
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.45) }
+        background: Rectangle {
+            radius: root.theme.radiusLarge
+            color: root.theme.surfaceRaised
+            border.color: root.theme.borderDefault
+        }
+        header: LabText {
+            theme: root.theme; text: "语音输入设置"; variant: "section"; strong: true
+            padding: 20
+            bottomPadding: 0
+        }
+        contentItem: ScrollView {
+            id: voiceSettingsScroll
+            objectName: "interviewVoiceSettingsScroll"
+            clip: true
+            contentWidth: availableWidth
+            Column {
+                id: voiceSettingsBody
+                width: voiceSettingsScroll.availableWidth - 12
+            }
+        }
+        footer: RowLayout {
+            spacing: 8
+            Item { Layout.fillWidth: true }
+            LabButton {
+                objectName: "closeInterviewVoiceSettings"
+                theme: root.theme; variant: "ghost"
+                text: "返回"
+                onClicked: root.showVoiceSettings = false
+            }
+            LabButton {
+                objectName: "startInterviewRecordingFromSettings"
+                theme: root.theme; variant: "primary"
+                text: "开始录音"
+                enabled: root.interviewCanEdit && !app.busy && !root.voiceRecording && !root.voiceTranscribing
+                         && (root.usingLocalStt
+                             ? app.localStt.ready && app.localStt.runtime_available && !app.localStt.downloading
+                             : voiceConnection.currentIndex >= 0 && voiceConsent.checked)
+                onClicked: root.toggleRecording()
+                Layout.rightMargin: 20
+                Layout.bottomMargin: 16
             }
         }
     }

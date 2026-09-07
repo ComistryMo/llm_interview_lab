@@ -8,6 +8,7 @@ Flickable {
     required property var app
     required property var colors
     required property var theme
+    signal codexSettingsRequested()
     contentWidth: width; contentHeight: content.implicitHeight + 60; clip: true
     property bool advanced: false
     // Editing stays local to this form. The key itself is never read back
@@ -566,7 +567,7 @@ Flickable {
                     objectName: "openCodexModelSettings"
                     theme: root.theme; compact: true; variant: "ghost"
                     text: app.codexAvailable ? "模型与推理强度" : "安装 / 路径设置"
-                    onClicked: app.navigate("settings")
+                    onClicked: root.codexSettingsRequested()
                 }
                 LabButton {
                     objectName: "refreshCodexConnection"

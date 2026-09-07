@@ -559,10 +559,22 @@ ApplicationWindow {
                     layoutMode: window.layoutMode
                 }
                 ExercisePage { app: backend; colors: window.colors; theme: appTheme }
-                InterviewPage { app: backend; colors: window.colors; theme: appTheme }
+                InterviewPage {
+                    app: backend; colors: window.colors; theme: appTheme
+                    onCodexSettingsRequested: {
+                        backend.navigate("settings")
+                        Qt.callLater(settingsPage.showCodexSettings)
+                    }
+                }
                 ProgressPage { objectName: "progressPage"; app: backend; colors: window.colors }
-                ConnectionsPage { objectName: "connectionsPage"; app: backend; colors: window.colors; theme: appTheme }
-                SettingsPage { objectName: "settingsPage"; app: backend; colors: window.colors; theme: appTheme }
+                ConnectionsPage {
+                    objectName: "connectionsPage"; app: backend; colors: window.colors; theme: appTheme
+                    onCodexSettingsRequested: {
+                        backend.navigate("settings")
+                        Qt.callLater(settingsPage.showCodexSettings)
+                    }
+                }
+                SettingsPage { id: settingsPage; objectName: "settingsPage"; app: backend; colors: window.colors; theme: appTheme }
             }
         }
     }
