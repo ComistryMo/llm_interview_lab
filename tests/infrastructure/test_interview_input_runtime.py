@@ -166,6 +166,163 @@ def _scroll_to_voice_control(window, item):
     assert _within_window(window, item)
 
 
+def _stub_dictation_capture(controller, monkeypatch, source=None):
+    """Inject only the microphone, never a demo controller or transcript UI."""
+    recorder = controller._voice_recorder
+
+    def start(path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if source:
+            shutil.copy2(source, path)
+        else:
+            path.write_bytes(b"synthetic audio for stub decoder")
+        recorder.path = path
+        recorder.state = "recording"
+        recorder.error_message = ""
+        recorder.duration_ms = 0
+        recorder.changed.emit()
+
+    def stop():
+        recorder.state = "recorded"
+        recorder.changed.emit()
+        recorder.ready.emit(str(recorder.path))
+
+    monkeypatch.setattr(recorder, "start", start)
+    monkeypatch.setattr(recorder, "stop", stop)
+
+
+def _dictation_model_ready(controller, monkeypatch):
+    monkeypatch.setattr(controller._local_stt, "ready", lambda: True)
+    monkeypatch.setattr(controller._local_stt, "runtime_available", lambda: True)
+    controller._refresh_local_stt_status()
+    controller.stateChanged.emit()
+
+
+@pytest.mark.parametrize("size,theme,scale", [
+    ((900, 620), "dark", 1.25), ((1080, 680), "light", 1.0),
+    ((1280, 800), "dark", 1.0), ((1440, 900), "light", 1.0),
+])
+def test_dictation_click_records_and_stop_automatically_appends(scene, monkeypatch, size, theme, scale):
+    window, controller = scene
+    _dictation_model_ready(controller, monkeypatch)
+    _stub_dictation_capture(controller, monkeypatch)
+    calls = []
+
+    def transcribe(path):
+        calls.append(path)
+        return "合成转录：我负责数据清洗和离线评估。"
+
+    monkeypatch.setattr(controller._local_stt, "transcribe", transcribe)
+    controller.setTheme(theme)
+    window.resize(*size)
+    window.setProperty("displayFontScaleOverride", scale)
+    QTest.qWait(120)
+    answer = _find(window, "interviewAnswerEditor")
+    answer.setProperty("text", "保留原有回答。")
+    button = _find(window, "toggleInterviewVoice")
+    _click(window, button)
+    QTest.qWait(80)
+    assert controller.interviewVoice["state"] == "recording"
+    assert button.property("text") == "完成录音"
+    assert not _find(window, "lockInterviewAnswer").isEnabled()
+    assert not _find(window, "interviewVoiceConnection").isVisible()
+    assert not _find(window, "downloadLocalSttModel").isVisible()
+    assert not _find(window, "transcribeInterviewRecording").isVisible()
+    card = _find(window, "interviewVoiceCard")
+    assert card.height() < 150, "Ordinary dictation must not expand the entire settings form"
+    assert _within_window(window, card) and _within_window(window, button)
+    for item in _items(card):
+        if item.isVisible() and item.property("text"):
+            assert item.mapToItem(card, QPointF()).x() >= 0
+            assert item.mapToItem(card, QPointF(item.width(), item.height())).x() <= card.width() + 1
+    _capture(window, f"dictation-recording-{size[0]}-{theme}")
+    _click(window, button)
+    for _ in range(100):
+        QTest.qWait(20)
+        time.sleep(.005)
+        if controller.interviewVoice["transcription_state"] == "transcribed":
+            break
+    assert len(calls) == 1
+    assert controller.interviewVoice["transcription_state"] == "transcribed"
+    assert answer.property("text") == "保留原有回答。\n合成转录：我负责数据清洗和离线评估。"
+    assert not controller.interview["answer_locked"] and not controller.busy
+    assert button.property("text") == "语音输入"
+    assert not _find(window, "transcribeInterviewRecording").isVisible()
+    _capture(window, f"dictation-text-{size[0]}-{theme}")
+
+
+@pytest.mark.parametrize("changed", ["profile", "question", "finished"])
+def test_dictation_stop_cannot_start_inference_in_changed_context(controller, monkeypatch, changed):
+    _dictation_model_ready(controller, monkeypatch)
+    _stub_dictation_capture(controller, monkeypatch)
+    monkeypatch.setattr(controller._local_stt, "transcribe", lambda _: pytest.fail("Stale recording must not be transcribed"))
+    assert controller.startInterviewDictation("local-sensevoice", False)
+    assert not controller.startInterviewDictation("local-sensevoice", False)
+    assert controller.stopInterviewRecording()
+    if changed == "profile":
+        controller._profile_id = "another-synthetic-profile"
+    elif changed == "question":
+        controller._interview["question"] = {**controller.interview["question"], "question_id": "q-002"}
+    else:
+        controller._interview["status"] = "incomplete"
+    QTest.qWait(80)
+    assert not controller.busy and not controller._voice_auto_transcription
+
+
+def test_dictation_remote_consent_is_explicit_and_only_for_one_recording(controller, monkeypatch):
+    _stub_dictation_capture(controller, monkeypatch)
+    calls = []
+    monkeypatch.setattr(controller, "transcribeInterviewRecording", lambda *args: calls.append(args))
+    assert not controller.startInterviewDictation("speech-api", False)
+    assert "明确授权" in controller.interviewVoice["error"]
+    assert controller.startInterviewDictation("speech-api", True)
+    assert controller.stopInterviewRecording()
+    QTest.qWait(80)
+    assert calls == [("speech-api", True)]
+    controller._voice_recorder.ready.emit(str(controller._voice_recorder.path))
+    QTest.qWait(20)
+    assert len(calls) == 1
+    assert not controller.startInterviewDictation("speech-api", False)
+
+
+def test_dictation_failure_keeps_draft_and_audio_and_retries(scene, monkeypatch):
+    window, controller = scene
+    _dictation_model_ready(controller, monkeypatch)
+    _stub_dictation_capture(controller, monkeypatch)
+    answer = _find(window, "interviewAnswerEditor")
+    answer.setProperty("text", "已有文字不能丢失。")
+
+    def fail(_):
+        raise RuntimeError("未听到清晰的人声，请重试。")
+
+    monkeypatch.setattr(controller._local_stt, "transcribe", fail)
+    _click(window, _find(window, "toggleInterviewVoice"))
+    _click(window, _find(window, "toggleInterviewVoice"))
+    for _ in range(100):
+        QTest.qWait(20)
+        time.sleep(.005)
+        if controller.interviewVoice["transcription_state"] == "error":
+            break
+    assert not controller.busy
+    assert "人声" in _find(window, "interviewVoiceError").property("text")
+    assert answer.property("text") == "已有文字不能丢失。"
+    audio = controller._voice_recorder.path
+    digest = hashlib.sha256(audio.read_bytes()).hexdigest()
+    monkeypatch.setattr(controller._local_stt, "transcribe", lambda _: "重试的合成结果。")
+    retry = _find(window, "transcribeInterviewRecording")
+    assert retry.isVisible() and retry.isEnabled()
+    _scroll_to_voice_control(window, retry)
+    _click(window, retry)
+    for _ in range(100):
+        QTest.qWait(20)
+        time.sleep(.005)
+        if controller.interviewVoice["transcription_state"] == "transcribed":
+            break
+    assert answer.property("text") == "已有文字不能丢失。\n重试的合成结果。"
+    assert hashlib.sha256(audio.read_bytes()).hexdigest() == digest
+    assert not controller.interview["answer_locked"]
+
+
 def test_recording_start_reaches_recorder_with_profile_local_path(controller, monkeypatch):
     destinations = []
     errors = []
@@ -322,11 +479,10 @@ def test_voice_error_and_transcription_choices_use_real_capabilities(scene, monk
     window.resize(*size)
     window.setProperty("displayFontScaleOverride", 1.25)
     QTest.qWait(150)
-    _click(window, _find(window, "toggleInterviewVoice"))
-    QTest.qWait(120)
+    _dictation_model_ready(controller, monkeypatch)
     from llm_interview_lab.desktop import voice as voice_module
     monkeypatch.setattr(voice_module.QMediaDevices, "audioInputs", staticmethod(lambda: []))
-    _click(window, _find(window, "startInterviewRecording"))
+    _click(window, _find(window, "toggleInterviewVoice"))
     QTest.qWait(100)
     assert _find(window, "interviewVoiceState").property("text") == "录音失败"
     error = _find(window, "interviewVoiceError")
@@ -335,27 +491,32 @@ def test_voice_error_and_transcription_choices_use_real_capabilities(scene, monk
     viewport = _find(window, "interviewQuestionScroll")
     assert 0 <= error.mapToItem(viewport, QPointF()).y()
     assert error.mapToItem(viewport, QPointF(0, error.height())).y() <= viewport.height()
-    assert "首次需下载" in _find(window, "interviewLocalSttStatus").property("text")
+    _click(window, _find(window, "interviewVoiceSettings"))
+    QTest.qWait(100)
+    assert "本地模型已下载" in _find(window, "interviewLocalSttStatus").property("text")
     assert _find(window, "interviewVoiceConnection").property("count") == 1
     assert _find(window, "interviewVoiceConnection").property("currentValue") == "local-sensevoice"
     assert not _find(window, "interviewVoiceRemoteConsent").isVisible()
     assert _find(window, "downloadLocalSttModel").isEnabled()
-    assert not _find(window, "transcribeInterviewRecording").isEnabled()
+    assert not _find(window, "transcribeInterviewRecording").isVisible()
     _capture(window, f"voice-missing-microphone-{size[0]}")
     assert controller.saveConnection("speech-api", "openai-compatible", "synthetic-chat-model", "语音连接", "http://localhost:8080/v1", "synthetic-key", "")
     assert [c["connection_id"] for c in controller.transcriptionConnections] == ["speech-api"]
 
 
 @pytest.mark.skipif(os.environ.get("LLM_LAB_TEST_MICROPHONE") != "1", reason="Explicit opt-in required for real microphone capture")
-def test_real_microphone_start_stop_from_production_page(scene):
+def test_real_microphone_start_stop_from_production_page(scene, monkeypatch):
     import wave
     window, controller = scene
     window.resize(1280, 800)
-    _click(window, _find(window, "toggleInterviewVoice"))
+    _dictation_model_ready(controller, monkeypatch)
+    # Exercise the real microphone but do not decode ambient/private speech.
+    # The real decoder is independently checked using the public Chinese WAV.
+    monkeypatch.setattr(controller._local_stt, "transcribe", lambda _: "合成转录测试结果。")
     QTest.qWait(150)
     recordings = []
     for cycle in range(3):
-        _click(window, _find(window, "startInterviewRecording"))
+        _click(window, _find(window, "toggleInterviewVoice"))
         assert controller.interviewVoice["state"] == "recording", controller.interviewVoice
         assert not controller.startInterviewRecording(), "Duplicate start must not replace the active recorder"
         QTest.qWait(1700)
@@ -364,10 +525,10 @@ def test_real_microphone_start_stop_from_production_page(scene):
         QTest.qWait(1700)
         assert controller.interviewVoice["duration_ms"] > first_tick
         display = _find(window, "interviewVoiceDuration").property("text")
-        assert "时长 00 秒" != display
+        assert display != "0:00"
         _capture(window, f"voice-recording-windows-{cycle + 1}")
         stopped_at = time.perf_counter()
-        _click(window, _find(window, "stopInterviewRecording"))
+        _click(window, _find(window, "toggleInterviewVoice"))
         for _ in range(50):
             QTest.qWait(20)
             if controller.interviewVoice["state"] != "recording":
@@ -381,10 +542,17 @@ def test_real_microphone_start_stop_from_production_page(scene):
             assert duration >= 2, duration
             print(f"REAL_MICROPHONE_OK cycle={cycle + 1} stop_seconds={stop_seconds:.3f} duration={duration:.2f}s bytes={path.stat().st_size} channels={audio.getnchannels()} rate={audio.getframerate()}")
         recordings.append((path, hashlib.sha256(path.read_bytes()).hexdigest()))
+        for _ in range(100):
+            QTest.qWait(20)
+            time.sleep(.005)
+            if controller.interviewVoice["transcription_state"] == "transcribed":
+                break
+        assert controller.interviewVoice["transcription_state"] == "transcribed"
         assert not controller.busy and not controller.interview["answer_locked"]
         assert not _find(window, "interviewVoiceRemoteConsent").property("checked")
         editor = _find(window, "interviewAnswerEditor")
         _click(window, editor)
+        QTest.keyClick(window, Qt.Key_End, Qt.ControlModifier)
         QTest.keyClick(window, Qt.Key_O)
         QTest.keyClick(window, Qt.Key_K)
         assert editor.property("text").endswith("ok"), "UI must accept input after Stop"
@@ -496,20 +664,14 @@ def test_local_stt_draft_result_is_single_and_question_scoped(controller, monkey
 def test_real_local_stt_from_production_page(scene, monkeypatch, size):
     import socket
     from llm_interview_lab.ai.local_transcription import LocalSpeechTranscriber
-    from llm_interview_lab.workspace import profile_paths
 
     window, controller = scene
     controller._local_stt = LocalSpeechTranscriber(Path(os.environ["LLM_LAB_TEST_LOCAL_STT_MODEL_ROOT"]))
     controller._refresh_local_stt_status()
     source = Path(os.environ["LLM_LAB_TEST_LOCAL_STT_AUDIO"])
-    # Public Chinese sample stands in for a finished recording. This test
+    # Public Chinese sample stands in for a microphone recording. This test
     # does not capture ambient sound or touch the user's existing Profile.
-    audio = profile_paths(controller.repo_root, controller.profileId).interviews_root / controller.interview["interview_id"] / "audio" / "public-zh.wav"
-    audio.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, audio)
-    controller._voice_recorder.path = audio
-    controller._voice_recorder.state = "recorded"
-    controller._voice_recorder.duration_ms = 5592
+    _stub_dictation_capture(controller, monkeypatch, source)
     controller.stateChanged.emit()
     def unexpected_network(*args, **kwargs):
         raise AssertionError("Local STT must not open a connection or load an API Key")
@@ -522,13 +684,11 @@ def test_real_local_stt_from_production_page(scene, monkeypatch, size):
     answer.setProperty("text", "先保留这句已输入的回答。")
     _click(window, _find(window, "toggleInterviewVoice"))
     QTest.qWait(150)
+    assert controller.interviewVoice["state"] == "recording"
     combo = _find(window, "interviewVoiceConnection")
     assert combo.property("currentValue") == "local-sensevoice"
     assert not _find(window, "interviewVoiceRemoteConsent").isVisible()
-    button = _find(window, "transcribeInterviewRecording")
-    # Scroll only enough to expose the actual button; no synthetic screenshot
-    # route or demo controller is used.
-    _scroll_to_voice_control(window, button)
+    button = _find(window, "toggleInterviewVoice")
     assert button.isEnabled() and _within_window(window, button)
     _capture(window, f"local-stt-ready-{size[0]}")
     started = time.perf_counter()
@@ -548,7 +708,7 @@ def test_real_local_stt_from_production_page(scene, monkeypatch, size):
     assert answer.property("text").startswith("先保留这句已输入的回答。\n")
     assert _find(window, "interviewVoiceState").property("text") == "已转录"
     assert not answer.property("readOnly") and not controller.interview["answer_locked"]
-    assert audio.read_bytes() == source.read_bytes()
+    assert controller._voice_recorder.path.read_bytes() == source.read_bytes()
     print(f"LOCAL_STT_QML width={size[0]} seconds={time.perf_counter() - started:.2f}")
     _capture(window, f"local-stt-transcribed-{size[0]}")
 
@@ -567,6 +727,69 @@ def test_corrected_coding_selection_opens_editor_and_shows_notice(scene):
     assert _find(window, "interviewCodingEditor").isVisible()
     assert controller.interview["coding_text"]
     _capture(window, "coding-corrected-editor")
+
+
+@pytest.mark.parametrize("size,theme", [
+    ((900, 620), "dark"), ((1080, 680), "light"),
+    ((1280, 800), "dark"), ((1440, 900), "light"),
+])
+def test_connections_compact_rows_align_and_actions_work(scene, monkeypatch, size, theme):
+    window, controller = scene
+    monkeypatch.setattr("llm_interview_lab.ai.credentials.KeyringCredentialStore.save",
+                        lambda *args: "synthetic-key-reference")
+    assert controller.saveConnection("layout-api", "deepseek", "synthetic-model", "DeepSeek · 布局验收", "", "synthetic-key", "none")
+    controller.navigate("connections")
+    controller.setTheme(theme)
+    window.resize(*size)
+    if size[0] == 900:
+        window.setProperty("displayFontScaleOverride", 1.25)
+    window.findChild(QObject, "globalToast").setProperty("visible", False)
+    QTest.qWait(150)
+    saved = _find(window, "savedConnectionCard")
+    codex = _find(window, "codexConnectionCard")
+    notice = _find(window, "localTrainingNotice")
+    assert abs(saved.width() - codex.width()) <= 1
+    assert abs(saved.mapToScene(QPointF()).x() - codex.mapToScene(QPointF()).x()) <= 1
+    assert codex.mapToScene(QPointF()).y() >= saved.mapToScene(QPointF(0, saved.height())).y() + 8
+    assert notice.height() < 70, "Local availability is a small notice, not an empty status card"
+    assert codex.height() < 220
+    for card in (saved, codex):
+        for item in _items(card):
+            if item.isVisible() and item.property("text"):
+                start = item.mapToItem(card, QPointF())
+                end = item.mapToItem(card, QPointF(item.width(), item.height()))
+                assert start.x() >= 0 and start.y() >= 0
+                assert end.x() <= card.width() + 1 and end.y() <= card.height() + 1
+    assert _within_window(window, codex)
+    assert _within_window(window, notice)
+    _capture(window, f"connections-compact-{size[0]}-{theme}")
+    _click(window, _find(window, "openCodexModelSettings"))
+    assert controller.currentPage == "settings"
+
+
+def test_connections_found_codex_keeps_connect_and_model_actions(scene, monkeypatch):
+    window, controller = scene
+    assert controller.saveConnection("layout-local", "ollama", "synthetic-model", "布局验收连接", "http://localhost:11434", "", "")
+    controller._codex_available = True  # Explicit discovery fixture; no real Codex login or API call.
+    controller.aiStateChanged.emit()
+    calls = []
+    monkeypatch.setattr(controller, "connectCodex", calls.append)
+    controller.navigate("connections")
+    window.resize(900, 620)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    window.findChild(QObject, "globalToast").setProperty("visible", False)
+    QTest.qWait(150)
+    connect = _find(window, "connectCodexInterviewer")
+    model = _find(window, "openCodexModelSettings")
+    refresh = _find(window, "refreshCodexConnection")
+    for button in (connect, model, refresh):
+        assert button.isVisible() and _within_window(window, button)
+    assert model.property("text") == "模型与推理强度"
+    _capture(window, "connections-codex-discovery-fixture-900")
+    _click(window, connect)
+    assert calls == ["interviewer"]
+    _click(window, model)
+    assert controller.currentPage == "settings"
 
 
 def test_material_refresh_keeps_tested_connection_but_not_across_profiles(scene, monkeypatch, tmp_path):
@@ -1710,12 +1933,12 @@ def test_composer_tools_preserve_the_answer_and_never_send_on_inspection(scene):
     QTest.qWait(100)
     assert _find(window, "interviewVoiceCard").isVisible()
     viewport = _find(window, "interviewQuestionScroll")
-    start = _find(window, "startInterviewRecording")
+    start = _find(window, "interviewVoiceSettings")
     top = start.mapToItem(viewport, QPointF()).y()
-    assert 0 <= top and top + start.height() <= viewport.height(), "Opening voice should reveal the recording action"
+    assert 0 <= top and top + start.height() <= viewport.height(), "First-use voice should reveal model setup"
     _capture(window, "voice-options-900")
-    _click(window, _find(window, "toggleInterviewVoice"))
-    assert not _find(window, "interviewVoiceCard").isVisible()
+    _click(window, start)
+    assert not _find(window, "interviewVoiceConnection").isVisible()
     assert answer.property("text") == draft
     assert not controller.busy and not controller.interview["answer_locked"]
 

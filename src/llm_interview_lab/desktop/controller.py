@@ -433,6 +433,7 @@ class AppController(QObject):
         self._voice_transcription_state = "idle"
         self._voice_transcription_error = ""
         self._voice_transcription_operation_id = ""
+        self._voice_auto_transcription: tuple[str, str, str, str, bool] | None = None
         self._voice_question_key = ""
         self._local_stt = LocalSpeechTranscriber(self.repo_root / "models" / "stt" / "sensevoice-small-int8")
         self._refresh_local_stt_status()
@@ -441,6 +442,7 @@ class AppController(QObject):
         self._local_stt_download_error = ""
         self._voice_recorder.changed.connect(self._voice_state_changed)
         self._voice_recorder.failed.connect(self._voice_failed)
+        self._voice_recorder.ready.connect(self._recording_ready)
         # Profile/question/transcription changes still refresh voice controls;
         # microphone duration changes must never refresh every page/property.
         self.stateChanged.connect(self.interviewVoiceChanged)
@@ -1393,8 +1395,32 @@ class AppController(QObject):
         self.interviewVoiceChanged.emit()
 
     def _voice_failed(self, message: str) -> None:
+        self._voice_auto_transcription = None
         self._voice_transcription_error = message
         self.interviewVoiceChanged.emit()
+
+    def _recording_ready(self, audio_path: str) -> None:
+        request = self._voice_auto_transcription
+        self._voice_auto_transcription = None
+        if request is None:
+            return
+        profile_id, interview_id, question_id, connection_id, consent_remote = request
+
+        def transcribe() -> None:
+            if (
+                self._shutdown_done
+                or self._profile_id != profile_id
+                or self._interview.get("interview_id") != interview_id
+                or (self._interview.get("question") or {}).get("question_id") != question_id
+                or self._interview.get("status") != "active"
+                or self._interview.get("answer_locked")
+                or str(self._voice_recorder.path) != audio_path
+            ):
+                return
+            self.transcribeInterviewRecording(connection_id, consent_remote)
+
+        # Let Qt finish closing the WAV before starting the existing worker.
+        QTimer.singleShot(0, transcribe)
 
     def _recording_failed(self, error: Exception) -> None:
         operation_id = uuid4().hex[:8]
@@ -1599,6 +1625,7 @@ class AppController(QObject):
         # transcription state from the Profile that was open before it. The
         # identity fence in ``_load_interview`` handles active sessions; this
         # reset covers the no-session branch as well.
+        self._voice_auto_transcription = None
         self._voice_recorder.reset()
         self._voice_transcription_state = "idle"
         self._voice_transcription_error = ""
@@ -1939,6 +1966,7 @@ class AppController(QObject):
             self._recent_interview = {}
             # A missing Profile must not leave a recording or transcription
             # draft from the previously selected Profile visible in QML.
+            self._voice_auto_transcription = None
             self._voice_recorder.reset()
             self._voice_transcription_state = "idle"
             self._voice_transcription_error = ""
@@ -2984,6 +3012,7 @@ class AppController(QObject):
             else f"{self._profile_id}::"
         )
         if voice_question_key != self._voice_question_key:
+            self._voice_auto_transcription = None
             self._voice_recorder.reset()
             self._voice_transcription_state = "idle"
             self._voice_transcription_error = ""
@@ -3312,6 +3341,30 @@ class AppController(QObject):
         except Exception as error:
             self._recording_failed(error)
             return False
+
+    @Slot(str, bool, result=bool)
+    def startInterviewDictation(self, connection_id: str, consent_remote: bool) -> bool:
+        """Record now, then transcribe this recording automatically on stop."""
+        if self._busy or self._voice_recorder.state == "recording" or self._voice_transcription_operation_id:
+            return False
+        if connection_id == LOCAL_STT_ID:
+            status = self.localStt
+            if not status["runtime_available"] or not status["ready"] or status["downloading"]:
+                self._voice_failed("本地语音尚未就绪，请在语音设置中完成组件或模型安装后再开始。")
+                return False
+        elif not consent_remote:
+            self._voice_failed("请在语音设置中明确授权本次远程转录；也可以选择无需联网的本地语音。")
+            return False
+        self._voice_auto_transcription = (
+            self._profile_id,
+            str(self._interview.get("interview_id") or ""),
+            str((self._interview.get("question") or {}).get("question_id") or ""),
+            connection_id, consent_remote,
+        )
+        if not self.startInterviewRecording():
+            self._voice_auto_transcription = None
+            return False
+        return self._voice_recorder.state == "recording"
 
     @Slot(str, bool)
     def transcribeInterviewRecording(

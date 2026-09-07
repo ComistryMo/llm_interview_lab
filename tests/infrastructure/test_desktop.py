@@ -1436,17 +1436,17 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert 'objectName: "personalizedInterviewPlanDialog"' in interview
     assert 'objectName: "confirmPersonalizedInterviewPlan"' in interview
     assert 'objectName: "interviewVoiceCard"' in interview
-    assert 'objectName: "startInterviewRecording"' in interview
-    assert 'objectName: "stopInterviewRecording"' in interview
+    assert 'objectName: "toggleInterviewVoice"' in interview
+    assert 'objectName: "interviewVoiceSettings"' in interview
     assert 'objectName: "transcribeInterviewRecording"' in interview
     assert 'objectName: "interviewVoiceRemoteConsent"' in interview
-    assert 'app.startInterviewRecording()' in interview
+    assert 'app.startInterviewDictation(' in interview
     assert 'app.stopInterviewRecording()' in interview
     assert 'app.transcribeInterviewRecording(' in interview
     assert 'function onInterviewTranscriptReady(value)' in interview
-    # A transcript is deliberately inserted as an editable draft; it must
-    # still go through the normal lock/submit action.
-    assert 'answer.text = value || ""' in interview
+    # Append dictation to the editable draft; preserve already typed text and
+    # still require the normal lock/submit action.
+    assert 'answer.text + "\\n" + value : value' in interview
     assert 'app.lockInterviewAnswer(value)' not in interview
     assert "app.dynamicInterviewContextPreview(" in interview
     assert "app.startDynamicPersonalizedInterview(" in interview
@@ -1522,7 +1522,9 @@ def test_interview_setup_uses_profile_role_availability_and_real_report() -> Non
     assert "https://github.com/ComistryMo/llm_interview_lab/blob/main/docs/desktop-app.md" in interview
     assert "Qt.openUrlExternally(link)" in interview
     assert "当前环境暂缺所需依赖；可先切换到“标准”或查看环境说明。" not in interview
-    assert "范围  非代码专项（部分证据）" in interview
+    # Partial-evidence disclosure lives with the result, not in a duplicate
+    # setup banner removed by the conversational page layout.
+    assert 'visible: root.interviewResult.delivery_mode === "non_coding_fallback"' in interview
     assert 'objectName: "interviewFallbackResultScope"' in interview
     assert "非代码专项 · 蓝图证据覆盖 " in interview
     assert "省略代码实现轮次：" in interview

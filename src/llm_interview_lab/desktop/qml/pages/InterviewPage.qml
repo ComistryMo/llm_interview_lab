@@ -12,6 +12,10 @@ Item {
     readonly property bool dynamicInterview: app.interview.delivery_mode === "dynamic_ai"
     readonly property bool conversationalAnswer: root.dynamicInterview && !!activeQuestion && !root.codingQuestion
     property bool showVoiceOptions: false
+    property bool showVoiceSettings: false
+    readonly property bool voiceRecording: app.interviewVoice.state === "recording"
+    readonly property bool voiceTranscribing: app.interviewVoice.transcription_state === "transcribing"
+    readonly property string voiceActionText: root.voiceRecording ? "完成录音" : root.voiceTranscribing ? "正在转成文字…" : "语音输入"
     property var activeQuestion: app.interview.question || null
     property var rubricScores: ({})
     property var aiPreview: ({"parts": [], "estimated_tokens": 0})
@@ -128,6 +132,8 @@ Item {
     }
 
     function resetQuestionEditors() {
+        root.showVoiceOptions = false
+        root.showVoiceSettings = false
         root.rubricScores = ({})
         root.answerDraft = ""
         root.pendingLockAnswer = ""
@@ -660,6 +666,25 @@ Item {
             root.answerDraft = answer.text
             answer.forceActiveFocus()
         }
+    }
+
+    function toggleRecording() {
+        root.showVoiceOptions = true
+        if (root.voiceRecording) {
+            app.stopInterviewRecording()
+        } else if ((root.usingLocalStt && (!app.localStt.ready || !app.localStt.runtime_available || app.localStt.downloading))
+                   || (!root.usingLocalStt && !voiceConsent.checked)) {
+            root.showVoiceSettings = true
+        } else {
+            if (app.startInterviewDictation(voiceConnection.currentValue, voiceConsent.checked))
+                root.showVoiceSettings = false
+            voiceConsent.checked = false
+        }
+        Qt.callLater(function() {
+            questionContent.forceLayout()
+            questionScroll.contentItem.contentY = Math.min(voicePanel.y,
+                Math.max(0, questionContent.height - questionScroll.availableHeight))
+        })
     }
 
     Timer {
@@ -1354,8 +1379,9 @@ Item {
                         variant: "ghost"
                         visible: !root.dynamicInterview && !!activeQuestion && activeQuestion.kind !== "coding" && !root.answerLocked
                         compact: true
-                        text: root.showVoiceOptions ? "收起语音回答" : "语音回答（可选）"
-                        onClicked: root.showVoiceOptions = !root.showVoiceOptions
+                        text: root.voiceActionText
+                        enabled: root.interviewCanEdit && !root.voiceTranscribing && (!app.busy || root.voiceRecording)
+                        onClicked: root.toggleRecording()
                     }
                     LabCard {
                         id: voicePanel
@@ -1372,10 +1398,23 @@ Item {
                             RowLayout {
                                 Layout.fillWidth: true
                                 Text {
-                                    text: "语音回答（可选）"
+                                    text: root.voiceRecording ? "正在听，请说话…"
+                                          : root.voiceTranscribing ? "正在转成文字…"
+                                          : app.interviewVoice.transcription_state === "transcribed" ? "已添加到回答框" : "语音输入"
                                     color: root.colors.text
                                     font.bold: true
                                     Layout.fillWidth: true
+                                }
+                                Text {
+                                    objectName: "interviewVoiceDuration"
+                                    visible: root.voiceRecording || root.voiceTranscribing
+                                    text: {
+                                        var seconds = Math.floor(Number(app.interviewVoice.duration_ms || 0) / 1000)
+                                        return Math.floor(seconds / 60) + ":" + (seconds % 60 < 10 ? "0" : "") + seconds % 60
+                                    }
+                                    color: root.colors.muted
+                                    font.pixelSize: 12
+                                    font.family: root.codeFontFamily
                                 }
                                 StatusPill {
                                     objectName: "interviewVoiceState"
@@ -1388,10 +1427,19 @@ Item {
                                     tone: app.interviewVoice.state === "recording"
                                           ? root.colors.warning : root.colors.muted
                                 }
+                                LabButton {
+                                    objectName: "interviewVoiceSettings"
+                                    theme: root.theme; compact: true; variant: "ghost"
+                                    text: root.showVoiceSettings ? "收起设置" : "语音设置"
+                                    enabled: !root.voiceRecording && !root.voiceTranscribing
+                                    onClicked: root.showVoiceSettings = !root.showVoiceSettings
+                                }
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: "默认在本机将录音转成文字，不需要 API Key。识别结果追加到回答框，保留已写文字，你可以修改后再提交。只有选择远程转录并明确授权，音频才会发送到所选服务。"
+                                text: root.usingLocalStt
+                                      ? "结束录音后自动在本机转成文字，不上传音频。你可以修改后再提交。"
+                                      : "远程转录需本次授权，录音结束后自动转文字。文字追加到回答框，不会自动提交。"
                                 color: root.colors.muted
                                 font.pixelSize: 11
                                 wrapMode: Text.Wrap
@@ -1405,155 +1453,125 @@ Item {
                                 font.pixelSize: 12
                                 wrapMode: Text.Wrap
                             }
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Button {
-                                    objectName: "startInterviewRecording"
-                                    text: "开始录音"
-                                    enabled: app.interviewVoice.state !== "recording"
-                                             && app.interviewVoice.transcription_state !== "transcribing"
-                                             && !app.busy
-                                    onClicked: {
-                                        voiceConsent.checked = false
-                                        app.startInterviewRecording()
-                                    }
-                                }
-                                Button {
-                                    objectName: "stopInterviewRecording"
-                                    text: "停止录音"
-                                    enabled: app.interviewVoice.state === "recording"
-                                    onClicked: app.stopInterviewRecording()
-                                }
-                                Text {
-                                    objectName: "interviewVoiceDuration"
-                                    text: {
-                                        var ms = Number(app.interviewVoice.duration_ms || 0)
-                                        var seconds = Math.floor(ms / 1000)
-                                        return "时长 " + (seconds < 10 ? "0" : "") + seconds + " 秒"
-                                    }
-                                    color: root.colors.muted
-                                    font.pixelSize: 12
-                                }
-                                Item { Layout.fillWidth: true }
-                            }
-                            GridLayout {
-                                Layout.fillWidth: true
-                                columns: root.compactInterviewLayout ? 1 : (root.usingLocalStt ? 2 : 3)
-                                ComboBox {
-                                    id: voiceConnection
-                                    objectName: "interviewVoiceConnection"
-                                    Layout.fillWidth: true
-                                    Layout.minimumWidth: 0
-                                    model: app.interviewTranscriptionOptions
-                                    textRole: "display_name"
-                                    valueRole: "connection_id"
-                                    displayText: currentIndex < 0 ? "请选择语音转录连接" : currentText
-                                    enabled: app.interviewVoice.transcription_state !== "transcribing"
-                                    onModelChanged: Qt.callLater(root.restoreTranscriptionConnection)
-                                    onActivated: {
-                                        voiceConsent.checked = false
-                                        root.transcriptionConnectionId = currentValue || ""
-                                        app.saveInterviewPreferences({transcription_connection_id: root.transcriptionConnectionId})
-                                    }
-                                }
-                                CheckBox {
-                                    id: voiceConsent
-                                    objectName: "interviewVoiceRemoteConsent"
-                                    visible: !root.usingLocalStt
-                                    text: "本次允许远程转录"
-                                    enabled: app.interviewVoice.audio_ready
-                                             && voiceConnection.currentIndex >= 0
-                                             && app.interviewVoice.transcription_state !== "transcribing"
-                                }
-                                Button {
-                                    objectName: "transcribeInterviewRecording"
-                                    text: app.interviewVoice.transcription_state === "transcribing"
-                                          ? (root.usingLocalStt ? "正在本地识别…" : "正在远程转录…")
-                                          : (root.usingLocalStt ? "本地转录到回答框" : "远程转录到回答框")
-                                    enabled: app.interviewVoice.audio_ready
-                                             && (root.usingLocalStt
-                                                 ? app.localStt.ready && app.localStt.runtime_available && !app.localStt.downloading
-                                                 : voiceConsent.checked)
-                                             && voiceConnection.currentValue
-                                             && app.interviewVoice.transcription_state !== "transcribing"
-                                             && !app.busy
-                                    onClicked: app.transcribeInterviewRecording(
-                                        voiceConnection.currentValue, voiceConsent.checked
-                                    )
+                            LabButton {
+                                objectName: "transcribeInterviewRecording"
+                                theme: root.theme; compact: true
+                                visible: app.interviewVoice.audio_ready && !root.voiceTranscribing
+                                         && app.interviewVoice.transcription_state !== "transcribed"
+                                text: "重试转成文字"
+                                enabled: !app.busy && (root.usingLocalStt
+                                    ? app.localStt.ready && app.localStt.runtime_available && !app.localStt.downloading
+                                    : voiceConsent.checked)
+                                onClicked: {
+                                    app.transcribeInterviewRecording(voiceConnection.currentValue, voiceConsent.checked)
+                                    voiceConsent.checked = false
                                 }
                             }
                             ColumnLayout {
-                                visible: root.usingLocalStt
+                                visible: root.showVoiceSettings
                                 Layout.fillWidth: true
                                 spacing: 8
-                                Text {
-                                    objectName: "interviewLocalSttStatus"
+                                GridLayout {
                                     Layout.fillWidth: true
-                                    text: !app.localStt.runtime_available
-                                          ? "当前环境缺少本地语音组件，请按桌面指南更新 desktop 依赖。"
-                                          : app.localStt.downloading
-                                            ? "正在下载本地模型：" + app.localStt.progress + "%（不会上传录音）"
-                                            : app.localStt.ready
-                                              ? "本地模型已下载 · 无需联网或 Key；首次识别会加载模型。"
-                                              : "首次需下载约 " + app.localStt.download_mb + " MB 模型，之后可离线转录中文或英文。"
-                                    color: root.colors.muted
-                                    font.pixelSize: 12
-                                    wrapMode: Text.Wrap
-                                }
-                                ProgressBar {
-                                    Layout.fillWidth: true
-                                    visible: app.localStt.downloading
-                                    from: 0; to: 100; value: app.localStt.progress
-                                }
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    LabButton {
-                                        objectName: "downloadLocalSttModel"
-                                        theme: root.theme
-                                        compact: true
-                                        text: app.localStt.ready ? "检查 / 重新下载模型" : "下载本地模型"
-                                        enabled: !app.localStt.downloading && app.localStt.runtime_available
-                                                 && app.interviewVoice.transcription_state !== "transcribing"
-                                        onClicked: app.downloadLocalSttModel()
+                                    columns: 1
+                                    ComboBox {
+                                        id: voiceConnection
+                                        objectName: "interviewVoiceConnection"
+                                        Layout.fillWidth: true
+                                        Layout.minimumWidth: 0
+                                        model: app.interviewTranscriptionOptions
+                                        textRole: "display_name"
+                                        valueRole: "connection_id"
+                                        displayText: currentIndex < 0 ? "请选择语音转录连接" : currentText
+                                        enabled: !root.voiceTranscribing && !root.voiceRecording
+                                        onModelChanged: Qt.callLater(root.restoreTranscriptionConnection)
+                                        onActivated: {
+                                            voiceConsent.checked = false
+                                            root.transcriptionConnectionId = currentValue || ""
+                                            app.saveInterviewPreferences({transcription_connection_id: root.transcriptionConnectionId})
+                                        }
                                     }
-                                    LabButton {
-                                        objectName: "cancelLocalSttDownload"
-                                        theme: root.theme
-                                        compact: true
-                                        text: "取消下载"
+                                    CheckBox {
+                                        id: voiceConsent
+                                        objectName: "interviewVoiceRemoteConsent"
+                                        visible: !root.usingLocalStt
+                                        text: "本次允许将录音发送到所选服务转录"
+                                        enabled: voiceConnection.currentIndex >= 0 && !root.voiceTranscribing && !root.voiceRecording
+                                    }
+                                }
+                                ColumnLayout {
+                                    visible: root.usingLocalStt
+                                    Layout.fillWidth: true
+                                    spacing: 8
+                                    Text {
+                                        objectName: "interviewLocalSttStatus"
+                                        Layout.fillWidth: true
+                                        text: !app.localStt.runtime_available
+                                              ? "当前环境缺少本地语音组件，请按桌面指南更新 desktop 依赖。"
+                                              : app.localStt.downloading
+                                                ? "正在下载本地模型：" + app.localStt.progress + "%（不会上传录音）"
+                                                : app.localStt.ready
+                                                  ? "本地模型已下载 · 无需联网或 Key；首次识别会加载模型。"
+                                                  : "首次需下载约 " + app.localStt.download_mb + " MB 模型，之后可离线转录中文或英文。"
+                                        color: root.colors.muted
+                                        font.pixelSize: 12
+                                        wrapMode: Text.Wrap
+                                    }
+                                    ProgressBar {
+                                        Layout.fillWidth: true
                                         visible: app.localStt.downloading
-                                        onClicked: app.cancelLocalSttDownload()
+                                        from: 0; to: 100; value: app.localStt.progress
                                     }
-                                    Item { Layout.fillWidth: true }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        LabButton {
+                                            objectName: "downloadLocalSttModel"
+                                            theme: root.theme
+                                            compact: true
+                                            text: app.localStt.ready ? "检查 / 重新下载模型" : "下载本地模型"
+                                            enabled: !app.localStt.downloading && app.localStt.runtime_available
+                                                     && app.interviewVoice.transcription_state !== "transcribing"
+                                            onClicked: app.downloadLocalSttModel()
+                                        }
+                                        LabButton {
+                                            objectName: "cancelLocalSttDownload"
+                                            theme: root.theme
+                                            compact: true
+                                            text: "取消下载"
+                                            visible: app.localStt.downloading
+                                            onClicked: app.cancelLocalSttDownload()
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    Text {
+                                        objectName: "interviewLocalSttDownloadError"
+                                        visible: !!app.localStt.error
+                                        Layout.fillWidth: true
+                                        text: app.localStt.error || ""
+                                        color: root.colors.danger
+                                        font.pixelSize: 12
+                                        wrapMode: Text.Wrap
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: "SenseVoiceSmall：FunAudioLLM / Alibaba；ONNX 由 k2-fsa 转换。点击下载表示同意 <a href='" + app.localStt.license_url + "'>模型使用许可</a>。"
+                                        textFormat: Text.RichText
+                                        color: root.colors.muted
+                                        linkColor: root.colors.accent
+                                        font.pixelSize: 11
+                                        wrapMode: Text.Wrap
+                                        onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+                                    }
                                 }
                                 Text {
-                                    objectName: "interviewLocalSttDownloadError"
-                                    visible: !!app.localStt.error
+                                    objectName: "interviewTranscriptionAvailability"
+                                    visible: !root.usingLocalStt
                                     Layout.fillWidth: true
-                                    text: app.localStt.error || ""
-                                    color: root.colors.danger
-                                    font.pixelSize: 12
-                                    wrapMode: Text.Wrap
-                                }
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: "SenseVoiceSmall：FunAudioLLM / Alibaba；ONNX 由 k2-fsa 转换。点击下载表示同意 <a href='" + app.localStt.license_url + "'>模型使用许可</a>。"
-                                    textFormat: Text.RichText
+                                    text: "远程转录使用 whisper-1，服务需支持 /audio/transcriptions。DeepSeek 仅用于文字面试，也可直接搭配上方的本地转录；选择本地时不需要远程授权。"
                                     color: root.colors.muted
-                                    linkColor: root.colors.accent
                                     font.pixelSize: 11
                                     wrapMode: Text.Wrap
-                                    onLinkActivated: function(link) { Qt.openUrlExternally(link) }
                                 }
-                            }
-                            Text {
-                                objectName: "interviewTranscriptionAvailability"
-                                visible: !root.usingLocalStt
-                                Layout.fillWidth: true
-                                text: "远程转录使用 whisper-1，服务需支持 /audio/transcriptions。DeepSeek 仅用于文字面试，也可直接搭配上方的本地转录；选择本地时不需要远程授权。"
-                                color: root.colors.muted
-                                font.pixelSize: 11
-                                wrapMode: Text.Wrap
                             }
                         }
                     }
@@ -1569,7 +1587,9 @@ Item {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                                  && !root.answerLocked && answer.text.trim().length === 0
                         width: parent.width
-                        text: "先写下回答，提交按钮才会启用。"
+                        text: root.voiceRecording ? "说完后点击「完成录音」，文字会自动填入下方。"
+                              : root.voiceTranscribing ? "正在识别，完成后可编辑文字再提交。"
+                              : "输入回答，或点击「语音输入」开始口述。"
                         color: root.colors.muted
                         font.pixelSize: 11
                         wrapMode: Text.Wrap
@@ -2072,16 +2092,9 @@ Item {
                                 compact: true
                                 variant: "ghost"
                                 visible: !root.answerLocked
-                                text: root.showVoiceOptions ? "收起语音" : "语音"
-                                onClicked: {
-                                    root.showVoiceOptions = !root.showVoiceOptions
-                                    if (root.showVoiceOptions)
-                                        Qt.callLater(function() {
-                                            questionContent.forceLayout()
-                                            questionScroll.contentItem.contentY = Math.min(voicePanel.y,
-                                                Math.max(0, questionContent.height - questionScroll.availableHeight))
-                                        })
-                                }
+                                text: root.voiceActionText
+                                enabled: root.interviewCanEdit && !root.voiceTranscribing && (!app.busy || root.voiceRecording)
+                                onClicked: root.toggleRecording()
                             }
                             Item { Layout.fillWidth: true }
                         }
@@ -2093,9 +2106,9 @@ Item {
                             bottomInset: 0
                             visible: !root.answerLocked || root.dynamicInterview
                             text: root.dynamicInterview
-                                  ? (app.busy ? "正在接续面试…" : root.answerLocked ? "重试生成下一问" : "提交并继续")
+                                  ? (root.voiceTranscribing ? "正在转成文字…" : app.busy ? "正在接续面试…" : root.answerLocked ? "重试生成下一问" : "提交并继续")
                                   : "提交并锁定回答"
-                            enabled: root.interviewCanEdit && answer.text.trim().length > 0 && !app.busy
+                            enabled: root.interviewCanEdit && answer.text.trim().length > 0 && !app.busy && !root.voiceRecording
                             Layout.alignment: Qt.AlignRight
                             onClicked: {
                                 if (root.dynamicInterview) {

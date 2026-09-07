@@ -33,11 +33,6 @@ Flickable {
     // needed for the short 620/680px targets.
     property bool compactOverview: height < 680
     property bool compactForm: width < 760
-    // Keep the two status cards on one visual baseline.  A shared minimum is
-    // less distracting than letting each card size itself from a different
-    // amount of copy, especially beside the first configuration fields.
-    property int overviewCardMinHeight: compactOverview ? 96 : 150
-
     property string pendingDeleteConnectionId: ""
     property string pendingDeleteConnectionName: ""
 
@@ -198,7 +193,6 @@ Flickable {
                 // wrapping action row keeps every action reachable without
                 // shrinking labels to unreadable glyphs.
                 Layout.fillWidth: true
-                Layout.minimumHeight: root.compactForm ? 142 : 116
                 cardColor: root.colors.surface; borderColor: root.colors.border
                 ColumnLayout {
                     width: parent.width
@@ -209,7 +203,7 @@ Flickable {
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 2
-                            Text { text: modelData.display_name || modelData.connection_id; color: root.colors.text; font.bold: true; elide: Text.ElideRight; Layout.fillWidth: true }
+                            Text { text: modelData.display_name || modelData.connection_id; color: root.colors.text; font.pixelSize: 16; font.bold: true; elide: Text.ElideRight; Layout.fillWidth: true }
                             Text {
                                 text: modelData.provider_id + " · " + modelData.model
                                       + (modelData.reasoning_effort
@@ -240,28 +234,25 @@ Flickable {
                         Layout.fillWidth: true
                         spacing: 6
                         layoutDirection: Qt.LeftToRight
-                        Button {
+                        LabButton {
                             objectName: "editConnection"
+                            theme: root.theme; compact: true; variant: "ghost"
                             text: "修改模型 / Key"
-                            flat: true
                             enabled: !root.saving && !app.busy
-                            implicitHeight: 32
                             onClicked: root.beginEditConnection(modelData)
                         }
-                        Button {
+                        LabButton {
                             objectName: "testSavedConnection"
+                            theme: root.theme; compact: true; variant: "ghost"
                             text: modelData.status === "测试中" ? "测试中…" : "测试连接"
-                            flat: true
                             enabled: !app.busy
-                            implicitHeight: 32
                             onClicked: app.testConnection(modelData.connection_id)
                         }
-                        Button {
+                        LabButton {
                             objectName: "deleteSavedConnection"
+                            theme: root.theme; compact: true; variant: "ghost"
                             text: "删除连接与 Key"
-                            flat: true
                             enabled: !root.saving && !app.busy
-                            implicitHeight: 32
                             onClicked: root.requestDeleteConnection(modelData)
                         }
                     }
@@ -515,129 +506,90 @@ Flickable {
             }
         }
 
-        GridLayout {
-            id: connectionOverview
+        LabCard {
+            id: codexCard
+            objectName: "codexConnectionCard"
             Layout.fillWidth: true
-            columns: content.width < 820 ? 1 : 2
-            columnSpacing: 14
-            rowSpacing: root.compactOverview ? 8 : 14
-            LabCard {
-                Layout.fillWidth: true
-                Layout.minimumWidth: 0
-                Layout.preferredWidth: connectionOverview.columns === 2
-                                       ? (connectionOverview.width
-                                          - connectionOverview.columnSpacing) / 2
-                                       : connectionOverview.width
-                Layout.preferredHeight: Math.max(root.overviewCardMinHeight, implicitHeight)
-                Layout.alignment: Qt.AlignTop
-                cardColor: root.colors.surface; borderColor: root.colors.border
-                accentColor: root.colors.success
-                padding: root.compactOverview ? 10 : 14
-                RowLayout {
-                    width: parent.width
-                    Text { text: "无需 AI"; color: root.colors.text; font.pixelSize: 18; font.bold: true }
-                    Item { Layout.fillWidth: true }
-                    StatusPill { text: "始终可用"; tone: root.colors.success }
-                }
-                Text {
-                    width: parent.width
-                    text: root.compactOverview
-                          ? "无需配置，训练可直接进行。"
-                          : "课程、测试、审查与复测在本机运行；个性化面试需要连接 AI。"
-                    color: root.compactOverview ? root.colors.text : root.colors.muted
-                    wrapMode: Text.Wrap
-                    maximumLineCount: root.compactOverview ? 1 : 2
-                    elide: Text.ElideRight
-                    font.bold: root.compactOverview
-                }
-                Text {
-                    // The compact sentence above already communicates the
-                    // No-AI guarantee.  Keep this reinforcing sentence for
-                    // the taller layout only so the card does not repeat
-                    // itself at 900x620/1080x680.
-                    visible: !root.compactOverview
-                    width: parent.width
-                    text: "AI 不可用时仍可继续训练。"
-                    color: root.colors.text
-                    wrapMode: Text.Wrap
-                    font.bold: true
+            Layout.minimumWidth: 0
+            cardColor: root.colors.surface
+            borderColor: root.colors.border
+            padding: 16
+            RowLayout {
+                width: parent.width
+                Text { text: "Codex"; color: root.colors.text; font.pixelSize: 16; font.bold: true }
+                Item { Layout.fillWidth: true }
+                StatusPill {
+                    text: app.aiStatusVariant === "connected" ? "已连接"
+                          : app.aiStatusVariant === "connecting" ? "连接中"
+                          : app.codexAvailable ? "已发现 · 未连接" : "未检测到"
+                    tone: app.aiStatusVariant === "connected" ? root.colors.success
+                          : app.aiStatusVariant === "connecting" ? root.colors.warning
+                          : app.codexAvailable ? root.colors.accent : root.colors.muted
                 }
             }
-            LabCard {
-                id: codexCard
-                Layout.fillWidth: true
-                Layout.minimumWidth: 0
-                Layout.preferredWidth: connectionOverview.columns === 2
-                                       ? (connectionOverview.width
-                                          - connectionOverview.columnSpacing) / 2
-                                       : connectionOverview.width
-                Layout.alignment: Qt.AlignTop
-                // At the minimum supported window width the four actions do
-                // not fit in one row. Let the card use two predictable rows
-                // instead of silently pushing the settings action off-screen.
-                Layout.preferredHeight: Math.max(root.overviewCardMinHeight, implicitHeight)
-                cardColor: root.colors.surface; borderColor: root.colors.border
-                accentColor: root.colors.accent
-                padding: root.compactOverview ? 10 : 14
-                RowLayout {
-                    width: parent.width
-                    Text { text: "Codex"; color: root.colors.text; font.pixelSize: 18; font.bold: true }
-                    Item { Layout.fillWidth: true }
-                    StatusPill {
-                        text: app.aiStatusVariant === "connected" ? "已连接"
-                              : app.aiStatusVariant === "connecting" ? "连接中"
-                              : app.codexAvailable ? "已发现（未连接）" : "未检测到"
-                        tone: app.aiStatusVariant === "connected" ? root.colors.success
-                              : app.aiStatusVariant === "connecting" ? root.colors.warning
-                              : app.codexAvailable ? root.colors.accent : root.colors.warning
-                    }
-                }
+            Column {
+                width: parent.width
+                spacing: 4
                 Text {
                     width: parent.width
                     text: !app.codexAvailable
-                          ? "未检测到 Codex，可在设置中选择路径或继续使用 No-AI。"
+                          ? "未找到 Codex。可在设置中选择程序路径；普通 LLM API 不受影响。"
                           : app.aiStatusVariant === "connected"
-                            ? "Codex 已连接，可使用只读教练或经审批的仓库代理。"
-                            : "已找到 Codex，但还没有建立连接；请确认已登录后再点击连接。"
+                            ? "已连接，可在模拟面试中选择 Codex。"
+                            : "已找到程序。登录后连接，即可用于模拟面试。"
                     color: root.colors.muted
+                    font.pixelSize: 12
                     wrapMode: Text.Wrap
-                    maximumLineCount: root.compactOverview ? 1 : 3
-                    elide: Text.ElideRight
-                    visible: true
                 }
-                RowLayout {
+                Text {
+                    objectName: "codexModelEffortSummary"
                     width: parent.width
-                    spacing: 8
-                    Text {
-                        objectName: "codexModelEffortSummary"
-                        Layout.fillWidth: true
-                        text: "模型：" + (app.codexModel || "默认")
-                              + " · 推理强度：" + (app.codexReasoningEffort || "默认")
-                        color: root.colors.muted
-                        font.pixelSize: 11
-                        elide: Text.ElideRight
-                    }
-                    Button {
-                        objectName: "openCodexModelSettings"
-                        text: "模型与推理强度"
-                        flat: true
-                        onClicked: app.navigate("settings")
-                    }
+                    text: "模型：" + (app.codexModel || "默认")
+                          + " · 推理强度：" + (app.codexReasoningEffort || "默认")
+                    color: root.colors.muted
+                    font.pixelSize: 12
+                    wrapMode: Text.Wrap
                 }
-                GridLayout {
-                    id: codexActions
-                    width: parent.width
-                    columns: root.compactOverview || codexCard.width < 500 ? 2 : 4
-                    columnSpacing: 8
-                    rowSpacing: root.compactOverview ? 4 : 6
-                    Button { visible: app.codexAvailable; enabled: app.aiStatusVariant !== "connecting"; Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "连接 Codex 面试官"; flat: true; onClicked: app.connectCodex("interviewer") }
-                    Button { Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "重新检测"; flat: true; onClicked: app.refreshCodexAvailability() }
-                    Button { Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "查找设置"; flat: true; visible: !app.codexAvailable; onClicked: app.navigate("settings") }
+            }
+            Flow {
+                width: parent.width
+                spacing: 8
+                LabButton {
+                    objectName: "connectCodexInterviewer"
+                    theme: root.theme; compact: true
+                    text: app.aiStatusVariant === "connected" ? "进入模拟面试" : "连接 Codex"
+                    visible: app.codexAvailable
+                    enabled: app.aiStatusVariant !== "connecting"
+                    onClicked: app.aiStatusVariant === "connected" ? app.navigate("interview") : app.connectCodex("interviewer")
+                }
+                LabButton {
+                    objectName: "openCodexModelSettings"
+                    theme: root.theme; compact: true; variant: "ghost"
+                    text: app.codexAvailable ? "模型与推理强度" : "安装 / 路径设置"
+                    onClicked: app.navigate("settings")
+                }
+                LabButton {
+                    objectName: "refreshCodexConnection"
+                    theme: root.theme; compact: true; variant: "ghost"
+                    text: "重新检测"
+                    onClicked: app.refreshCodexAvailability()
                 }
             }
         }
-
-
+        RowLayout {
+            objectName: "localTrainingNotice"
+            Layout.fillWidth: true
+            Layout.topMargin: 4
+            spacing: 10
+            StatusPill { text: "本地模式"; tone: root.colors.success }
+            Text {
+                Layout.fillWidth: true
+                text: "无需 AI 连接，刷题、测试与复测始终可用。"
+                color: root.colors.muted
+                font.pixelSize: 12
+                wrapMode: Text.Wrap
+            }
+        }
     }
 
     Dialog {
