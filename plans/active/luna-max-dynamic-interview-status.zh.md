@@ -1,6 +1,77 @@
 # Luna Max 动态面试当前状态报告
 
-## 2026-09-07：AI 仅用于面试、针对性追问与本地选题（最新）
+## 2026-09-07：已保存 Key 复用与旧数据目录启动失败（最新）
+
+基线 `b240245602a1167b3aef598d5effa87595fdc3f4`；分支 `fix/dynamic-interview-full-flow-20260905`；实现提交 `dcc70b7ce2664d569301ada7ea4dfe1f7d224628`。这是源码修复，不是安装包更新。
+
+### 实际根因与修改
+
+- 用户当前 `workspace/maintainer/manual-uat` 的公开目录缺少 `coach/prompts/dynamic-interviewer.md`，但 marker 仍是同版本 `role-interview-dynamic-stages-v3`。上一轮加了面试提示文件，却未更新资源 revision；启动只比较版本/revision，因而一直跳过旧目录同步。点击开始在构造上下文时就失败，尚未请求 DeepSeek。这是资源更新遗漏，不是用户材料或 Key 配错。用隔离旧目录重现了两种 `FileNotFoundError`，未读取真实简历正文。
+- `runtime.py` 使用 v4 资源 revision；源码模式启动时同步公开目录，避免同版本源码变更继续被旧缓存遮蔽。测试逐字比较升级前后的合成 Profile 文件，确认无修改、无重复档案。未清空真实 UAT。
+- 原后端已经把 Key 存入系统密钥环，编辑时留空可复用；但连接页先展示空的新建表单，重启后又让用户返回“保存并测试”，造成必须重填的误导。现在已保存连接位于首屏，显示复用说明；修改模型/推理强度无需重填 Key，输入新值才替换，删除连接与 Key 要确认。新增连接使用未占用 ID，不覆盖已有凭证。
+- 面试开始按钮可以直接复用已保存 Key 进行一次连接检测；成功后自动打开材料/上下文确认，而非要求回到连接页。忙碌中不重复触发，切档/离开页面不继续旧操作；仍以实际布尔就绪结果为准，不从文案推断。
+- 恢复进行中的面试可用原连接直接提交；真实回复成功同样更新就绪状态。资源缺失显示在固定开始操作区附近，日志记录 `context_preview` 和错误编号；不再只显示泛化 Toast。系统密钥环中的 Key 若被外部删除，说明重新填写入口，不谎称一定仍可用。
+
+### 正式 Windows 页面与真实 DeepSeek 证据
+
+使用维护者既有的合成测试档案、合成简历/JD及该测试连接的 Windows Keyring 引用；没有读取、发送用户真实简历，也没有把 Secret 写入代码、命令、日志或报告。
+
+这次没有直接调用 `startDynamicPersonalizedInterview()` 绕过表单：原进程退出后，真实源码入口恢复档案和连接，使用正式设置控件选择**后训练 / 实习 / 高压 / 普通 API / DeepSeek / 一份材料**，第二材料未勾选，逐场授权已勾选。鼠标点击开始、预览确认、提交回答，得到：
+
+| 操作 | 实际结果 |
+|---|---|
+| 已保存连接 → 点击开始 | 自动检测并打开上下文确认，7.26 秒；无 Key 重填 |
+| 确认进入面试 | 真实 `q-001`，0.55 秒 |
+| 自我介绍 → 提交 | DeepSeek 返回 `q-002`，4.22 秒，询问偏好数据项目目标与本人工作 |
+| 项目介绍 → 提交 | 返回 `q-003`，4.50 秒，围绕留出集划分追问 |
+| 关闭进程 → 再次启动 | 同一 Profile、同一面试、同一 `q-003` 恢复，无重新保存连接 |
+| 回答“不负责线上实验” → 提交 | 返回 `q-004`，7.16 秒，换回本人负责的去重键细节 |
+
+真实服务为已配置的 `deepseek-v4-flash`、关闭思考。上述为三轮真实传输和跨进程恢复证据，**不是整场面试/手撕/报告全链路的新验收**。本次未重测 Codex。
+
+证据位于 ignored 的 `workspace/maintainer/saved-key-restart-20260907/`：
+
+- `live_setup.py`：正式入口/表单交互脚本，复用已有合成档案，不重新保存 Key；`UAT_PHASE=start` 与 `resume` 为两次独立 Python 进程。
+- `start-result.json`、`resume-result.json`：真实结果、耗时、Qt 告警。
+- 已人工查看 `start-material-preview.png`、`start-followup-dark.png`、`start-followup-light.png`；界面无提示文字重叠，材料预览可滚动。
+- `ui/saved-key-after-restart.png`、`ui/edit-saved-key.png`、`ui/missing-prompt-actionable-error.png` 已逐图查看；这组来自正式 QML 加 Fake Provider/Mock Keyring，不能冒充真实账户结果。
+
+### 本次实际命令与结果
+
+`python` 指 `.venv\Scripts\python.exe`，`PYTHONPATH=src`；界面测试用 `QT_QPA_PLATFORM=windows`。只运行以下目标选择，最终 **13 个不同用例通过**。
+
+```text
+python -m pytest tests/infrastructure/test_desktop.py -k existing_desktop_data_receives_interview_prompt -q
+修复前：2 failed, 38 deselected in 2.17s（复现旧目录没有新提示文件）。
+
+python -m pytest tests/infrastructure/test_desktop.py tests/infrastructure/test_ai_connections.py tests/infrastructure/test_interview_input_runtime.py -k "existing_desktop_data_receives_interview_prompt or saved_deepseek_key_survives or restarted_profile_starts or missing_interview_prompt_is_inline or edit_saved_connection_reveals_form or saved_connection_card_fits" -q
+6 passed / 2 failed, 107 deselected in 32.72s；两个失败已进入真实 q-001，但新 Fake Provider 漏接 json_mode 且证据不足 20 字。修正测试夹具，未放宽产品返回校验。
+
+python -m pytest tests/infrastructure/test_interview_input_runtime.py -k restarted_profile_starts -q
+2 passed, 52 deselected in 16.52s；含/不含材料的跨 Controller 重启 → 正式表单 → q-001 → 提交 → q-002。
+
+python -m pytest tests/infrastructure/test_interview_input_runtime.py -k "saved_key_form_preserves or single_submit_provider_preserves or shell_setup_home_and_settings or deepseek_connection_controls" -q --tb=short
+5 passed, 50 deselected in 33.84s；含 Key 编辑/替换/确认删除、新建不覆盖、成功回复更新就绪、四尺寸设置布局和 DeepSeek 控件。
+
+python -m pytest tests/infrastructure/test_ai_connections.py -k saved_deepseek_key_survives -q
+1 passed, 20 deselected in 1.50s；补验缺失 Key 的具体中文提示。
+
+python workspace/maintainer/saved-key-restart-20260907/live_setup.py
+UAT_PHASE=start：passed；UAT_PHASE=resume：passed（两个独立进程）。
+
+git diff --check
+通过；只有既有 Git CRLF 规范化提醒。
+```
+
+### 未执行与剩余边界
+
+- 没有完整 pytest、RC/CI、Windows/macOS 构建、Tag/Release或 main 合并。
+- 没有删除、清空或重建用户 UAT、材料、Profile、答案、Key；既有未跟踪文件保持原样。未强行关闭用户仍打开的旧应用窗口；需重启以加载当前源码和同步公开资源。
+- 真实 DeepSeek 请求仍受网络/模型服务影响；本轮不承诺所有模型/推理档位延迟相同。Windows 的既有 `MS Sans Serif` DirectWrite 告警仍出现，没有屏蔽；没有新的 QML 加载告警。macOS 本轮未实机验证。
+
+状态：`WAITING_FOR_MANUAL_INTERVIEW_UAT`。
+
+## 2026-09-07：AI 仅用于面试、针对性追问与本地选题（前一切片）
 
 基线 `1940add3fbe659bf2ba48d3b5056d07dfa37e4ac`，沿用 `fix/dynamic-interview-full-flow-20260905`。当前源码变更，不代表安装包或 Release 已更新。
 
