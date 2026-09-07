@@ -1533,3 +1533,64 @@ def test_small_home_keeps_text_inside_controls(scene, theme):
             if item.isVisible() and item.property("text") and item.property("contentHeight") is not None:
                 assert item.property("contentHeight") <= item.height() + 1, item.property("text")
                 assert item.mapToItem(card, QPointF(0, item.height())).y() <= card.height(), item.property("text")
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_home_layout_and_real_entry_points(scene, theme):
+    window, controller = scene
+    controller.setTheme(theme)
+    controller.navigate("home")
+    for width, height in ((900, 620), (1080, 680), (1280, 800), (1440, 900)):
+        window.resize(width, height)
+        window.setProperty("displayFontScaleOverride", 1.25 if width == 900 else 1.0)
+        QTest.qWait(120)
+        page = _find(window, "homePage")
+        page.setProperty("contentY", 0)
+        primary = _find(window, "homePrimaryAction")
+        assert _within_window(window, primary)
+        focus = _find(window, "homeTodayFocus")
+        evidence = _find(window, "homeEvidenceRail")
+        assert focus.mapToScene(QPointF(0, focus.height())).y() < evidence.mapToScene(QPointF()).y()
+        for card in (focus, evidence):
+            for item in _items(card):
+                if item.isVisible() and item.property("text") and item.property("contentHeight") is not None:
+                    assert item.property("contentHeight") <= item.height() + 1, item.property("text")
+                    assert item.mapToItem(card, QPointF(item.width(), item.height())).y() <= card.height() + 1
+                    assert item.mapToItem(card, QPointF(item.width(), 0)).x() <= card.width() + 1
+        assert "Post-Training" not in _find(window, "homeFocusTitle").property("text")
+        _capture(window, f"home-polish-{width}x{height}-{theme}")
+        page.setProperty("contentY", max(0, page.property("contentHeight") - page.height()))
+        QTest.qWait(30)
+        assert _within_window(window, _find(window, "homeEvidenceNote"))
+        page.setProperty("contentY", 0)
+    QTest.qWait(80)
+    primary = _find(window, "homePrimaryAction")
+    clicks = []
+    errors = []
+    primary.clicked.connect(lambda: clicks.append(True))
+    controller.toast.connect(errors.append)
+    assert primary.isEnabled(), (controller.busy, primary.property("busy"))
+    _click(window, primary)
+    QTest.qWait(120)
+    assert clicks, (primary.mapToScene(QPointF()), primary.width(), primary.height())
+    assert not errors, errors
+    assert controller.currentPage == "interview"
+    assert _find(window, "interviewAnswerEditor").isVisible()
+    controller.navigate("home")
+    QTest.qWait(100)
+    _click(window, _find(window, "homeBrowseTraining"))
+    QTest.qWait(100)
+    assert controller.currentPage == "learn"
+    controller.navigate("home")
+    QTest.qWait(100)
+    _click(window, _find(window, "homeProgressAction"))
+    QTest.qWait(100)
+    assert _find(window, "progressPage").isVisible()
+    controller.finishInterview()
+    controller.navigate("home")
+    QTest.qWait(80)
+    _capture(window, f"home-practice-1440x900-{theme}")
+    _click(window, _find(window, "homePrimaryAction"))
+    QTest.qWait(100)
+    assert controller.currentPage == "exercise"
+    assert _find(window, "exerciseEditorFrame").isVisible()

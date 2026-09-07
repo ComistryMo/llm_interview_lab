@@ -127,9 +127,18 @@ Flickable {
         return "今天"
     }
 
+    function interviewRoleTitle() {
+        var roles = app.roles || []
+        for (var i = 0; i < roles.length; ++i) {
+            if (roles[i].id === app.interview.role_id)
+                return roles[i].title
+        }
+        return app.interview.role_title || "模拟面试"
+    }
+
     function focusTitle() {
         if (focusKind === "expired_interview" || focusKind === "interview")
-            return app.interview.role_title || "模拟面试"
+            return interviewRoleTitle()
         if (focusKind === "retention")
             return retentionLabel(actionableRetention)
         if (focusProblem)
@@ -138,6 +147,10 @@ Flickable {
     }
 
     function focusDescription() {
+        // During a task switch, the derived focus updates one binding at a
+        // time. Do not dereference its previous task in that loading frame.
+        if ((focusKind === "practice" || focusKind === "unlock") && !focusProblem)
+            return "正在加载当前任务…"
         if (focusKind === "expired_interview")
             return "本场计时已经结束。请完成留档后再开始新的训练或面试。"
         if (focusKind === "interview")
@@ -190,287 +203,217 @@ Flickable {
     }
 
     contentWidth: width
-    contentHeight: content.implicitHeight + (compactLayout ? 36 : 52)
+    contentHeight: content.y + content.implicitHeight + 28
     clip: true
     boundsBehavior: Flickable.StopAtBounds
-
-    ScrollBar.vertical: LabScrollBar {
-        visible: root.contentHeight > root.height
-    }
+    ScrollBar.vertical: LabScrollBar { visible: root.contentHeight > root.height }
 
     ColumnLayout {
         id: content
-        x: root.compactLayout ? 18 : 28
-        y: root.compactLayout ? 18 : 26
-        width: parent.width - (root.compactLayout ? 36 : 56)
-        spacing: root.compactLayout ? 14 : 18
+        x: (root.width - width) / 2
+        y: root.compactLayout ? 20 : 32
+        width: Math.min(1000, root.width - (root.compactLayout ? 36 : 64))
+        spacing: 24
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 6
+            LabText {
+                theme: root.theme
+                Layout.fillWidth: true
+                text: "今天，从这里开始"
+                variant: "title"
+                strong: true
+                wrapMode: Text.Wrap
+            }
+            LabText {
+                theme: root.theme
+                Layout.fillWidth: true
+                text: app.dashboard.role
+                      ? (app.dashboard.role.title || "目标岗位") + " · "
+                        + root.seniorityText(app.dashboard.role.seniority)
+                      : "先完成一次练习，再用面试检验你的表达。"
+                tone: "muted"
+                wrapMode: Text.Wrap
+            }
+        }
+
+        LabSurface {
+            id: todayFocus
+            objectName: "homeTodayFocus"
+            theme: root.theme
+            Layout.fillWidth: true
+            Layout.preferredHeight: focusContent.implicitHeight + padding * 2
+            level: "base"
+            padding: root.compactLayout ? 20 : 28
+
+            ColumnLayout {
+                id: focusContent
+                anchors.fill: parent
+                spacing: 16
+                RowLayout {
+                    Layout.fillWidth: true
+                    LabText {
+                        theme: root.theme
+                        text: root.focusEyebrow()
+                        tone: "muted"
+                        variant: "caption"
+                        Layout.fillWidth: true
+                    }
+                    StatusPill {
+                        objectName: "homeInterviewInProgressState"
+                        theme: root.theme
+                        visible: root.activeInterview
+                        text: root.expiredInterview ? "已到时" : "进行中"
+                        tone: root.expiredInterview ? root.dangerColor : root.accentColor
+                        compact: true
+                    }
+                    StatusPill {
+                        theme: root.theme
+                        visible: !!root.focusProblem
+                        text: root.focusProblemRunnable ? "当前可运行" : "环境受限"
+                        tone: root.focusProblemRunnable ? root.successColor : root.warningColor
+                        compact: true
+                    }
+                }
+                LabText {
+                    objectName: "homeFocusTitle"
+                    theme: root.theme
+                    Layout.fillWidth: true
+                    text: root.focusTitle()
+                    variant: "title"
+                    strong: true
+                    wrapMode: Text.Wrap
+                }
+                LabText {
+                    theme: root.theme
+                    Layout.fillWidth: true
+                    text: root.focusDescription()
+                    tone: root.expiredInterview ? "danger" : "muted"
+                    wrapMode: Text.Wrap
+                }
+                LabText {
+                    theme: root.theme
+                    visible: root.focusKind === "practice"
+                    text: root.statusText(root.currentPractice ? root.currentPractice.status : "")
+                    variant: "caption"
+                    tone: "muted"
+                }
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: root.quietBorder }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    LabButton {
+                        objectName: "homePrimaryAction"
+                        theme: root.theme
+                        text: root.primaryLabel()
+                        variant: "primary"
+                        Layout.minimumWidth: implicitWidth
+                        busy: !!app.busy
+                        onClicked: root.executePrimary()
+                    }
+                    LabButton {
+                        objectName: "homeInterviewSecondaryAction"
+                        theme: root.theme
+                        visible: !root.expiredInterview
+                        text: root.activeInterview ? "结束并留档" : "开始模拟面试"
+                        variant: "ghost"
+                        onClicked: root.activeInterview
+                                   ? abandonInterviewDialog.open() : app.navigate("interview")
+                    }
+                    Item { Layout.fillWidth: true }
+                }
+            }
+        }
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 16
-
-            ColumnLayout {
+            LabText {
+                theme: root.theme
                 Layout.fillWidth: true
-                spacing: 3
-                LabText {
-                    theme: root.theme
-                    Layout.fillWidth: true
-                    text: "今天"
-                    variant: "title"
-                    strong: true
-                }
-                LabText {
-                    theme: root.theme
-                    Layout.fillWidth: true
-                    text: "一次只推进最重要的下一步。"
-                    tone: "muted"
-                    wrapMode: Text.Wrap
-                }
+                text: "按节奏练习，不必一次做完"
+                tone: "muted"
+                variant: "caption"
+                wrapMode: Text.Wrap
             }
-
+            LabButton {
+                objectName: "homeBrowseTraining"
+                theme: root.theme
+                text: "浏览题库 →"
+                variant: "ghost"
+                compact: true
+                onClicked: app.navigate("learn")
+            }
         }
 
-        Item {
-            id: overviewGrid
-            objectName: "homeOverviewGrid"
+        LabSurface {
+            id: evidenceRail
+            objectName: "homeEvidenceRail"
+            theme: root.theme
             Layout.fillWidth: true
-            Layout.preferredHeight: implicitHeight
-            implicitHeight: root.compactLayout
-                            ? todayFocus.height + 14 + evidenceRail.height
-                            : Math.max(todayFocus.height, evidenceRail.height)
+            Layout.preferredHeight: evidenceContent.implicitHeight + padding * 2
+            level: "canvas"
+            outlined: false
+            padding: 0
 
-            LabSurface {
-                id: todayFocus
-                objectName: "homeTodayFocus"
-                theme: root.theme
-                x: 0
-                y: 0
-                width: root.compactLayout ? overviewGrid.width
-                                           : (overviewGrid.width - 14) * 0.72
-                height: Math.max(
-                    root.compactLayout ? 226 : 272,
-                    focusContent.implicitHeight + padding * 2,
-                    root.compactLayout ? 0 : evidenceContent.implicitHeight + evidenceRail.evidencePadding * 2
-                )
-                level: "raised"
-                outlined: true
-                padding: root.compactLayout ? 18 : 24
-
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    width: 3
-                    radius: 2
-                    color: root.focusKind === "expired_interview"
-                           ? root.dangerColor
-                           : root.focusKind === "retention"
-                             ? root.warningColor : root.accentColor
+            ColumnLayout {
+                id: evidenceContent
+                objectName: "homeEvidenceContent"
+                anchors.fill: parent
+                spacing: 16
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: root.quietBorder }
+                RowLayout {
+                    Layout.fillWidth: true
+                    LabText { theme: root.theme; text: "学习记录"; variant: "section"; Layout.fillWidth: true }
+                    LabButton {
+                        objectName: "homeProgressAction"
+                        theme: root.theme
+                        text: "查看进度"
+                        variant: "ghost"
+                        compact: true
+                        onClicked: app.navigate("progress")
+                    }
                 }
-
-                ColumnLayout {
-                    id: focusContent
-                    anchors.fill: parent
-                    anchors.leftMargin: 10
-                    spacing: root.compactLayout ? 8 : 10
-
-                    LabText {
-                        theme: root.theme
-                        Layout.fillWidth: true
-                        text: root.focusEyebrow().toUpperCase()
-                        tone: root.focusKind === "expired_interview" ? "danger"
-                              : root.focusKind === "retention" ? "warning" : "accent"
-                        variant: "caption"
-                        strong: true
-                        font.letterSpacing: 0.8
-                    }
-
-                    LabText {
-                        theme: root.theme
-                        Layout.fillWidth: true
-                        text: root.focusTitle()
-                        variant: "title"
-                        strong: true
-                        wrapMode: Text.Wrap
-                        maximumLineCount: 2
-                    }
-
-                    LabText {
-                        theme: root.theme
-                        Layout.fillWidth: true
-                        text: root.focusDescription()
-                        tone: root.focusKind === "expired_interview" ? "danger"
-                              : root.focusProblem && !root.focusProblemRunnable ? "warning" : "muted"
-                        wrapMode: Text.Wrap
-                        maximumLineCount: root.compactLayout ? 3 : 2
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 8
-
-                        StatusPill {
-                            objectName: "homeInterviewInProgressState"
-                            theme: root.theme
-                            visible: root.activeInterview
-                            text: root.expiredInterview ? "已到时" : "进行中"
-                            tone: root.expiredInterview ? root.dangerColor : root.warningColor
-                            compact: true
-                        }
-                        StatusPill {
-                            theme: root.theme
-                            visible: root.focusKind === "practice"
-                            text: root.statusText(root.currentPractice ? root.currentPractice.status : "")
-                            tone: root.currentPractice && root.currentPractice.status === "mastered"
-                                  ? root.successColor : root.accentColor
-                            compact: true
-                        }
-                        StatusPill {
-                            theme: root.theme
-                            visible: root.focusKind === "retention"
-                            text: (root.actionableRetention
-                                   ? (root.actionableRetention.stage || "复测").toUpperCase() : "")
-                            tone: root.warningColor
-                            compact: true
-                        }
-                        StatusPill {
-                            theme: root.theme
-                            visible: !!root.focusProblem
-                            text: root.focusProblemRunnable ? "当前可运行" : "环境受限"
-                            tone: root.focusProblemRunnable ? root.successColor : root.warningColor
-                            compact: true
-                        }
-                        Item { Layout.fillWidth: true }
-                    }
-
-                    Item { Layout.fillHeight: true }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
-
-                        LabButton {
-                            id: continueTrainingButton
-                            objectName: "homePrimaryAction"
-                            theme: root.theme
-                            text: root.primaryLabel()
-                            variant: "primary"
-                            Layout.preferredWidth: root.compactLayout ? 154 : 172
-                            onClicked: root.executePrimary()
-                        }
-
-                        LabButton {
-                            id: startInterviewButton
-                            objectName: "homeInterviewSecondaryAction"
-                            theme: root.theme
-                            visible: !root.expiredInterview
-                            text: root.activeInterview ? "结束并留档" : "开始模拟面试"
-                            variant: "secondary"
-                            onClicked: root.activeInterview
-                                       ? abandonInterviewDialog.open()
-                                       : app.navigate("interview")
-                        }
-
-                        Item { Layout.fillWidth: true }
-
-                        LabText {
-                            theme: root.theme
-                            visible: root.activeInterview
-                            text: app.interview
-                                  ? (app.interview.completed_questions || 0) + " / "
-                                    + (app.interview.total_questions || 0) + " 题"
-                                  : ""
-                            tone: "muted"
-                            variant: "caption"
+                RowLayout {
+                    objectName: "homeEvidenceMetrics"
+                    Layout.fillWidth: true
+                    spacing: 16
+                    Repeater {
+                        model: [
+                            {label: "已掌握", value: app.dashboard.mastered_count || 0},
+                            {label: "到期复测", value: root.dueRetentionCount},
+                            {label: "待复盘", value: root.dueReviewCount}
+                        ]
+                        ColumnLayout {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 1
+                            spacing: 4
+                            LabText {
+                                theme: root.theme
+                                Layout.fillWidth: true
+                                text: String(modelData.value)
+                                variant: "section"
+                                strong: true
+                            }
+                            LabText {
+                                theme: root.theme
+                                Layout.fillWidth: true
+                                text: modelData.label
+                                tone: "muted"
+                                wrapMode: Text.Wrap
+                            }
                         }
                     }
                 }
-            }
-
-            LabSurface {
-                id: evidenceRail
-                objectName: "homeEvidenceRail"
-                theme: root.theme
-                x: root.compactLayout ? 0 : todayFocus.width + 14
-                y: root.compactLayout ? todayFocus.height + 14 : 0
-                width: root.compactLayout ? overviewGrid.width
-                                          : overviewGrid.width - x
-                // The evidence note is part of the card content.  Keep the
-                // wide layout's comfortable minimum, but let the card grow
-                // when Chinese wrapping or enlarged fonts need more room.
-                height: Math.max(
-                    root.compactLayout ? 210 : 272,
-                    evidenceContent.implicitHeight + evidencePadding * 2
-                )
-                level: "base"
-                outlined: true
-                property int evidencePadding: root.compactLayout ? 18 : 20
-                padding: evidencePadding
-                clip: true
-
-                ColumnLayout {
-                    id: evidenceContent
-                    objectName: "homeEvidenceContent"
-                    anchors.fill: parent
-                    spacing: 10
-
-                    LabText {
-                        theme: root.theme
-                        Layout.fillWidth: true
-                        text: "学习证据"
-                        variant: "section"
-                        strong: true
-                    }
-                    LabText {
-                        theme: root.theme
-                        Layout.fillWidth: true
-                        text: app.dashboard.role
-                              ? "目标 · " + root.seniorityText(app.dashboard.role.seniority) + " · "
-                                + (app.dashboard.role.title
-                                   || app.dashboard.role.primary_role.replace(/_/g, " "))
-                              : "尚未设置目标岗位"
-                        tone: "muted"
-                        wrapMode: Text.Wrap
-                        maximumLineCount: 2
-                    }
-
-                    Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: root.quietBorder }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        LabText { theme: root.theme; text: "已掌握"; tone: "muted" }
-                        Item { Layout.fillWidth: true }
-                        LabText { theme: root.theme; text: String(app.dashboard.mastered_count || 0); strong: true }
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        LabText { theme: root.theme; text: "到期复测"; tone: "muted" }
-                        Item { Layout.fillWidth: true }
-                        LabText {
-                            theme: root.theme
-                            text: String(root.dueRetentionCount)
-                            strong: true
-                            tone: root.dueRetentionCount > 0 ? "warning" : "default"
-                        }
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        LabText { theme: root.theme; text: "待复盘"; tone: "muted" }
-                        Item { Layout.fillWidth: true }
-                        LabText { theme: root.theme; text: String(root.dueReviewCount); strong: true }
-                    }
-
-                    // Keep the evidence note inside the surface. A fill-height
-                    // spacer could push it beyond the fixed wide card height.
-                    Item { Layout.preferredHeight: 6 }
-                    LabText {
-                        theme: root.theme
-                        Layout.fillWidth: true
-                        text: "这里只统计固定规则已经记录的证据。"
-                        variant: "caption"
-                        tone: "subtle"
-                        wrapMode: Text.Wrap
-                    }
+                LabText {
+                    objectName: "homeEvidenceNote"
+                    theme: root.theme
+                    Layout.fillWidth: true
+                    text: "完成实现、复盘与间隔复测后，掌握记录会在这里更新。"
+                    variant: "caption"
+                    tone: "subtle"
+                    wrapMode: Text.Wrap
                 }
             }
         }
@@ -493,12 +436,13 @@ Flickable {
                 delegate: Rectangle {
                     required property var modelData
                     Layout.fillWidth: true
-                    Layout.preferredHeight: root.compactLayout ? 64 : 58
+                    Layout.preferredHeight: retentionRow.implicitHeight + 24
                     radius: root.theme ? root.theme.radiusMedium : 9
                     color: root.pageSurface
                     border.color: root.quietBorder
 
                     RowLayout {
+                        id: retentionRow
                         anchors.fill: parent
                         anchors.leftMargin: 14
                         anchors.rightMargin: 12
@@ -553,12 +497,12 @@ Flickable {
             // Keep enough vertical room for localized status/time strings at
             // narrow widths.  A fixed 82px row clipped the second line and
             // made the report action appear to overlap the interview summary.
-            Layout.preferredHeight: root.compactLayout ? 118 : 96
-            Layout.minimumHeight: root.compactLayout ? 118 : 96
+            Layout.preferredHeight: recentSummary.implicitHeight + padding * 2
             level: "base"
             padding: 14
 
             RowLayout {
+                id: recentSummary
                 anchors.fill: parent
                 spacing: 12
                 ColumnLayout {
@@ -569,9 +513,9 @@ Flickable {
                     LabText {
                         theme: root.theme
                         Layout.fillWidth: true
-                        text: (app.recentInterview.completion_status === "completed" ? "已完成" : "未完成")
-                              + " · "
-                              + (app.recentInterview.overall_score === undefined
+                        text: app.recentInterview.completion_status !== "completed"
+                              ? "未完成 · 查看本场记录"
+                              : "已完成 · " + (app.recentInterview.overall_score === undefined
                                  || app.recentInterview.overall_score === null
                                  ? "尚未评分" : String(app.recentInterview.overall_score) + " / 100")
                         strong: true
@@ -582,7 +526,9 @@ Flickable {
                     LabText {
                         theme: root.theme
                         Layout.fillWidth: true
-                        text: app.recentInterview.finished_at || "时间未记录"
+                        text: app.recentInterview.finished_at
+                              ? Qt.formatDateTime(new Date(app.recentInterview.finished_at), "yyyy/MM/dd hh:mm")
+                              : "时间未记录"
                         tone: "muted"
                         variant: "caption"
                         wrapMode: Text.Wrap
@@ -602,23 +548,6 @@ Flickable {
             }
         }
 
-        RowLayout {
-            Layout.fillWidth: true
-            LabText {
-                theme: root.theme
-                Layout.fillWidth: true
-                text: "完整路线和实验性内容在训练页查看。"
-                tone: "subtle"
-                variant: "caption"
-            }
-            LabButton {
-                theme: root.theme
-                text: "浏览训练路线"
-                variant: "ghost"
-                compact: true
-                onClicked: app.navigate("learn")
-            }
-        }
     }
 
     Dialog {

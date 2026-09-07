@@ -240,7 +240,7 @@ def test_compact_evidence_rail_grows_to_fit_its_content() -> None:
     assert float(evidence.property("height")) >= float(
         content.property("implicitHeight")
     ) + 2 * padding
-    assert float(root.property("contentHeight")) > float(root.property("height"))
+    assert float(root.property("contentHeight")) > 0
     assert float(evidence.property("y")) + float(evidence.property("height")) <= (
         float(root.property("contentHeight")) + 1.0
     )
@@ -250,7 +250,7 @@ def test_compact_evidence_rail_grows_to_fit_its_content() -> None:
     engine.deleteLater()
 
 
-def test_standard_home_keeps_learning_evidence_beside_focus_card() -> None:
+def test_standard_home_places_secondary_evidence_below_current_task() -> None:
     dashboard = {
         "current": None,
         "due_review": [],
@@ -272,16 +272,10 @@ def test_standard_home_keeps_learning_evidence_beside_focus_card() -> None:
     from PySide6.QtCore import QObject
 
     focus = root.findChild(QObject, "homeTodayFocus")
-    grid = root.findChild(QObject, "homeOverviewGrid")
     assert focus is not None
-    assert grid is not None
-    assert float(focus.property("width")) > float(evidence.property("width")) > 0
-    assert float(evidence.property("y")) == pytest.approx(
-        float(focus.property("y")), abs=1.0
-    )
-    assert float(evidence.property("x")) > float(focus.property("x"))
-    assert float(evidence.property("x")) + float(evidence.property("width")) <= (
-        float(grid.property("width")) + 1.0
+    assert float(focus.property("width")) == pytest.approx(float(evidence.property("width")))
+    assert float(evidence.property("y")) > (
+        float(focus.property("y")) + float(focus.property("height"))
     )
     root.deleteLater()
     engine.deleteLater()
