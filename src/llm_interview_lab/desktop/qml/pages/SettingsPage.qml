@@ -11,6 +11,10 @@ Flickable {
     required property var theme
     property bool compactLayout: width < 780
     readonly property bool stackedAppearance: width < 600 || app.fontScale > 1.25
+    // Native typing/selection can leave a QML binding intact. Forward only
+    // real preference changes, not every unrelated controller stateChanged.
+    readonly property string savedCodexModel: app.codexModel || ""
+    readonly property string savedCodexEffort: app.codexReasoningEffort || ""
     property bool refreshRequested: false
     function showCodexSettings() {
         contentY = Math.max(0, Math.min(codexSettings.y + content.y - 16, contentHeight - height))
@@ -329,7 +333,7 @@ Flickable {
                     objectName: "codexModelField"
                     theme: root.theme
                     Layout.fillWidth: true
-                    text: app.codexModel || ""
+                    text: root.savedCodexModel
                     placeholderText: "模型 ID（留空使用 Codex 默认模型）"
                     accessibleLabel: "Codex 模型 ID"
                 }
@@ -346,7 +350,7 @@ Flickable {
                         {value: "high", label: "推理强度：高"},
                         {value: "xhigh", label: "推理强度：极高"}
                     ]
-                    currentIndex: root.codexEffortIndex(app.codexReasoningEffort)
+                    currentIndex: root.codexEffortIndex(root.savedCodexEffort)
                 }
             }
             RowLayout {

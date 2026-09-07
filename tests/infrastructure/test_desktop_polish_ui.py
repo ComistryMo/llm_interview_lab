@@ -7,7 +7,7 @@ import time
 import pytest
 
 from .test_interview_input_runtime import (
-    QCoreApplication, QPointF, QTest,
+    QCoreApplication, QPointF, QTest, Qt,
     _capture, _click, _dictation_model_ready, _find, _stub_dictation_capture,
     _within_window,
 )
@@ -148,11 +148,31 @@ def test_model_settings_links_scroll_to_editable_codex_fields(scene):
     assert controller.currentPage == "settings"
     model = _find(window, "codexModelField")
     assert _within_window(window, model) and model.hasActiveFocus()
-    model.setProperty("text", "user-model-draft")
+    # Exercise native editing: setProperty would remove the QML text binding
+    # and conceal resets caused by the controller's coarse stateChanged.
+    for key in (Qt.Key_M, Qt.Key_O, Qt.Key_D, Qt.Key_E, Qt.Key_L):
+        QTest.keyClick(window, key)
+    assert model.property("text") == "model"
+    effort = _find(window, "codexReasoningEffort")
+    effort.forceActiveFocus()
+    QTest.keyClick(window, Qt.Key_End)
+    assert effort.property("currentValue") == "xhigh"
+    model.forceActiveFocus()
+    controller.stateChanged.emit()
+    controller.setTheme("light" if controller.theme == "dark" else "dark")
     controller.interviewTranscriptReady.emit("合成后台转录，不抢设置输入焦点。")
     QCoreApplication.processEvents()
-    assert model.hasActiveFocus() and model.property("text") == "user-model-draft"
+    assert model.hasActiveFocus() and model.property("text") == "model"
+    assert effort.property("currentValue") == "xhigh"
+    assert controller.codexModel == "" and controller.codexReasoningEffort == ""
+    QTest.keyClick(window, Qt.Key_X)
+    assert model.property("text") == "modelx"
     assert "合成后台转录" in _find(window, "interviewAnswerEditor").property("text")
+    _click(window, _find(window, "saveCodexModelPreferences"))
+    assert controller.codexModel == "modelx" and controller.codexReasoningEffort == "xhigh"
+    controller.stateChanged.emit()
+    QCoreApplication.processEvents()
+    assert model.property("text") == "modelx" and effort.property("currentValue") == "xhigh"
     _capture(window, "polish-codex-settings-link-900")
     controller.navigate("interview")
     controller.finishInterview()
