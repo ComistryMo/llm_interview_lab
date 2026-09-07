@@ -100,6 +100,9 @@ def _items(item):
 
 def _find(window, name):
     item = next((item for item in _items(window.contentItem()) if item.objectName() == name), None)
+    if item is None:
+        # Closed Popup content is owned by the QML object tree, not the scene.
+        item = window.findChild(QObject, name)
     assert item is not None, name
     return item
 
@@ -158,7 +161,11 @@ def _within_window(window, item):
 
 
 def _scroll_to_voice_control(window, item):
-    viewport = _find(window, "interviewQuestionScroll").property("contentItem")
+    settings = _find(window, "interviewVoiceSettingsScroll")
+    if not settings.isVisible():
+        assert _within_window(window, item)
+        return
+    viewport = settings.property("contentItem")
     y = item.mapToItem(viewport, QPointF()).y()
     if y + item.height() > viewport.height():
         viewport.setProperty("contentY", viewport.property("contentY") + y + item.height() - viewport.height() + 16)
@@ -223,20 +230,22 @@ def test_dictation_click_records_and_stop_automatically_appends(scene, monkeypat
     _click(window, button)
     QTest.qWait(80)
     assert controller.interviewVoice["state"] == "recording"
-    assert button.property("text") == "完成录音"
+    stop = _find(window, "finishInterviewDictation")
+    assert stop.isVisible() and stop.property("text") == "完成录音"
+    assert not button.isVisible(), "Only one recording action should be visible"
     assert not _find(window, "lockInterviewAnswer").isEnabled()
     assert not _find(window, "interviewVoiceConnection").isVisible()
     assert not _find(window, "downloadLocalSttModel").isVisible()
     assert not _find(window, "transcribeInterviewRecording").isVisible()
     card = _find(window, "interviewVoiceCard")
     assert card.height() < 150, "Ordinary dictation must not expand the entire settings form"
-    assert _within_window(window, card) and _within_window(window, button)
+    assert _within_window(window, card) and _within_window(window, stop)
     for item in _items(card):
         if item.isVisible() and item.property("text"):
             assert item.mapToItem(card, QPointF()).x() >= 0
             assert item.mapToItem(card, QPointF(item.width(), item.height())).x() <= card.width() + 1
     _capture(window, f"dictation-recording-{size[0]}-{theme}")
-    _click(window, button)
+    _click(window, stop)
     for _ in range(100):
         QTest.qWait(20)
         time.sleep(.005)
@@ -297,7 +306,7 @@ def test_dictation_failure_keeps_draft_and_audio_and_retries(scene, monkeypatch)
 
     monkeypatch.setattr(controller._local_stt, "transcribe", fail)
     _click(window, _find(window, "toggleInterviewVoice"))
-    _click(window, _find(window, "toggleInterviewVoice"))
+    _click(window, _find(window, "finishInterviewDictation"))
     for _ in range(100):
         QTest.qWait(20)
         time.sleep(.005)
@@ -484,11 +493,11 @@ def test_voice_error_and_transcription_choices_use_real_capabilities(scene, monk
     monkeypatch.setattr(voice_module.QMediaDevices, "audioInputs", staticmethod(lambda: []))
     _click(window, _find(window, "toggleInterviewVoice"))
     QTest.qWait(100)
-    assert _find(window, "interviewVoiceState").property("text") == "录音失败"
+    assert _find(window, "interviewVoiceState").property("text") == "语音输入未完成"
     error = _find(window, "interviewVoiceError")
     assert error.isVisible() and "麦克风" in error.property("text")
     assert error.property("contentHeight") <= error.height() + 1
-    viewport = _find(window, "interviewQuestionScroll")
+    viewport = _find(window, "interviewVoiceCard")
     assert 0 <= error.mapToItem(viewport, QPointF()).y()
     assert error.mapToItem(viewport, QPointF(0, error.height())).y() <= viewport.height()
     _click(window, _find(window, "interviewVoiceSettings"))
@@ -515,9 +524,13 @@ def test_real_microphone_start_stop_from_production_page(scene, monkeypatch):
     monkeypatch.setattr(controller._local_stt, "transcribe", lambda _: "合成转录测试结果。")
     QTest.qWait(150)
     recordings = []
+    capture_graphs = []
     for cycle in range(3):
         _click(window, _find(window, "toggleInterviewVoice"))
         assert controller.interviewVoice["state"] == "recording", controller.interviewVoice
+        recorder = controller._voice_recorder
+        capture_graphs.append((recorder._capture, recorder._audio_input, recorder._recorder))
+        assert len(recorder.children()) == 3, "Native capture objects must not accumulate between answers"
         assert not controller.startInterviewRecording(), "Duplicate start must not replace the active recorder"
         QTest.qWait(1700)
         first_tick = controller.interviewVoice["duration_ms"]
@@ -528,7 +541,7 @@ def test_real_microphone_start_stop_from_production_page(scene, monkeypatch):
         assert display != "0:00"
         _capture(window, f"voice-recording-windows-{cycle + 1}")
         stopped_at = time.perf_counter()
-        _click(window, _find(window, "toggleInterviewVoice"))
+        _click(window, _find(window, "finishInterviewDictation"))
         for _ in range(50):
             QTest.qWait(20)
             if controller.interviewVoice["state"] != "recording":
@@ -558,6 +571,7 @@ def test_real_microphone_start_stop_from_production_page(scene, monkeypatch):
         assert editor.property("text").endswith("ok"), "UI must accept input after Stop"
         _capture(window, f"voice-recorded-windows-{cycle + 1}")
     assert len({path for path, _ in recordings}) == 3
+    assert capture_graphs[0] == capture_graphs[1] == capture_graphs[2]
     assert all(hashlib.sha256(path.read_bytes()).hexdigest() == digest for path, digest in recordings)
 
 
@@ -688,13 +702,14 @@ def test_real_local_stt_from_production_page(scene, monkeypatch, size):
     combo = _find(window, "interviewVoiceConnection")
     assert combo.property("currentValue") == "local-sensevoice"
     assert not _find(window, "interviewVoiceRemoteConsent").isVisible()
-    button = _find(window, "toggleInterviewVoice")
+    button = _find(window, "finishInterviewDictation")
     assert button.isEnabled() and _within_window(window, button)
     _capture(window, f"local-stt-ready-{size[0]}")
     started = time.perf_counter()
     _click(window, button)
     assert controller.interviewVoice["transcription_state"] == "transcribing"
-    assert not button.isEnabled()
+    assert not button.isVisible()
+    assert not _find(window, "toggleInterviewVoice").isVisible()
     for _ in range(300):
         QTest.qWait(30)
         # Unlike app.exec(), QTest.qWait repeatedly holds the Python GIL.
@@ -706,7 +721,7 @@ def test_real_local_stt_from_production_page(scene, monkeypatch, size):
     answer = _find(window, "interviewAnswerEditor")
     assert "早上9点至下午5点" in answer.property("text")
     assert answer.property("text").startswith("先保留这句已输入的回答。\n")
-    assert _find(window, "interviewVoiceState").property("text") == "已转录"
+    assert _find(window, "interviewVoiceState").property("text") == "已添加到回答框"
     assert not answer.property("readOnly") and not controller.interview["answer_locked"]
     assert controller._voice_recorder.path.read_bytes() == source.read_bytes()
     print(f"LOCAL_STT_QML width={size[0]} seconds={time.perf_counter() - started:.2f}")
@@ -1932,12 +1947,12 @@ def test_composer_tools_preserve_the_answer_and_never_send_on_inspection(scene):
     _click(window, _find(window, "toggleInterviewVoice"))
     QTest.qWait(100)
     assert _find(window, "interviewVoiceCard").isVisible()
-    viewport = _find(window, "interviewQuestionScroll")
-    start = _find(window, "interviewVoiceSettings")
-    top = start.mapToItem(viewport, QPointF()).y()
-    assert 0 <= top and top + start.height() <= viewport.height(), "First-use voice should reveal model setup"
+    assert _find(window, "interviewVoiceSettingsScroll").isVisible(), "First-use voice should reveal model setup"
+    close = _find(window, "closeInterviewVoiceSettings")
+    assert _within_window(window, close)
     _capture(window, "voice-options-900")
-    _click(window, start)
+    _click(window, close)
+    QTest.qWait(100)
     assert not _find(window, "interviewVoiceConnection").isVisible()
     assert answer.property("text") == draft
     assert not controller.busy and not controller.interview["answer_locked"]
