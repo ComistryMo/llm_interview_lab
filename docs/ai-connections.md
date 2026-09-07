@@ -6,15 +6,28 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 
 | 模式 | 用途 | 是否需要网络或密钥 |
 |---|---|---|
-| No-AI | 课程、测试、复测、手动模拟面试 | 否 |
+| No-AI | 本地课程、测试、复测；个性化模拟面试需要连接 AI | 否 |
 | 普通 LLM API | 解释、提示、只读审查、面试追问 | 视服务而定 |
-| Codex | 仓库感知教练、个性化面试计划、测试、Diff 与受审批维护 | 需要 Codex 可用并完成相应认证 |
+| Codex | 仓库感知教练、逐问个性化面试、测试、Diff 与受审批维护 | 需要 Codex 可用并完成相应认证 |
 
 首次启动默认选择 No-AI。任何连接故障都不应阻塞本地训练。
 
 ## 普通 LLM API
 
 桌面页面把常用配置收敛为：服务、Key 或本地地址、模型、测试连接、保存。Endpoint、显示名称与连接 ID 在高级设置中。
+
+### DeepSeek（当前源码）
+
+打开 **AI 连接 → deepseek**，选择模型和推理强度，输入 API Key，点击 **保存并测试**。无需填写地址，使用官方 `https://api.deepseek.com`。编辑已保存的连接时可以切换模型和推理强度；Key 留空会保留系统密钥环中的原凭证。
+
+- 模型提供 `deepseek-v4-flash`、`deepseek-v4-pro` 与自定义模型 ID；2026-09-07 已通过官方模型列表和真实 `/models` 请求核验，服务端模型会随时间变化。
+- 推理选项：关闭思考（默认，更快回复）、低、高、最高、服务默认。关闭对应 `thinking.type=disabled`，其余使用 `enabled` 和 `reasoning_effort=low/high/max`；服务默认不指定强度。支持范围以 [DeepSeek 思考模式文档](https://api-docs.deepseek.com/guides/thinking_mode/) 为准。
+- 实现读取 SSE 的 `delta.content`，不把 `reasoning_content` 当作回答或评分。动态面试请求 JSON 格式，仍逐轮做本地字段校验；空正文、截断和过滤响应不作为成功结果保存。
+- “保存并测试”只做关闭思考的短连接检查，不承诺高强度推理的耗时。面试仍使用你保存的模型与强度。`402` 表示余额不足，`401` 表示凭证问题，`429` 表示限流。
+
+2026-09-07 Windows 源码真实验证使用 `deepseek-v4-flash`、关闭思考、合成简历/JD：连续 9 次提交均进入下一问（单轮约 5.45–7.53 秒），随后进入本地中文代码题。代码没有作答，报告如实为未完成；不把这项验证称为完整面试通过。布局和提示词收尾后又验证两轮，分别为 4.52 秒、6.81 秒。这些是该设备和连接的样本，不是服务耗时保证。
+
+本轮未重建 Windows/macOS 下载包，不能据此认为旧 Release 已包含 DeepSeek。DeepSeek 不作为当前语音转录服务。
 
 打包桌面重点验证：
 
@@ -109,6 +122,10 @@ Key 只写入操作系统密钥环：
 Coach、Reviewer 与 Interviewer 默认只读，不修改答案。Repository Agent 只面向维护者和贡献者，并使用显式审批。
 
 在桌面端“设置 → 模型与推理强度”中可以为 Codex 选择模型 ID 和 `default / low / medium / high / xhigh` 推理强度。该设置同时用于 Coach、面试评估和动态面试的当前问题；只影响新的 Codex 请求。面试设置页选择“Codex”后也会显示当前值并提供“修改”入口。动态面试每次只生成当前非代码问题，用户确认上下文后才创建会话，不会预先生成整场问题。
+
+同一场面试、模型和材料/背景授权快照不变时，应用复用同一 App Server Thread，通过新的 `turn/start` 继续。换档、换场、换模型、取消材料或 SHA 变化时，使用新 Thread 隔离旧上下文；本地 Session 仍是学习记录的事实源。这与 [Codex App Server 的 Thread / Turn 协议](https://learn.chatgpt.com/docs/app-server) 对齐，不是每次启动一个 Codex CLI。
+
+“已连接”表示本地 App Server 可用，不保证上游模型网络畅通。`responseStreamDisconnected / request timed out / Reconnecting` 属于上游传输失败，不是用户需要再次手动连接。客户端、账户、模型、推理强度和上下文大小不同，不能用另一个 Codex 聊天窗口的响应速度保证本应用耗时。面试要等完整 JSON 校验后才展示下一问，也不会将思考片段直接显示成题目。
 
 ### macOS 查找 Codex
 

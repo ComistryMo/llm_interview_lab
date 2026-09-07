@@ -1,6 +1,88 @@
 # Luna Max 动态面试当前状态报告
 
-## 2026-09-07：面试界面视觉收敛（最新）
+## 2026-09-07：DeepSeek、Codex 连续会话与中文题面（最新）
+
+基线 `428efd63a6edfcf733938c1ee9b1a3d688fa7a3e`，主要实现提交 `0d3f0b24595c6ae6c5c937a68d9f57c2a17c68bc`、控件中线收尾提交 `29d8eaaeb8ce89a411369149380240b113b72637`；沿用 `fix/dynamic-interview-full-flow-20260905`。以下证据仅针对当前源码，不表示已更新任何安装包。
+
+### 已解决的实际问题
+
+- **重复标题与“详情”**：移除无必要的详情入口和弹窗；顶部只显示问次、计时和暂停，标题不重复。连接选择与材料授权移入回答区；正文、回答、操作区仍独立布局和滚动。综合评分及证据计算未变。
+- **Codex 每轮新建线程**：原代码复用 App Server 进程，但每个答案都 `thread/start`，意在隔离撤销的材料。改为按进程、Profile、面试、模型与材料/背景 SHA 范围复用；范围变化仍新建线程，不把旧材料带回新请求。
+- **QML 告警**：十个页面自定义 `palette` 与 Qt 基类属性冲突，统一改成 `colors`。Qt 控件自己的 `palette.buttonText` 保留，未用日志过滤掩盖问题。初次机械替换漏掉了部分原生赋值，真实 QML 加载测试失败后已全部纠正。
+- **DeepSeek**：沿用现有 HTTP/SSE 适配器，官方地址、模型选择、自定义模型 ID、关闭/低/高/最高思考、保存并测试均可操作。普通 API 的就绪状态也用于顶部状态，不再已连接却显示 No-AI。Key 只进入 Windows Credential Manager，没有明文后备。
+- **真实返回格式差异**：首次请求成功抵达服务，但 DeepSeek 将“空 coding_problem_id”返回为 `null`，被本地校验拒绝。已明确空字符串约定，动态请求附现有 JSON Schema 并启用 JSON 格式；没有放宽评分/题目校验。忽略思考片段，只解析回答正文；空正文和截断不伪装成功。
+- **英文手撕题**：面试原来直接展示冻结英文 task，绕过中文展示。现在当前 45 份本地题使用中文要求，保留原函数签名与代码示例；可查看英文，设置语言变化也会生效。中文展示绑定原文 SHA，历史原文不同则明确提示，不改 Catalog、Session 题目或 Grader。
+
+### 真实 Windows / 远程调用
+
+使用生产 `desktop.main`、真实 AppController/QML、鼠标点击与中文输入事件。数据位于 ignored 的 `workspace/maintainer/deepseek-polish-20260907/`；全部为合成简历/JD和答案，没有读取或发送真实用户简历，没有使用 demo controller。连接/材料准备由隔离探针调用真实服务，回答与提交由真实控件驱动。
+
+| 路径 | 结果 | 提交到下一问耗时 |
+|---|---|---|
+| DeepSeek v4 Flash，关闭思考 | 连续 9 次成功接续，进入 `FND-002` 中文手撕题 | 5.45、6.06、6.24、7.22、7.53、7.11、6.86、6.51、7.41 秒 |
+| DeepSeek 布局/追问措辞收尾后 | 两轮均成功；问题引用合成经历中的偏好数据、去重与泄漏 | 4.52、6.81 秒 |
+| Codex `gpt-5.6-sol` / low | 两轮均成功，同一 Thread，第二轮没有 `thread/start` | 126.62、13.44 秒 |
+
+Codex 本地 `initialize` 0.125 秒，连接线程 0.235 秒、面试线程 0.250 秒，两次 `turn/start` 为 0.062 / 0.094 秒。首轮等待主要不在本地初始化；历史同日探针曾记录上游 `responseStreamDisconnected / request timed out` 和自动重试。**本轮只证明同场线程复用和真实接续，不能保证 Codex 首轮延迟已经解决，也不能将不同客户端、模型及账号的耗时直接比较。**
+
+当前真实手撕只验证了进入中文题面，未填写代码或运行 Grader。本轮场次均按实际证据保存为 `incomplete`，没有宣称完成一场全环节通过的面试。高推理强度和 Pro 模型没有逐个付费实测，模型 ID 来自官方与真实 `/models`，参数通过 HTTP/SSE 定向测试。
+
+### 截图与输入验证
+
+截图存于上述 ignored 目录，不将账号配置、Session 或原始日志提交 Git。已实际查看：
+
+- `refined-live-experience-dark.png`：真实 DeepSeek 下一问，紧凑连接/授权区；
+- `refined-live-small-light.png`、`refined-live-small-dark.png`：900×620、125% 字号，题目滚动与主动作；
+- `refined-live-connections-dark.png`：真实连接就绪，首屏模型/推理/Key 表单；
+- `live-coding-chinese-dark.png`：9 次真实接续后到达的中文本地题；
+- `screenshots/coding-chinese-dark.png`：最终源码的中文/英文切换检查（问题由隔离测试推进，不当作远程 AI 证据）。
+- 最后逐图检查发现模型选择与材料勾选的控件中线仍有偏差，已统一高度；`screenshots/composer-aligned-dark.png` 和实际坐标断言验证修正。连接测试的合成就绪状态不作为账户可用性的证据。
+
+四种窗口 900×620、1080×680、1280×800、1440×900 的定向 QML 测试覆盖深浅色及 100%/125% 字号、正尺寸、不重叠、IME 组字与提交按钮可见。`engine.warnings` 检查没有 QML 绑定或属性加载错误。
+
+### 实际收尾测试
+
+以下命令均设 `PYTHONPATH=<仓库>/src`，GUI 使用 `QT_QPA_PLATFORM=windows`；API 单元测试使用 Fake HTTP/Mock Keyring，不访问真实账户。
+
+```text
+.venv\Scripts\python.exe -m pytest tests/infrastructure/test_deepseek.py tests/infrastructure/test_ai_connections.py -q --tb=short
+30 passed in 3.51s
+
+.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k "deepseek_connection or codex_reuses or single_submit_provider or answer_geometry_at_supported_sizes or removes_details" -q --tb=short --junitxml=workspace/maintainer/deepseek-polish-20260907/target-results.xml
+8 passed, 40 deselected in 47.53s
+
+.venv\Scripts\python.exe -m pytest tests/infrastructure/test_deepseek.py tests/infrastructure/test_interview_input_runtime.py tests/infrastructure/test_desktop_design_system.py tests/infrastructure/test_alpha4_home_p1.py -k "current_chinese or deepseek_connection or shell_breakpoints_and_exercise_route or compact_evidence_rail" -q --tb=short
+4 passed, 77 deselected in 9.64s
+
+.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k deepseek_connection -q --tb=short
+最后的中线对齐 + 模型/推理/Keyring + 中文切换：1 passed, 47 deselected in 11.99s
+
+.venv\Scripts\python.exe -m pytest tests/infrastructure/test_chinese_docs.py -k all_readme_relative_links -q --tb=short
+1 passed, 9 deselected in 0.19s
+
+.venv\Scripts\python.exe workspace/maintainer/deepseek-polish-20260907/live.py
+DeepSeek 9 轮；UAT_TURNS=2 + UAT_CAPTURE_LABEL=refined- 复测 2 轮
+UAT_PROVIDER=codex + UAT_TURNS=2 + UAT_CAPTURE_LABEL=codex-：Codex 2 轮
+
+git diff --check
+通过（仅行尾规范化提醒，没有空白错误）
+```
+
+开发中曾针对首次 QML 失败重跑失败案例，并做相关连接/几何的选择测试；没有运行完整 pytest，没有 Windows/macOS 打包，没有触发 CI/Release。早期一组选择测试的完整输出未保留，未将其计入上述通过数。
+
+### 仍然存在的限制
+
+- Windows 仍出现一次 `MS Sans Serif` 的 DirectWrite 字体兼容告警；运行与真实答题可继续。剪贴板占用重试也不等于 AI 失败。本轮没有屏蔽这些系统日志。
+- Codex 首轮 126.62 秒的长等待未消失；线程复用不能保证上游响应速度。
+- 新题面翻译需随公开原文更新；历史场次可能需要查看英文原题。
+- 未做 macOS 实机、全量回归或打包验证；公开安装包不包含本轮更新。
+- 用户此前贴出的凭证未写入源码、报告或截图；建议在服务控制台轮换。真实测试凭证仅留在隔离测试档案的系统密钥环引用中，不自动复制到其他档案。
+
+工作树原有未跟踪反馈、原图、计划和 UAT 目录全部保留。终局仍为 `WAITING_FOR_MANUAL_INTERVIEW_UAT`。
+
+---
+
+## 2026-09-07：面试界面视觉收敛（历史）
 
 基线 `c904b3ef830422805205fc9e51f63dbf88a9ca11`，分支 `fix/dynamic-interview-full-flow-20260905`。本轮落实用户要求的布局与美观迭代，不修改 Controller、AI 传输、阶段、题库、评分或个人数据。
 

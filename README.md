@@ -263,8 +263,10 @@ CI 只使用 Fake Provider、Fake Codex 与 Mock Keyring，不调用真实付费
 
 ### 普通 LLM API
 
-流程被收敛为：选择服务 → 填写 Key 或本地地址 → 选择模型 → 保存 → 测试连接。
+流程被收敛为：选择服务 → 填写 Key 或本地地址 → 选择模型和推理强度 → 保存并测试。
 高级 Endpoint 和连接 ID 放在折叠区域。API Key 只进入系统密钥环：Windows 使用 Credential Manager，macOS 使用 Keychain；密钥环不可用时不会降级为明文文件。
+
+**当前源码新增 DeepSeek 快捷接入**：官方地址无需手填，可选模型及关闭思考／低／高／最高推理强度。已用合成简历/JD 验证 Windows 上的真实逐轮面试；不代表旧 Release 安装包已更新。配置和实测范围见 [AI 连接指南](docs/ai-connections.md#deepseek当前源码)。
 
 ### Codex
 
