@@ -132,14 +132,41 @@ problems:
     description: "Generate deterministic sine and cosine features for arbitrary positions."
   - id: ATT-003
     title: "Causal and Padding Mask Composition"
-    status: planned
+    status: ready
     domain: transformer
     tracks: ["llm_algorithm","vlm_algorithm"]
     tier: core
     difficulty: {concept: 3, coding: 4, debugging: 4}
     prerequisites: ["TNS-010"]
-    problem_type: implementation
-    description: "Compose causal and padding masks with documented polarity."
+    skills: ["attention.mask","tensor.broadcast","attention.kv_cache"]
+    canonical_skills: ["skill.llm_vlm.attention"]
+    validation: {level: oracle, field_runs: 0, fingerprint: 067886585b63134e08902c388f092de3e92514d7fbac3e4c45372d45a3164cb9}
+    assets: {problem_dir: curriculum/problems/ATT-003-causal-padding-mask}
+    interface: {language: python, framework: pytorch, symbol: causal_padding_mask}
+    constraints:
+      forbidden_apis: ["torch.tril","torch.triu"]
+      time_limit_ms: 10000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: brute_force
+        target: "Explicit per-batch query/key validity and absolute-position relation"
+        description: "独立参考、梯度/不变性与边界验证；不代表真实用户 Field Run。"
+      oral_questions:
+        - "为何掩码 head 维可以为 1？"
+        - "增量解码为什么不能使用左上三角替代绝对位置？"
+        - "不同 attention API 的布尔语义是否一致？"
+        - "全屏蔽行需要调用者怎样处理数值问题？"
+    variant_axes: ["query_length","key_length","position_offset","padding_side"]
+    invariants: ["future_keys_hidden","invalid_queries_hidden","position_translation_invariant","input_immutable"]
+    common_bugs: ["inverse_mask_polarity","left_aligned_decode_triangle","key_only_padding"]
+    retention:
+      d2: "计划中的无帮助变式：改变数据布局或接口后重写；尚无可运行复测资产，不可用于掌握。"
+      d7: "计划中的迁移变式：结合实际训练/解码情境解释与调试；尚未上线。"
+    sources:
+      - {type: official_docs, title: "PyTorch scaled dot product attention", url: https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html}
+      - {type: internal_original, title: "LLM Interview Lab 原创题面、接口与测试"}
   - id: ATT-008
     title: "Decoder Layer"
     status: planned
@@ -594,14 +621,41 @@ problems:
     description: "Construct counterexamples that score well but violate task intent."
   - id: PT-019
     title: "GSPO Sequence Ratio"
-    status: planned
+    status: ready
     domain: post_training
     tracks: ["post_training"]
     tier: advanced
     difficulty: {concept: 4, coding: 5, debugging: 5}
-    prerequisites: ["PT-015"]
-    problem_type: implementation
-    description: "Compare sequence-level and token-level importance-ratio objectives."
+    prerequisites: ["LOSS-008","TNS-010"]
+    skills: ["post_training.grpo","post_training.policy_ratio","post_training.mask"]
+    canonical_skills: ["skill.post_training_rl.grpo","skill.post_training_rl.policy_optimization"]
+    validation: {level: oracle, field_runs: 0, fingerprint: 992e9c2111c50d0460973c5a9c23639647a0316270f8109e57a0772dc6dc927d}
+    assets: {problem_dir: curriculum/problems/PT-019-gspo-sequence-ratio}
+    interface: {language: python, framework: pytorch, symbol: gspo_sequence_loss}
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 10000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: closed_form
+        target: "GSPO section 4.1, scalar sequence likelihood calculation and independent float64 gradients"
+        description: "独立参考、梯度/不变性与边界验证；不代表真实用户 Field Run。"
+      oral_questions:
+        - "几何平均与 token 比率的算术平均有何不同？"
+        - "负 advantage 的裁剪方向和梯度是什么？"
+        - "序列等权与 token 等权会怎样改变长样本权重？"
+        - "为什么 detach old policy 和 advantage，这里没有覆盖完整训练的哪些部分？"
+    variant_axes: ["group_size","sequence_length","advantage_sign","clip_boundary"]
+    invariants: ["sequence_equal_weight","padding_invariant","current_policy_only_gradient","input_immutable"]
+    common_bugs: ["mean_of_exp_ratios","token_weighted_reduction","wrong_signed_clipping","old_policy_gradient"]
+    retention:
+      d2: "计划中的无帮助变式：改变数据布局或接口后重写；尚无可运行复测资产，不可用于掌握。"
+      d7: "计划中的迁移变式：结合实际训练/解码情境解释与调试；尚未上线。"
+    sources:
+      - {type: paper, title: "Group Sequence Policy Optimization (2025), section 4.1", url: https://arxiv.org/abs/2507.18071}
+      - {type: internal_original, title: "LLM Interview Lab 原创题面、接口与测试"}
   - id: PT-020
     title: "Process Reward Aggregation"
     status: planned

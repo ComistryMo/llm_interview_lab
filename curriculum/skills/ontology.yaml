@@ -127,14 +127,14 @@ skills:
     description: Implement objectives with stable numerics and clear reductions.
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [LOSS-007, LOSS-008, LOSS-013, LOSS-014, CAP-LOSS-001, CAP-TRN-001]
+    related_problems: [LOSS-007, LOSS-008, LOSS-013, LOSS-014, LOSS-002, CAP-LOSS-001, CAP-TRN-001]
   - id: skill.deep_learning.optimizers
     title: Stateful Optimizers
     domain: deep_learning
     description: Implement stateful parameter updates and resume semantics.
     levels: *levels
     evidence: [coding, debugging, oral]
-    related_problems: [OPT-001, OPT-002, OPT-004, OPT-005, CAP-TRN-001]
+    related_problems: [OPT-001, OPT-002, OPT-003, OPT-004, OPT-005, CAP-TRN-001]
 
   - id: skill.llm_vlm.tokenization
     title: Tokenization and Templates
@@ -149,7 +149,7 @@ skills:
     description: Implement and analyze attention, masks and head layouts.
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [ATT-002, ATT-004, ATT-005, ATT-006]
+    related_problems: [ATT-002, ATT-003, ATT-004, ATT-005, ATT-006]
     aliases: [Attention]
   - id: skill.llm_vlm.transformer
     title: Transformer Architecture
@@ -214,7 +214,7 @@ skills:
     description: Explain policy ratios, clipping, advantages and KL control.
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [PT-009, PT-010, PT-011, PT-012]
+    related_problems: [PT-009, PT-010, PT-011, PT-012, PT-019]
   - id: skill.post_training_rl.grpo
     title: Grouped Policy Optimization
     domain: post_training_rl

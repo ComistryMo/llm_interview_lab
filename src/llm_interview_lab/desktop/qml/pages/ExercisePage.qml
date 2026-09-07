@@ -28,6 +28,7 @@ Item {
     property bool hasTask: root.activeProblemId.length > 0
     property bool syncingEditor: false
     property bool showOriginalContract: false
+    readonly property bool sourceTaskChinese: (app.currentTask.task || "").indexOf("\n## 任务\n") >= 0
     property string codeFontFamily: Qt.platform.os === "windows" ? "Cascadia Mono"
                                     : Qt.platform.os === "osx" ? "Menlo" : "monospace"
 
@@ -188,7 +189,7 @@ Item {
                     Rectangle { width: parent.width; height: 1; color: root.colors.border }
                     Text { width: parent.width; text: root.displayTask(); color: root.colors.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
                     Button {
-                        visible: app.language !== "en" && root.hasTask && !!app.currentTask.task
+                        visible: app.language !== "en" && root.hasTask && !!app.currentTask.task && !root.sourceTaskChinese
                         text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
                         flat: true
                         palette.buttonText: root.colors.text
@@ -516,7 +517,7 @@ Item {
                 Text { text: root.displayTitle(); color: root.colors.text; font.pixelSize: 20; font.bold: true; wrapMode: Text.Wrap; width: parent.width }
                 Text { text: root.displayTask(); color: root.colors.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
                 Button {
-                    visible: app.language !== "en" && root.hasTask && !!app.currentTask.task
+                    visible: app.language !== "en" && root.hasTask && !!app.currentTask.task && !root.sourceTaskChinese
                     text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
                     flat: true
                     palette.buttonText: root.colors.text

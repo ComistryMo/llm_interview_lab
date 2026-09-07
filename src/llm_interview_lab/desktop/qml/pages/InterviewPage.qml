@@ -1251,6 +1251,7 @@ Item {
                         objectName: "toggleInterviewQuestionLanguage"
                         theme: root.theme
                         visible: root.codingQuestion && root.showCodingPrompt
+                                 && (root.activeQuestion.prompt || "").indexOf("\n## 任务\n") < 0
                         text: root.showEnglishQuestion ? "查看中文题目" : "查看英文题目"
                         compact: true
                         variant: "ghost"

@@ -372,14 +372,41 @@ problems:
     description: "Compute masked NLL from precomputed log probabilities."
   - id: LOSS-002
     title: "Label Smoothing"
-    status: planned
+    status: ready
     domain: loss_metric
     tracks: ["llm_algorithm","vlm_algorithm"]
     tier: core
     difficulty: {concept: 3, coding: 4, debugging: 4}
     prerequisites: ["LOSS-014"]
-    problem_type: implementation
-    description: "Blend hard-label NLL with uniform-class loss under ignore masking."
+    skills: ["loss.label_smoothing","loss.cross_entropy","tensor.mask"]
+    canonical_skills: ["skill.deep_learning.losses"]
+    validation: {level: oracle, field_runs: 0, fingerprint: 7d34503564bb722555c8211a42041d524147d0f64df6de25374b67bd2a377e21}
+    assets: {problem_dir: curriculum/problems/LOSS-002-label-smoothing}
+    interface: {language: python, framework: pytorch, symbol: label_smoothed_cross_entropy}
+    constraints:
+      forbidden_apis: ["torch.nn.functional.cross_entropy","torch.nn.functional.nll_loss","torch.nn.CrossEntropyLoss","torch.nn.NLLLoss"]
+      time_limit_ms: 10000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: "PyTorch cross_entropy label_smoothing plus explicit differentiable-zero all-ignore case"
+        description: "独立参考、梯度/不变性与边界验证；不代表真实用户 Field Run。"
+      oral_questions:
+        - "平滑质量分给 C 类还是 C-1 类？"
+        - "如何处理 ignore_index 的分子与分母？"
+        - "全忽略样本怎样保留零梯度计算图？"
+        - "极大 logits 为什么不应该先直接 exp？"
+    variant_axes: ["class_count","smoothing","ignore_fraction","logit_offset"]
+    invariants: ["shift_invariant","ignored_gradient_zero","input_immutable"]
+    common_bugs: ["wrong_class_denominator","batch_instead_of_valid_count","all_ignored_nan"]
+    retention:
+      d2: "计划中的无帮助变式：改变数据布局或接口后重写；尚无可运行复测资产，不可用于掌握。"
+      d7: "计划中的迁移变式：结合实际训练/解码情境解释与调试；尚未上线。"
+    sources:
+      - {type: official_docs, title: "PyTorch CrossEntropyLoss", url: https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html}
+      - {type: internal_original, title: "LLM Interview Lab 原创题面、接口与测试"}
   - id: LOSS-003
     title: "Focal Loss"
     status: planned
@@ -472,14 +499,41 @@ problems:
     description: "Combine named objectives with explicit scales and per-loss metrics."
   - id: OPT-003
     title: "Nesterov Momentum"
-    status: planned
+    status: ready
     domain: optimizer
     tracks: ["ai_foundation","llm_algorithm"]
     tier: advanced
     difficulty: {concept: 4, coding: 5, debugging: 5}
     prerequisites: ["OPT-002"]
-    problem_type: implementation
-    description: "Extend momentum state with a look-ahead update and verify equations."
+    skills: ["optimizer.state","optimizer.no_grad","optimizer.nesterov"]
+    canonical_skills: ["skill.deep_learning.optimizers"]
+    validation: {level: oracle, field_runs: 0, fingerprint: 68733fff538659c66474dc2c0d59e7b1c7abb1537bbcab2370c10904138d6dc9}
+    assets: {problem_dir: curriculum/problems/OPT-003-nesterov-momentum}
+    interface: {language: python, framework: pytorch, symbol: nesterov_step}
+    constraints:
+      forbidden_apis: ["torch.optim"]
+      time_limit_ms: 10000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: framework_reference
+        target: "torch.optim.SGD with nesterov=True, dampening=0 and weight_decay=0"
+        description: "独立参考、梯度/不变性与边界验证；不代表真实用户 Field Run。"
+      oral_questions:
+        - "第一步与普通 Momentum 的差别来自哪里？"
+        - "速度中是否包含学习率，改变学习率会影响什么？"
+        - "为什么返回状态必须独立且脱离计算图？"
+        - "梯度缺失应该由谁处理，为什么不能复用旧梯度？"
+    variant_axes: ["momentum","step_count","learning_rate","noncontiguous_input"]
+    invariants: ["input_immutable","state_detached","first_step_matches_reference"]
+    common_bugs: ["extra_learning_rate_in_velocity","wrong_first_step","aliased_state"]
+    retention:
+      d2: "计划中的无帮助变式：改变数据布局或接口后重写；尚无可运行复测资产，不可用于掌握。"
+      d7: "计划中的迁移变式：结合实际训练/解码情境解释与调试；尚未上线。"
+    sources:
+      - {type: official_docs, title: "PyTorch SGD", url: https://docs.pytorch.org/docs/stable/generated/torch.optim.SGD.html}
+      - {type: internal_original, title: "LLM Interview Lab 原创题面、接口与测试"}
   - id: OPT-006
     title: "Warmup Cosine Scheduler"
     status: planned
@@ -550,4 +604,3 @@ problems:
     prerequisites: ["OPT-009","OPT-010"]
     problem_type: integration
     description: "Implement train and evaluation phases with explicit mode and gradient boundaries."
-

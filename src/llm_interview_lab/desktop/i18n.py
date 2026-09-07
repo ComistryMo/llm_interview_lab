@@ -118,6 +118,10 @@ ROLE_TEXT: dict[str, tuple[str, str, str]] = {
 # desktop surface uses this small vocabulary to make the first reading pass
 # Chinese-first without changing Catalog fingerprints or public task files.
 PROBLEM_TITLE_ZH: dict[str, str] = {
+    "OPT-003": "Nesterov SGD：一步前瞻更新",
+    "LOSS-002": "标签平滑交叉熵",
+    "ATT-003": "因果与填充掩码：从训练到解码",
+    "PT-019": "GSPO：序列比率与裁剪损失",
     "LOSS-013": "带 Logits 的二元交叉熵",
     "INF-003": "连续批处理调度器",
     "CAP-LOSS-001": "带 Mask 的序列分类损失",
@@ -169,6 +173,10 @@ PROBLEM_TITLE_ZH: dict[str, str] = {
 
 
 PROBLEM_BRIEF_ZH: dict[str, str] = {
+    "OPT-003": "在 SGD/Momentum 的基础上实现 Nesterov 前瞻更新，核对首次速度、状态独立和多步参数变化。",
+    "LOSS-002": "实现带忽略标签的平滑交叉熵，正确处理类别分母、有效样本平均、大 logits 与全忽略样本的零梯度。",
+    "ATT-003": "为 MHA/GQA 组合因果与 padding 掩码，按绝对位置处理 KV Cache 解码，输出可广播的布尔可见性。",
+    "PT-019": "从 GRPO 进一步实现 GSPO 序列比率与裁剪损失，比较序列等权和 token 等权，并隔离旧策略与优势的梯度。",
     "FND-001": "实现一个纯函数，统计预测与标签不一致的样本数量。请处理空输入、长度不一致和输入不变性，并返回稳定的整数结果。\n\n完整接口与边界契约仍以当前题目文件和公开测试为准。",
     "FND-002": "检查每条训练样本是否满足字段、类型和标签范围契约；遇到无效样本时给出可定位的结果，不要修改原始数据。",
     "FND-003": "根据预测错误、置信度或损失等信号筛选困难样本。保持样本顺序和输入不变，并明确空结果的行为。",
@@ -277,6 +285,10 @@ def problem_brief(problem_id: str, fallback: str = "", language: str = "zh-CN") 
     """Return a concise Chinese first-read contract; English remains opt-in."""
 
     if language in {"en", "en-US", "en-GB"}:
+        return fallback
+    # Chinese-authored tasks are already the full user-facing statement, not
+    # an English source that needs a short first-read translation.
+    if "\n## 任务\n" in fallback:
         return fallback
     return PROBLEM_BRIEF_ZH.get(
         str(problem_id),
