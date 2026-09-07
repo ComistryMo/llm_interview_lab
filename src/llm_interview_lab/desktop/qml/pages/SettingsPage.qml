@@ -7,7 +7,7 @@ import "../components"
 Flickable {
     id: root
     required property var app
-    required property var palette
+    required property var colors
     required property var theme
     property bool compactLayout: width < 780
     property bool refreshRequested: false
@@ -26,7 +26,7 @@ Flickable {
         contentItem: Rectangle {
             implicitWidth: 5
             radius: 3
-            color: root.palette.muted
+            color: root.colors.muted
             opacity: 0.45
         }
     }
@@ -43,7 +43,7 @@ Flickable {
         Text {
             objectName: "settingsRouteContext"
             text: "本地设置与连接"
-            color: root.palette.text
+            color: root.colors.text
             font.pixelSize: 16
             font.bold: true
         }
@@ -53,15 +53,15 @@ Flickable {
                   : Qt.platform.os === "windows"
                     ? "调整显示、查看本地数据，并在 Windows 无法自动找到 Codex 时指定可执行文件。"
                     : "调整显示、查看本地数据，并在应用无法从 PATH 找到 Codex 时指定可执行文件。"
-            color: root.palette.muted
+            color: root.colors.muted
             wrapMode: Text.Wrap
             Layout.fillWidth: true
         }
 
         LabCard {
             Layout.fillWidth: true
-            cardColor: root.palette.surface; borderColor: root.palette.border
-            Text { text: "外观"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
+            cardColor: root.colors.surface; borderColor: root.colors.border
+            Text { text: "外观"; color: root.colors.text; font.bold: true; font.pixelSize: 18 }
             Flow {
                 width: parent.width
                 spacing: 8
@@ -76,13 +76,13 @@ Flickable {
                     }
                 }
             }
-            Text { text: "文字大小"; color: root.palette.text; font.bold: true }
+            Text { text: "文字大小"; color: root.colors.text; font.bold: true }
             RowLayout {
                 width: parent.width
                 Slider { from: 0.85; to: 1.4; value: app.fontScale; stepSize: 0.05; Layout.fillWidth: true; onMoved: app.setFontScale(value) }
-                Text { text: Math.round(app.fontScale * 100) + "%"; color: root.palette.muted }
+                Text { text: Math.round(app.fontScale * 100) + "%"; color: root.colors.muted }
             }
-            Text { text: "界面语言"; color: root.palette.text; font.bold: true }
+            Text { text: "界面语言"; color: root.colors.text; font.bold: true }
             Flow {
                 width: parent.width
                 spacing: 8
@@ -102,7 +102,7 @@ Flickable {
                 text: app.language === "en"
                       ? "语言选择会在下次启动时保留；题面内容仍以课程提供的语言为准。"
                       : "简体中文是默认语言；选择会在下次启动时保留。"
-                color: root.palette.muted
+                color: root.colors.muted
                 wrapMode: Text.Wrap
                 font.pixelSize: 12
             }
@@ -111,12 +111,12 @@ Flickable {
         LabCard {
             objectName: "profileSwitcherCard"
             Layout.fillWidth: true
-            cardColor: root.palette.surface; borderColor: root.palette.border
-            Text { text: "学习档案"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
+            cardColor: root.colors.surface; borderColor: root.colors.border
+            Text { text: "学习档案"; color: root.colors.text; font.bold: true; font.pixelSize: 18 }
             Text {
                 width: parent.width
                 text: "切换后，材料、作答、面试和进度都会从所选档案重新读取。"
-                color: root.palette.muted
+                color: root.colors.muted
                 wrapMode: Text.Wrap
             }
             RowLayout {
@@ -161,14 +161,14 @@ Flickable {
                     theme: null
                     compact: true
                     text: app.profileSwitchBusy ? "切换中" : "当前"
-                    tone: app.profileSwitchBusy ? root.palette.warning : root.palette.success
+                    tone: app.profileSwitchBusy ? root.colors.warning : root.colors.success
                 }
             }
             Text {
                 width: parent.width
                 visible: (app.profileOptions || []).length === 0
                 text: "当前没有可切换的学习档案。返回首次启动流程即可创建一个新的档案。"
-                color: root.palette.muted
+                color: root.colors.muted
                 wrapMode: Text.Wrap
             }
             Button {
@@ -182,14 +182,14 @@ Flickable {
                 width: parent.width
                 visible: (app.profileSwitchError || app.profileRestoreError || "").length > 0
                 text: app.profileSwitchError || app.profileRestoreError
-                color: root.palette.danger
+                color: root.colors.danger
                 wrapMode: Text.Wrap
             }
             Text {
                 width: parent.width
                 visible: (app.profileRestoreErrorCode || "").length > 0
                 text: "错误编号：" + app.profileRestoreErrorCode + "。请先备份数据目录，再选择其他档案或重新创建。"
-                color: root.palette.muted
+                color: root.colors.muted
                 wrapMode: Text.Wrap
                 font.pixelSize: 12
             }
@@ -197,11 +197,11 @@ Flickable {
 
         LabCard {
             Layout.fillWidth: true
-            cardColor: root.palette.surface; borderColor: root.palette.border
-            Text { text: "本地数据"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
-            Text { width: parent.width; text: "学习档案、答案和面试记录默认只保存在本机。应用不提供遥测、账号或云同步。"; color: root.palette.muted; wrapMode: Text.Wrap }
-            Text { width: parent.width; text: "数据目录：" + app.dataDirectory; color: root.palette.text; elide: Text.ElideMiddle; font.pixelSize: 12 }
-            Text { width: parent.width; text: "日志目录：" + app.logDirectory; color: root.palette.text; elide: Text.ElideMiddle; font.pixelSize: 12 }
+            cardColor: root.colors.surface; borderColor: root.colors.border
+            Text { text: "本地数据"; color: root.colors.text; font.bold: true; font.pixelSize: 18 }
+            Text { width: parent.width; text: "学习档案、答案和面试记录默认只保存在本机。应用不提供遥测、账号或云同步。"; color: root.colors.muted; wrapMode: Text.Wrap }
+            Text { width: parent.width; text: "数据目录：" + app.dataDirectory; color: root.colors.text; elide: Text.ElideMiddle; font.pixelSize: 12 }
+            Text { width: parent.width; text: "日志目录：" + app.logDirectory; color: root.colors.text; elide: Text.ElideMiddle; font.pixelSize: 12 }
             Flow {
                 width: parent.width
                 spacing: 8
@@ -223,8 +223,8 @@ Flickable {
 
         LabCard {
             Layout.fillWidth: true
-            cardColor: root.palette.surface; borderColor: root.palette.border
-            Text { text: "Codex 可执行文件"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
+            cardColor: root.colors.surface; borderColor: root.colors.border
+            Text { text: "Codex 可执行文件"; color: root.colors.text; font.bold: true; font.pixelSize: 18 }
             Text {
                 width: parent.width
                 text: app.codexExecutableDisplay || (Qt.platform.os === "osx"
@@ -232,7 +232,7 @@ Flickable {
                       : Qt.platform.os === "windows"
                         ? "自动查找（PATH、npm 和常见用户目录）"
                         : "自动查找（PATH 和常见用户目录）")
-                color: root.palette.muted
+                color: root.colors.muted
                 elide: Text.ElideMiddle
             }
             RowLayout {
@@ -245,15 +245,15 @@ Flickable {
                           : app.aiStatusVariant === "connected" ? "已连接"
                           : app.codexDiscoveryState === "found" ? "已发现（未连接）"
                           : app.codexDiscoveryState === "missing" ? "未发现" : "未检查"
-                    tone: app.codexProbeRunning || app.aiStatusVariant === "connecting" ? root.palette.warning
-                          : app.aiStatusVariant === "connected" ? root.palette.success
-                          : app.codexDiscoveryState === "found" ? root.palette.accent
-                          : root.palette.muted
+                    tone: app.codexProbeRunning || app.aiStatusVariant === "connecting" ? root.colors.warning
+                          : app.aiStatusVariant === "connected" ? root.colors.success
+                          : app.codexDiscoveryState === "found" ? root.colors.accent
+                          : root.colors.muted
                 }
                 Text {
                     Layout.fillWidth: true
                     text: app.codexDiscoveryMessage || ""
-                    color: root.palette.muted
+                    color: root.colors.muted
                     wrapMode: Text.Wrap
                     elide: Text.ElideRight
                 }
@@ -263,11 +263,11 @@ Flickable {
                 width: parent.width
                 visible: app.codexDiscoveryState === "found" && (app.codexDiscoveredPath || "").length > 0
                 text: "来源：" + app.codexDiscoveredPath
-                color: root.palette.text
+                color: root.colors.text
                 elide: Text.ElideMiddle
                 font.pixelSize: 12
             }
-            Text { text: "模型与推理强度"; color: root.palette.text; font.bold: true }
+            Text { text: "模型与推理强度"; color: root.colors.text; font.bold: true }
             GridLayout {
                 width: parent.width
                 columns: root.compactLayout ? 1 : 2
@@ -315,7 +315,7 @@ Flickable {
                 Text {
                     Layout.fillWidth: true
                     text: "只影响新的 Codex 请求；模型不支持所选强度时会返回明确错误。"
-                    color: root.palette.muted
+                    color: root.colors.muted
                     wrapMode: Text.Wrap
                     font.pixelSize: 12
                 }
@@ -339,19 +339,19 @@ Flickable {
                 text: app.codexDiscoveryState === "found" && app.aiStatusVariant !== "connected"
                       ? "已发现只代表找到可执行文件；连接还需要 Codex 已登录并成功创建 App Server 会话。"
                       : "未检测到 Codex 不会影响本地训练或普通 LLM API。"
-                color: root.palette.muted
+                color: root.colors.muted
                 wrapMode: Text.Wrap
             }
         }
 
         LabCard {
             Layout.fillWidth: true
-            cardColor: root.palette.surface; borderColor: root.palette.border
-            Text { text: "安全边界"; color: root.palette.text; font.bold: true; font.pixelSize: 18 }
-            Text { width: parent.width; text: "本地 Grader 只用于运行你本人信任的代码，不是恶意代码安全沙箱。连接远程 AI 前请核对上下文预览。"; color: root.palette.muted; wrapMode: Text.Wrap }
+            cardColor: root.colors.surface; borderColor: root.colors.border
+            Text { text: "安全边界"; color: root.colors.text; font.bold: true; font.pixelSize: 18 }
+            Text { width: parent.width; text: "本地 Grader 只用于运行你本人信任的代码，不是恶意代码安全沙箱。连接远程 AI 前请核对上下文预览。"; color: root.colors.muted; wrapMode: Text.Wrap }
         }
 
-        Text { text: "LLM Interview Lab v" + Qt.application.version + " · 中文优先桌面体验"; color: root.palette.muted; font.pixelSize: 12 }
+        Text { text: "LLM Interview Lab v" + Qt.application.version + " · 中文优先桌面体验"; color: root.colors.muted; font.pixelSize: 12 }
     }
 
     FileDialog {
@@ -389,13 +389,13 @@ Flickable {
                          ? " 本地操作正在进行。"
                          : "")
                       + "刷新会重新读取磁盘快照，并停止未完成的本地操作；未保存内容可能丢失。请先保存或等待完成，或确认继续刷新。"
-                color: root.palette.text
+                color: root.colors.text
                 wrapMode: Text.Wrap
             }
             Text {
                 Layout.fillWidth: true
                 text: "刷新不会修改课程或其他 Profile。"
-                color: root.palette.muted
+                color: root.colors.muted
                 font.pixelSize: 12
                 wrapMode: Text.Wrap
             }
@@ -415,7 +415,7 @@ Flickable {
             Text {
                 Layout.fillWidth: true
                 text: "检测到 v0.4.0-alpha.1 的学习档案。迁移会先复制、计算 SHA-256 并保留备份；不会删除或覆盖旧目录。\n\n旧目录：" + app.legacyDataDirectory
-                color: root.palette.text
+                color: root.colors.text
                 wrapMode: Text.Wrap
             }
             RowLayout {

@@ -7,7 +7,7 @@ import "../components"
 Item {
     id: root
     required property var app
-    required property var palette
+    required property var colors
     property var theme: null
     readonly property bool dynamicInterview: app.interview.delivery_mode === "dynamic_ai"
     readonly property bool conversationalAnswer: root.dynamicInterview && !!activeQuestion && !root.codingQuestion
@@ -44,6 +44,9 @@ Item {
     // intentionally broken after typing, so track edits explicitly.
     property bool codingEditorDirty: false
     property bool showCodingPrompt: true
+    property bool showEnglishQuestion: app.language === "en"
+    readonly property string preferredQuestionLanguage: app.language
+    onPreferredQuestionLanguageChanged: showEnglishQuestion = preferredQuestionLanguage === "en"
     readonly property bool codingQuestion: !!activeQuestion && activeQuestion.kind === "coding"
     readonly property bool interviewFinished: app.interview.status === "completed" || app.interview.status === "incomplete"
     readonly property bool hasUnsubmittedDraft: !!activeQuestion && (root.codingQuestion
@@ -117,6 +120,7 @@ Item {
         root.answerDraft = ""
         root.pendingLockAnswer = ""
         root.showCodingPrompt = true
+        root.showEnglishQuestion = app.language === "en"
         var savedConnection = String(app.interview.connection_id || "")
         var selectedIndex = providerConnection.indexOfValue(savedConnection)
         if (selectedIndex >= 0)
@@ -680,7 +684,7 @@ Item {
                                 return "难度用于调整 AI 追问强度；不要求该档位有完整固定题单。"
                             return "选择面试官后即可开始；不连接 AI 仍可继续刷题。"
                         }
-                        color: root.palette.muted
+                        color: root.colors.muted
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
                     }
@@ -707,7 +711,7 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible && aiMode.currentValue === "disabled"
                         text: "模拟面试需要 AI 才能进行真实追问和证据化复盘。No-AI 模式仍可继续刷题、运行测试、复盘和间隔复测；不会创建虚假的 Session、评分或报告。"
-                        color: root.palette.warning
+                        color: root.colors.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
                     }
@@ -716,20 +720,20 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible && aiMode.currentValue === "disabled"
                         padding: 12
-                        cardColor: root.palette.surfaceAlt
-                        borderColor: root.palette.border
+                        cardColor: root.colors.surfaceAlt
+                        borderColor: root.colors.border
                         theme: root.theme
                         Text {
                             width: parent.width
                             text: "个性化模拟面试已锁定"
-                            color: root.palette.text
+                            color: root.colors.text
                             font.bold: true
                             wrapMode: Text.Wrap
                         }
                         Text {
                             width: parent.width
                             text: "接入普通 LLM、配置本地 Ollama 或连接 Codex 后，才能根据你的回答进行追问和证据化复盘。AI 连接不是刷题的前置条件。"
-                            color: root.palette.muted
+                            color: root.colors.muted
                             wrapMode: Text.Wrap
                             font.pixelSize: 11
                         }
@@ -760,7 +764,7 @@ Item {
                               : (app.codexAvailable
                                  ? "确认后会先进入本地开场题；提交回答时再调用 Codex。你也可以先在设置中选择模型和推理强度。"
                                  : "尚未发现 Codex。请在 AI 连接页检查安装/登录状态；普通 LLM API 也可单独使用。")
-                        color: app.aiStatusVariant === "connected" ? root.palette.success : root.palette.warning
+                        color: app.aiStatusVariant === "connected" ? root.colors.success : root.colors.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
                     }
@@ -773,7 +777,7 @@ Item {
                             Layout.fillWidth: true
                             text: "本场 Codex：" + (app.codexModel || "默认模型")
                                   + " · 推理强度：" + (app.codexReasoningEffort || "默认")
-                            color: root.palette.muted
+                            color: root.colors.muted
                             font.pixelSize: 11
                             wrapMode: Text.Wrap
                         }
@@ -790,7 +794,7 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible && aiMode.currentValue === "provider"
                         text: "AI 连接"
-                        color: root.palette.muted
+                        color: root.colors.muted
                         font.pixelSize: 12
                     }
                     LabComboBox {
@@ -811,7 +815,7 @@ Item {
                         text: planConnection.currentIndex < 0
                               ? "尚未选择 AI 连接。"
                               : "该连接尚未通过测试；请先到 AI 连接页保存并测试。"
-                        color: root.palette.warning
+                        color: root.colors.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
                     }
@@ -825,7 +829,7 @@ Item {
                         contentItem: Text {
                             text: useMaterial.text
                             font: useMaterial.font
-                            color: useMaterial.enabled ? root.palette.text : root.palette.muted
+                            color: useMaterial.enabled ? root.colors.text : root.colors.muted
                             leftPadding: useMaterial.indicator.width + useMaterial.spacing
                             wrapMode: Text.Wrap
                             verticalAlignment: Text.AlignVCenter
@@ -864,7 +868,7 @@ Item {
                         text: jd.currentIndex >= 0 ? "补充材料：" + app.materials[jd.currentIndex].id
                               + " · SHA " + app.materials[jd.currentIndex].sha256.slice(0, 12)
                               + (app.materials[jd.currentIndex].ai_access ? "" : "\n请先在求职材料页允许此材料供 AI 使用。") : ""
-                        color: root.palette.muted
+                        color: root.colors.muted
                         wrapMode: Text.WrapAnywhere
                         font.pixelSize: 12
                     }
@@ -872,7 +876,7 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible && useMaterial.checked && material.currentIndex >= 0
                         text: material.currentIndex >= 0 ? "材料 ID：" + app.materials[material.currentIndex].id + "\n用途：role_interview\nSHA-256：" + app.materials[material.currentIndex].sha256 : ""
-                        color: root.palette.muted
+                        color: root.colors.muted
                         font.pixelSize: 10
                         wrapMode: Text.WrapAnywhere
                     }
@@ -884,7 +888,7 @@ Item {
                                  && material.currentIndex >= 0
                                  && !app.materials[material.currentIndex].ai_access
                         text: "这份材料尚未允许 AI 使用。点击下方按钮后，系统会在本机重新提取 PDF/DOCX 文本并绑定当前文件 SHA；提取失败时仍保持本地保存。"
-                        color: root.palette.warning
+                        color: root.colors.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
                     }
@@ -908,7 +912,7 @@ Item {
                         contentItem: Text {
                             text: consent.text
                             font: consent.font
-                            color: root.palette.text
+                            color: root.colors.text
                             leftPadding: consent.indicator.width + consent.spacing
                             wrapMode: Text.Wrap
                             verticalAlignment: Text.AlignVCenter
@@ -923,7 +927,7 @@ Item {
                                  && app.materials[material.currentIndex].ai_access
                                  && !consent.checked
                         text: "请勾选上方授权后，Codex 才会读取这份材料；未勾选不会发送。"
-                        color: root.palette.warning
+                        color: root.colors.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
                     }
@@ -935,7 +939,7 @@ Item {
                                  && aiMode.currentValue !== "codex"
                                  && root.configuration.available === false
                         text: root.configurationMessage()
-                        color: root.palette.warning
+                        color: root.colors.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
                     }
@@ -960,7 +964,7 @@ Item {
                                  && aiMode.currentValue !== "codex"
                                  && (root.configuration.missing_environment || []).indexOf("pytorch") >= 0
                         text: "完整蓝图需要源码 PyTorch 环境。桌面应用不会自行安装依赖。需先克隆源码并进入仓库根目录，再运行：\npython -m pip install -e \".[torch,dev]\""
-                        color: root.palette.muted
+                        color: root.colors.muted
                         wrapMode: Text.WrapAnywhere
                         font.pixelSize: 11
                     }
@@ -973,7 +977,7 @@ Item {
                                  && (root.configuration.missing_environment || []).indexOf("pytorch") >= 0
                         text: "<a href=\"https://github.com/ComistryMo/llm_interview_lab/blob/main/docs/desktop-app.md\">查看源码环境说明</a>"
                         textFormat: Text.RichText
-                        color: root.palette.accent
+                        color: root.colors.accent
                         font.pixelSize: 11
                         onLinkActivated: Qt.openUrlExternally(link)
                     }
@@ -984,7 +988,7 @@ Item {
                                  && aiMode.currentValue !== "disabled"
                                  && app.interviewPlanPreview.status === "starting"
                         text: app.interviewPlanPreview.user_message || "正在进入面试……"
-                        color: root.palette.accent
+                        color: root.colors.accent
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
                     }
@@ -995,7 +999,7 @@ Item {
                                  && app.interviewPlanPreview.status === "error"
                         text: (app.interviewPlanPreview.user_message || "第一问生成失败。")
                               + "\n" + (app.interviewPlanPreview.recommended_action || "请检查连接后重试。")
-                        color: root.palette.danger
+                        color: root.colors.danger
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
                     }
@@ -1004,7 +1008,7 @@ Item {
                         width: parent.width
                         visible: false
                         text: "AI 会依据岗位蓝图、canonical skills、求职级别和难度生成结构化问题；材料是可选上下文。Coding 环节只使用当前环境可运行的已验证本地题，不满足时会在计划中明确省略。"
-                        color: root.palette.muted
+                        color: root.colors.muted
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
                     }
@@ -1013,7 +1017,7 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible && aiMode.currentValue !== "disabled"
                         text: "先自我介绍，再围绕你的经历深入追问、考察岗位原理，最后从当前可运行的本地题目中选择手撕题。AI 每次只生成下一问；没有可用代码题时会明确标记未完成环节。"
-                        color: root.palette.muted
+                        color: root.colors.muted
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
                     }
@@ -1024,7 +1028,7 @@ Item {
                         text: "返回上一场结果"
                         onClicked: root.configuringNewInterview = false
                     }
-                    Text { width: parent.width; text: "面试结果仅用于复盘，不改变刷题训练的掌握状态。"; color: root.palette.muted; wrapMode: Text.Wrap; font.pixelSize: root.theme ? root.theme.fontCaption : 12 }
+                    Text { width: parent.width; text: "面试结果仅用于复盘，不改变刷题训练的掌握状态。"; color: root.colors.muted; wrapMode: Text.Wrap; font.pixelSize: root.theme ? root.theme.fontCaption : 12 }
                 }
             }
                 LabDivider { theme: root.theme; Layout.fillWidth: true }
@@ -1088,17 +1092,11 @@ Item {
                 LabText {
                     theme: root.theme
                     visible: !root.interviewFinished
-                    text: root.dynamicInterview ? (app.interview.stage_label || "本场复盘") : "限时面试"
+                    objectName: "interviewQuestionPosition"
+                    text: root.dynamicInterview ? "第 " + (app.interview.total_questions || 1) + " 问 · 逐问面试" : "限时面试"
                     variant: "caption"
                     tone: "muted"
-                }
-                LabButton {
-                    objectName: "openInterviewSessionInfo"
-                    theme: root.theme
-                    variant: "ghost"
-                    compact: true
-                    text: "详情"
-                    onClicked: sessionInfoDialog.open()
+                    Layout.alignment: Qt.AlignVCenter
                 }
                 Item { Layout.fillWidth: true }
                 StatusPill {
@@ -1108,7 +1106,7 @@ Item {
                     objectName: "interviewPhasePill"
                     visible: !root.dynamicInterview && !!activeQuestion && app.interview.status === "active"
                     text: root.answerLocked ? "回答已锁定" : "正在回答"
-                    tone: root.palette.muted
+                    tone: root.colors.muted
                     style: "plain"
                     showDot: false
                 }
@@ -1119,7 +1117,7 @@ Item {
                     text: app.interview.status === "active"
                           ? root.timerText(app.interview.remaining_seconds)
                           : root.statusText(app.interview.status)
-                    tone: app.interview.expired === true ? root.palette.warning : root.palette.muted
+                    tone: app.interview.expired === true ? root.colors.warning : root.colors.muted
                     style: "plain"
                     showDot: false
                 }
@@ -1176,10 +1174,12 @@ Item {
                     }
                     LabText {
                         objectName: "interviewQuestionTitle"
-                        visible: !root.codingQuestion || !root.showCodingPrompt
+                        visible: true
                         width: parent.width
                         theme: root.theme
-                        text: activeQuestion ? activeQuestion.title
+                        text: activeQuestion ? (root.codingQuestion && !root.showEnglishQuestion
+                                               ? app.problemTitle(activeQuestion.source.id, activeQuestion.title)
+                                               : activeQuestion.title)
                               : root.interviewFinished ? "本场复盘"
                               : app.interview.expired ? "本场已到时" : "本场作答已完成"
                         variant: "title"
@@ -1194,15 +1194,26 @@ Item {
                         // Markdown's default implicit height does not include
                         // the complete custom paragraph leading on Qt/Windows.
                         height: contentHeight
-                        text: activeQuestion ? activeQuestion.prompt
+                        text: activeQuestion ? (root.codingQuestion && !root.showEnglishQuestion
+                                               ? app.problemStatement(activeQuestion.source.id, activeQuestion.prompt)
+                                               : root.codingQuestion ? activeQuestion.prompt.replace(/^#[^\n]+\n+/, "") : activeQuestion.prompt)
                               : root.interviewFinished ? "下面汇总已记录的回答与评估依据。缺少的环节不会作为已完成计入。"
                               : "点击「结束并查看复盘」保存本场结果；完成情况以实际回答和测试证据为准。"
-                        color: root.palette.text
+                        color: root.colors.text
                         font.family: root.theme ? root.theme.uiFontFamily : ""
                         font.pixelSize: root.theme ? root.theme.fontBodyLarge : 15
                         wrapMode: Text.Wrap
                         textFormat: Text.MarkdownText
-                        lineHeight: 1.5
+                        lineHeight: 1.4
+                    }
+                    LabButton {
+                        objectName: "toggleInterviewQuestionLanguage"
+                        theme: root.theme
+                        visible: root.codingQuestion && root.showCodingPrompt
+                        text: root.showEnglishQuestion ? "查看中文题目" : "查看英文题目"
+                        compact: true
+                        variant: "ghost"
+                        onClicked: root.showEnglishQuestion = !root.showEnglishQuestion
                     }
                     Item {
                         id: answerInlineHost
@@ -1263,9 +1274,9 @@ Item {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                                  && !root.answerLocked && root.interviewCanEdit && root.showVoiceOptions
                         width: parent.width
-                        cardColor: root.palette.surfaceAlt
+                        cardColor: root.colors.surfaceAlt
                         borderColor: app.interviewVoice.state === "recording"
-                                      ? root.palette.warning : root.palette.border
+                                      ? root.colors.warning : root.colors.border
                         ColumnLayout {
                             width: parent.width
                             spacing: 8
@@ -1273,7 +1284,7 @@ Item {
                                 Layout.fillWidth: true
                                 Text {
                                     text: "语音回答（可选）"
-                                    color: root.palette.text
+                                    color: root.colors.text
                                     font.bold: true
                                     Layout.fillWidth: true
                                 }
@@ -1284,13 +1295,13 @@ Item {
                                           : app.interviewVoice.transcription_state === "transcribing"
                                             ? "转录中" : app.interviewVoice.audio_ready ? "已录音" : "未开始"
                                     tone: app.interviewVoice.state === "recording"
-                                          ? root.palette.warning : root.palette.muted
+                                          ? root.colors.warning : root.colors.muted
                                 }
                             }
                             Text {
                                 Layout.fillWidth: true
                                 text: "录音保存在当前学习档案；只有勾选本次授权并点击转录时，音频才会发送到所选 AI 服务。转录结果会先放入可编辑回答框。"
-                                color: root.palette.muted
+                                color: root.colors.muted
                                 font.pixelSize: 11
                                 wrapMode: Text.Wrap
                             }
@@ -1317,7 +1328,7 @@ Item {
                                         var seconds = Math.floor(ms / 1000)
                                         return "时长 " + (seconds < 10 ? "0" : "") + seconds + " 秒"
                                     }
-                                    color: root.palette.muted
+                                    color: root.colors.muted
                                     font.pixelSize: 12
                                 }
                                 Item { Layout.fillWidth: true }
@@ -1359,7 +1370,7 @@ Item {
                                 visible: (app.connections || []).length === 0
                                 Layout.fillWidth: true
                                 text: "尚未配置可用的 AI 连接。你仍可直接输入文字回答；如需转录，请先在 AI 连接页保存并测试。"
-                                color: root.palette.muted
+                                color: root.colors.muted
                                 font.pixelSize: 11
                                 wrapMode: Text.Wrap
                             }
@@ -1367,7 +1378,7 @@ Item {
                                 visible: !!app.interviewVoice.error
                                 Layout.fillWidth: true
                                 text: app.interviewVoice.error || ""
-                                color: root.palette.danger
+                                color: root.colors.danger
                                 font.pixelSize: 11
                                 wrapMode: Text.Wrap
                             }
@@ -1377,16 +1388,16 @@ Item {
                         objectName: "interviewAnswerCorruption"
                         visible: !!app.interview.answer_corrupted
                         width: parent.width
-                        cardColor: root.palette.surfaceAlt
-                        borderColor: root.palette.danger
-                        Text { width: parent.width; text: app.interview.answer_error || "已锁定的回答当前不可读取，评分已暂停。"; color: root.palette.danger; wrapMode: Text.Wrap; font.bold: true }
+                        cardColor: root.colors.surfaceAlt
+                        borderColor: root.colors.danger
+                        Text { width: parent.width; text: app.interview.answer_error || "已锁定的回答当前不可读取，评分已暂停。"; color: root.colors.danger; wrapMode: Text.Wrap; font.bold: true }
                     }
                     Text {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                                  && !root.answerLocked && answer.text.trim().length === 0
                         width: parent.width
                         text: "先写下回答，提交按钮才会启用。"
-                        color: root.palette.muted
+                        color: root.colors.muted
                         font.pixelSize: 11
                         wrapMode: Text.Wrap
                     }
@@ -1394,14 +1405,14 @@ Item {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding" && root.answerLocked && !app.interview.answer_corrupted && !root.dynamicInterview
                         width: parent.width
                         spacing: 6
-                        Text { text: "候选人自评 Rubric（每个维度 1–5 分）"; color: root.palette.muted; font.bold: true }
-                        Text { text: "用于自我校准，不代表客观面试结论。请点击每个滑块选择分数，未评分项不会提交。"; color: root.palette.muted; font.pixelSize: 11; wrapMode: Text.Wrap; width: parent.width }
+                        Text { text: "候选人自评 Rubric（每个维度 1–5 分）"; color: root.colors.muted; font.bold: true }
+                        Text { text: "用于自我校准，不代表客观面试结论。请点击每个滑块选择分数，未评分项不会提交。"; color: root.colors.muted; font.pixelSize: 11; wrapMode: Text.Wrap; width: parent.width }
                         Repeater {
                             model: activeQuestion ? Object.keys(activeQuestion.rubric.dimensions) : []
                             delegate: RowLayout {
                                 required property string modelData
                                 width: parent.width
-                                Text { text: modelData.replace(/_/g, " "); color: root.palette.text; Layout.preferredWidth: 190 }
+                                Text { text: modelData.replace(/_/g, " "); color: root.colors.text; Layout.preferredWidth: 190 }
                                 Slider {
                                     id: dimensionScore
                                     // Zero is a presentation-only placeholder.
@@ -1420,7 +1431,7 @@ Item {
                                     enabled: root.interviewCanEdit
                                     onValueChanged: if ((pressed || activeFocus) && value >= 1) root.setRubricScore(modelData, Math.round(value))
                                 }
-                                Text { text: root.rubricScores[modelData] === undefined ? "未评分" : root.rubricScores[modelData] + " / 5"; color: root.palette.text; font.bold: true; Layout.preferredWidth: 54 }
+                                Text { text: root.rubricScores[modelData] === undefined ? "未评分" : root.rubricScores[modelData] + " / 5"; color: root.colors.text; font.bold: true; Layout.preferredWidth: 54 }
                             }
                         }
                     }
@@ -1428,7 +1439,7 @@ Item {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                                  && root.answerLocked && !app.interview.answer_corrupted && !root.dynamicInterview
                         text: "回答证据 · 必填"
-                        color: root.palette.text
+                        color: root.colors.text
                         font.bold: true
                         font.pixelSize: 13
                         width: parent.width
@@ -1443,16 +1454,6 @@ Item {
                         enabled: root.interviewCanEdit
                         placeholderText: root.interviewCanEdit ? "请引用回答中的具体证据（必填）" : "面试已暂停或结束"
                     }
-                    ComboBox {
-                        id: providerConnection
-                        objectName: "interviewActiveProvider"
-                        visible: !!activeQuestion && activeQuestion.kind !== "coding" && (root.answerLocked || root.dynamicInterview) && !app.interview.answer_corrupted && app.interview.ai_mode === "provider"
-                        enabled: !app.busy
-                        width: parent.width
-                        model: app.connections
-                        textRole: "display_name"
-                        valueRole: "connection_id"
-                    }
                     Text {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                                  && root.answerLocked && !app.interview.answer_corrupted
@@ -1463,7 +1464,7 @@ Item {
                         text: root.dynamicInterview
                               ? "当前连接尚未测试通过。请到“AI 连接”完成测试，再返回生成下一问。"
                               : "当前连接尚未测试通过。请到“AI 连接”测试后再请求评估，或改用人工评分。"
-                        color: root.palette.warning
+                        color: root.colors.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
                     }
@@ -1476,31 +1477,21 @@ Item {
                         text: root.dynamicInterview
                               ? "还没有可用的已测试连接。请到“AI 连接”保存并测试服务，再返回继续面试。"
                               : "还没有可用的已测试连接；可以去 AI 连接页配置，或直接记录人工评分。"
-                        color: root.palette.warning
+                        color: root.colors.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
-                    }
-                    CheckBox {
-                        id: includeInterviewMaterials
-                        visible: !!activeQuestion && (root.answerLocked || root.dynamicInterview) && !app.interview.answer_corrupted
-                                 && activeQuestion.kind !== "coding"
-                                 && app.interview.ai_mode !== "disabled"
-                                 && (app.interview.material_refs || []).length > 0
-                        checked: true
-                        enabled: !app.busy
-                        text: "发送时包含本场已授权的简历 / JD"
                     }
                     LabCard {
                         visible: !!app.interview.pending_followup
                         width: parent.width
-                        cardColor: root.palette.surfaceAlt
-                        borderColor: root.palette.accent
-                        Text { width: parent.width; text: "自适应追问\n" + (app.interview.pending_followup || ""); color: root.palette.text; wrapMode: Text.Wrap; font.bold: true }
+                        cardColor: root.colors.surfaceAlt
+                        borderColor: root.colors.accent
+                        Text { width: parent.width; text: "自适应追问\n" + (app.interview.pending_followup || ""); color: root.colors.text; wrapMode: Text.Wrap; font.bold: true }
                         LabTextArea { id: followupAnswer; objectName: "interviewFollowupEditor"; theme: root.theme; width: parent.width; height: 100; enabled: root.interviewCanEdit; placeholderText: root.interviewCanEdit ? "回答这一个追问" : "面试已暂停或结束" }
                         Text {
                             width: parent.width
                             text: "追问回答会留档并关联到本题评估；当前评分仍采用主回答生成的 AI 评估，不会根据这次追问自动重算。"
-                            color: root.palette.muted
+                            color: root.colors.muted
                             font.pixelSize: 11
                             wrapMode: Text.Wrap
                         }
@@ -1541,7 +1532,7 @@ Item {
                                     text: root.resultScoreLabel(root.interviewResult)
                                           + (root.resultAssessmentSources(root.interviewResult).length > 0 ? " · 满分 100" : "")
                                           + "\n" + root.statusText(root.interviewResult.completion_status)
-                                    color: root.palette.text
+                                    color: root.colors.text
                                     font.pixelSize: root.theme.fontBody
                                     wrapMode: Text.Wrap
                                     lineHeight: 1.5
@@ -1556,7 +1547,7 @@ Item {
                                   + Math.round(Number((root.interviewResult.blueprint_coverage || {}).coverage_weight || 0) * 100)
                                   + "%\n省略代码实现轮次："
                                   + root.fallbackRoundSummary((root.interviewResult.blueprint_coverage || {}).omitted_rounds)
-                            color: root.palette.warning
+                            color: root.colors.warning
                             wrapMode: Text.Wrap
                             font.pixelSize: 12
                             font.bold: true
@@ -1565,7 +1556,7 @@ Item {
                             width: parent.width
                             visible: root.resultSourceNote(root.interviewResult).length > 0
                             text: root.resultSourceNote(root.interviewResult)
-                            color: root.palette.muted
+                            color: root.colors.muted
                             wrapMode: Text.Wrap
                             font.pixelSize: 12
                         }
@@ -1573,10 +1564,10 @@ Item {
                             width: parent.width
                             visible: !!root.interviewResult.summary
                             text: root.interviewResult.summary || ""
-                            color: root.palette.text
+                            color: root.colors.text
                             wrapMode: Text.Wrap
                         }
-                        Text { width: parent.width; text: "评分证据"; color: root.palette.muted; font.bold: true }
+                        Text { width: parent.width; text: "评分证据"; color: root.colors.muted; font.bold: true }
                         Repeater {
                             model: root.interviewResult.assessment_evidence || []
                             delegate: Rectangle {
@@ -1593,7 +1584,7 @@ Item {
                                         width: parent.width
                                         text: (modelData.title || modelData.question_id || "未命名问题")
                                               + (modelData.score === undefined || modelData.score === null ? " · 尚未评分" : " · " + modelData.score)
-                                        color: root.palette.text
+                                        color: root.colors.text
                                         font.pixelSize: root.theme.fontBodyLarge
                                         font.bold: true
                                         wrapMode: Text.Wrap
@@ -1602,7 +1593,7 @@ Item {
                                         width: parent.width
                                         text: "来源：" + root.assessmentSourceText(modelData.source)
                                               + " · 置信度：" + root.confidenceText(modelData.confidence)
-                                        color: root.palette.muted
+                                        color: root.colors.muted
                                         font.pixelSize: root.theme.fontCaption
                                         wrapMode: Text.Wrap
                                     }
@@ -1610,7 +1601,7 @@ Item {
                                         visible: (modelData.followup_ids || []).length > 0
                                         width: parent.width
                                         text: "关联追问：" + root.followupLabelList(modelData.followup_ids)
-                                        color: root.palette.accent
+                                        color: root.colors.accent
                                         font.pixelSize: 11
                                         wrapMode: Text.Wrap
                                     }
@@ -1629,7 +1620,7 @@ Item {
                             visible: (root.interviewResult.followups || []).length > 0
                             width: parent.width
                             spacing: 8
-                            Text { width: parent.width; text: "追问记录"; color: root.palette.muted; font.bold: true }
+                            Text { width: parent.width; text: "追问记录"; color: root.colors.muted; font.bold: true }
                             Repeater {
                                 model: root.interviewResult.followups || []
                                 delegate: Rectangle {
@@ -1638,8 +1629,8 @@ Item {
                                     width: parent.width
                                     height: followupColumn.implicitHeight + 16
                                     radius: 8
-                                    color: root.palette.surface
-                                    border.color: root.palette.border
+                                    color: root.colors.surface
+                                    border.color: root.colors.border
                                     Column {
                                         id: followupColumn
                                         x: 10; y: 8; width: parent.width - 20; spacing: 4
@@ -1647,18 +1638,18 @@ Item {
                                             width: parent.width
                                             text: "追问 " + (index + 1) + " · "
                                                   + (modelData.parent_title || modelData.parent_question_id || "原问题未记录")
-                                            color: root.palette.accent
+                                            color: root.colors.accent
                                             font.bold: true
                                             wrapMode: Text.Wrap
                                         }
-                                        Text { width: parent.width; text: modelData.prompt || ""; color: root.palette.text; wrapMode: Text.Wrap }
-                                        Text { width: parent.width; text: "回答：" + (modelData.answer || ""); color: root.palette.text; wrapMode: Text.Wrap }
-                                        Text { width: parent.width; text: "来源：" + root.assessmentSourceText(modelData.source); color: root.palette.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
+                                        Text { width: parent.width; text: modelData.prompt || ""; color: root.colors.text; wrapMode: Text.Wrap }
+                                        Text { width: parent.width; text: "回答：" + (modelData.answer || ""); color: root.colors.text; wrapMode: Text.Wrap }
+                                        Text { width: parent.width; text: "来源：" + root.assessmentSourceText(modelData.source); color: root.colors.muted; font.pixelSize: 11; wrapMode: Text.Wrap }
                                         Text {
                                             width: parent.width
                                             text: "记录：" + (modelData.followup_id || "未编号")
                                                   + " · " + root.recordedAtText(modelData.recorded_at)
-                                            color: root.palette.muted
+                                            color: root.colors.muted
                                             font.pixelSize: 11
                                             wrapMode: Text.Wrap
                                         }
@@ -1670,14 +1661,14 @@ Item {
                             width: parent.width
                             visible: (root.interviewResult.assessment_evidence || []).length === 0
                             text: "本场没有足够证据支持评分。"
-                            color: root.palette.muted
+                            color: root.colors.muted
                             wrapMode: Text.Wrap
                         }
                         Text {
                             width: parent.width
                             visible: root.resultListText(root.interviewResult.critical_gaps, "").length > 0
                             text: "关键缺口：" + root.resultListText(root.interviewResult.critical_gaps, "")
-                            color: root.palette.warning
+                            color: root.colors.warning
                             wrapMode: Text.Wrap
                             font.bold: true
                         }
@@ -1685,14 +1676,14 @@ Item {
                             width: parent.width
                             visible: root.resultUnscoredText(root.interviewResult).length > 0
                             text: root.resultUnscoredText(root.interviewResult)
-                            color: root.palette.warning
+                            color: root.colors.warning
                             wrapMode: Text.Wrap
                             font.bold: true
                         }
                         Text {
                             width: parent.width
                             text: "该结果只记录模拟面试证据，不会改变刷题训练的掌握状态。"
-                            color: root.palette.muted
+                            color: root.colors.muted
                             wrapMode: Text.Wrap
                             font.pixelSize: 12
                         }
@@ -1700,7 +1691,7 @@ Item {
                     ColumnLayout {
                         visible: root.codingQuestion && !root.showCodingPrompt
                         width: parent.width; spacing: 10
-                        Text { text: "本场手撕代码"; color: root.palette.text; font.bold: true }
+                        Text { text: "本场手撕代码"; color: root.colors.text; font.bold: true }
                         LabTextArea {
                             id: codingEditor
                             objectName: "interviewCodingEditor"
@@ -1708,13 +1699,13 @@ Item {
                             Layout.fillWidth: true; Layout.preferredHeight: root.compactInterviewLayout ? 210 : 260
                             text: app.interview.coding_text || ""
                             readOnly: !root.interviewCanEdit
-                            color: root.palette.text
+                            color: root.colors.text
                             font.family: root.codeFontFamily
                             font.pixelSize: 13
                             wrapMode: TextEdit.NoWrap
                             padding: 12
                             clip: true
-                            background: Rectangle { color: root.palette.surfaceAlt; radius: 8; border.color: root.palette.border }
+                            background: Rectangle { color: root.colors.surfaceAlt; radius: 8; border.color: root.colors.border }
                             Accessible.name: "限时代码面试编辑器"
                             onTextChanged: if (!root.syncingQuestionEditors) root.codingEditorDirty = true
                         }
@@ -1726,7 +1717,7 @@ Item {
                         }
                         Rectangle {
                             Layout.fillWidth: true; Layout.preferredHeight: 140; radius: 8
-                            color: root.palette.surfaceAlt; border.color: root.palette.border
+                            color: root.colors.surfaceAlt; border.color: root.colors.border
                             ScrollView {
                                 id: codingOutputScroll
                                 anchors.fill: parent; anchors.margins: 10
@@ -1737,14 +1728,14 @@ Item {
                                     width: codingOutputScroll.availableWidth
                                     text: app.interview.coding_test_output || "尚未运行。点击「保存并测试」，将测试当前编辑器中的代码。"
                                     textFormat: Text.PlainText
-                                    color: root.palette.text
+                                    color: root.colors.text
                                     wrapMode: Text.Wrap
                                     font.family: root.codeFontFamily
                                     font.pixelSize: root.theme ? root.theme.scaledPx(12) : 12
                                 }
                             }
                         }
-                        Text { text: "面试进行中不会展示教学提示。代码记录只接受当前编辑器已复测的版本。"; color: root.palette.warning; font.pixelSize: 12; font.bold: true; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                        Text { text: "面试进行中不会展示教学提示。代码记录只接受当前编辑器已复测的版本。"; color: root.colors.warning; font.pixelSize: 12; font.bold: true; wrapMode: Text.Wrap; Layout.fillWidth: true }
                     }
                 }
                 }
@@ -1835,13 +1826,51 @@ Item {
                             Layout.preferredHeight: Math.min(root.theme.scaledPx(root.compactInterviewLayout ? 144 : 192),
                                                             Math.max(root.theme.scaledPx(76), answer.implicitHeight))
                         }
+                        Flow {
+                            objectName: "interviewComposerOptions"
+                            Layout.fillWidth: true
+                            Layout.columnSpan: 2
+                            Layout.preferredHeight: childrenRect.height
+                            spacing: 8
+                            visible: !!activeQuestion && activeQuestion.kind !== "coding"
+                                     && (root.answerLocked || root.dynamicInterview) && !app.interview.answer_corrupted
+                                     && (app.interview.ai_mode === "provider"
+                                         || (app.interview.ai_mode === "codex" && (app.interview.material_refs || []).length > 0))
+                            ComboBox {
+                                id: providerConnection
+                                objectName: "interviewActiveProvider"
+                                visible: !!activeQuestion && activeQuestion.kind !== "coding" && (root.answerLocked || root.dynamicInterview) && !app.interview.answer_corrupted && app.interview.ai_mode === "provider"
+                                enabled: !app.busy
+                                width: Math.min(240, parent.width)
+                                height: root.theme.controlHeightCompact
+                                font.family: root.theme.uiFontFamily
+                                font.pixelSize: root.theme.fontCaption
+                                model: app.connections
+                                textRole: "display_name"
+                                valueRole: "connection_id"
+                            }
+                            CheckBox {
+                                id: includeInterviewMaterials
+                                objectName: "includeInterviewMaterialsToggle"
+                                width: Math.min(implicitWidth, parent.width)
+                                font.pixelSize: root.theme.fontCaption
+                                font.family: root.theme.uiFontFamily
+                                visible: !!activeQuestion && (root.answerLocked || root.dynamicInterview) && !app.interview.answer_corrupted
+                                         && activeQuestion.kind !== "coding"
+                                         && app.interview.ai_mode !== "disabled"
+                                         && (app.interview.material_refs || []).length > 0
+                                checked: true
+                                enabled: !app.busy
+                                text: "包含本场授权的简历 / JD"
+                            }
+                        }
                         Text {
                             objectName: "interviewAnswerActionHint"
                             visible: !root.dynamicInterview
                             text: root.answerLocked
                                   ? "回答已锁定；先记录证据，再选择评分来源。"
                                   : "提交并锁定后，再查看评分维度。"
-                            color: root.palette.muted
+                            color: root.colors.muted
                             font.family: root.theme ? root.theme.uiFontFamily : ""
                             font.pixelSize: root.theme ? root.theme.fontCaption : 12
                             wrapMode: Text.Wrap
@@ -1988,7 +2017,7 @@ Item {
                           ? (root.dynamicInterview ? "AI 正在阅读你的回答并生成下一问……" : "AI 正在根据回答生成评分证据……")
                           : app.interview.ai_error || "Codex 评分尚未完成；可以检查连接后重试。"
                     color: app.interview.ai_assessment_state === "streaming"
-                           ? root.palette.accent : root.palette.warning
+                           ? root.colors.accent : root.colors.warning
                     wrapMode: Text.Wrap
                     font.pixelSize: 11
                 }
@@ -2001,7 +2030,7 @@ Item {
                         text: root.conversationalAnswer
                               ? (root.answerLocked ? "回答已保存，失败后可直接重试。" : "提交后，AI 会根据本轮回答继续追问。")
                               : root.interviewFinished ? "保留每轮证据，复盘更有依据。" : ""
-                        color: root.palette.muted
+                        color: root.colors.muted
                         font.pixelSize: 12
                     }
                     Item { Layout.fillWidth: true }
@@ -2064,26 +2093,6 @@ Item {
         onAccepted: app.pauseInterview()
     }
 
-    LabDialog {
-        id: sessionInfoDialog
-        objectName: "interviewSessionInfoDialog"
-        theme: root.theme
-        anchors.centerIn: parent
-        width: Math.min(520, root.width - 48)
-        title: "本场信息"
-        showSecondary: false
-        primaryText: "返回回答"
-        message: (app.interview.role_title || app.interview.role_id || "")
-                 + "\n" + root.seniorityText(app.interview.seniority)
-                 + " · " + root.difficultyText(app.interview.difficulty)
-                 + " · " + root.statusText(app.interview.status)
-        detailText: (root.dynamicInterview
-                     ? "已展示 " + (app.interview.total_questions || 0) + " 问；后续根据回答逐问生成。"
-                     : "已完成 " + (app.interview.completed_questions || 0) + " / " + (app.interview.total_questions || 0))
-                    + (app.interview.delivery_mode === "non_coding_fallback" ? "\n范围  非代码专项（部分证据）" : "")
-                    + "\n面试结果用于复盘，不改变刷题训练的掌握状态。"
-    }
-
     Basic.Dialog {
         id: contextDialog
         objectName: "interviewAnswerContextDialog"
@@ -2103,16 +2112,16 @@ Item {
                 y: 16
                 width: parent.width - 40
                 text: contextDialog.title
-                color: root.palette.text
+                color: root.colors.text
                 font.pixelSize: root.theme ? root.theme.fontSection : 18
                 font.bold: true
                 wrapMode: Text.Wrap
             }
         }
         background: Rectangle {
-            color: root.palette.surface
+            color: root.colors.surface
             radius: 12
-            border.color: root.palette.border
+            border.color: root.colors.border
             border.width: 1
         }
         footer: Basic.DialogButtonBox {
@@ -2166,13 +2175,13 @@ Item {
                 text: root.pendingAIAction === "submit"
                       ? "授权本场对话：点击提交时发送当前回答、前序问答、岗位背景和下列材料。相同范围只需确认一次；材料、背景或服务改变后会重新确认。"
                       : "这里只列出发送范围。关闭预览不会发送任何内容。"
-                color: root.palette.text
+                color: root.colors.text
                 wrapMode: Text.Wrap
             }
             Text {
                 Layout.fillWidth: true
                 text: "以下列出本次请求的内容范围；授权材料另显示短 SHA 以供核对。"
-                color: root.palette.muted
+                color: root.colors.muted
                 font.pixelSize: 11
                 wrapMode: Text.Wrap
             }
@@ -2189,7 +2198,7 @@ Item {
             Text {
                 Layout.fillWidth: true
                 text: "预计上下文：" + (root.aiPreview.estimated_tokens || 0) + " tokens"
-                color: root.palette.muted
+                color: root.colors.muted
                 font.pixelSize: root.theme ? root.theme.fontCaption : 12
                 wrapMode: Text.Wrap
             }
@@ -2224,16 +2233,16 @@ Item {
                 y: 16
                 width: parent.width - 40
                 text: planContextDialog.title
-                color: root.palette.text
+                color: root.colors.text
                 font.pixelSize: root.theme ? root.theme.fontSection : 18
                 font.bold: true
                 wrapMode: Text.Wrap
             }
         }
         background: Rectangle {
-            color: root.palette.surface
+            color: root.colors.surface
             radius: 12
-            border.color: root.palette.border
+            border.color: root.colors.border
             border.width: 1
         }
         footer: Basic.DialogButtonBox {
@@ -2285,13 +2294,13 @@ Item {
             Text {
                 Layout.fillWidth: true
                 text: "确认后立即进入开场题。面试流程、岗位技能、难度和你明确授权的材料会作为后续 AI 请求的上下文；不会在开始时等待模型，也不会提前生成整场计划。"
-                color: root.palette.text
+                color: root.colors.text
                 wrapMode: Text.Wrap
             }
             Text {
                 Layout.fillWidth: true
                 text: "本场授权包含你主动提交的回答及前序问答。每次点击“提交并继续”会直接发送，不再逐轮弹窗；材料、背景或服务改变时重新确认。AI 只生成当前下一问，不预排整场题单。"
-                color: root.palette.muted
+                color: root.colors.muted
                 font.pixelSize: 11
                 wrapMode: Text.Wrap
             }
@@ -2309,7 +2318,7 @@ Item {
                 Layout.fillWidth: true
                 text: "预计上下文：" + (root.planContext.estimated_tokens || 0)
                       + " tokens · SHA " + String(root.planContext.context_sha256 || "").slice(0, 12)
-                color: root.palette.muted
+                color: root.colors.muted
                 font.pixelSize: root.theme ? root.theme.fontCaption : 12
                 wrapMode: Text.Wrap
             }
@@ -2330,7 +2339,7 @@ Item {
             Text {
                 Layout.fillWidth: true
                 text: app.interviewPlanPreview.user_message || "请检查计划。"
-                color: root.palette.text
+                color: root.colors.text
                 wrapMode: Text.Wrap
                 font.bold: true
             }
@@ -2341,7 +2350,7 @@ Item {
                       + "\n材料：" + ((app.interviewPlanPreview.material_refs || []).length)
                       + " 份逐场授权 · 上下文 SHA："
                       + String(app.interviewPlanPreview.plan_context_sha256 || "").slice(0, 12)
-                color: root.palette.muted
+                color: root.colors.muted
                 wrapMode: Text.Wrap
                 font.pixelSize: 12
             }
@@ -2357,10 +2366,10 @@ Item {
                         delegate: LabCard {
                             required property var modelData
                             width: parent.width
-                            cardColor: root.palette.surfaceAlt
+                            cardColor: root.colors.surfaceAlt
                             borderColor: modelData.source.kind === "catalog_problem"
                                          || modelData.source.kind === "process_opening"
-                                         ? root.palette.accent : root.palette.border
+                                         ? root.colors.accent : root.colors.border
                             Text {
                                 width: parent.width
                                 text: modelData.source.kind === "catalog_problem"
@@ -2371,14 +2380,14 @@ Item {
                                       + " · " + modelData.timebox_minutes + " 分钟"
                                 color: modelData.source.kind === "catalog_problem"
                                        || modelData.source.kind === "process_opening"
-                                       ? root.palette.accent : root.palette.muted
+                                       ? root.colors.accent : root.colors.muted
                                 font.pixelSize: 11
                                 font.bold: true
                             }
                             Text {
                                 width: parent.width
                                 text: modelData.title
-                                color: root.palette.text
+                                color: root.colors.text
                                 font.pixelSize: 16
                                 font.bold: true
                                 wrapMode: Text.Wrap
@@ -2386,7 +2395,7 @@ Item {
                             Text {
                                 width: parent.width
                                 text: modelData.prompt
-                                color: root.palette.muted
+                                color: root.colors.muted
                                 wrapMode: Text.Wrap
                                 maximumLineCount: 4
                                 elide: Text.ElideRight
@@ -2460,7 +2469,7 @@ Item {
             Text {
                 Layout.fillWidth: true
                 text: "开始后会创建一份不可静默改题的本地 session，并启动本地计时。"
-                color: root.palette.text
+                color: root.colors.text
                 wrapMode: Text.Wrap
                 font.bold: true
             }
@@ -2470,14 +2479,14 @@ Item {
                       + "\n求职阶段：" + root.seniorityText(seniority.currentValue)
                       + "\n难度：" + root.difficultyText(difficulty.currentValue)
                       + "\n面试官：" + (aiMode.currentText || "手动 / 无 AI")
-                color: root.palette.text
+                color: root.colors.text
                 wrapMode: Text.Wrap
             }
             Text {
                 Layout.fillWidth: true
                 text: "固定题目环节：" + ((root.configuration.rounds || []).length || "按岗位蓝图")
                       + " · 题目组合和公开 Rubric 会在创建时冻结。"
-                color: root.palette.muted
+                color: root.colors.muted
                 wrapMode: Text.Wrap
                 font.pixelSize: 12
             }
@@ -2485,14 +2494,14 @@ Item {
                 Layout.fillWidth: true
                 visible: useMaterial.checked
                 text: "材料：仅使用你勾选并同意的精确 ID / SHA；不会读取其他材料。"
-                color: root.palette.warning
+                color: root.colors.warning
                 wrapMode: Text.Wrap
                 font.pixelSize: 12
             }
             Text {
                 Layout.fillWidth: true
                 text: "确认后才会写入当前 Profile；取消不会创建 session。"
-                color: root.palette.muted
+                color: root.colors.muted
                 wrapMode: Text.Wrap
                 font.pixelSize: 12
             }
@@ -2523,7 +2532,7 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     text: "当前环境缺少完整蓝图所需的 PyTorch 代码环节。你可以明确选择只完成其余固定非代码轮次。"
-                    color: root.palette.text
+                    color: root.colors.text
                     wrapMode: Text.Wrap
                     font.bold: true
                 }
@@ -2533,14 +2542,14 @@ Item {
                           + "\n省略：" + root.fallbackRoundSummary(root.nonCodingFallback().omitted_rounds)
                           + "\n专项时长：" + Number(root.nonCodingFallback().duration_minutes || 0) + " 分钟"
                           + "\n蓝图证据覆盖：" + root.fallbackCoveragePercent() + "%"
-                    color: root.palette.text
+                    color: root.colors.text
                     wrapMode: Text.Wrap
                     lineHeight: 1.4
                 }
                 Text {
                     Layout.fillWidth: true
                     text: "各轮仍保留原蓝图权重，不会重新归一化。即使所有专项问题都完成，本场也始终标记为未完整，只形成部分面试证据。"
-                    color: root.palette.warning
+                    color: root.colors.warning
                     wrapMode: Text.Wrap
                     font.pixelSize: 12
                     font.bold: true
@@ -2548,14 +2557,14 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     text: "技术状态：incomplete / partial evidence"
-                    color: root.palette.muted
+                    color: root.colors.muted
                     wrapMode: Text.Wrap
                     font.pixelSize: 11
                 }
                 Text {
                     Layout.fillWidth: true
                     text: "专项结果不会改变 Practice mastery。需要完整岗位面试时，需先克隆源码并进入仓库根目录，再运行：python -m pip install -e \".[torch,dev]\""
-                    color: root.palette.muted
+                    color: root.colors.muted
                     wrapMode: Text.WrapAnywhere
                     font.pixelSize: 12
                 }
@@ -2564,7 +2573,7 @@ Item {
                     Layout.fillWidth: true
                     text: "<a href=\"https://github.com/ComistryMo/llm_interview_lab/blob/main/docs/desktop-app.md\">查看源码环境说明</a>"
                     textFormat: Text.RichText
-                    color: root.palette.accent
+                    color: root.colors.accent
                     font.pixelSize: 12
                     onLinkActivated: Qt.openUrlExternally(link)
                 }
@@ -2572,7 +2581,7 @@ Item {
                     Layout.fillWidth: true
                     visible: useMaterial.checked
                     text: "材料：仅使用你勾选并同意的精确 ID / SHA；不会读取其他材料。"
-                    color: root.palette.warning
+                    color: root.colors.warning
                     wrapMode: Text.Wrap
                     font.pixelSize: 12
                 }

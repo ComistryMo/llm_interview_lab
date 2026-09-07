@@ -6,7 +6,7 @@ import "../components"
 Flickable {
     id: root
     required property var app
-    required property var palette
+    required property var colors
     required property var theme
     contentWidth: width; contentHeight: content.implicitHeight + 60; clip: true
     property bool advanced: false
@@ -15,6 +15,7 @@ Flickable {
     property string editingConnectionId: ""
     property string formError: ""
     property bool saving: false
+    readonly property bool deepSeek: provider.currentText === "deepseek"
     // Keep the first configuration fields in view on compact desktop windows.
     // The full explanations remain available at a taller viewport without
     // changing the connection model or its actions.
@@ -68,7 +69,9 @@ Flickable {
         // id is not silently regenerated or changed when a user edits the
         // display fields.
         connectionId.text = root.editingConnectionId
-        model.text = String(item.model || "")
+        modelField.text = String(item.model || "")
+        deepseekModel.currentIndex = deepseekModel.find(modelField.text)
+        if (deepseekModel.currentIndex < 0) deepseekModel.currentIndex = 2
         var effortValue = String(item.reasoning_effort || "")
         for (var j = 0; j < reasoningEffort.count; ++j) {
             if (String(reasoningEffort.model[j].value) === effortValue) {
@@ -83,8 +86,10 @@ Flickable {
         secretOrEndpoint.text = item.provider_id === "ollama"
                                 ? String(item.base_url || "") : ""
         Qt.callLater(function() {
-            model.forceActiveFocus()
-            model.selectAll()
+            if (modelField.visible) {
+                modelField.forceActiveFocus()
+                modelField.selectAll()
+            } else deepseekModel.forceActiveFocus()
             root.cancelFlick()
             root.contentY = Math.max(0, content.y + connectionForm.y - 12)
         })
@@ -95,7 +100,8 @@ Flickable {
         root.clearFormError()
         root.advanced = false
         provider.currentIndex = 0
-        model.text = ""
+        deepseekModel.currentIndex = 0
+        modelField.text = root.deepSeek ? "deepseek-v4-flash" : ""
         reasoningEffort.currentIndex = 0
         secretOrEndpoint.text = ""
         endpoint.text = ""
@@ -109,16 +115,16 @@ Flickable {
         contentItem: Rectangle {
             implicitWidth: 5
             radius: 3
-            color: root.palette.muted
+            color: root.colors.muted
             opacity: 0.45
         }
     }
 
     ColumnLayout {
         id: content
-        x: root.compactForm ? 18 : 28
+        x: (root.width - width) / 2
         y: root.compactForm ? 18 : 24
-        width: parent.width - (root.compactForm ? 36 : 56)
+        width: Math.min(900, parent.width - (root.compactForm ? 36 : 56))
         spacing: root.compactForm ? 10 : 12
 
         // Main.qml owns the route title; use this smaller line for the
@@ -126,7 +132,7 @@ Flickable {
         Text {
             objectName: "connectionsRouteContext"
             text: "本地优先，按需连接 AI"
-            color: root.palette.text
+            color: root.colors.text
             font.pixelSize: 16
             font.bold: true
         }
@@ -134,7 +140,7 @@ Flickable {
             text: root.compactOverview
                   ? "不连接 AI 也能训练；远程请求仅发送你确认的内容。"
                   : "不连接 AI 也能完成固定课程、测试和复测。个性化模拟面试需要 AI；远程请求只发送你确认的上下文。"
-            color: root.palette.muted
+            color: root.colors.muted
             wrapMode: Text.Wrap
             // Security guidance must not disappear behind an ellipsis.  The
             // compact copy is short enough for one line on the target window,
@@ -142,6 +148,227 @@ Flickable {
             maximumLineCount: 2
             elide: Text.ElideNone
             Layout.fillWidth: true
+        }
+
+
+        LabCard {
+            id: connectionForm
+            objectName: "connectionForm"
+            Layout.fillWidth: true
+            // Let LabCard's implicit height follow the visible form rows.  A
+            // fixed height used to let the privacy note spill into the next
+            // section after the primary action was moved to the header.
+            cardColor: root.colors.surface; borderColor: root.colors.border
+            Text {
+                text: root.editingConnectionId.length > 0 ? "编辑 AI 连接" : root.deepSeek ? "连接 DeepSeek" : "连接普通 LLM API"
+                color: root.colors.text
+                font.pixelSize: 18
+                font.bold: true
+            }
+            // Keep the primary action adjacent to the form heading so it remains
+            // discoverable in the initial viewport on compact desktop windows.
+            RowLayout {
+                visible: root.editingConnectionId.length > 0
+                width: parent.width
+                spacing: 8
+                StatusPill { text: "正在编辑"; tone: root.colors.accent }
+                Text {
+                    text: root.editingConnectionId
+                    color: root.colors.muted
+                    elide: Text.ElideMiddle
+                    Layout.fillWidth: true
+                }
+                Button {
+                    text: "取消编辑"
+                    flat: true
+                    onClicked: root.cancelEditConnection()
+                }
+            }
+            RowLayout {
+                width: parent.width
+                spacing: 12
+                LabButton {
+                    objectName: "saveAndTestConnection"
+                    theme: root.theme
+                    variant: "primary"
+                    // Static contract: text: "保存并测试"
+                    text: root.saving ? "正在保存并测试…" : "保存并测试"
+                    enabled: modelField.text.trim().length > 0 && !root.saving && !app.busy
+                    onClicked: {
+                        root.saving = true
+                        var isOllama = provider.currentText === "ollama"
+                        var saved = app.saveConnection(connectionId.text, provider.currentText, modelField.text,
+                                                       displayName.text, isOllama ? secretOrEndpoint.text : root.deepSeek ? "" : endpoint.text,
+                                                       isOllama ? "" : secretOrEndpoint.text,
+                                                       reasoningEffort.currentValue)
+                        if (saved) {
+                            root.formError = ""
+                            app.testConnection(connectionId.text)
+                            if (!isOllama) secretOrEndpoint.text = ""
+                            root.editingConnectionId = ""
+                        } else {
+                            root.formError = "保存失败。请检查连接 ID、模型和地址；远程服务的 API Key 必须可由系统密钥环保存。"
+                        }
+                        // saveConnection is synchronous; testConnection owns
+                        // the asynchronous busy state. Release this local guard
+                        // after the one save call so a failed save can be fixed
+                        // immediately, while app.busy blocks duplicate tests.
+                        root.saving = false
+                    }
+                }
+                Text {
+                    text: root.deepSeek ? "官方地址已填好；只需选择模型并填写 Key。" : "填写模型与凭证，保存后自动测试。"
+                    color: root.colors.muted
+                    font.pixelSize: 12
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
+                }
+            }
+            GridLayout {
+                width: parent.width; columns: 2; columnSpacing: 12; rowSpacing: 10
+                Text { text: "服务"; color: root.colors.muted }
+                ComboBox {
+                    id: provider
+                    objectName: "connectionProviderChoice"
+                    Layout.fillWidth: true
+                    model: app.providerOptions
+                    enabled: root.editingConnectionId.length === 0
+                    onActivated: {
+                        root.clearFormError()
+                        reasoningEffort.currentIndex = 0
+                        deepseekModel.currentIndex = 0
+                        modelField.text = root.deepSeek ? "deepseek-v4-flash" : ""
+                    }
+                }
+                Text { text: "模型"; color: root.colors.muted }
+                ComboBox {
+                    id: deepseekModel
+                    objectName: "deepseekModelChoice"
+                    visible: root.deepSeek
+                    Layout.fillWidth: true
+                    model: ["deepseek-v4-flash", "deepseek-v4-pro", "自定义模型 ID"]
+                    onActivated: {
+                        modelField.text = currentIndex < 2 ? currentText : ""
+                        root.clearFormError()
+                    }
+                }
+                Text { visible: root.deepSeek && deepseekModel.currentIndex === 2; text: "模型 ID"; color: root.colors.muted }
+                LabTextField {
+                    id: modelField
+                    objectName: "connectionModelField"
+                    theme: root.theme
+                    Layout.fillWidth: true
+                    visible: !root.deepSeek || deepseekModel.currentIndex === 2
+                    text: root.deepSeek ? "deepseek-v4-flash" : ""
+                    placeholderText: "例如 gpt-5、claude 或本地模型 ID"
+                    onTextEdited: root.clearFormError()
+                }
+                Text { text: "推理强度"; color: root.colors.muted }
+                ComboBox {
+                    id: reasoningEffort
+                    objectName: "providerReasoningEffort"
+                    Layout.fillWidth: true
+                    textRole: "label"
+                    valueRole: "value"
+                    model: root.deepSeek ? [
+                        {value: "none", label: "关闭思考 · 更快回复"},
+                        {value: "low", label: "低 · 轻量思考"},
+                        {value: "high", label: "高 · 深入思考"},
+                        {value: "max", label: "最高 · 等待更久"},
+                        {value: "", label: "服务默认（当前为高）"}
+                    ] : [
+                        {value: "", label: "使用服务默认值"},
+                        {value: "low", label: "低"},
+                        {value: "medium", label: "中"},
+                        {value: "high", label: "高"},
+                        {value: "xhigh", label: "极高"}
+                    ]
+                    onActivated: root.clearFormError()
+                }
+                Text {
+                    text: root.deepSeek ? "官方地址：https://api.deepseek.com\n思考越深入通常等待越久；不会把思考片段当作回答。"
+                                       : "仅在所选模型支持时生效；不确定时保留默认值。"
+                    color: root.colors.muted
+                    font.pixelSize: 12
+                    Layout.columnSpan: 2
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                }
+                Text {
+                    visible: modelField.text.trim().length === 0
+                    text: "请输入模型 ID 后才能保存并测试。"
+                    color: root.colors.warning
+                    font.pixelSize: 12
+                    Layout.columnSpan: 2
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                }
+                Text { text: provider.currentText === "ollama" ? "本地地址" : "API Key"; color: root.colors.muted }
+                LabTextField {
+                    id: secretOrEndpoint; Layout.fillWidth: true
+                    objectName: "connectionSecretField"
+                    theme: root.theme
+                    placeholderText: provider.currentText === "ollama" ? "http://127.0.0.1:11434" : "仅保存到系统密钥环"
+                    echoMode: provider.currentText === "ollama" ? TextInput.Normal : TextInput.Password
+                    onTextEdited: root.clearFormError()
+                }
+                Text {
+                    visible: provider.currentText === "ollama"
+                    text: "Ollama 使用本机地址，不需要 API Key。"
+                    color: root.colors.muted
+                    font.pixelSize: 12
+                    Layout.columnSpan: 2
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                }
+            }
+            ToolButton { text: root.advanced ? "收起高级设置" : "展开高级设置"; onClicked: root.advanced = !root.advanced }
+            Text {
+                objectName: "connectionFormError"
+                visible: root.formError.length > 0 || (app.connectionError || "").length > 0
+                text: app.connectionError || root.formError
+                color: root.colors.danger
+                font.pixelSize: 12
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+            GridLayout {
+                visible: root.advanced
+                width: parent.width; columns: 2; columnSpacing: 12; rowSpacing: 10
+                LabTextField {
+                    id: connectionId
+                    theme: root.theme
+                    Layout.fillWidth: true
+                    text: provider.currentText + "-main"
+                    readOnly: root.editingConnectionId.length > 0
+                    placeholderText: root.editingConnectionId.length > 0
+                                     ? "编辑时保持连接 ID 不变" : "连接 ID"
+                }
+                LabTextField {
+                    id: displayName
+                    theme: root.theme
+                    Layout.fillWidth: true
+                    text: provider.currentText === "ollama" ? "本地 Ollama" : root.deepSeek ? "DeepSeek" : provider.currentText
+                    placeholderText: "显示名称"
+                    onTextEdited: root.clearFormError()
+                }
+                LabTextField {
+                    id: endpoint
+                    visible: !root.deepSeek
+                    theme: root.theme
+                    Layout.columnSpan: 2
+                    Layout.fillWidth: true
+                    placeholderText: "自定义 Endpoint（OpenAI-compatible 可选）"
+                    onTextEdited: root.clearFormError()
+                }
+            }
+            Text {
+                text: "Key 不会写入学习档案、事件或日志。"
+                color: root.colors.muted
+                font.pixelSize: 12
+                width: parent.width
+                wrapMode: Text.Wrap
+            }
         }
 
         GridLayout {
@@ -159,21 +386,21 @@ Flickable {
                                        : connectionOverview.width
                 Layout.preferredHeight: Math.max(root.overviewCardMinHeight, implicitHeight)
                 Layout.alignment: Qt.AlignTop
-                cardColor: root.palette.surface; borderColor: root.palette.border
-                accentColor: root.palette.success
+                cardColor: root.colors.surface; borderColor: root.colors.border
+                accentColor: root.colors.success
                 padding: root.compactOverview ? 10 : 14
                 RowLayout {
                     width: parent.width
-                    Text { text: "无需 AI"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
+                    Text { text: "无需 AI"; color: root.colors.text; font.pixelSize: 18; font.bold: true }
                     Item { Layout.fillWidth: true }
-                    StatusPill { text: "始终可用"; tone: root.palette.success }
+                    StatusPill { text: "始终可用"; tone: root.colors.success }
                 }
                 Text {
                     width: parent.width
                     text: root.compactOverview
                           ? "无需配置，训练可直接进行。"
-                          : "课程、测试、审查、复测和手动面试都在本机运行。"
-                    color: root.compactOverview ? root.palette.text : root.palette.muted
+                          : "课程、测试、审查与复测在本机运行；个性化面试需要连接 AI。"
+                    color: root.compactOverview ? root.colors.text : root.colors.muted
                     wrapMode: Text.Wrap
                     maximumLineCount: root.compactOverview ? 1 : 2
                     elide: Text.ElideRight
@@ -187,7 +414,7 @@ Flickable {
                     visible: !root.compactOverview
                     width: parent.width
                     text: "AI 不可用时仍可继续训练。"
-                    color: root.palette.text
+                    color: root.colors.text
                     wrapMode: Text.Wrap
                     font.bold: true
                 }
@@ -205,20 +432,20 @@ Flickable {
                 // not fit in one row. Let the card use two predictable rows
                 // instead of silently pushing the settings action off-screen.
                 Layout.preferredHeight: Math.max(root.overviewCardMinHeight, implicitHeight)
-                cardColor: root.palette.surface; borderColor: root.palette.border
-                accentColor: root.palette.accent
+                cardColor: root.colors.surface; borderColor: root.colors.border
+                accentColor: root.colors.accent
                 padding: root.compactOverview ? 10 : 14
                 RowLayout {
                     width: parent.width
-                    Text { text: "Codex"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
+                    Text { text: "Codex"; color: root.colors.text; font.pixelSize: 18; font.bold: true }
                     Item { Layout.fillWidth: true }
                     StatusPill {
                         text: app.aiStatusVariant === "connected" ? "已连接"
                               : app.aiStatusVariant === "connecting" ? "连接中"
                               : app.codexAvailable ? "已发现（未连接）" : "未检测到"
-                        tone: app.aiStatusVariant === "connected" ? root.palette.success
-                              : app.aiStatusVariant === "connecting" ? root.palette.warning
-                              : app.codexAvailable ? root.palette.accent : root.palette.warning
+                        tone: app.aiStatusVariant === "connected" ? root.colors.success
+                              : app.aiStatusVariant === "connecting" ? root.colors.warning
+                              : app.codexAvailable ? root.colors.accent : root.colors.warning
                     }
                 }
                 Text {
@@ -228,7 +455,7 @@ Flickable {
                           : app.aiStatusVariant === "connected"
                             ? "Codex 已连接，可使用只读教练或经审批的仓库代理。"
                             : "已找到 Codex，但还没有建立连接；请确认已登录后再点击连接。"
-                    color: root.palette.muted
+                    color: root.colors.muted
                     wrapMode: Text.Wrap
                     maximumLineCount: root.compactOverview ? 1 : 3
                     elide: Text.ElideRight
@@ -242,7 +469,7 @@ Flickable {
                         Layout.fillWidth: true
                         text: "模型：" + (app.codexModel || "默认")
                               + " · 推理强度：" + (app.codexReasoningEffort || "默认")
-                        color: root.palette.muted
+                        color: root.colors.muted
                         font.pixelSize: 11
                         elide: Text.ElideRight
                     }
@@ -267,199 +494,8 @@ Flickable {
             }
         }
 
-        LabCard {
-            id: connectionForm
-            objectName: "connectionForm"
-            Layout.fillWidth: true
-            // Let LabCard's implicit height follow the visible form rows.  A
-            // fixed height used to let the privacy note spill into the next
-            // section after the primary action was moved to the header.
-            cardColor: root.palette.surface; borderColor: root.palette.border
-            Text {
-                text: root.editingConnectionId.length > 0 ? "编辑 AI 连接" : "连接普通 LLM API"
-                color: root.palette.text
-                font.pixelSize: 18
-                font.bold: true
-            }
-            // Keep the primary action adjacent to the form heading so it remains
-            // discoverable in the initial viewport on compact desktop windows.
-            RowLayout {
-                visible: root.editingConnectionId.length > 0
-                width: parent.width
-                spacing: 8
-                StatusPill { text: "正在编辑"; tone: root.palette.accent }
-                Text {
-                    text: root.editingConnectionId
-                    color: root.palette.muted
-                    elide: Text.ElideMiddle
-                    Layout.fillWidth: true
-                }
-                Button {
-                    text: "取消编辑"
-                    flat: true
-                    onClicked: root.cancelEditConnection()
-                }
-            }
-            RowLayout {
-                width: parent.width
-                spacing: 12
-                LabButton {
-                    objectName: "saveAndTestConnection"
-                    theme: root.theme
-                    variant: "primary"
-                    // Static contract: text: "保存并测试"
-                    text: root.saving ? "正在保存并测试…" : "保存并测试"
-                    enabled: model.text.trim().length > 0 && !root.saving && !app.busy
-                    onClicked: {
-                        root.saving = true
-                        var isOllama = provider.currentText === "ollama"
-                        var saved = app.saveConnection(connectionId.text, provider.currentText, model.text,
-                                                       displayName.text, isOllama ? secretOrEndpoint.text : endpoint.text,
-                                                       isOllama ? "" : secretOrEndpoint.text,
-                                                       reasoningEffort.currentValue)
-                        if (saved) {
-                            root.formError = ""
-                            app.testConnection(connectionId.text)
-                            if (!isOllama) secretOrEndpoint.text = ""
-                            root.editingConnectionId = ""
-                        } else {
-                            root.formError = "保存失败。请检查连接 ID、模型和地址；远程服务的 API Key 必须可由系统密钥环保存。"
-                        }
-                        // saveConnection is synchronous; testConnection owns
-                        // the asynchronous busy state. Release this local guard
-                        // after the one save call so a failed save can be fixed
-                        // immediately, while app.busy blocks duplicate tests.
-                        root.saving = false
-                    }
-                }
-                Text {
-                    text: "填写模型并向下补充地址或密钥；保存后会自动测试连接。"
-                    color: root.palette.muted
-                    font.pixelSize: 12
-                    Layout.fillWidth: true
-                    elide: Text.ElideRight
-                }
-            }
-            GridLayout {
-                width: parent.width; columns: 2; columnSpacing: 12; rowSpacing: 10
-                Text { text: "服务"; color: root.palette.muted }
-                ComboBox {
-                    id: provider
-                    Layout.fillWidth: true
-                    model: app.providerOptions
-                    enabled: root.editingConnectionId.length === 0
-                    onActivated: root.clearFormError()
-                }
-                Text { text: "模型"; color: root.palette.muted }
-                LabTextField {
-                    id: model
-                    objectName: "connectionModelField"
-                    theme: root.theme
-                    Layout.fillWidth: true
-                    placeholderText: "例如 gpt-5、claude 或本地模型 ID"
-                    onTextEdited: root.clearFormError()
-                }
-                Text { text: "推理强度"; color: root.palette.muted }
-                ComboBox {
-                    id: reasoningEffort
-                    objectName: "providerReasoningEffort"
-                    Layout.fillWidth: true
-                    textRole: "label"
-                    valueRole: "value"
-                    model: [
-                        {value: "", label: "使用服务默认值"},
-                        {value: "low", label: "低"},
-                        {value: "medium", label: "中"},
-                        {value: "high", label: "高"},
-                        {value: "xhigh", label: "极高"}
-                    ]
-                    onActivated: root.clearFormError()
-                }
-                Text {
-                    text: "仅在所选模型支持时生效；不确定时保留默认值。"
-                    color: root.palette.muted
-                    font.pixelSize: 12
-                    Layout.columnSpan: 2
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                }
-                Text {
-                    visible: model.text.trim().length === 0
-                    text: "请输入模型 ID 后才能保存并测试。"
-                    color: root.palette.warning
-                    font.pixelSize: 12
-                    Layout.columnSpan: 2
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                }
-                Text { text: provider.currentText === "ollama" ? "本地地址" : "API Key"; color: root.palette.muted }
-                LabTextField {
-                    id: secretOrEndpoint; Layout.fillWidth: true
-                    theme: root.theme
-                    placeholderText: provider.currentText === "ollama" ? "http://127.0.0.1:11434" : "仅保存到系统密钥环"
-                    echoMode: provider.currentText === "ollama" ? TextInput.Normal : TextInput.Password
-                    onTextEdited: root.clearFormError()
-                }
-                Text {
-                    visible: provider.currentText === "ollama"
-                    text: "Ollama 使用本机地址，不需要 API Key。"
-                    color: root.palette.muted
-                    font.pixelSize: 12
-                    Layout.columnSpan: 2
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                }
-            }
-            ToolButton { text: root.advanced ? "收起高级设置" : "展开高级设置"; onClicked: root.advanced = !root.advanced }
-            Text {
-                objectName: "connectionFormError"
-                visible: root.formError.length > 0 || (app.connectionError || "").length > 0
-                text: app.connectionError || root.formError
-                color: root.palette.danger
-                font.pixelSize: 12
-                wrapMode: Text.Wrap
-                Layout.fillWidth: true
-            }
-            GridLayout {
-                visible: root.advanced
-                width: parent.width; columns: 2; columnSpacing: 12; rowSpacing: 10
-                LabTextField {
-                    id: connectionId
-                    theme: root.theme
-                    Layout.fillWidth: true
-                    text: provider.currentText + "-main"
-                    readOnly: root.editingConnectionId.length > 0
-                    placeholderText: root.editingConnectionId.length > 0
-                                     ? "编辑时保持连接 ID 不变" : "连接 ID"
-                }
-                LabTextField {
-                    id: displayName
-                    theme: root.theme
-                    Layout.fillWidth: true
-                    text: provider.currentText === "ollama" ? "本地 Ollama" : provider.currentText
-                    placeholderText: "显示名称"
-                    onTextEdited: root.clearFormError()
-                }
-                LabTextField {
-                    id: endpoint
-                    theme: root.theme
-                    Layout.columnSpan: 2
-                    Layout.fillWidth: true
-                    placeholderText: "自定义 Endpoint（OpenAI-compatible 可选）"
-                    onTextEdited: root.clearFormError()
-                }
-            }
-            Text {
-                text: "Key 不会写入学习档案、事件或日志。"
-                color: root.palette.muted
-                font.pixelSize: 12
-                width: parent.width
-                wrapMode: Text.Wrap
-            }
-        }
-
-        Text { text: "已保存的连接"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
-        Text { visible: app.connections.length === 0; text: "尚未配置。你可以直接使用无需 AI 的本地模式。"; color: root.palette.muted }
+        Text { text: "已保存的连接"; color: root.colors.text; font.pixelSize: 18; font.bold: true }
+        Text { visible: app.connections.length === 0; text: "尚未配置。你可以直接使用无需 AI 的本地模式。"; color: root.colors.muted }
         Repeater {
             model: app.connections
             delegate: LabCard {
@@ -471,7 +507,7 @@ Flickable {
                 // shrinking labels to unreadable glyphs.
                 Layout.fillWidth: true
                 Layout.minimumHeight: root.compactForm ? 142 : 116
-                cardColor: root.palette.surface; borderColor: root.palette.border
+                cardColor: root.colors.surface; borderColor: root.colors.border
                 ColumnLayout {
                     width: parent.width
                     spacing: 8
@@ -481,12 +517,12 @@ Flickable {
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 2
-                            Text { text: modelData.display_name || modelData.connection_id; color: root.palette.text; font.bold: true; elide: Text.ElideRight; Layout.fillWidth: true }
+                            Text { text: modelData.display_name || modelData.connection_id; color: root.colors.text; font.bold: true; elide: Text.ElideRight; Layout.fillWidth: true }
                             Text {
                                 text: modelData.provider_id + " · " + modelData.model
                                       + (modelData.reasoning_effort
                                          ? " · 推理 " + modelData.reasoning_effort : "")
-                                color: root.palette.muted
+                                color: root.colors.muted
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
                                 font.pixelSize: 12
@@ -495,8 +531,8 @@ Flickable {
                         StatusPill {
                             objectName: "savedConnectionStatus"
                             text: modelData.status || "已保存，尚未测试"
-                            tone: modelData.ready === true ? root.palette.success
-                                  : modelData.status === "连接失败" ? root.palette.danger : root.palette.muted
+                            tone: modelData.ready === true ? root.colors.success
+                                  : modelData.status === "连接失败" ? root.colors.danger : root.colors.muted
                             Layout.alignment: Qt.AlignTop
                         }
                     }
@@ -559,7 +595,7 @@ Flickable {
             width: Math.min(360, Math.max(240, root.width - 96))
             text: "将删除“" + root.pendingDeleteConnectionName
                   + "”的本地连接配置。系统密钥环中的 Key 不会被读取或展示；删除后仍可重新配置。"
-            color: root.palette.text
+            color: root.colors.text
             wrapMode: Text.Wrap
         }
     }

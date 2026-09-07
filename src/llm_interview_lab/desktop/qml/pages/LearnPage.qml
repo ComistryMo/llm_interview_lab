@@ -8,7 +8,7 @@ Item {
     objectName: "learnPage"
 
     required property var app
-    required property var palette
+    required property var colors
     property var theme: null
     property string layoutMode: "standard"
     property string section: "courses"
@@ -336,10 +336,10 @@ Item {
                                 height: Math.max(88, root.theme ? root.theme.scaledPx(88) : 88)
                                 radius: root.theme ? root.theme.radiusMedium : 9
                                 color: selected || hoverHandler.hovered
-                                       ? (root.theme ? root.theme.surfaceHover : root.palette.surfaceAlt)
+                                       ? (root.theme ? root.theme.surfaceHover : root.colors.surfaceAlt)
                                        : "transparent"
                                 border.color: selected
-                                              ? (root.theme ? root.theme.focusRing : root.palette.accent)
+                                              ? (root.theme ? root.theme.focusRing : root.colors.accent)
                                               : "transparent"
                                 border.width: selected ? 1 : 0
                                 activeFocusOnTab: true
@@ -376,7 +376,7 @@ Item {
                                             compact: true
                                             text: root.statusText(modelData.status)
                                             tone: modelData.status === "mastered"
-                                                  ? root.palette.success : root.palette.accent
+                                                  ? root.colors.success : root.colors.accent
                                         }
                                         LabText {
                                             theme: root.theme
@@ -461,19 +461,19 @@ Item {
                                         theme: root.theme
                                         text: root.statusText(root.selectedProblem.status)
                                         tone: root.selectedProblem.status === "mastered"
-                                              ? root.palette.success : root.palette.accent
+                                              ? root.colors.success : root.colors.accent
                                     }
                                     StatusPill {
                                         theme: root.theme
                                         text: root.validationText(root.selectedProblem.validation)
                                         tone: root.selectedProblem.validation === "contract"
-                                              ? root.palette.warning : root.palette.success
+                                              ? root.colors.warning : root.colors.success
                                     }
                                     StatusPill {
                                         theme: root.theme
                                         text: root.selectedProblem.environment || "当前可运行"
                                         tone: root.selectedProblem.environment_available === false
-                                              ? root.palette.warning : root.palette.muted
+                                              ? root.colors.warning : root.colors.muted
                                     }
                                 }
                                 InlineNotice {
@@ -611,7 +611,7 @@ Item {
                                 height: Math.max(80, root.theme ? root.theme.scaledPx(80) : 80)
                                 radius: root.theme ? root.theme.radiusMedium : 9
                                 color: hoverHandlerKnowledge.hovered
-                                       ? (root.theme ? root.theme.surfaceHover : root.palette.surfaceAlt)
+                                       ? (root.theme ? root.theme.surfaceHover : root.colors.surfaceAlt)
                                        : "transparent"
                                 activeFocusOnTab: true
                                 Accessible.role: Accessible.ListItem

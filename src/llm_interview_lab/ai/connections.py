@@ -22,9 +22,9 @@ from ..workspace import (
 
 CONNECTION_ID_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 SUPPORTED_PROVIDERS = frozenset(
-    {"openai", "openai-compatible", "anthropic", "gemini", "ollama"}
+    {"openai", "openai-compatible", "anthropic", "gemini", "ollama", "deepseek"}
 )
-SUPPORTED_REASONING_EFFORTS = frozenset({"low", "medium", "high", "xhigh"})
+SUPPORTED_REASONING_EFFORTS = frozenset({"low", "medium", "high", "xhigh", "max", "none"})
 
 
 class ConnectionConfigError(RuntimeError):
@@ -143,8 +143,12 @@ def save_connection(
     effort = reasoning_effort.strip().lower() if reasoning_effort else None
     if effort not in SUPPORTED_REASONING_EFFORTS | {None}:
         raise ConnectionConfigError(
-            "reasoning effort must be low, medium, high, xhigh, or empty"
+            "推理选项不受支持，请从当前服务的列表中重新选择。"
         )
+    if provider_id == "deepseek" and effort not in {None, "none", "low", "high", "max"}:
+        raise ConnectionConfigError("DeepSeek 支持关闭思考、低、高、最高；请选择对应选项。")
+    if provider_id != "deepseek" and effort in {"none", "max"}:
+        raise ConnectionConfigError("这个推理选项仅适用于 DeepSeek，请重新选择当前服务的推理强度。")
     value = _read(repo_root, profile_id)
     existing = next(
         (item for item in value["connections"] if item["connection_id"] == connection_id),

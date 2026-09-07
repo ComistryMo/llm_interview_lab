@@ -8,7 +8,7 @@ Rectangle {
     objectName: "onboardingPage"
 
     required property var app
-    required property var palette
+    required property var colors
     // Main.qml supplies these during the Quiet Forge migration. Keeping both
     // optional preserves source-mode and older embedding compatibility.
     property var theme: null
@@ -52,7 +52,7 @@ Rectangle {
                                                    || (app.profileRestoreError || "")
                                                    || root.roleSelectionError)
 
-    color: theme ? theme.canvas : root.palette.background
+    color: theme ? theme.canvas : root.colors.background
     focus: visible
     activeFocusOnTab: true
 
@@ -201,8 +201,8 @@ Rectangle {
             Layout.preferredWidth: visible
                                    ? Math.round((onboardingFrame.width - 16) * 0.32) : 0
             radius: root.theme ? root.theme.radiusLarge : 12
-            color: root.theme ? root.theme.surfaceSunken : root.palette.surfaceAlt
-            border.color: root.theme ? root.theme.borderSubtle : root.palette.border
+            color: root.theme ? root.theme.surfaceSunken : root.colors.surfaceAlt
+            border.color: root.theme ? root.theme.borderSubtle : root.colors.border
 
             ColumnLayout {
                 anchors.fill: parent
@@ -223,7 +223,7 @@ Rectangle {
                 Text {
                     Layout.fillWidth: true
                     text: "把面试准备，变成可验证的能力"
-                    color: root.theme ? root.theme.textStrong : root.palette.text
+                    color: root.theme ? root.theme.textStrong : root.colors.text
                     font.pixelSize: root.scaledPx(26)
                     font.weight: Font.DemiBold
                     wrapMode: Text.WordWrap
@@ -232,7 +232,7 @@ Rectangle {
                 Text {
                     Layout.fillWidth: true
                     text: "根据目标岗位安排训练路线，用公开测试、复盘和间隔复测帮助你独立完成，而不是替你给出答案。"
-                    color: root.theme ? root.theme.text : root.palette.muted
+                    color: root.theme ? root.theme.text : root.colors.muted
                     font.pixelSize: root.scaledPx(14)
                     lineHeight: 1.35
                     wrapMode: Text.WordWrap
@@ -259,7 +259,7 @@ Rectangle {
                                 Text {
                                     anchors.centerIn: parent
                                     text: "✓"
-                                    color: root.palette.accent
+                                    color: root.colors.accent
                                     font.pixelSize: root.scaledPx(11)
                                     font.bold: true
                                 }
@@ -267,7 +267,7 @@ Rectangle {
                             Text {
                                 Layout.fillWidth: true
                                 text: modelData
-                                color: root.theme ? root.theme.textStrong : root.palette.text
+                                color: root.theme ? root.theme.textStrong : root.colors.text
                                 font.pixelSize: root.scaledPx(14)
                                 wrapMode: Text.WordWrap
                             }
@@ -280,7 +280,7 @@ Rectangle {
                 Text {
                     Layout.fillWidth: true
                     text: "源码模式使用仓库内 Workspace；桌面安装包使用系统应用数据目录。两种模式都默认保存在本机。"
-                    color: root.theme ? root.theme.subtle : root.palette.muted
+                    color: root.theme ? root.theme.subtle : root.colors.muted
                     font.pixelSize: root.scaledPx(12)
                     lineHeight: 1.35
                     wrapMode: Text.WordWrap
@@ -293,8 +293,8 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             radius: root.theme ? root.theme.radiusLarge : 12
-            color: root.theme ? root.theme.surface : root.palette.surface
-            border.color: root.theme ? root.theme.borderDefault : root.palette.border
+            color: root.theme ? root.theme.surface : root.colors.surface
+            border.color: root.theme ? root.theme.borderDefault : root.colors.border
 
             ColumnLayout {
                 anchors.fill: parent
@@ -323,7 +323,7 @@ Rectangle {
                         Text {
                             Layout.fillWidth: true
                             text: root.step === 0 ? "创建你的学习档案" : "选择目标岗位"
-                            color: root.theme ? root.theme.textStrong : root.palette.text
+                            color: root.theme ? root.theme.textStrong : root.colors.text
                             font.pixelSize: Math.min(
                                 root.scaledPx(root.compactLayout ? 22 : 25),
                                 root.compactLayout ? 28 : 32
@@ -336,7 +336,7 @@ Rectangle {
                             text: root.step === 0
                                   ? "只需一个名称；首次使用默认按校招、No-AI 开始。"
                                   : "岗位只影响推荐路线和面试蓝图，不会改变公共课程。"
-                            color: root.theme ? root.theme.text : root.palette.muted
+                            color: root.theme ? root.theme.text : root.colors.muted
                             font.pixelSize: root.scaledPx(13)
                             maximumLineCount: root.compactLayout ? 1 : 2
                             wrapMode: Text.WordWrap
@@ -347,7 +347,7 @@ Rectangle {
                     Text {
                         text: (Math.min(Math.max(root.step, 0), root.stepCount - 1) + 1)
                               + " / " + root.stepCount
-                        color: root.theme ? root.theme.subtle : root.palette.muted
+                        color: root.theme ? root.theme.subtle : root.colors.muted
                         font.pixelSize: root.scaledPx(12)
                         font.bold: true
                     }
@@ -361,7 +361,7 @@ Rectangle {
                            / root.stepCount
                     background: Rectangle {
                         radius: 2
-                        color: root.theme ? root.theme.surfaceSunken : root.palette.surfaceAlt
+                        color: root.theme ? root.theme.surfaceSunken : root.colors.surfaceAlt
                     }
                     contentItem: Item {
                         implicitHeight: 4
@@ -369,7 +369,7 @@ Rectangle {
                             width: parent.width * stepProgress.visualPosition
                             height: parent.height
                             radius: 2
-                            color: root.palette.accent
+                            color: root.colors.accent
                         }
                     }
                 }
@@ -400,7 +400,7 @@ Rectangle {
                             Text {
                                 width: parent.width
                                 text: "学习档案名称"
-                                color: root.theme ? root.theme.textStrong : root.palette.text
+                                color: root.theme ? root.theme.textStrong : root.colors.text
                                 font.pixelSize: root.scaledPx(15)
                                 font.weight: Font.DemiBold
                             }
@@ -425,7 +425,7 @@ Rectangle {
                                 width: parent.width
                                 visible: profileName.text.length > 0 && !root.profileNameValid
                                 text: "请输入至少一个可见字符。"
-                                color: root.palette.danger
+                                color: root.colors.danger
                                 font.pixelSize: root.scaledPx(12)
                                 wrapMode: Text.WordWrap
                             }
@@ -434,7 +434,7 @@ Rectangle {
                                 width: parent.width
                                 height: Math.max(root.scaledPx(78), privacyCopy.implicitHeight + 28)
                                 radius: root.theme ? root.theme.radiusMedium : 8
-                                color: root.theme ? root.theme.surfaceSunken : root.palette.surfaceAlt
+                                color: root.theme ? root.theme.surfaceSunken : root.colors.surfaceAlt
                                 border.color: root.theme ? root.theme.borderSubtle : "transparent"
 
                                 Text {
@@ -442,7 +442,7 @@ Rectangle {
                                     anchors.fill: parent
                                     anchors.margins: 14
                                     text: "默认保存在本机\n源码运行时使用仓库内 workspace/profiles/；桌面安装包使用系统应用数据目录。连接 AI 不是必选项，只有你确认的上下文才会发送。"
-                                    color: root.theme ? root.theme.text : root.palette.text
+                                    color: root.theme ? root.theme.text : root.colors.text
                                     font.pixelSize: root.scaledPx(13)
                                     lineHeight: 1.3
                                     wrapMode: Text.WordWrap
@@ -497,7 +497,7 @@ Rectangle {
                                         implicitWidth: 5
                                         radius: 3
                                         color: root.theme ? root.theme.borderStrong
-                                                          : root.palette.muted
+                                                          : root.colors.muted
                                         opacity: 0.65
                                     }
                                 }
@@ -519,14 +519,14 @@ Rectangle {
                                              ? (root.theme ? root.theme.surfaceHover
                                                            : Qt.rgba(0.32, 0.39, 0.85, 0.06))
                                              : (root.theme ? root.theme.surfaceRaised
-                                                           : root.palette.surfaceAlt)
+                                                           : root.colors.surfaceAlt)
                                     border.color: root.selectedRole === modelData.id
                                                   || roleCard.activeFocus
                                                   || roleHitArea.containsMouse
-                                                  ? root.palette.accent
+                                                  ? root.colors.accent
                                                   : (root.theme
                                                      ? root.theme.borderDefault
-                                                     : root.palette.border)
+                                                     : root.colors.border)
                                     border.width: root.selectedRole === modelData.id
                                                   || roleCard.activeFocus ? 2 : 1
                                     activeFocusOnTab: true
@@ -548,7 +548,7 @@ Rectangle {
                                                 Layout.fillWidth: true
                                                 text: modelData.title || "未命名岗位"
                                                 color: root.theme ? root.theme.textStrong
-                                                                  : root.palette.text
+                                                                  : root.colors.text
                                                 font.pixelSize: root.scaledPx(14)
                                                 font.weight: Font.DemiBold
                                                 maximumLineCount: root.largeText ? 1 : 2
@@ -560,7 +560,7 @@ Rectangle {
                                                 Layout.preferredWidth: 22
                                                 text: "✓"
                                                 visible: root.selectedRole === modelData.id
-                                                color: root.palette.accent
+                                                color: root.colors.accent
                                                 font.pixelSize: root.scaledPx(17)
                                                 font.bold: true
                                                 horizontalAlignment: Text.AlignRight
@@ -570,7 +570,7 @@ Rectangle {
                                         Text {
                                             Layout.fillWidth: true
                                             text: modelData.summary || ""
-                                            color: root.theme ? root.theme.text : root.palette.muted
+                                            color: root.theme ? root.theme.text : root.colors.muted
                                             font.pixelSize: root.scaledPx(11)
                                             maximumLineCount: root.largeText ? 1 : 2
                                             wrapMode: Text.WordWrap
@@ -581,7 +581,7 @@ Rectangle {
                                             Layout.fillWidth: true
                                             text: "面试重点 · " + (modelData.interview_content
                                                   || "结构化问答与能力验证")
-                                            color: root.theme ? root.theme.subtle : root.palette.muted
+                                            color: root.theme ? root.theme.subtle : root.colors.muted
                                             font.pixelSize: root.scaledPx(10)
                                             maximumLineCount: 1
                                             elide: Text.ElideRight
@@ -615,14 +615,14 @@ Rectangle {
                                 Layout.preferredHeight: visible ? 64 : 0
                                 radius: root.theme ? root.theme.radiusMedium : 8
                                 color: root.theme ? root.theme.surfaceSunken
-                                                  : root.palette.surfaceAlt
+                                                  : root.colors.surfaceAlt
                                 border.color: root.theme ? root.theme.borderSubtle
-                                                         : root.palette.border
+                                                         : root.colors.border
                                 Text {
                                     anchors.fill: parent
                                     anchors.margins: 12
                                     text: "暂时没有可用岗位。请检查课程资源后重试。"
-                                    color: root.theme ? root.theme.text : root.palette.muted
+                                    color: root.theme ? root.theme.text : root.colors.muted
                                     font.pixelSize: root.scaledPx(13)
                                     wrapMode: Text.WordWrap
                                     verticalAlignment: Text.AlignVCenter
@@ -633,7 +633,7 @@ Rectangle {
                                 visible: roleGrid.contentHeight > roleGrid.height
                                 Layout.fillWidth: true
                                 text: "滚动查看更多岗位"
-                                color: root.theme ? root.theme.subtle : root.palette.muted
+                                color: root.theme ? root.theme.subtle : root.colors.muted
                                 font.pixelSize: root.scaledPx(11)
                             }
 
@@ -646,11 +646,11 @@ Rectangle {
                                        ? (root.theme ? root.theme.accentSoft
                                                      : Qt.rgba(0.32, 0.39, 0.85, 0.09))
                                        : (root.theme ? root.theme.surfaceSunken
-                                                     : root.palette.surfaceAlt)
+                                                     : root.colors.surfaceAlt)
                                 border.color: root.selectedRoleCard
-                                              ? root.palette.accent
+                                              ? root.colors.accent
                                               : (root.theme ? root.theme.borderSubtle
-                                                            : root.palette.border)
+                                                            : root.colors.border)
 
                                 RowLayout {
                                     anchors.fill: parent
@@ -665,9 +665,9 @@ Rectangle {
                                               ? "已选择：" + root.selectedRoleCard.title
                                               : "请选择一个岗位后继续"
                                         color: root.selectedRoleCard
-                                               ? root.palette.accent
+                                               ? root.colors.accent
                                                : (root.theme ? root.theme.subtle
-                                                             : root.palette.muted)
+                                                             : root.colors.muted)
                                         font.pixelSize: root.scaledPx(12)
                                         font.bold: root.selectedRoleCard !== null
                                         elide: Text.ElideRight
@@ -677,9 +677,9 @@ Rectangle {
                                         height: 8
                                         radius: 4
                                         color: root.selectedRoleCard
-                                               ? root.palette.accent
+                                               ? root.colors.accent
                                                : (root.theme ? root.theme.subtle
-                                                             : root.palette.muted)
+                                                             : root.colors.muted)
                                         opacity: root.selectedRoleCard ? 1 : 0.5
                                     }
                                 }
@@ -700,7 +700,7 @@ Rectangle {
                     radius: root.theme ? root.theme.radiusSmall : 8
                     color: root.theme ? root.theme.dangerSoft
                                       : Qt.rgba(0.776, 0.239, 0.310, 0.12)
-                    border.color: root.palette.danger
+                    border.color: root.colors.danger
 
                     ColumnLayout {
                         id: onboardingErrorContent
@@ -711,7 +711,7 @@ Rectangle {
                             id: onboardingErrorText
                             Layout.fillWidth: true
                             text: root.displayedError
-                            color: root.palette.danger
+                            color: root.colors.danger
                             font.pixelSize: root.scaledPx(12)
                             wrapMode: Text.WordWrap
                         }
@@ -721,7 +721,7 @@ Rectangle {
                             visible: !!app.lastActionResult
                                      && (app.lastActionResult.recommended_action || "").length > 0
                             text: "下一步：" + (app.lastActionResult.recommended_action || "")
-                            color: root.theme ? root.theme.text : root.palette.text
+                            color: root.theme ? root.theme.text : root.colors.text
                             font.pixelSize: root.scaledPx(12)
                             wrapMode: Text.WordWrap
                         }
@@ -731,7 +731,7 @@ Rectangle {
                             visible: !!app.lastActionResult
                                      && (app.lastActionResult.error_code || "").length > 0
                             text: "错误编号：" + (app.lastActionResult.error_code || "")
-                            color: root.theme ? root.theme.subtle : root.palette.muted
+                            color: root.theme ? root.theme.subtle : root.colors.muted
                             font.pixelSize: root.scaledPx(10)
                             wrapMode: Text.WrapAnywhere
                         }
@@ -756,7 +756,7 @@ Rectangle {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 1
-                    color: root.theme ? root.theme.borderSubtle : root.palette.border
+                    color: root.theme ? root.theme.borderSubtle : root.colors.border
                 }
 
                 RowLayout {
@@ -781,7 +781,7 @@ Rectangle {
                         visible: root.step >= 1 && !root.selectedRoleCard
                         Layout.fillWidth: true
                         text: "选择岗位后即可开始；稍后仍可在设置中调整。"
-                        color: root.theme ? root.theme.subtle : root.palette.muted
+                        color: root.theme ? root.theme.subtle : root.colors.muted
                         font.pixelSize: root.scaledPx(11)
                         maximumLineCount: 1
                         elide: Text.ElideRight

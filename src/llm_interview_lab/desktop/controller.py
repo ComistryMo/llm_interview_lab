@@ -519,6 +519,7 @@ class AppController(QObject):
         self._codex_thread: threading.Thread | None = None
         self._codex_backend: CodexAppServerBackend | None = None
         self._codex_thread_id: str | None = None
+        self._codex_interview_thread: tuple[tuple, str] | None = None
         # One App Server process may host several isolated threads.  Keep the
         # workflow mode alongside each id so a repository-agent (write)
         # thread can never be reused by Coach/Interview (read-only).
@@ -811,6 +812,12 @@ class AppController(QObject):
 
         return problem_brief(problem_id, fallback, self._language)
 
+    @Slot(str, str, result=str)
+    def problemStatement(self, problem_id: str, original: str) -> str:
+        """Chinese display of the frozen statement, without rewriting its source."""
+        from .coding_statements_zh import chinese_statement
+        return chinese_statement(problem_id, original)
+
     @Slot(str, str, str, result="QVariantMap")
     def interviewConfiguration(
         self, role_id: str, seniority: str, difficulty: str
@@ -901,8 +908,8 @@ class AppController(QObject):
         """Expose only adapters shipped by the current distribution."""
 
         if is_packaged_desktop():
-            return ["openai", "openai-compatible", "ollama"]
-        return ["openai", "openai-compatible", "ollama", "anthropic", "gemini"]
+            return ["deepseek", "openai", "openai-compatible", "ollama"]
+        return ["deepseek", "openai", "openai-compatible", "ollama", "anthropic", "gemini"]
 
     @Property("QVariantList", notify=stateChanged)
     def materials(self) -> list[dict[str, Any]]:
@@ -3556,6 +3563,10 @@ class AppController(QObject):
 
             if session.get("delivery_mode") == "dynamic_ai":
                 instruction = dialogue_instruction(dimensions, fatal_issues)
+                if config.provider_id == "deepseek":
+                    instruction += "\nJSON 字段与类型必须符合以下 Schema：\n" + json.dumps(
+                        _dynamic_response_schema(preview, dimensions, fatal_issues), ensure_ascii=False,
+                    )
 
             async def collect() -> str:
                 chunks: list[str] = []
@@ -3563,7 +3574,8 @@ class AppController(QObject):
                     [
                         {"role": "system", "content": preview.selected_text},
                         {"role": "user", "content": instruction},
-                    ]
+                    ],
+                    **({"json_mode": True} if config.provider_id == "deepseek" else {}),
                 ):
                     if event.text:
                         chunks.append(event.text)
@@ -5128,6 +5140,8 @@ class AppController(QObject):
         if active == identity:
             if kind == "interview" and payload.get("thread_id"):
                 self._codex_thread_id = str(payload["thread_id"])
+                if payload.get("thread_scope"):
+                    self._codex_interview_thread = (payload["thread_scope"], self._codex_thread_id)
             self._codex_start_ready = True
             # The response to ``turn/start`` is the strongest correlation
             # available on the App Server protocol.  Bind a concrete id here
@@ -7133,17 +7147,27 @@ class AppController(QObject):
         prompt = preview.selected_text + "\n\n## Frozen scorecard contract\n" + instruction
         backend = self._codex_backend
         model, effort = self._codex_model or None, self._codex_reasoning_effort or None
+        # Reuse only this interview's transport history, under the same
+        # material/background permission snapshot. A deselection or changed
+        # SHA starts a clean thread: old material cannot be erased remotely.
+        thread_scope = (
+            backend, self._profile_id, self._interview["interview_id"], model,
+            tuple((part.id, part.sha256) for part in preview.parts
+                  if part.selected and (part.id.startswith("material:") or part.id == "profile_context")),
+        )
+        reusable_thread = (self._codex_interview_thread[1]
+                           if self._codex_interview_thread and self._codex_interview_thread[0] == thread_scope
+                           else None)
         output_options = (
             {"output_schema": _dynamic_response_schema(preview, dimensions, fatal_issues)}
             if self._interview.get("delivery_mode") == "dynamic_ai" else {}
         )
 
         async def start_interview_turn():
-            # A new transport thread cannot retain a material deselected this
-            # turn, or facts from another session. All multi-turn context is
-            # rebuilt explicitly from this interview and previewed by the user.
-            thread = await backend.start_thread(mode="interviewer", model=model)
-            thread_id = thread["thread"]["id"]
+            thread_id = reusable_thread
+            if thread_id is None:
+                thread = await backend.start_thread(mode="interviewer", model=model)
+                thread_id = thread["thread"]["id"]
             result = await backend.start_turn(thread_id, prompt, model=model, effort=effort, **output_options)
             return {**result, "thread_id": thread_id}
 
@@ -7169,7 +7193,8 @@ class AppController(QObject):
                 turn = response.get("turn") if isinstance(response, Mapping) else None
                 turn_id = (turn or {}).get("id") if isinstance(turn, Mapping) else None
                 self._codexTurnStarted.emit(
-                    {"kind": "interview", "identity": token, "turn_id": turn_id, "thread_id": response.get("thread_id")}
+                    {"kind": "interview", "identity": token, "turn_id": turn_id,
+                     "thread_id": response.get("thread_id"), "thread_scope": thread_scope}
                 )
             except Exception as caught:
                 self._codexTurnStarted.emit(

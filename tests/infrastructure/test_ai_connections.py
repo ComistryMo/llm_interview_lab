@@ -89,6 +89,26 @@ def test_connection_metadata_never_contains_api_key(tmp_path: Path) -> None:
     assert not backend.values
 
 
+@pytest.mark.parametrize("effort", ["none", "low", "high", "max"])
+def test_deepseek_connection_roundtrip_keeps_secret_in_keyring(tmp_path, effort):
+    from llm_interview_lab.ai.connections import ConnectionConfigError
+    root = _repository(tmp_path)
+    backend = MemoryKeyring()
+    store = KeyringCredentialStore(backend)
+    options = dict(connection_id="deepseek-main", provider_id="deepseek",
+                   model="deepseek-v4-flash", display_name="DeepSeek", credential_store=store)
+    config = save_connection(root, "learner-one", api_key="fake-deepseek-key",
+                             reasoning_effort=effort, **options)
+    assert list_connections(root, "learner-one") == (config,)
+    assert config.reasoning_effort == effort
+    assert backend.values[(SERVICE_NAME, config.key_reference)] == "fake-deepseek-key"
+    before = (root / "workspace/profiles/learner-one/connections.json").read_text(encoding="utf-8")
+    assert "fake-deepseek-key" not in before
+    with pytest.raises(ConnectionConfigError, match="DeepSeek"):
+        save_connection(root, "learner-one", reasoning_effort="medium", **options)
+    assert (root / "workspace/profiles/learner-one/connections.json").read_text(encoding="utf-8") == before
+
+
 class FakeDelta:
     def __init__(self, text: str) -> None:
         self.choices = [type("Choice", (), {"delta": type("Delta", (), {"content": text})()})()]

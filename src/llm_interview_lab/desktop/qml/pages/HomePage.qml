@@ -7,7 +7,7 @@ Flickable {
     id: root
 
     required property var app
-    required property var palette
+    required property var colors
     property var theme: null
     property string layoutMode: width < 1040 ? "compact"
                                : width < 1400 ? "standard" : "wide"
@@ -44,13 +44,13 @@ Flickable {
                                                  && focusProblem.environment_available !== false
     readonly property var secondaryRetentions: retentionItemsAfterFocus(dueRetentions)
 
-    readonly property color strongText: theme ? theme.textStrong : palette.text
-    readonly property color pageSurface: theme ? theme.surface : palette.surface
-    readonly property color quietBorder: theme ? theme.borderSubtle : palette.border
-    readonly property color accentColor: theme ? theme.accent : palette.accent
-    readonly property color warningColor: theme ? theme.warning : palette.warning
-    readonly property color dangerColor: theme ? theme.danger : palette.danger
-    readonly property color successColor: theme ? theme.success : palette.success
+    readonly property color strongText: theme ? theme.textStrong : colors.text
+    readonly property color pageSurface: theme ? theme.surface : colors.surface
+    readonly property color quietBorder: theme ? theme.borderSubtle : colors.border
+    readonly property color accentColor: theme ? theme.accent : colors.accent
+    readonly property color warningColor: theme ? theme.warning : colors.warning
+    readonly property color dangerColor: theme ? theme.danger : colors.danger
+    readonly property color successColor: theme ? theme.success : colors.success
 
     function practiceActionable(item) {
         if (!item)

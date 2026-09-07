@@ -7,9 +7,9 @@ Item {
     id: root
     objectName: "coachPage"
     required property var app
-    required property var palette
+    required property var colors
     // The shared token object keeps primary actions visually consistent with
-    // the shell.  `palette` remains for legacy page colours.
+    // the shell.  `colors` remains for legacy page colours.
     property var theme: null
 
     property bool compactLayout: width < 980
@@ -94,11 +94,11 @@ Item {
     }
 
     function statusTone(value) {
-        return !value ? root.palette.muted
-             : value === "streaming" ? root.palette.accent
-             : value === "error" ? root.palette.danger
-             : value === "stopped" ? root.palette.warning
-             : root.palette.success
+        return !value ? root.colors.muted
+             : value === "streaming" ? root.colors.accent
+             : value === "error" ? root.colors.danger
+             : value === "stopped" ? root.colors.warning
+             : root.colors.success
     }
 
     function connectionReady(item) {
@@ -271,7 +271,7 @@ Item {
                 spacing: 10
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "会话"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
+                    Text { text: "会话"; color: root.colors.text; font.pixelSize: 18; font.bold: true }
                     Item { Layout.fillWidth: true }
                     ToolButton {
                         objectName: "newCoachSession"
@@ -292,7 +292,7 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     text: root.sessions.length ? "最近会话" : "还没有本地会话"
-                    color: root.palette.muted
+                    color: root.colors.muted
                     font.pixelSize: 12
                     font.bold: true
                 }
@@ -310,10 +310,10 @@ Item {
                         height: 64
                         radius: 8
                         color: modelData.session_id === root.activeSession.session_id
-                               ? Qt.rgba(root.palette.accent.r, root.palette.accent.g, root.palette.accent.b, 0.12)
+                               ? Qt.rgba(root.colors.accent.r, root.colors.accent.g, root.colors.accent.b, 0.12)
                                : "transparent"
                         border.color: modelData.session_id === root.activeSession.session_id
-                                      ? root.palette.accent : "transparent"
+                                      ? root.colors.accent : "transparent"
                         RowLayout {
                             anchors.fill: parent
                             anchors.margins: 8
@@ -325,7 +325,7 @@ Item {
                                 Text {
                                     Layout.fillWidth: true
                                     text: modelData.title || "未命名会话"
-                                    color: root.palette.text
+                                    color: root.colors.text
                                     font.bold: modelData.session_id === root.activeSession.session_id
                                     elide: Text.ElideRight
                                 }
@@ -333,7 +333,7 @@ Item {
                                     Layout.fillWidth: true
                                     text: root.modeLabel(modelData.mode) + " · " + root.statusLabel(modelData.status)
                                           + (modelData.message_count ? " · " + modelData.message_count : "")
-                                    color: root.palette.muted
+                                    color: root.colors.muted
                                     font.pixelSize: 11
                                     elide: Text.ElideRight
                                 }
@@ -358,7 +358,7 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     text: "会话只保存在当前 Profile；不计入掌握状态。"
-                    color: root.palette.muted
+                    color: root.colors.muted
                     font.pixelSize: 10
                     wrapMode: Text.Wrap
                 }
@@ -401,7 +401,7 @@ Item {
                         Text {
                             Layout.fillWidth: true
                             text: root.activeSession.title || "AI 辅助（可选）"
-                            color: root.palette.text
+                            color: root.colors.text
                             font.pixelSize: 20
                             font.bold: true
                             elide: Text.ElideRight
@@ -411,7 +411,7 @@ Item {
                             text: root.activeSession.session_id
                                   ? root.modeLabel(root.activeSession.mode) + " · " + root.providerLabel()
                                   : "新建会话后，选择范围再发送问题"
-                            color: root.palette.muted
+                            color: root.colors.muted
                             font.pixelSize: 12
                             elide: Text.ElideRight
                         }
@@ -436,14 +436,14 @@ Item {
                     Layout.minimumHeight: 0
                     visible: root.inlineError.length > 0
                     radius: 8
-                    color: Qt.rgba(root.palette.danger.r, root.palette.danger.g, root.palette.danger.b, 0.10)
-                    border.color: root.palette.danger
+                    color: Qt.rgba(root.colors.danger.r, root.colors.danger.g, root.colors.danger.b, 0.10)
+                    border.color: root.colors.danger
                     Text {
                         id: errorText
                         anchors.fill: parent
                         anchors.margins: 10
                         text: root.inlineError + "\n可检查连接后重试；本地课程和手动面试仍可继续。"
-                        color: root.palette.danger
+                        color: root.colors.danger
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
                     }
@@ -470,11 +470,11 @@ Item {
                             implicitHeight: bubbleColumn.implicitHeight + 20
                             radius: 10
                             color: modelData.role === "user"
-                                   ? root.palette.surfaceAlt
+                                   ? root.colors.surfaceAlt
                                    : modelData.role === "error"
-                                     ? Qt.rgba(root.palette.danger.r, root.palette.danger.g, root.palette.danger.b, 0.10)
+                                     ? Qt.rgba(root.colors.danger.r, root.colors.danger.g, root.colors.danger.b, 0.10)
                                      : "transparent"
-                            border.color: modelData.role === "error" ? root.palette.danger : "transparent"
+                            border.color: modelData.role === "error" ? root.colors.danger : "transparent"
                             ColumnLayout {
                                 id: bubbleColumn
                                 anchors.fill: parent
@@ -484,7 +484,7 @@ Item {
                                     Layout.fillWidth: true
                                     Text {
                                         text: root.roleLabel(modelData.role)
-                                        color: modelData.role === "error" ? root.palette.danger : root.palette.muted
+                                        color: modelData.role === "error" ? root.colors.danger : root.colors.muted
                                         font.bold: true
                                         font.pixelSize: 11
                                     }
@@ -500,7 +500,7 @@ Item {
                                 Text {
                                     Layout.fillWidth: true
                                     text: modelData.content || (modelData.role === "assistant" ? "正在生成……" : "")
-                                    color: root.palette.text
+                                    color: root.colors.text
                                     wrapMode: Text.Wrap
                                     textFormat: Text.PlainText
                                     lineHeight: 1.25
@@ -524,11 +524,11 @@ Item {
                             anchors.fill: parent
                             anchors.margins: 14
                             spacing: 6
-                            Text { text: "从一个具体问题开始"; color: root.palette.text; font.pixelSize: 17; font.bold: true }
+                            Text { text: "从一个具体问题开始"; color: root.colors.text; font.pixelSize: 17; font.bold: true }
                             Text {
                                 Layout.fillWidth: true
                                 text: "主流程中的 AI 角色是模拟面试官；本页仅在你主动需要时提供只读提示、讲解或审查，不会替你改答案。"
-                                color: root.palette.muted
+                                color: root.colors.muted
                                 wrapMode: Text.Wrap
                             }
                             LabButton {
@@ -608,7 +608,7 @@ Item {
                         var modelName = item && item.model ? String(item.model) : "默认模型"
                         return "模型 · " + modelName
                     }
-                    color: root.palette.muted
+                    color: root.colors.muted
                     font.pixelSize: 11
                     verticalAlignment: Text.AlignVCenter
                     elide: Text.ElideRight
@@ -650,7 +650,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
                         text: app.coachStreaming ? "正在接收流式回答 · 可随时停止" : root.providerStatusHint()
-                        color: app.coachStreaming ? root.palette.accent : root.palette.muted
+                        color: app.coachStreaming ? root.colors.accent : root.colors.muted
                         font.pixelSize: 11
                         wrapMode: Text.Wrap
                         maximumLineCount: 2
@@ -694,29 +694,29 @@ Item {
             Layout.minimumWidth: 250
             Layout.fillHeight: true
             padding: 12
-            cardColor: root.palette.surface
-            borderColor: root.palette.border
+            cardColor: root.colors.surface
+            borderColor: root.colors.border
             ColumnLayout {
                 width: parent.width
                 height: parent.height
                 spacing: 9
-                Text { text: "上下文预览"; color: root.palette.text; font.pixelSize: 18; font.bold: true }
+                Text { text: "上下文预览"; color: root.colors.text; font.pixelSize: 18; font.bold: true }
                 Text {
                     Layout.fillWidth: true
                     text: "只发送下方明确选择的当前题面、答案或测试摘要。"
-                    color: root.palette.muted
+                    color: root.colors.muted
                     wrapMode: Text.Wrap
                     font.pixelSize: 11
                 }
                 CheckBox { id: includeSubmission; Layout.fillWidth: true; text: "包含当前答案"; onCheckedChanged: root.refreshPreview() }
                 CheckBox { id: includeTestOutput; Layout.fillWidth: true; text: "包含测试摘要"; checked: true; onCheckedChanged: root.refreshPreview() }
                 Button { Layout.fillWidth: true; text: "刷新预览"; onClicked: root.refreshPreview() }
-                Rectangle { Layout.fillWidth: true; height: 1; color: root.palette.border }
+                Rectangle { Layout.fillWidth: true; height: 1; color: root.colors.border }
                     Text {
                         Layout.fillWidth: true
                         text: "将发送 " + root.selectedContextCount() + " 项 · 约 "
                               + (root.preview.estimated_tokens || 0) + " tokens"
-                              color: root.palette.muted
+                              color: root.colors.muted
                               font.pixelSize: 11
                         }
                 Text {
@@ -724,7 +724,7 @@ Item {
                     visible: root.hasMessages
                     text: "另会带上最近 " + Math.min(8, root.messages.length)
                           + " 条本地对话；如需改变范围，请新建会话。"
-                    color: root.palette.warning
+                    color: root.colors.warning
                     wrapMode: Text.Wrap
                     font.pixelSize: 11
                 }
@@ -738,15 +738,15 @@ Item {
                         required property var modelData
                         width: contextList.width
                         spacing: 6
-                        StatusPill { text: modelData.selected ? "发送" : "不发送"; tone: modelData.selected ? root.palette.accent : root.palette.muted }
-                        Text { Layout.fillWidth: true; text: modelData.label; color: root.palette.text; wrapMode: Text.Wrap; font.pixelSize: 11 }
-                        StatusPill { visible: modelData.sensitive; text: "敏感"; tone: root.palette.warning }
+                        StatusPill { text: modelData.selected ? "发送" : "不发送"; tone: modelData.selected ? root.colors.accent : root.colors.muted }
+                        Text { Layout.fillWidth: true; text: modelData.label; color: root.colors.text; wrapMode: Text.Wrap; font.pixelSize: 11 }
+                        StatusPill { visible: modelData.sensitive; text: "敏感"; tone: root.colors.warning }
                     }
                 }
                 Text {
                     Layout.fillWidth: true
                     text: "AI 只提供建议；不会修改答案或授予 mastery。"
-                    color: root.palette.warning
+                    color: root.colors.warning
                     wrapMode: Text.Wrap
                     font.pixelSize: 11
                     font.bold: true
@@ -766,7 +766,7 @@ Item {
             anchors.fill: parent
             anchors.margins: 16
             spacing: 10
-            Text { text: "本地 Coach 会话"; color: root.palette.text; font.pixelSize: 20; font.bold: true }
+            Text { text: "本地 Coach 会话"; color: root.colors.text; font.pixelSize: 20; font.bold: true }
             Button { text: "新建会话"; Layout.fillWidth: true; highlighted: true; onClicked: { root.createSession(); sessionDrawer.close() } }
             ListView {
                 id: drawerSessionList
@@ -793,7 +793,7 @@ Item {
                     }
                 }
             }
-            Text { text: "仅当前 Profile 可见"; color: root.palette.muted; font.pixelSize: 11 }
+            Text { text: "仅当前 Profile 可见"; color: root.colors.muted; font.pixelSize: 11 }
         }
     }
 
@@ -808,8 +808,8 @@ Item {
             anchors.fill: parent
             anchors.margins: 16
             spacing: 10
-            Text { text: "上下文预览（只读）"; color: root.palette.text; font.pixelSize: 20; font.bold: true }
-            Text { Layout.fillWidth: true; text: "只有标记为发送的内容会离开本机。"; color: root.palette.muted; wrapMode: Text.Wrap }
+            Text { text: "上下文预览（只读）"; color: root.colors.text; font.pixelSize: 20; font.bold: true }
+            Text { Layout.fillWidth: true; text: "只有标记为发送的内容会离开本机。"; color: root.colors.muted; wrapMode: Text.Wrap }
             CheckBox { id: includeSubmissionDrawer; text: "包含当前答案"; checked: includeSubmission.checked; onCheckedChanged: { includeSubmission.checked = checked; root.refreshPreview() } }
             CheckBox { id: includeTestOutputDrawer; text: "包含测试摘要"; checked: includeTestOutput.checked; onCheckedChanged: { includeTestOutput.checked = checked; root.refreshPreview() } }
             Button { text: "刷新预览"; Layout.fillWidth: true; onClicked: root.refreshPreview() }
@@ -821,8 +821,8 @@ Item {
                 delegate: RowLayout {
                     required property var modelData
                     width: parent.width
-                    StatusPill { text: modelData.selected ? "将发送" : "不发送"; tone: modelData.selected ? root.palette.accent : root.palette.muted }
-                    Text { Layout.fillWidth: true; text: modelData.label; color: root.palette.text; wrapMode: Text.Wrap; font.pixelSize: 12 }
+                    StatusPill { text: modelData.selected ? "将发送" : "不发送"; tone: modelData.selected ? root.colors.accent : root.colors.muted }
+                    Text { Layout.fillWidth: true; text: modelData.label; color: root.colors.text; wrapMode: Text.Wrap; font.pixelSize: 12 }
                 }
             }
             Button { text: "关闭"; Layout.fillWidth: true; onClicked: contextDrawer.close() }
@@ -842,7 +842,7 @@ Item {
         contentItem: Text {
             width: 360
             text: "将删除“" + root.pendingDeleteTitle + "”及其本地消息。此操作不会影响答案、测试或掌握状态。"
-            color: root.palette.text
+            color: root.colors.text
             wrapMode: Text.Wrap
         }
         onAccepted: {

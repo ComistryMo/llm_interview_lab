@@ -450,6 +450,14 @@ ApplicationWindow {
                         objectName: "globalAiStatus"
                         readonly property string interviewRequestState: backend.currentPage === "interview"
                             ? (backend.interview.ai_assessment_state || "") : ""
+                        readonly property bool apiReady: {
+                            var inInterview = backend.currentPage === "interview"
+                            if (inInterview && backend.interview.ai_mode !== "provider") return false
+                            var selected = inInterview ? backend.interview.connection_id : ""
+                            return backend.connections.some(function(connection) {
+                                return connection.ready === true && (!selected || connection.connection_id === selected)
+                            })
+                        }
                         theme: appTheme
                         style: "plain"
                         compact: window.layoutMode === "compact"
@@ -457,10 +465,12 @@ ApplicationWindow {
                               : interviewRequestState === "cancelled" ? "AI 已停止"
                               : interviewRequestState === "retrying" ? "AI 正在重连"
                               : interviewRequestState === "streaming" ? "AI 正在响应"
+                              : apiReady ? "AI 服务就绪"
                               : backend.aiStatusVariant === "connected" ? "AI 已连接"
                               : backend.aiStatusVariant === "connecting" ? "AI 连接中"
                               : "No-AI 可用"
                         tone: interviewRequestState === "error" || interviewRequestState === "retrying" ? appTheme.warning
+                              : apiReady ? appTheme.success
                               : backend.aiStatusVariant === "connected" ? appTheme.success
                               : backend.aiStatusVariant === "connecting" ? appTheme.warning
                               : appTheme.muted
@@ -538,23 +548,23 @@ ApplicationWindow {
                 currentIndex: ({home:0, career:1, learn:2, exercise:3, interview:4, coach:5, progress:6, connections:7, settings:8})[backend.currentPage] || 0
                 HomePage {
                     app: backend
-                    palette: window.colors
+                    colors: window.colors
                     theme: appTheme
                     layoutMode: window.layoutMode
                 }
-                CareerPage { app: backend; palette: window.colors; theme: appTheme }
+                CareerPage { app: backend; colors: window.colors; theme: appTheme }
                 LearnPage {
                     app: backend
-                    palette: window.colors
+                    colors: window.colors
                     theme: appTheme
                     layoutMode: window.layoutMode
                 }
-                ExercisePage { app: backend; palette: window.colors; theme: appTheme }
-                InterviewPage { app: backend; palette: window.colors; theme: appTheme }
-                CoachPage { app: backend; palette: window.colors; theme: appTheme }
-                ProgressPage { app: backend; palette: window.colors }
-                ConnectionsPage { app: backend; palette: window.colors; theme: appTheme }
-                SettingsPage { app: backend; palette: window.colors; theme: appTheme }
+                ExercisePage { app: backend; colors: window.colors; theme: appTheme }
+                InterviewPage { app: backend; colors: window.colors; theme: appTheme }
+                CoachPage { app: backend; colors: window.colors; theme: appTheme }
+                ProgressPage { app: backend; colors: window.colors }
+                ConnectionsPage { app: backend; colors: window.colors; theme: appTheme }
+                SettingsPage { app: backend; colors: window.colors; theme: appTheme }
             }
         }
     }
@@ -564,7 +574,7 @@ ApplicationWindow {
         z: 20
         visible: backend.onboardingRequired
         app: backend
-        palette: window.colors
+        colors: window.colors
         theme: appTheme
         layoutMode: window.layoutMode
     }

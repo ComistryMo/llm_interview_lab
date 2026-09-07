@@ -29,10 +29,16 @@ class ProviderConfig:
 
 
 def _safe_error(error: Exception) -> ProviderError:
+    if isinstance(error, ProviderError):
+        return error
     name = type(error).__name__.lower()
     text = str(error).lower()
     if "auth" in name or "401" in text or "unauthorized" in text:
         return ProviderError("authentication failed; check the stored API key")
+    if "402" in text:
+        return ProviderError("服务账户余额不足（402）。请到服务控制台检查余额后重试；回答已保留。")
+    if "400" in text or "422" in text:
+        return ProviderError("模型或推理参数不被服务接受。请核对模型 ID 与该服务支持的推理选项。")
     if "rate" in name or "429" in text:
         return ProviderError("provider rate limit reached; retry later")
     if "timeout" in name or "timed out" in text:
@@ -156,7 +162,7 @@ class OpenAICompatibleChatProvider:
         api_key: str | None,
         client_factory: Callable[..., Any] | None = None,
     ) -> None:
-        if config.provider_id not in {"openai", "openai-compatible", "ollama"}:
+        if config.provider_id not in {"openai", "openai-compatible", "ollama", "deepseek"}:
             raise ProviderError("this adapter requires an OpenAI-compatible provider")
         self.config = config
         self._api_key = api_key
@@ -176,16 +182,28 @@ class OpenAICompatibleChatProvider:
             base_url = base_url or "http://127.0.0.1:11434/v1"
         elif self.config.provider_id == "openai":
             base_url = base_url or "https://api.openai.com/v1"
+        elif self.config.provider_id == "deepseek":
+            base_url = "https://api.deepseek.com"
         if not base_url:
             raise ProviderError("an OpenAI-compatible endpoint is required")
         headers = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
-        return factory(base_url=base_url.rstrip("/") + "/", headers=headers, timeout=20.0)
+        return factory(base_url=base_url.rstrip("/") + "/", headers=headers,
+                       timeout=90.0 if self.config.provider_id == "deepseek" else 20.0)
+
+    def _reasoning_options(self) -> dict[str, Any]:
+        effort = self.config.reasoning_effort
+        if self.config.provider_id == "deepseek":
+            if effort == "none":
+                return {"thinking": {"type": "disabled"}}
+            return {"thinking": {"type": "enabled"},
+                    **({"reasoning_effort": effort} if effort else {})}
+        return {"reasoning_effort": effort} if effort else {}
 
     @staticmethod
     async def _close(client: Any) -> None:
-        close = getattr(client, "close", None)
+        close = getattr(client, "aclose", None) or getattr(client, "close", None)
         if close is not None:
             result = close()
             if inspect.isawaitable(result):
@@ -198,10 +216,13 @@ class OpenAICompatibleChatProvider:
             payload: dict[str, Any] = {
                 "model": self.config.model,
                 "messages": [{"role": "user", "content": "Reply with OK."}],
-                "max_tokens": 2,
+                "max_tokens": 256 if self.config.provider_id == "deepseek" else 2,
             }
-            if self.config.reasoning_effort:
-                payload["reasoning_effort"] = self.config.reasoning_effort
+            payload.update(self._reasoning_options())
+            if self.config.provider_id == "deepseek":
+                # A short model/key reachability check, not a reasoning task.
+                payload["thinking"] = {"type": "disabled"}
+                payload.pop("reasoning_effort", None)
             await asyncio.wait_for(
                 self._post_checked(
                     client,
@@ -225,7 +246,7 @@ class OpenAICompatibleChatProvider:
         )
 
     async def stream_chat(
-        self, messages: Sequence[dict[str, str]]
+        self, messages: Sequence[dict[str, str]], *, json_mode: bool = False
     ) -> AsyncIterator[ChatEvent]:
         client = self._client()
         try:
@@ -234,8 +255,10 @@ class OpenAICompatibleChatProvider:
                 "messages": list(messages),
                 "stream": True,
             }
-            if self.config.reasoning_effort:
-                payload["reasoning_effort"] = self.config.reasoning_effort
+            payload.update(self._reasoning_options())
+            if json_mode:
+                payload["response_format"] = {"type": "json_object"}
+            received_text = False
             async with client.stream(
                 "POST",
                 "chat/completions",
@@ -246,7 +269,9 @@ class OpenAICompatibleChatProvider:
                     if not line.startswith("data:"):
                         continue
                     data = line[5:].strip()
-                    if not data or data == "[DONE]":
+                    if data == "[DONE]":
+                        break
+                    if not data:
                         continue
                     try:
                         chunk = json.loads(data)
@@ -254,7 +279,16 @@ class OpenAICompatibleChatProvider:
                         raise ProviderError("provider returned malformed streaming JSON") from error
                     text = _delta_text(chunk)
                     if text:
+                        received_text = True
                         yield ChatEvent("text_delta", text)
+                    # DeepSeek sends reasoning_content separately. Only final
+                    # content is an answer; never parse its thinking as a score.
+                    choices = chunk.get("choices", [])
+                    finish = choices[0].get("finish_reason") if choices else None
+                    if finish in {"length", "content_filter", "insufficient_system_resource"}:
+                        raise ProviderError("AI 回复未完整生成（" + finish + "）。请重试或降低推理强度；回答已保留。")
+            if not received_text:
+                raise ProviderError("服务未返回回答正文。请重试或关闭思考模式；不会把思考片段当作面试结果。")
             yield ChatEvent("completed")
         except asyncio.CancelledError:
             yield ChatEvent("cancelled")
@@ -293,6 +327,6 @@ def create_chat_provider(
 ) -> AnyLLMChatProvider | OpenAICompatibleChatProvider:
     """Select the smallest protocol adapter that exactly fits a connection."""
 
-    if config.provider_id in {"openai", "openai-compatible", "ollama"}:
+    if config.provider_id in {"openai", "openai-compatible", "ollama", "deepseek"}:
         return OpenAICompatibleChatProvider(config, api_key=api_key)
     return AnyLLMChatProvider(config, api_key=api_key)

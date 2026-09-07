@@ -205,7 +205,7 @@ def test_shell_breakpoints_and_exercise_route_are_permanent() -> None:
     assert 'property bool compactShell: width < 1180 || height < 700' in source
     assert 'sidebarWidth: compactShell ? 64 : 220' in source
     assert source.count('{id: "exercise"') == 1
-    assert "ExercisePage { app: backend; palette: window.colors; theme: appTheme }" in source
+    assert "ExercisePage { app: backend; colors: window.colors; theme: appTheme }" in source
     assert "exercise:3" in source
     assert 'sequences: ["Ctrl+R", "Meta+R"]' in source
     assert "onActivated: backend.runTests()" in source

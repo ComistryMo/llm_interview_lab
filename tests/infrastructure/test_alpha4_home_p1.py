@@ -96,7 +96,7 @@ def _home_component(dashboard: dict, *, width: int = 900, height: int = 620):
                 "interview": {},
                 "recentInterview": {},
             },
-            "palette": {
+            "colors": {
                 "text": "#171717",
                 "surface": "#fbfaf7",
                 "border": "#dedbd3",

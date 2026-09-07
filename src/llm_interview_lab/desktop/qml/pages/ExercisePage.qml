@@ -6,7 +6,7 @@ import "../components"
 Item {
     id: root
     required property var app
-    required property var palette
+    required property var colors
     required property var theme
     // Keep the editor as the primary workspace.  The Coach drawer remains
     // available on demand, but opening it by default steals useful width from
@@ -178,24 +178,24 @@ Item {
             visible: root.wideLayout || root.mediumLayout
             SplitView.preferredWidth: root.wideLayout ? 330 : 300
             SplitView.minimumWidth: 248
-            color: root.palette.surface
-            border.color: root.palette.border
+            color: root.colors.surface
+            border.color: root.colors.border
             ScrollView {
                 id: detailsScroll
                 anchors.fill: parent; anchors.margins: 20; clip: true
                 Column {
                     id: detailsColumn
                     width: detailsScroll.availableWidth; spacing: 12
-                    Text { width: parent.width; text: root.hasTask ? app.currentTask.problem_id : "尚未选择题目"; color: root.hasTask ? root.palette.accent : root.palette.muted; font.bold: true; font.pixelSize: 12 }
-                    Text { width: parent.width; text: root.displayTitle(); color: root.palette.text; font.pixelSize: 21; font.bold: true; wrapMode: Text.Wrap }
-                    StatusPill { text: root.hasTask ? (app.currentTask.validation || "尚未开始") : "未选择"; tone: root.hasTask ? root.palette.success : root.palette.muted }
-                    Rectangle { width: parent.width; height: 1; color: root.palette.border }
-                    Text { width: parent.width; text: root.displayTask(); color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
+                    Text { width: parent.width; text: root.hasTask ? app.currentTask.problem_id : "尚未选择题目"; color: root.hasTask ? root.colors.accent : root.colors.muted; font.bold: true; font.pixelSize: 12 }
+                    Text { width: parent.width; text: root.displayTitle(); color: root.colors.text; font.pixelSize: 21; font.bold: true; wrapMode: Text.Wrap }
+                    StatusPill { text: root.hasTask ? (app.currentTask.validation || "尚未开始") : "未选择"; tone: root.hasTask ? root.colors.success : root.colors.muted }
+                    Rectangle { width: parent.width; height: 1; color: root.colors.border }
+                    Text { width: parent.width; text: root.displayTask(); color: root.colors.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
                     Button {
                         visible: app.language !== "en" && root.hasTask && !!app.currentTask.task
                         text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
                         flat: true
-                        palette.buttonText: root.palette.text
+                        palette.buttonText: root.colors.text
                         Layout.alignment: Qt.AlignLeft
                         onClicked: root.showOriginalContract = !root.showOriginalContract
                     }
@@ -203,17 +203,17 @@ Item {
                         visible: root.showOriginalContract
                         width: parent.width
                         text: app.currentTask.task || ""
-                        color: root.palette.muted
+                        color: root.colors.muted
                         wrapMode: Text.Wrap
                         textFormat: Text.MarkdownText
                         lineHeight: 1.2
                     }
-                    Rectangle { width: parent.width; height: 1; color: root.palette.border }
-                    Text { text: "掌握流程"; color: root.palette.text; font.bold: true }
+                    Rectangle { width: parent.width; height: 1; color: root.colors.border }
+                    Text { text: "掌握流程"; color: root.colors.text; font.bold: true }
                     Text {
                         width: detailsColumn.width
                         text: root.actionExplanation()
-                        color: root.primaryActionKind() === "blocked" ? root.palette.warning : root.palette.muted
+                        color: root.primaryActionKind() === "blocked" ? root.colors.warning : root.colors.muted
                         wrapMode: Text.Wrap
                         font.pixelSize: 12
                     }
@@ -224,7 +224,7 @@ Item {
         Rectangle {
             SplitView.fillWidth: true
                 SplitView.minimumWidth: 380
-            color: root.palette.background
+            color: root.colors.background
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 14; spacing: 10
                 Rectangle {
@@ -232,14 +232,14 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 42
                     radius: 10
-                    color: root.palette.surfaceAlt
-                    border.color: root.palette.border
+                    color: root.colors.surfaceAlt
+                    border.color: root.colors.border
                     RowLayout {
                         anchors.fill: parent
                         anchors.leftMargin: 8
                         anchors.rightMargin: 8
                         spacing: 2
-                        Text { text: "submission.py"; color: root.palette.text; font.bold: true; Layout.leftMargin: 4 }
+                        Text { text: "submission.py"; color: root.colors.text; font.bold: true; Layout.leftMargin: 4 }
                         Item { Layout.fillWidth: true }
                         // Reference panes remain available on compact layouts;
                         // wide screens keep the editor deliberately quiet.
@@ -247,17 +247,17 @@ Item {
                             visible: !root.wideLayout
                             text: "题面"
                             flat: true
-                            palette.buttonText: root.palette.text
+                            palette.buttonText: root.colors.text
                             onClicked: detailsDrawer.open()
                         }
                         Button {
                             visible: !root.wideLayout || !root.coachOpen
                             text: "AI 辅助（可选）"
                             flat: true
-                            palette.buttonText: root.palette.text
+                            palette.buttonText: root.colors.text
                             onClicked: root.wideLayout ? root.coachOpen = true : coachDrawer.open()
                         }
-                        Button { text: "保存"; flat: true; palette.buttonText: root.palette.text; enabled: root.hasTask && !app.busy; onClicked: app.saveSubmission(editor.text) }
+                        Button { text: "保存"; flat: true; palette.buttonText: root.colors.text; enabled: root.hasTask && !app.busy; onClicked: app.saveSubmission(editor.text) }
                     }
                 }
                 Rectangle {
@@ -265,8 +265,8 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 38
                     radius: 8
-                    color: root.palette.surfaceAlt
-                    border.color: root.palette.border
+                    color: root.colors.surfaceAlt
+                    border.color: root.colors.border
                     RowLayout {
                         anchors.fill: parent
                         anchors.leftMargin: 12
@@ -276,7 +276,7 @@ Item {
                             objectName: "exerciseContextLabel"
                             text: (app.currentTask.problem_id || "当前题目")
                                   + " · " + root.displayTitle()
-                            color: root.palette.text
+                            color: root.colors.text
                             font.bold: true
                             elide: Text.ElideRight
                             Layout.fillWidth: true
@@ -284,9 +284,9 @@ Item {
                         StatusPill {
                             objectName: "exerciseContextStatus"
                             text: app.submissionDirty ? "未保存" : (app.testState || "未测试")
-                            tone: app.submissionDirty ? root.palette.warning
-                                  : app.testState === "测试通过" ? root.palette.success
-                                  : root.palette.muted
+                            tone: app.submissionDirty ? root.colors.warning
+                                  : app.testState === "测试通过" ? root.colors.success
+                                  : root.colors.muted
                         }
                     }
                 }
@@ -295,9 +295,9 @@ Item {
                     objectName: "exerciseEditorFrame"
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    color: root.palette.surface
+                    color: root.colors.surface
                     radius: 9
-                    border.color: editor.activeFocus ? root.palette.accent : root.palette.border
+                    border.color: editor.activeFocus ? root.colors.accent : root.colors.border
                     border.width: editor.activeFocus ? 2 : 1
                     clip: true
 
@@ -308,17 +308,17 @@ Item {
                             objectName: "exerciseEditorHeader"
                             Layout.fillWidth: true
                             Layout.preferredHeight: 30
-                            color: root.palette.surfaceAlt
-                            border.color: root.palette.border
+                            color: root.colors.surfaceAlt
+                            border.color: root.colors.border
                             RowLayout {
                                 anchors.fill: parent
                                 anchors.leftMargin: 14
                                 anchors.rightMargin: 12
                                 spacing: 10
-                                Text { text: "Python"; color: root.palette.accent; font.bold: true; font.pixelSize: 11 }
-                                Text { text: "纯文本编辑"; color: root.palette.muted; font.pixelSize: 11 }
+                                Text { text: "Python"; color: root.colors.accent; font.bold: true; font.pixelSize: 11 }
+                                Text { text: "纯文本编辑"; color: root.colors.muted; font.pixelSize: 11 }
                                 Item { Layout.fillWidth: true }
-                                Text { text: app.submissionDirty ? "本地草稿 · 尚未保存" : "本地草稿 · 已保存"; color: app.submissionDirty ? root.palette.warning : root.palette.muted; font.pixelSize: 11 }
+                                Text { text: app.submissionDirty ? "本地草稿 · 尚未保存" : "本地草稿 · 已保存"; color: app.submissionDirty ? root.colors.warning : root.colors.muted; font.pixelSize: 11 }
                             }
                         }
                         LabTextArea {
@@ -328,8 +328,8 @@ Item {
                             text: app.submissionText
                             enabled: root.hasTask
                             readOnly: !root.hasTask
-                            color: root.palette.text
-                            selectionColor: root.palette.accent
+                            color: root.colors.text
+                            selectionColor: root.colors.accent
                             font.family: root.codeFontFamily
                             font.pixelSize: 14
                             wrapMode: TextEdit.NoWrap
@@ -346,7 +346,7 @@ Item {
                     Rectangle {
                         x: 0; y: 30; width: 3
                         height: Math.max(0, parent.height - 30)
-                        color: root.palette.accent
+                        color: root.colors.accent
                         opacity: 0.72
                     }
                     Rectangle {
@@ -354,7 +354,7 @@ Item {
                         visible: !root.hasTask
                         anchors.fill: parent
                         z: 2
-                        color: root.palette.surface
+                        color: root.colors.surface
                         opacity: 0.97
                         ColumnLayout {
                             anchors.centerIn: parent
@@ -363,7 +363,7 @@ Item {
                             Text {
                                 Layout.fillWidth: true
                                 text: "还没有打开题目"
-                                color: root.palette.text
+                                color: root.colors.text
                                 font.pixelSize: 18
                                 font.bold: true
                                 horizontalAlignment: Text.AlignHCenter
@@ -371,7 +371,7 @@ Item {
                             Text {
                                 Layout.fillWidth: true
                                 text: "先从刷题训练选择一道可运行题目，编辑器和公开测试会自动绑定到当前作答。"
-                                color: root.palette.muted
+                                color: root.colors.muted
                                 wrapMode: Text.Wrap
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -392,11 +392,11 @@ Item {
                     Text {
                         visible: app.testedRevision.length > 0
                         text: "测试版本：" + app.testedRevision.slice(0, 12)
-                        color: root.palette.muted
+                        color: root.colors.muted
                         font.pixelSize: 11
                     }
                     Item { Layout.fillWidth: true }
-                    Text { visible: app.submissionDirty; text: "未保存"; color: root.palette.warning; font.pixelSize: 11 }
+                    Text { visible: app.submissionDirty; text: "未保存"; color: root.colors.warning; font.pixelSize: 11 }
                 }
                 Rectangle {
                     objectName: "exerciseTestOutput"
@@ -409,17 +409,17 @@ Item {
                                           : (root.compactHeight ? 78 : 92)
                     Layout.minimumHeight: root.compactHeight ? 68 : 80
                     radius: 9
-                    color: root.palette.surface
-                    border.color: app.testState === "测试通过" ? root.palette.success
+                    color: root.colors.surface
+                    border.color: app.testState === "测试通过" ? root.colors.success
                                   : app.testState === "测试失败" || app.testState === "保存失败"
-                                    ? root.palette.danger : root.palette.border
+                                    ? root.colors.danger : root.colors.border
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 12
                         spacing: 6
                         Text {
                             text: "公开测试输出"
-                            color: root.palette.muted
+                            color: root.colors.muted
                             font.bold: true
                             font.pixelSize: 11
                         }
@@ -430,7 +430,7 @@ Item {
                             Text {
                                 width: parent.width
                                 text: app.testOutput || "运行公开测试后，结果会显示在这里。"
-                                color: root.palette.text
+                                color: root.colors.text
                                 font.family: root.codeFontFamily
                                 font.pixelSize: 12
                                 wrapMode: Text.Wrap
@@ -443,8 +443,8 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: root.compactHeight ? 62 : 70
                     radius: 9
-                    color: root.palette.surface
-                    border.color: root.primaryActionKind() === "blocked" ? root.palette.warning : root.palette.border
+                    color: root.colors.surface
+                    border.color: root.primaryActionKind() === "blocked" ? root.colors.warning : root.colors.border
 
                     RowLayout {
                         anchors.fill: parent
@@ -456,14 +456,14 @@ Item {
                             spacing: 2
                             Text {
                                 text: root.primaryActionKind() === "blocked" ? "下一阶段暂不可用" : "下一步"
-                                color: root.primaryActionKind() === "blocked" ? root.palette.warning : root.palette.accent
+                                color: root.primaryActionKind() === "blocked" ? root.colors.warning : root.colors.accent
                                 font.pixelSize: 11
                                 font.bold: true
                             }
                             Text {
                                 Layout.fillWidth: true
                                 text: root.actionExplanation()
-                                color: root.palette.text
+                                color: root.colors.text
                                 font.pixelSize: 12
                                 wrapMode: Text.Wrap
                                 maximumLineCount: 2
@@ -481,11 +481,11 @@ Item {
                             enabled: !app.busy
                             background: Rectangle {
                                 radius: 8
-                                color: practicePrimaryButton.enabled ? root.palette.accent : root.palette.border
+                                color: practicePrimaryButton.enabled ? root.colors.accent : root.colors.border
                             }
                             contentItem: Text {
                                 text: practicePrimaryButton.text
-                                color: practicePrimaryButton.enabled ? "white" : root.palette.muted
+                                color: practicePrimaryButton.enabled ? "white" : root.colors.muted
                                 font.bold: true
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
@@ -497,14 +497,14 @@ Item {
                             visible: root.primaryActionKind() === "blocked"
                             text: "返回可做题目"
                             flat: true
-                            palette.buttonText: root.palette.text
+                            palette.buttonText: root.colors.text
                             Layout.preferredWidth: 132
                             Layout.preferredHeight: 40
                             onClicked: app.navigate("learn")
                         }
                     }
                 }
-                Text { text: "实现、审查与间隔复测会分别留证；一次测试通过不会直接授予已掌握。"; color: root.palette.muted; font.pixelSize: 12; wrapMode: Text.Wrap }
+                Text { text: "实现、审查与间隔复测会分别留证；一次测试通过不会直接授予已掌握。"; color: root.colors.muted; font.pixelSize: 12; wrapMode: Text.Wrap }
             }
         }
 
@@ -512,21 +512,21 @@ Item {
             visible: root.wideLayout && root.coachOpen
             SplitView.preferredWidth: root.coachOpen ? 310 : 0
             SplitView.minimumWidth: root.coachOpen ? 270 : 0
-            color: root.palette.surface
-            border.color: root.palette.border
+            color: root.colors.surface
+            border.color: root.colors.border
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 16; spacing: 12
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "AI 辅助（可选）"; color: root.palette.text; font.bold: true; font.pixelSize: 17 }
+                    Text { text: "AI 辅助（可选）"; color: root.colors.text; font.bold: true; font.pixelSize: 17 }
                     Item { Layout.fillWidth: true }
                     Button { text: "×"; flat: true; onClicked: root.coachOpen = false }
                 }
-                Text { text: "遵守 H0–H5 帮助边界；AI 辅助不会静默修改当前答案。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; font.pixelSize: 12 }
+                Text { text: "遵守 H0–H5 帮助边界；AI 辅助不会静默修改当前答案。"; color: root.colors.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; font.pixelSize: 12 }
                 Text {
                     Layout.fillWidth: true
                     text: "需要提示或只读审查时，再打开 AI 辅助页面。模拟面试请进入“模拟面试”；本页不会自动占用训练流程。"
-                    color: root.palette.text
+                    color: root.colors.text
                     wrapMode: Text.Wrap
                 }
                 Item { Layout.fillHeight: true }
@@ -549,16 +549,16 @@ Item {
                 x: 20
                 width: parent.width - 40
                 spacing: 12
-                Text { text: root.displayTitle(); color: root.palette.text; font.pixelSize: 20; font.bold: true; wrapMode: Text.Wrap; width: parent.width }
-                Text { text: root.displayTask(); color: root.palette.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
+                Text { text: root.displayTitle(); color: root.colors.text; font.pixelSize: 20; font.bold: true; wrapMode: Text.Wrap; width: parent.width }
+                Text { text: root.displayTask(); color: root.colors.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
                 Button {
                     visible: app.language !== "en" && root.hasTask && !!app.currentTask.task
                     text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
                     flat: true
-                    palette.buttonText: root.palette.text
+                    palette.buttonText: root.colors.text
                     onClicked: root.showOriginalContract = !root.showOriginalContract
                 }
-                Text { visible: root.showOriginalContract; text: app.currentTask.task || ""; color: root.palette.muted; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
+                Text { visible: root.showOriginalContract; text: app.currentTask.task || ""; color: root.colors.muted; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
             }
         }
     }
@@ -574,8 +574,8 @@ Item {
             anchors.fill: parent
             anchors.margins: 16
             spacing: 12
-            Text { text: "AI 辅助（可选）"; color: root.palette.text; font.pixelSize: 20; font.bold: true }
-            Text { text: "模拟面试请进入“模拟面试”。这里仅提供主动请求的解释和只读审查，不会自动修改答案。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+            Text { text: "AI 辅助（可选）"; color: root.colors.text; font.pixelSize: 20; font.bold: true }
+            Text { text: "模拟面试请进入“模拟面试”。这里仅提供主动请求的解释和只读审查，不会自动修改答案。"; color: root.colors.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
             Button { text: "打开 AI 辅助页面"; Layout.fillWidth: true; onClicked: { coachDrawer.close(); app.navigate("coach") } }
             Item { Layout.fillHeight: true }
         }
@@ -597,7 +597,7 @@ Item {
         )
         ColumnLayout {
             width: parent.width; spacing: 10
-                Text { text: "这里记录你的自我复盘（source=self），用于准备后续正式审查；不会代替导师或 AI 评审，也不会直接授予“已掌握”。"; color: root.palette.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                Text { text: "这里记录你的自我复盘（source=self），用于准备后续正式审查；不会代替导师或 AI 评审，也不会直接授予“已掌握”。"; color: root.colors.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
                 LabTextArea { id: explanation; theme: root.theme; Layout.fillWidth: true; Layout.preferredHeight: 80; placeholderText: "解释实现思路与不变式" }
                 LabTextField { id: complexity; theme: root.theme; Layout.fillWidth: true; placeholderText: "时间与空间复杂度" }
                 LabTextArea { id: boundaries; theme: root.theme; Layout.fillWidth: true; Layout.preferredHeight: 70; placeholderText: "边界情况、异常和输入不变性" }

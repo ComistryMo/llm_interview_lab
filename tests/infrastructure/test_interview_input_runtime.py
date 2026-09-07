@@ -84,6 +84,7 @@ def scene(controller):
     window.show()
     QTest.qWait(80)
     yield window, controller
+    assert not qml_errors, "\n".join(qml_errors)
     window.close()
     engine.deleteLater()
     QCoreApplication.sendPostedEvents()
@@ -1074,14 +1075,10 @@ def test_composer_tools_preserve_the_answer_and_never_send_on_inspection(scene):
     assert not controller.busy and not controller.interview["answer_locked"]
 
 
-def test_interview_session_details_and_reconfigure_preserve_results(scene):
+def test_interview_removes_details_and_reconfigure_preserves_results(scene):
     window, controller = scene
-    _click(window, _find(window, "openInterviewSessionInfo"))
-    dialog = window.findChild(QObject, "interviewSessionInfoDialog")
-    assert dialog.property("visible")
-    assert "实习" in dialog.property("message")
-    QMetaObject.invokeMethod(dialog, "accept")
-    QTest.qWait(150)
+    assert not any(item.objectName() == "openInterviewSessionInfo" for item in _items(window.contentItem()))
+    assert _find(window, "interviewQuestionPosition").property("text") == "第 1 问 · 逐问面试"
     controller.finishInterview()
     QTest.qWait(100)
     previous_id = controller.interview["interview_id"]
@@ -1093,6 +1090,126 @@ def test_interview_session_details_and_reconfigure_preserve_results(scene):
     QTest.qWait(50)
     assert _find(window, "interviewConversation").isVisible()
     assert controller.interview["interview_id"] == previous_id
+
+
+def test_codex_reuses_interview_thread_until_model_or_material_scope_changes(controller, monkeypatch):
+    from dataclasses import replace
+    from llm_interview_lab.ai.base import ContextPart
+    class Backend:
+        threads = []
+        turns = []
+        async def start_thread(self, **kwargs):
+            self.threads.append(kwargs)
+            return {"thread": {"id": f"scope-{len(self.threads)}"}}
+        async def start_turn(self, thread_id, *args, **kwargs):
+            self.turns.append(thread_id)
+            return {"turn": {"id": f"turn-{len(self.turns)}"}}
+    backend = Backend()
+    controller._codex_backend = backend
+    controller._codex_thread_id = "connected-interviewer"
+    controller._codex_thread_mode = "interviewer"
+    controller._codex_pump_started = True
+    controller._ensure_codex_loop()
+    original_context = controller._confirmed_interview_context
+    add_material = [True]
+    def preview(include_materials):
+        value = original_context(include_materials)
+        if add_material[0]:
+            value = replace(value, parts=(*value.parts, ContextPart("material:synthetic", "Synthetic", "synthetic", "abc")))
+        return value
+    monkeypatch.setattr(controller, "_confirmed_interview_context", preview)
+    for index in range(4):
+        if index == 2: add_material[0] = False
+        if index == 3: controller.setCodexModel("changed-model")
+        assert controller.submitInterviewAnswer("合成回答：我通过独立验证集和按用户划分避免数据泄漏。", "codex", False)
+        for _ in range(80):
+            QTest.qWait(10)
+            time.sleep(0.005)
+            if controller._codex_interview_turn_id == f"turn-{index + 1}": break
+        assert len(backend.turns) == index + 1
+        result = {"scores": {d: 3 for d in controller.interview["question"]["rubric"]["dimensions"]},
+                  "evidence": "合成回答明确说明独立验证集和按用户划分。", "confidence": "medium", "fatal_issues": [],
+                  "follow_up": f"请说明第 {index + 1} 次划分如何避免泄漏？", "next_stage": "experience",
+                  "coding_problem_id": "", "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))]}
+        controller._codex_interview_buffer = json.dumps(result)
+        controller._finish_codex_interview_assessment(controller._codex_interview_identity)
+        assert not controller.busy and not controller.interview.get("ai_error")
+    assert backend.turns == ["scope-1", "scope-1", "scope-2", "scope-3"]
+
+
+def test_deepseek_connection_controls_and_coding_language_are_real(scene, monkeypatch):
+    from llm_interview_lab.ai.base import ConnectionResult
+    from llm_interview_lab.ai.credentials import KeyringCredentialStore
+    saved_secrets, requests = {}, []
+    class Keyring:
+        def set_password(self, service, reference, secret): saved_secrets[reference] = secret
+        def get_password(self, service, reference): return saved_secrets.get(reference)
+    store = KeyringCredentialStore(Keyring())
+    monkeypatch.setattr("llm_interview_lab.ai.connections.KeyringCredentialStore", lambda: store)
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.KeyringCredentialStore", lambda: store)
+    class Provider:
+        async def test_connection(self): return ConnectionResult(True, "synthetic connection", 12)
+    def provider(config, **kwargs):
+        requests.append(config)
+        return Provider()
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.create_chat_provider", provider)
+    window, controller = scene
+    controller.navigate("connections")
+    QTest.qWait(100)
+    assert _find(window, "connectionProviderChoice").property("currentText") == "deepseek"
+    choices = _find(window, "deepseekModelChoice")
+    choices.forceActiveFocus()
+    QTest.keyClick(window, Qt.Key_Down)
+    QCoreApplication.processEvents()
+    field = _find(window, "connectionModelField")
+    assert choices.property("currentText") == "deepseek-v4-pro"
+    assert field.property("text") == "deepseek-v4-pro"
+    efforts = _find(window, "providerReasoningEffort")
+    assert efforts.property("currentValue") == "none"
+    efforts.forceActiveFocus()
+    QTest.keyClick(window, Qt.Key_Down)
+    assert efforts.property("currentValue") == "low"
+    for size, theme in (((900, 620), "light"), ((1280, 800), "dark")):
+        window.resize(*size)
+        controller.setTheme(theme)
+        QTest.qWait(60)
+        assert _within_window(window, _find(window, "saveAndTestConnection"))
+        _capture(window, f"deepseek-connections-{theme}")
+    _find(window, "connectionSecretField").setProperty("text", "fake-key-for-ui-test")
+    _click(window, _find(window, "saveAndTestConnection"))
+    for _ in range(60):
+        QTest.qWait(10)
+        time.sleep(0.005)
+        if not controller.busy: break
+    assert len(requests) == 1
+    assert (requests[0].provider_id, requests[0].model, requests[0].reasoning_effort) == ("deepseek", "deepseek-v4-pro", "low")
+    assert _find(window, "connectionSecretField").property("text") == ""
+    assert _find(window, "globalAiStatus").property("text") == "AI 服务就绪"
+    # A human-readable label is never a connection readiness signal.
+    controller._connections[0].update(ready=False, status="已连接")
+    controller.stateChanged.emit()
+    QCoreApplication.processEvents()
+    assert _find(window, "globalAiStatus").property("text") == "No-AI 可用"
+    controller.navigate("interview")
+    _enter_coding_round(controller)
+    text = _find(window, "interviewQuestionPrompt")
+    assert "sample_id" in text.property("text") and "校验" in text.property("text")
+    assert "## Goal" not in text.property("text")
+    toggle = _find(window, "toggleInterviewQuestionLanguage")
+    # Long task scroll positions do not change the underlying language action.
+    toggle.clicked.emit()
+    QCoreApplication.processEvents()
+    assert "## Goal" in text.property("text")
+    toggle.clicked.emit()
+    QCoreApplication.processEvents()
+    assert "校验" in text.property("text")
+    controller.setLanguage("en")
+    QCoreApplication.processEvents()
+    assert "## Goal" in text.property("text")
+    controller.setLanguage("zh-CN")
+    QCoreApplication.processEvents()
+    assert "校验" in text.property("text")
+    _capture(window, "coding-chinese-dark")
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])

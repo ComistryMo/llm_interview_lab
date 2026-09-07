@@ -120,6 +120,9 @@ ROLE_TEXT: dict[str, tuple[str, str, str]] = {
 # desktop surface uses this small vocabulary to make the first reading pass
 # Chinese-first without changing Catalog fingerprints or public task files.
 PROBLEM_TITLE_ZH: dict[str, str] = {
+    "LOSS-013": "带 Logits 的二元交叉熵",
+    "INF-003": "连续批处理调度器",
+    "CAP-LOSS-001": "带 Mask 的序列分类损失",
     "FND-001": "统计错误预测样本",
     "FND-002": "校验样本契约",
     "FND-003": "筛选困难样本",
@@ -286,6 +289,8 @@ def problem_brief(problem_id: str, fallback: str = "", language: str = "zh-CN") 
 def friendly_error(error: BaseException | str) -> str:
     raw = str(error).strip()
     message = raw.lower()
+    if any(token in raw for token in ("推理选项", "DeepSeek", "思考模式", "服务账户余额", "模型或推理参数", "回复未完整")):
+        return raw[:400]
     # Audio and transcription errors are already sanitized by the local
     # recorder / transcriber boundary.  Preserve their actionable next step
     # instead of collapsing them into the generic provider hint.
