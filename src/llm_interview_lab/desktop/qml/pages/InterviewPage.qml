@@ -1853,6 +1853,7 @@ Item {
                                 id: includeInterviewMaterials
                                 objectName: "includeInterviewMaterialsToggle"
                                 width: Math.min(implicitWidth, parent.width)
+                                height: root.theme.controlHeightCompact
                                 font.pixelSize: root.theme.fontCaption
                                 font.family: root.theme.uiFontFamily
                                 visible: !!activeQuestion && (root.answerLocked || root.dynamicInterview) && !app.interview.answer_corrupted

@@ -1137,7 +1137,7 @@ def test_codex_reuses_interview_thread_until_model_or_material_scope_changes(con
     assert backend.turns == ["scope-1", "scope-1", "scope-2", "scope-3"]
 
 
-def test_deepseek_connection_controls_and_coding_language_are_real(scene, monkeypatch):
+def test_deepseek_connection_controls_and_coding_language_are_real(scene, monkeypatch, tmp_path):
     from llm_interview_lab.ai.base import ConnectionResult
     from llm_interview_lab.ai.credentials import KeyringCredentialStore
     saved_secrets, requests = {}, []
@@ -1191,6 +1191,19 @@ def test_deepseek_connection_controls_and_coding_language_are_real(scene, monkey
     QCoreApplication.processEvents()
     assert _find(window, "globalAiStatus").property("text") == "No-AI 可用"
     controller.navigate("interview")
+    material_path = tmp_path / "synthetic-material.txt"
+    material_path.write_text("合成经历：负责偏好数据去重与留出集评估。", encoding="utf-8")
+    assert controller.addMaterial(str(material_path), "resume", "合成布局材料", True)
+    material_id = controller.materials[0]["id"]
+    controller.finishInterview()
+    preview = controller.dynamicInterviewContextPreview("post_training_engineer", "intern", "hard", material_id, True)
+    controller.startDynamicPersonalizedInterview("post_training_engineer", "intern", "hard", "deepseek-main", material_id, True, preview["context_sha256"])
+    QTest.qWait(80)
+    connection_choice = _find(window, "interviewActiveProvider")
+    consent_choice = _find(window, "includeInterviewMaterialsToggle")
+    assert connection_choice.isVisible() and consent_choice.isVisible()
+    assert connection_choice.mapToScene(QPointF(0, connection_choice.height()/2)).y() == pytest.approx(consent_choice.mapToScene(QPointF(0, consent_choice.height()/2)).y())
+    _capture(window, "composer-aligned-dark")
     _enter_coding_round(controller)
     text = _find(window, "interviewQuestionPrompt")
     assert "sample_id" in text.property("text") and "校验" in text.property("text")
