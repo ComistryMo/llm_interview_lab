@@ -34,7 +34,7 @@ Basic.Button {
     font.weight: selected ? Font.DemiBold : Font.Normal
     display: compact ? AbstractButton.IconOnly : AbstractButton.TextBesideIcon
     icon.source: iconSource
-    icon.color: theme ? theme.textStrong : "#303030"
+    icon.color: theme ? (selected || hovered ? theme.textStrong : theme.muted) : "#303030"
     icon.width: 18
     icon.height: 18
     palette.buttonText: selected
@@ -72,7 +72,7 @@ Basic.Button {
         icon: control.icon
         text: control.text
         font: control.font
-        color: control.theme ? control.theme.textStrong : "#303030"
+        color: control.theme ? (control.selected || control.hovered ? control.theme.textStrong : control.theme.text) : "#303030"
     }
 
     Rectangle {

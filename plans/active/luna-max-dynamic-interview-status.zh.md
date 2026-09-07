@@ -1,6 +1,62 @@
 # Luna Max 动态面试当前状态报告
 
-## 2026-09-07：一次提交自动接续与真实 Codex 验证（最新）
+## 2026-09-07：面试界面视觉收敛（最新）
+
+基线 `c904b3ef830422805205fc9e51f63dbf88a9ca11`，分支 `fix/dynamic-interview-full-flow-20260905`。本轮落实用户要求的布局与美观迭代，不修改 Controller、AI 传输、阶段、题库、评分或个人数据。
+
+### 可见变化
+
+- **准备页**：统一阅读宽度，按“面试目标 / 面试官与背景”分组；“开始面试”保持单一主动作并固定在底部。小窗口明确提示下方还有设置，细滚动条持续指示内容范围。
+- **作答页**：题目与回答分别滚动，输入、发送范围、语音和提交收拢为一体式回答区。短回答不占满一块大框，长回答自动增高至上限后滚动；仍然只点一次“提交并继续”。低饱和焦点环和主题实色保留。
+- **复盘页**：以分数、完成情况和逐条证据组织内容，去掉嵌套边框与重复标题。显示分数尺度、来源、置信度和未完成状态，不改变分值计算。
+- **侧栏**：减轻未选中图标与分组标题的强调，档案区改为首字头像和两行摘要；导航和档案入口不变。
+
+### 真实交互发现与修正
+
+首次检查长回答时，光标移到末尾后没有随输入滚动：新增测试真实失败。改为移动整个 ScrollView，保留 TextArea 作为它的直接内容，由 Qt 处理输入光标和滚动，不另造编辑器逻辑。参考 [Qt TextArea 的滚动用法](https://doc.qt.io/qt-6/qml-qtquick-controls-textarea.html#scrollable-textarea)。
+
+第二轮实看发现自定义细滚动条仍须明确右侧位置和完整轨道高度；已补几何断言。组合交互测试还暴露出展开语音时定位早于布局更新，导致录音入口落在视口外；现在先更新当前 Column 布局，再定位语音区域。工具检查确认查看发送范围不会锁定回答或发送请求，展开/收起语音也不会丢失草稿。
+
+### 定向验证与证据
+
+全部界面测试使用 Windows `QT_QPA_PLATFORM=windows`、正式 Main.qml、真实 AppController 与 Session 持久化；QSettings、档案和模型回复均隔离。**模型回复是 Fake Codex / fixture，不是本轮真实云服务实测。**没有读取用户简历、其他真实档案或 Keyring。
+
+使用统一前缀 `.\.venv\Scripts\python.exe -m pytest`，`PYTHONPATH` 指向当前仓库 `src`，以下为集成与收尾命令：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k 'answer_geometry_at_supported_sizes or conversation_long_answer or report_recognizes_qvariant or ui_single_submit_codex_response or shell_setup_home_coach_and_settings or answer_hint_hides_on_focus or question_switch_clears_drafts or codex_request_can_stop or setup_requires_consent or coding_actions_stay_visible or interview_completion_copy' -q
+# 22 passed, 23 deselected in 110.92s
+
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k 'answer_geometry_at_supported_sizes or conversation_long_answer or shell_setup_home_coach_and_settings or composer_tools' -q
+# 最后滚动条定位检查：8 passed，1 failed（展开语音未定位到录音入口）
+
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k 'conversation_long_answer or composer_tools or report_recognizes_qvariant' -q
+# 修正语音定位后：5 passed, 41 deselected in 21.68s
+
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_desktop.py -k 'interview_setup_uses_profile_role_availability_and_real_report or no_ai_interview_setup_explains_the_ai_boundary' -q
+# 2 passed, 36 deselected in 0.41s
+
+git diff --check
+# 通过
+```
+
+此前只执行本页迭代所需的 Before / 首轮输入 / 长文本 / 布局子集：Before 6 passed；首轮输入 1 passed；长回答首轮 10 passed、2 failed，修复后该子集 3 passed；细滚动条与复盘子集 10 passed；新增工具检查单独 1 passed。这些组相互重叠，**不相加冒充独立测试数**。当前覆盖 23 个不同的界面交互参数化用例及 2 个既有静态契约；最后暴露的失败均有直接修复和复验。
+
+作答布局覆盖 **900×620、1080×680、1280×800、1440×900 × 浅/深色 × 100%/125% 字号**；准备页覆盖四尺寸、浅/深色，并在最小尺寸检查放大字体、表单滚动与主按钮。另检查长回答 Ctrl+Home/End、中文输入法组字、草稿切题、材料授权、一次提交换题、停止/超时保留回答、手撕入口、证据列表滚动。
+
+截图全部来自本轮正式 QML 工作树，保存于 ignored `workspace/maintainer/interview-polish-20260907/`。已亲自查看 Before、首轮与修正后的深浅主题、小窗口长文本、准备页上下半部、等待/超时、语音展开及复盘：
+
+- Before：`before/interview-1280x800-dark-1.0.png`、`before/setup-1280x800-dark.png`。
+- After：`final/interview-1280x800-dark-1.0.png`、`final/interview-900x620-light-1.25.png`。
+- 其他：`final/setup-1280x800-dark.png`、`final/setup-scrolled-900-light.png`、`final/report-1280-dark.png`、`final/long-answer-900-light.png`、`final/voice-options-900.png`。
+
+### 终局与限制
+
+`UI_POLISH_READY_FOR_USER_UAT`。改动仍是源码版本 `0.4.0a3` 的分支迭代，不是新桌面 Release。没有运行全量 pytest、CI、打包、macOS 实机或真实云请求；此前真实 Codex 的约 125–128 秒网络重连延迟仍未解决，不将视觉迭代描述为性能修复。
+
+用户原有窗口、UAT 目录及未跟踪资料均保留。运行中的旧 Python 窗口不会热更新；处理未提交回答后，按[源码运行](../../docs/desktop-app.md#源码运行)重新启动，并继续使用原数据目录。
+
+## 2026-09-07：一次提交自动接续与真实 Codex 验证（历史）
 
 基线 `d7570dd4fd778a3a999f8425e72fef1a67a0b0e9`；分支 `fix/dynamic-interview-full-flow-20260905`。本轮只处理用户指出的多次确认、发送失败无具体原因及下一问验证，不改变阶段、题库、Grader 或 mastery，不构建、不触发 CI、不跑全量。
 

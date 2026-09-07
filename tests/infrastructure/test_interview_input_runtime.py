@@ -410,20 +410,59 @@ def test_setup_requires_consent_for_resume_and_jd(scene, tmp_path):
     assert {ref["kind"] for ref in session["material_refs"]} == {"resume", "job_description"}
 
 
-def test_report_recognizes_qvariant_evidence_as_scored(scene):
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_report_recognizes_qvariant_evidence_as_scored(scene, theme):
     window, controller = scene
-    controller.lockInterviewAnswer("合成回答：明确说明了独立留出评估与数据去重过程。")
-    question = controller.interview["question"]
-    controller.service.score_interview(
-        controller.profileId, controller.interview["interview_id"], question["question_id"],
-        {name: 3 for name in question["rubric"]["dimensions"]},
-        evidence="回答描述了独立留出评估和数据去重过程，缺少具体量化结果。", source="ai", confidence="medium",
-    )
+    controller.setTheme(theme)
+    window.resize(1280, 800)
+    interview_id = controller.interview["interview_id"]
+    for index, evidence in enumerate((
+        "回答描述了独立留出评估和数据去重过程，缺少具体量化结果。",
+        "能够区分训练数据与评估数据；需要进一步解释近重复样本的判定阈值。",
+        "提出了对照实验和回滚条件，但尚未说明如何区分数据变化与服务异常。",
+    )):
+        question = controller.interview["question"]
+        controller.lockInterviewAnswer("合成回答：先隔离训练与评估数据，再通过对照实验核对效果。")
+        controller.service.score_interview(
+            controller.profileId, interview_id, question["question_id"],
+            {name: 3 for name in question["rubric"]["dimensions"]},
+            evidence=evidence, source="ai", confidence="medium",
+        )
+        if index < 2:
+            current = controller.service.interview_session(controller.profileId, interview_id)
+            controller.service.append_dynamic_interview_question(
+                controller.profileId, interview_id,
+                question={"kind": question["kind"], "title": ("数据质量与评估隔离", "上线验证与失败定位")[index],
+                          "prompt": "请说明你会如何验证这个结论，以及什么结果会让你改变判断。"},
+                context_sha256=current["plan_context_sha256"],
+            )
+            controller._load_interview(interview_id)
     controller.finishInterview()
     QTest.qWait(80)
     summary = _find(window, "interviewResultSummary").property("text")
     assert "部分证据分数" in summary and "尚未评分" not in summary
-    assert format(controller.interview["result"]["overall_score"], "g") in summary
+    score = _find(window, "interviewResultScore").property("text")
+    assert format(controller.interview["result"]["overall_score"], "g") in score
+    for size, scale in (((1280, 800), 1.0), ((900, 620), 1.25)):
+        window.resize(*size)
+        window.setProperty("displayFontScaleOverride", scale)
+        QTest.qWait(80)
+        viewport = _find(window, "interviewQuestionScroll").property("contentItem")
+        viewport.setProperty("contentY", 0)
+        rows = [item for item in _items(window.contentItem()) if item.objectName() == "interviewEvidenceRow"]
+        assert len(rows) == 3
+        assert all(row.width() > 0 and row.height() > 0 for row in rows)
+        assert all(a.y() + a.height() <= b.y() for a, b in zip(rows, rows[1:]))
+        for row in rows:
+            for item in _items(row):
+                if item.isVisible() and item.property("text"):
+                    assert item.property("contentHeight") <= item.height() + 1
+                    assert item.mapToItem(row, QPointF(0, item.height())).y() <= row.height()
+        _capture(window, f"report-{size[0]}-{theme}")
+        viewport.setProperty("contentY", max(0, viewport.property("contentHeight") - viewport.height()))
+        QTest.qWait(50)
+        assert rows[-1].mapToItem(viewport, QPointF(0, rows[-1].height())).y() <= viewport.height() + 1
+        assert _within_window(window, _find(window, "configureAnotherInterview"))
 
 
 def test_onboarding_does_not_preview_a_nonexistent_practice_task(qapp, public_repo, tmp_path, monkeypatch):
@@ -458,6 +497,9 @@ def test_onboarding_does_not_preview_a_nonexistent_practice_task(qapp, public_re
 @pytest.mark.parametrize("action", ["stop", "timeout"])
 def test_codex_request_can_stop_without_losing_the_locked_answer(scene, action):
     window, controller = scene
+    window.resize(900, 620)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    controller.setTheme("dark")
     controller.lockInterviewAnswer("合成回答：我先划分训练集与验证集，再检查相互之间的数据泄漏。")
     interview_id = controller.interview["interview_id"]
     saved_answer = controller.interview["answer_text"]
@@ -495,6 +537,8 @@ def test_codex_request_can_stop_without_losing_the_locked_answer(scene, action):
         if controller._codex_interview_turn_id == "turn-stop-test":
             break
     operation = controller._codex_interview_operation_id
+    assert _within_window(window, _find(window, "stopCodexInterviewRequest"))
+    _capture(window, f"waiting-900-{action}")
     if action == "stop":
         _click(window, _find(window, "stopCodexInterviewRequest"))
     else:
@@ -510,6 +554,8 @@ def test_codex_request_can_stop_without_losing_the_locked_answer(scene, action):
     assert controller.service.interview_answer_text(controller.profileId, interview_id, "q-001") == saved_answer
     assert not controller.service.interview_session(controller.profileId, interview_id)["assessments"]
     assert "回答已保留" in controller.interview["ai_error"]
+    assert _within_window(window, _find(window, "lockInterviewAnswer"))
+    _capture(window, f"request-{action}-900")
     assert _find(window, "globalAiStatus").property("text") == ("AI 已停止" if action == "stop" else "AI 请求失败")
     if action == "stop":
         assert backend.interrupts == [("thread-stop-test", "turn-stop-test")]
@@ -873,13 +919,15 @@ def test_answer_geometry_at_supported_sizes(scene, size):
         assert answer.width() >= 260
         assert not _visible_hints(answer)
         button = _find(window, "lockInterviewAnswer")
-        hint = _find(window, "interviewAnswerActionHint")
         button_start = button.mapToScene(QPointF(0, 0))
-        hint_start = hint.mapToScene(QPointF(0, 0))
-        assert (
-            hint_start.y() + hint.height() <= button_start.y()
-            or hint_start.x() + hint.width() <= button_start.x()
-        ), "Submit button must not overlap its explanation"
+        composer = _find(window, "interviewPhaseGuidance")
+        reply_viewport = _find(window, "interviewReplyViewport")
+        assert reply_viewport.mapToScene(QPointF(0, reply_viewport.height())).y() <= button_start.y()
+        assert button.mapToItem(composer, QPointF(0, button.height())).y() <= composer.height() - 8
+        scope = _find(window, "inspectInterviewContext")
+        voice = _find(window, "toggleInterviewVoice")
+        assert scope.mapToScene(QPointF(scope.width(), 0)).x() <= voice.mapToScene(QPointF()).x()
+        assert voice.mapToScene(QPointF(voice.width(), 0)).x() <= button_start.x()
         assert button.isEnabled()
         assert button.property("resolvedBackground") != button.property("resolvedForeground")
         title = _find(window, "interviewQuestionTitle")
@@ -887,7 +935,13 @@ def test_answer_geometry_at_supported_sizes(scene, size):
         assert title.property("contentHeight") <= title.height() + 1
         assert prompt.property("contentHeight") <= prompt.height() + 1
         assert title.mapToScene(QPointF(0, title.height())).y() <= prompt.mapToScene(QPointF()).y()
-        assert prompt.mapToScene(QPointF(0, prompt.height())).y() <= answer.mapToScene(QPointF()).y()
+        reading = _find(window, "interviewQuestionScroll")
+        assert reading.property("clip") and reply_viewport.property("clip")
+        assert reading.mapToScene(QPointF(0, reading.height())).y() <= composer.mapToScene(QPointF()).y()
+        for view, name in ((reading, "interviewQuestionScrollBar"), (reply_viewport, "interviewReplyScrollBar")):
+            bar = _find(window, name)
+            assert bar.mapToItem(view, QPointF(bar.width(), 0)).x() == pytest.approx(view.width())
+            assert bar.height() == pytest.approx(view.property("availableHeight"))
         _capture(window, f"interview-{size[0]}x{size[1]}-{theme}-{scale}")
         viewport = _find(window, "interviewQuestionScroll")
         flickable = viewport.property("contentItem")
@@ -904,6 +958,42 @@ def test_answer_geometry_at_supported_sizes(scene, size):
         if size == (900, 620):
             _capture(window, f"interview-900x620-{theme}-{scale}-submit")
         flickable.setProperty("contentY", 0)
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_conversation_long_answer_scrolls_without_moving_submit(scene, theme):
+    window, controller = scene
+    window.resize(900, 620)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    controller.setTheme(theme)
+    answer = _find(window, "interviewAnswerEditor")
+    reading = _find(window, "interviewQuestionScroll")
+    prompt = _find(window, "interviewQuestionPrompt")
+    prompt.setProperty("text", "请根据刚才提到的评估过程，说明怎样避免数据泄漏，以及你会如何核对上线前后的结果。\n\n" * 12)
+    answer.setProperty("text", "合成回答：我先按用户和时间划分数据，再对语义相近的样本去重。\n" * 40)
+    QTest.qWait(100)
+    _click(window, answer)
+    QTest.keyClick(window, Qt.Key_End, Qt.ControlModifier)
+    QTest.qWait(80)
+    viewport = _find(window, "interviewReplyViewport")
+    flickable = viewport.property("contentItem")
+    cursor = answer.property("cursorRectangle")
+    cursor_bottom = answer.mapToItem(viewport, cursor.bottomRight()).y()
+    assert 0 < cursor_bottom <= viewport.height() + 1, "Typing cursor must follow the independently scrolling answer"
+    assert flickable.property("contentY") > 0
+    assert viewport.height() <= 180
+    button = _find(window, "lockInterviewAnswer")
+    button_y = button.mapToScene(QPointF()).y()
+    assert _within_window(window, button)
+    assert not _visible_hints(answer)
+    _capture(window, f"long-answer-900-{theme}")
+    reading.property("contentItem").setProperty("contentY", 200)
+    QTest.qWait(30)
+    assert button.mapToScene(QPointF()).y() == button_y
+    QTest.keyClick(window, Qt.Key_Home, Qt.ControlModifier)
+    QTest.qWait(50)
+    assert flickable.property("contentY") == 0
+    assert answer.property("text").count("合成回答") == 40
 
 
 @pytest.mark.parametrize("size", [(900, 620), (1280, 800)])
@@ -956,6 +1046,34 @@ def test_context_dialog_long_labels_scale_without_overlap(scene, size):
         QTest.qWait(150)
 
 
+def test_composer_tools_preserve_the_answer_and_never_send_on_inspection(scene):
+    window, controller = scene
+    window.resize(900, 620)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    answer = _find(window, "interviewAnswerEditor")
+    draft = "合成回答：我负责数据去重和独立评估。"
+    answer.setProperty("text", draft)
+    _click(window, _find(window, "inspectInterviewContext"))
+    QTest.qWait(80)
+    dialog = window.findChild(QObject, "interviewAnswerContextDialog")
+    assert dialog.property("visible")
+    assert not controller.busy and not controller.interview["answer_locked"]
+    QMetaObject.invokeMethod(dialog, "reject")
+    QTest.qWait(180)
+    _click(window, _find(window, "toggleInterviewVoice"))
+    QTest.qWait(100)
+    assert _find(window, "interviewVoiceCard").isVisible()
+    viewport = _find(window, "interviewQuestionScroll")
+    start = _find(window, "startInterviewRecording")
+    top = start.mapToItem(viewport, QPointF()).y()
+    assert 0 <= top and top + start.height() <= viewport.height(), "Opening voice should reveal the recording action"
+    _capture(window, "voice-options-900")
+    _click(window, _find(window, "toggleInterviewVoice"))
+    assert not _find(window, "interviewVoiceCard").isVisible()
+    assert answer.property("text") == draft
+    assert not controller.busy and not controller.interview["answer_locked"]
+
+
 def test_interview_session_details_and_reconfigure_preserve_results(scene):
     window, controller = scene
     _click(window, _find(window, "openInterviewSessionInfo"))
@@ -1005,7 +1123,7 @@ def test_shell_setup_home_coach_and_settings_have_readable_controls(scene, theme
     _click(window, _find(window, "configureAnotherInterview"))
     selector = _find(window, "interviewAiModeSelector")
     selector.setProperty("currentIndex", 2)
-    for size in ((900, 620), (1280, 800)):
+    for size in ((900, 620), (1080, 680), (1280, 800), (1440, 900)):
         window.resize(*size)
         window.setProperty("displayFontScaleOverride", 1.25 if size[0] == 900 else 1.0)
         QTest.qWait(100)
@@ -1015,6 +1133,19 @@ def test_shell_setup_home_coach_and_settings_have_readable_controls(scene, theme
         assert pos.y() >= 0 and pos.y() + start.height() <= window.height()
         assert pos.x() >= 0 and pos.x() + start.width() <= window.width()
         _capture(window, f"setup-{size[0]}x{size[1]}-{theme}")
+        viewport = _find(window, "interviewSetupScroll").property("contentItem")
+        view = _find(window, "interviewSetupScroll")
+        bar = _find(window, "interviewSetupScrollBar")
+        assert bar.mapToItem(view, QPointF(bar.width(), 0)).x() == pytest.approx(view.width())
+        assert bar.height() == pytest.approx(view.property("availableHeight"))
+        viewport.setProperty("contentY", max(0, viewport.property("contentHeight") - viewport.height()))
+        QTest.qWait(80)
+        materials = _find(window, "interviewUseMaterials")
+        assert _within_window(window, materials), "The optional background section remains reachable"
+        assert materials.mapToScene(QPointF(0, materials.height())).y() <= start.mapToScene(QPointF()).y()
+        if size == (900, 620):
+            _capture(window, f"setup-scrolled-900-{theme}")
+        viewport.setProperty("contentY", 0)
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])

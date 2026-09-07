@@ -276,7 +276,7 @@ ApplicationWindow {
                             }
                         }
                         Text {
-                            text: "本地面试训练工作台"
+                            text: "练习 · 面试 · 复盘"
                             color: window.colors.muted
                             font.pixelSize: appTheme.scaledPx(11)
                             Layout.fillWidth: true
@@ -312,7 +312,7 @@ ApplicationWindow {
                     text: "主要"
                     variant: "caption"
                     tone: "muted"
-                    strong: true
+                    Layout.leftMargin: 12
                     Layout.topMargin: 2
                 }
                 Repeater {
@@ -337,7 +337,7 @@ ApplicationWindow {
                     text: "复盘与辅助"
                     variant: "caption"
                     tone: "muted"
-                    strong: true
+                    Layout.leftMargin: 12
                 }
                 Repeater {
                     model: [
@@ -375,14 +375,29 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.preferredHeight: profileSummary.implicitHeight + 24
                     onActivated: backend.navigate("settings")
-                    ColumnLayout {
+                    RowLayout {
                         id: profileSummary
                         anchors.fill: parent
                         anchors.margins: 12
-                        spacing: 3
-                        LabText { theme: appTheme; text: "学习档案"; variant: "caption"; tone: "muted"; strong: true }
-                        LabText { theme: appTheme; text: backend.profileDisplayName || backend.profileId; strong: true; elide: Text.ElideRight; Layout.fillWidth: true }
-                        LabText { theme: appTheme; text: "数据保存在本机"; variant: "caption"; tone: "muted"; elide: Text.ElideRight; Layout.fillWidth: true }
+                        spacing: 10
+                        Rectangle {
+                            Layout.preferredWidth: 32; Layout.preferredHeight: 32
+                            radius: 16
+                            color: appTheme.surfaceHover
+                            Text {
+                                anchors.centerIn: parent
+                                text: (backend.profileDisplayName || backend.profileId || "我").slice(0, 1)
+                                color: appTheme.textStrong
+                                font.pixelSize: appTheme.fontBody
+                            }
+                        }
+                        ColumnLayout {
+                            spacing: 2
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                            LabText { theme: appTheme; text: backend.profileDisplayName || backend.profileId; strong: true; elide: Text.ElideRight; Layout.fillWidth: true }
+                            LabText { theme: appTheme; text: "本地学习档案"; variant: "caption"; tone: "muted"; elide: Text.ElideRight; Layout.fillWidth: true }
+                        }
                     }
                 }
                 LabIconButton {

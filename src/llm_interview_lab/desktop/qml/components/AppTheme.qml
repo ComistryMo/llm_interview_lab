@@ -82,6 +82,9 @@ QtObject {
     readonly property int controlHeight: Math.max(40, scaledPx(28) + 12)
     readonly property int controlHeightCompact: Math.max(34, scaledPx(24) + 10)
     readonly property int pagePadding: 24
+    // Reading and composing share one measure; code workspaces remain wider.
+    readonly property int readingWidth: 760
+    readonly property int composerRadius: 18
 
     readonly property int breakpointCompact: 1040
     readonly property int breakpointWide: 1400
