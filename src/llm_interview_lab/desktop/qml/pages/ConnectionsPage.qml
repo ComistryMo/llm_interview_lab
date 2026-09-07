@@ -28,18 +28,6 @@ Flickable {
     // amount of copy, especially beside the first configuration fields.
     property int overviewCardMinHeight: compactOverview ? 96 : 150
 
-    function connectionStatusTone(value) {
-        var status = String(value || "").toLowerCase()
-        if (status.indexOf("失败") >= 0 || status.indexOf("error") >= 0)
-            return root.palette.danger
-        if (status.indexOf("连接") >= 0 || status.indexOf("就绪") >= 0
-                || status === "connected" || status === "ready")
-            return root.palette.success
-        if (status.indexOf("测试") >= 0 || status.indexOf("验证") >= 0)
-            return root.palette.warning
-        return root.palette.muted
-    }
-
     property string pendingDeleteConnectionId: ""
     property string pendingDeleteConnectionName: ""
 
@@ -94,6 +82,12 @@ Flickable {
         // preserves the existing key_reference.
         secretOrEndpoint.text = item.provider_id === "ollama"
                                 ? String(item.base_url || "") : ""
+        Qt.callLater(function() {
+            model.forceActiveFocus()
+            model.selectAll()
+            root.cancelFlick()
+            root.contentY = Math.max(0, content.y + connectionForm.y - 12)
+        })
     }
 
     function cancelEditConnection() {
@@ -139,7 +133,7 @@ Flickable {
         Text {
             text: root.compactOverview
                   ? "不连接 AI 也能训练；远程请求仅发送你确认的内容。"
-                  : "不连接 AI 也能完成固定课程、测试、复测和手动面试。远程请求只发送你确认的上下文。"
+                  : "不连接 AI 也能完成固定课程、测试和复测。个性化模拟面试需要 AI；远程请求只发送你确认的上下文。"
             color: root.palette.muted
             wrapMode: Text.Wrap
             // Security guidance must not disappear behind an ellipsis.  The
@@ -274,6 +268,8 @@ Flickable {
         }
 
         LabCard {
+            id: connectionForm
+            objectName: "connectionForm"
             Layout.fillWidth: true
             // Let LabCard's implicit height follow the visible form rows.  A
             // fixed height used to let the privacy note spill into the next
@@ -307,11 +303,12 @@ Flickable {
             RowLayout {
                 width: parent.width
                 spacing: 12
-                Button {
+                LabButton {
                     objectName: "saveAndTestConnection"
+                    theme: root.theme
+                    variant: "primary"
                     // Static contract: text: "保存并测试"
                     text: root.saving ? "正在保存并测试…" : "保存并测试"
-                    highlighted: true
                     enabled: model.text.trim().length > 0 && !root.saving && !app.busy
                     onClicked: {
                         root.saving = true
@@ -356,6 +353,7 @@ Flickable {
                 Text { text: "模型"; color: root.palette.muted }
                 LabTextField {
                     id: model
+                    objectName: "connectionModelField"
                     theme: root.theme
                     Layout.fillWidth: true
                     placeholderText: "例如 gpt-5、claude 或本地模型 ID"
@@ -466,16 +464,16 @@ Flickable {
             model: app.connections
             delegate: LabCard {
                 required property var modelData
+                objectName: "savedConnectionCard"
                 // The old single-row delegate pushed three action buttons
                 // beyond the viewport at 900px.  A metadata row plus a
                 // wrapping action row keeps every action reachable without
                 // shrinking labels to unreadable glyphs.
                 Layout.fillWidth: true
-                Layout.preferredHeight: root.compactForm ? 142 : 116
+                Layout.minimumHeight: root.compactForm ? 142 : 116
                 cardColor: root.palette.surface; borderColor: root.palette.border
                 ColumnLayout {
                     width: parent.width
-                    height: parent.height
                     spacing: 8
                     RowLayout {
                         Layout.fillWidth: true
@@ -495,8 +493,10 @@ Flickable {
                             }
                         }
                         StatusPill {
+                            objectName: "savedConnectionStatus"
                             text: modelData.status || "已保存，尚未测试"
-                            tone: root.connectionStatusTone(modelData.status)
+                            tone: modelData.ready === true ? root.palette.success
+                                  : modelData.status === "连接失败" ? root.palette.danger : root.palette.muted
                             Layout.alignment: Qt.AlignTop
                         }
                     }
@@ -513,7 +513,7 @@ Flickable {
                             onClicked: root.beginEditConnection(modelData)
                         }
                         Button {
-                            text: app.busy ? "测试中…" : "测试连接"
+                            text: modelData.status === "测试中" ? "测试中…" : "测试连接"
                             flat: true
                             enabled: !app.busy
                             implicitHeight: 32

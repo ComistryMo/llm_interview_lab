@@ -29,7 +29,7 @@ Item {
     // the actual frozen answer.
     property string pendingLockAnswer: ""
     property string activeQuestionId: activeQuestion ? activeQuestion.question_id : ""
-    property string activeQuestionKey: String(app.interview.interview_id || "")
+    property string activeQuestionKey: String(app.profileId || "") + "::" + String(app.interview.interview_id || "")
                                   + "::" + String(activeQuestion ? activeQuestion.question_id : "")
     property bool configuringNewInterview: false
     property bool syncingQuestionEditors: false
@@ -42,6 +42,13 @@ Item {
     // matches the revision that the local Grader tested. TextArea bindings are
     // intentionally broken after typing, so track edits explicitly.
     property bool codingEditorDirty: false
+    property bool showCodingPrompt: true
+    readonly property bool codingQuestion: !!activeQuestion && activeQuestion.kind === "coding"
+    readonly property bool interviewFinished: app.interview.status === "completed" || app.interview.status === "incomplete"
+    readonly property bool hasUnsubmittedDraft: !!activeQuestion && (root.codingQuestion
+        ? root.codingEditorDirty
+        : !root.answerLocked && (answer.text.length > 0 || answer.preeditText.length > 0))
+    onHasUnsubmittedDraftChanged: app.setInterviewDraftDirty(root.hasUnsubmittedDraft)
     property bool interviewCanEdit: app.interview.status === "active"
                                     && app.interview.expired !== true
     // A short viewport needs to keep the answer action visible before asking
@@ -108,9 +115,24 @@ Item {
         root.rubricScores = ({})
         root.answerDraft = ""
         root.pendingLockAnswer = ""
+        root.showCodingPrompt = true
         evidence.text = ""
         followupAnswer.text = ""
         root.syncQuestionEditors()
+    }
+
+    function runCodingTests() {
+        if (app.runInterviewCoding(codingEditor.text)) {
+            root.codingEditorDirty = false
+            root.showCodingPrompt = false
+            questionScroll.contentItem.contentY = 0
+        }
+    }
+
+    Shortcut {
+        sequences: ["Ctrl+R", "Meta+R"]
+        enabled: root.visible && root.codingQuestion && root.interviewCanEdit && !app.busy
+        onActivated: root.runCodingTests()
     }
 
     function providerIsReady(itemOrId) {
@@ -954,7 +976,7 @@ Item {
                         objectName: "dynamicInterviewScope"
                         width: parent.width
                         visible: leftPanel.setupVisible && aiMode.currentValue !== "disabled"
-                        text: "确认后先自我介绍。提交回答后，AI 读取当前问题、已锁定回答、岗位与难度及本次确认的材料，再生成一条追问。当前动态模式尚未自动衔接代码题。"
+                        text: "先自我介绍，再围绕你的经历深入追问、考察岗位原理，最后从当前可运行的本地题目中选择手撕题。AI 每次只生成下一问；没有可用代码题时会明确标记未完成环节。"
                         color: root.palette.muted
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
@@ -1086,9 +1108,12 @@ Item {
                     }
                     LabText {
                         objectName: "interviewQuestionTitle"
+                        visible: !root.codingQuestion || !root.showCodingPrompt
                         width: parent.width
                         theme: root.theme
-                        text: activeQuestion ? activeQuestion.title : "本场已结束"
+                        text: activeQuestion ? activeQuestion.title
+                              : root.interviewFinished ? "本场复盘"
+                              : app.interview.expired ? "本场已到时" : "本场作答已完成"
                         variant: "title"
                         strong: true
                         font.pixelSize: root.theme ? root.theme.scaledPx(22) : 22
@@ -1096,11 +1121,14 @@ Item {
                     }
                     Text {
                         objectName: "interviewQuestionPrompt"
+                        visible: !root.codingQuestion || root.showCodingPrompt
                         width: parent.width
                         // Markdown's default implicit height does not include
                         // the complete custom paragraph leading on Qt/Windows.
                         height: contentHeight
-                        text: activeQuestion ? activeQuestion.prompt : "选择岗位、求职阶段与难度，先完成自我介绍，再由 AI 根据回答逐步追问。"
+                        text: activeQuestion ? activeQuestion.prompt
+                              : root.interviewFinished ? "下面汇总已记录的回答与评估依据。缺少的环节不会作为已完成计入。"
+                              : "点击「结束并查看复盘」保存本场结果；完成情况以实际回答和测试证据为准。"
                         color: root.palette.text
                         font.family: root.theme ? root.theme.uiFontFamily : ""
                         font.pixelSize: root.theme ? root.theme.fontBodyLarge : 15
@@ -1542,7 +1570,7 @@ Item {
                         }
                     }
                     ColumnLayout {
-                        visible: !!activeQuestion && activeQuestion.kind === "coding"
+                        visible: root.codingQuestion && !root.showCodingPrompt
                         width: parent.width; spacing: 10
                         Text { text: "本场手撕代码"; color: root.palette.text; font.bold: true }
                         LabTextArea {
@@ -1562,69 +1590,97 @@ Item {
                             Accessible.name: "限时代码面试编辑器"
                             onTextChanged: if (!root.syncingQuestionEditors) root.codingEditorDirty = true
                         }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: 8
-                            Button {
-                                text: "保存"
-                                enabled: root.interviewCanEdit && !app.busy
-                                onClicked: {
-                                    // The controller returns false when the
-                                    // immutable interview snapshot cannot be
-                                    // written.  Keep the editor dirty so the
-                                    // learner can retry instead of implying a
-                                    // save that never happened.
-                                    if (app.saveInterviewCoding(codingEditor.text))
-                                        root.codingEditorDirty = false
-                                }
-                            }
-                            Button {
-                                text: "运行 Grader"
-                                objectName: "runInterviewGrader"
-                                highlighted: true
-                                enabled: root.interviewCanEdit && !app.busy
-                                onClicked: {
-                                    // The controller saves exactly this
-                                    // snapshot before grading. A failed run
-                                    // still leaves coding_test_current=false,
-                                    // so the record action remains disabled.
-                                    if (app.runInterviewCoding(codingEditor.text))
-                                        root.codingEditorDirty = false
-                                }
-                            }
-                            Button {
-                                objectName: "recordInterviewCodingRound"
-                                text: "记录本轮并继续"
-                                enabled: root.interviewCanEdit && !app.busy && !root.codingEditorDirty
-                                         && app.interview.coding_test_current === true
-                                onClicked: app.recordInterviewCodingRound()
-                            }
-                        }
-                        Text {
-                            Layout.fillWidth: true
-                            text: root.codingEditorDirty
-                                  ? "当前编辑器有未保存修改；请保存并重新运行 Grader。"
-                                  : app.interview.coding_test_current === true
-                                    ? "当前版本已由本地 Grader 测试，可记录为客观代码证据。"
-                                    : "请先运行本地 Grader；未复测的代码不能记录。"
-                            color: root.codingEditorDirty
-                                   ? root.palette.warning
-                                   : app.interview.coding_test_current === true
-                                     ? root.palette.success : root.palette.muted
-                            wrapMode: Text.Wrap
-                            font.pixelSize: 11
+                        LabText {
+                            theme: root.theme
+                            text: root.codingEditorDirty ? "上次测试输出（代码已修改）" : "测试输出"
+                            variant: "caption"
+                            tone: "muted"
                         }
                         Rectangle {
-                            Layout.fillWidth: true; Layout.preferredHeight: 110; radius: 8
+                            Layout.fillWidth: true; Layout.preferredHeight: 140; radius: 8
                             color: root.palette.surfaceAlt; border.color: root.palette.border
                             ScrollView {
+                                id: codingOutputScroll
                                 anchors.fill: parent; anchors.margins: 10
-                                Text { width: parent.width; text: app.testOutput || "本地 Grader 是代码结果的事实来源。"; color: root.palette.text; wrapMode: Text.Wrap; font.family: root.codeFontFamily; font.pixelSize: 11 }
+                                contentWidth: availableWidth
+                                clip: true
+                                Text {
+                                    objectName: "interviewCodingOutput"
+                                    width: codingOutputScroll.availableWidth
+                                    text: app.interview.coding_test_output || "尚未运行。点击「保存并测试」，将测试当前编辑器中的代码。"
+                                    textFormat: Text.PlainText
+                                    color: root.palette.text
+                                    wrapMode: Text.Wrap
+                                    font.family: root.codeFontFamily
+                                    font.pixelSize: root.theme ? root.theme.scaledPx(12) : 12
+                                }
                             }
                         }
                         Text { text: "面试进行中不会展示教学提示。代码记录只接受当前编辑器已复测的版本。"; color: root.palette.warning; font.pixelSize: 12; font.bold: true; wrapMode: Text.Wrap; Layout.fillWidth: true }
                     }
                 }
+                }
+                ColumnLayout {
+                    visible: root.codingQuestion
+                    Layout.fillWidth: true
+                    spacing: 8
+                    LabText {
+                        objectName: "interviewCodingStatus"
+                        theme: root.theme
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                        variant: "caption"
+                        text: root.codingEditorDirty ? "代码已修改；请保存并测试，旧结果不能用于当前代码。"
+                              : app.interview.coding_test_status === "running" ? "正在测试已保存的代码…"
+                              : app.interview.coding_test_current === true
+                                ? (app.interview.coding_test_status === "passed" ? "测试通过" : "测试未通过")
+                                  + " · revision " + String(app.interview.coding_tested_revision).slice(0, 7)
+                                  + " · 可以继续修改，也可记录本次结果。"
+                              : app.interview.coding_test_status === "error" ? "测试未能完成，请查看输出后重试。"
+                                : "运行测试会先保存当前代码。"
+                        tone: root.codingEditorDirty ? "warning"
+                              : app.interview.coding_test_current === true
+                                ? (app.interview.coding_test_status === "passed" ? "success" : "danger") : "muted"
+                    }
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        LabButton {
+                            objectName: "toggleInterviewCodingPrompt"
+                            theme: root.theme
+                            text: root.showCodingPrompt ? "开始作答" : "查看题面"
+                            onClicked: {
+                                root.showCodingPrompt = !root.showCodingPrompt
+                                questionScroll.contentItem.contentY = 0
+                                if (!root.showCodingPrompt) codingEditor.forceActiveFocus()
+                            }
+                        }
+                        LabButton {
+                            theme: root.theme
+                            text: "保存"
+                            variant: "ghost"
+                            enabled: root.interviewCanEdit && !app.busy
+                            onClicked: if (app.saveInterviewCoding(codingEditor.text)) root.codingEditorDirty = false
+                        }
+                        LabButton {
+                            objectName: "runInterviewGrader"
+                            theme: root.theme
+                            variant: "primary"
+                            text: app.interview.coding_test_status === "running" ? "正在测试…" : "保存并测试"
+                            enabled: root.interviewCanEdit && !app.busy
+                            onClicked: root.runCodingTests()
+                            ToolTip.visible: hovered
+                            ToolTip.text: Qt.platform.os === "osx" ? "Command+R · 测试当前编辑器代码" : "Ctrl+R · 测试当前编辑器代码"
+                        }
+                        LabButton {
+                            objectName: "recordInterviewCodingRound"
+                            theme: root.theme
+                            text: "记录本轮并继续"
+                            enabled: root.interviewCanEdit && !app.busy && !root.codingEditorDirty
+                                     && app.interview.coding_test_current === true
+                            onClicked: app.recordInterviewCodingRound()
+                        }
+                    }
                 }
                 Rectangle {
                     objectName: "interviewPhaseGuidance"
@@ -1770,7 +1826,8 @@ Item {
                         objectName: "finishInterviewButton"
                         theme: root.theme
                         variant: "ghost"
-                        text: "结束本场"
+                        visible: !root.interviewFinished
+                        text: activeQuestion ? "结束本场" : "结束并查看复盘"
                         flat: true
                         enabled: !!app.interview.interview_id
                                  && (app.interview.status === "active"

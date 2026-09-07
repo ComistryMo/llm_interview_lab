@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import time
 from uuid import uuid4
 
 import pytest
@@ -122,6 +124,223 @@ def _capture(window, name):
         destination = Path(directory)
         destination.mkdir(parents=True, exist_ok=True)
         assert window.grabWindow().save(str(destination / f"{name}.png"))
+
+
+def _enter_coding_round(controller):
+    """Prepare a real persisted session; replies here are fixture data, not AI evidence."""
+    for stage in ("experience", "experience", "theory", "theory", "coding"):
+        question = controller.interview["question"]
+        controller.lockInterviewAnswer("合成验收回答：我负责偏好数据去重，用独立留出集验证。")
+        preview = controller.interviewContextPreview(controller.interview["answer_text"], False)
+        assert preview["parts"]
+        controller.service.advance_dynamic_interview(
+            controller.profileId, controller.interview["interview_id"], question["question_id"],
+            {"scores": {name: 3 for name in question["rubric"]["dimensions"]},
+             "evidence": "合成验收数据，仅用于界面测试。", "confidence": "medium", "fatal_issues": [],
+             "next_stage": stage, "follow_up": "如何验证你提到的数据去重？" if stage != "coding" else "",
+             "coding_problem_id": "FND-002" if stage == "coding" else "",
+             "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))]
+                               if stage != "coding" else []},
+            context_sha256=controller._interview_context_confirmation[-1],
+        )
+        controller._load_interview(controller.interview["interview_id"])
+    assert controller.interview["question"]["kind"] == "coding"
+    QTest.qWait(100)
+
+
+def _within_window(window, item):
+    start = item.mapToScene(QPointF())
+    return (start.x() >= 0 and start.y() >= 0
+            and start.x() + item.width() <= window.width() + 1
+            and start.y() + item.height() <= window.height() + 1)
+
+
+@pytest.mark.parametrize("size", [(900, 620), (1080, 680), (1280, 800), (1440, 900)])
+def test_coding_actions_stay_visible_while_reading_question(scene, size):
+    window, controller = scene
+    window.resize(*size)
+    _enter_coding_round(controller)
+    viewport = _find(window, "interviewQuestionScroll").property("contentItem")
+    for theme, scale in (("dark", 1.25), ("light", 1.0)):
+        controller.setTheme(theme)
+        window.setProperty("displayFontScaleOverride", scale)
+        for show_code in (False, True):
+            if show_code:
+                _click(window, _find(window, "toggleInterviewCodingPrompt"))
+            viewport.setProperty("contentY", 0)
+            QTest.qWait(80)
+            for name in ("runInterviewGrader", "recordInterviewCodingRound", "toggleInterviewCodingPrompt"):
+                assert _within_window(window, _find(window, name)), name
+            status = _find(window, "interviewCodingStatus")
+            assert status.property("contentHeight") <= status.height() + 1
+            assert viewport.height() > 130
+            _capture(window, f"coding-{'editor' if show_code else 'question'}-{size[0]}-{theme}")
+        _click(window, _find(window, "toggleInterviewCodingPrompt"))
+
+
+def test_edit_saved_connection_reveals_form(scene):
+    window, controller = scene
+    window.resize(900, 620)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    assert controller.saveConnection("ux-local", "ollama", "synthetic-model", "本地模型（未测试）",
+                                     "http://localhost:11434", "", "low")
+    controller.navigate("connections")
+    QTest.qWait(150)
+    button = _find(window, "editConnection")
+    page = button.parentItem()
+    while page.property("editingConnectionId") is None:
+        page = page.parentItem()
+    page.setProperty("contentY", max(0, page.property("contentHeight") - page.height()))
+    QTest.qWait(100)
+    _click(window, button)
+    QTest.qWait(150)
+    window.findChild(QObject, "globalToast").setProperty("visible", False)
+    _capture(window, "connection-edit-small")
+    assert page.property("editingConnectionId") == "ux-local"
+    for name in ("saveAndTestConnection", "connectionModelField"):
+        control = _find(window, name)
+        top = control.mapToItem(page, QPointF()).y()
+        assert 0 <= top and top + control.height() <= page.height()
+    assert _find(window, "connectionModelField").hasActiveFocus()
+    assert _find(window, "saveAndTestConnection").property("variant") == "primary"
+
+
+def test_saved_connection_card_fits_large_text_and_never_implies_ready(scene):
+    window, controller = scene
+    window.resize(900, 620)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    assert controller.saveConnection("ux-local", "ollama", "synthetic-model", "本地模型（尚未测试连接）",
+                                     "http://localhost:11434", "", "low")
+    controller.navigate("connections")
+    QTest.qWait(150)
+    card = _find(window, "savedConnectionCard")
+    page = card.parentItem()
+    while page.property("editingConnectionId") is None:
+        page = page.parentItem()
+    page.setProperty("contentY", max(0, page.property("contentHeight") - page.height()))
+    window.findChild(QObject, "globalToast").setProperty("visible", False)
+    QTest.qWait(80)
+    pill = _find(window, "savedConnectionStatus")
+    assert controller.connections[0]["ready"] is False
+    assert pill.property("tone") == page.property("theme").property("muted")
+    for item in _items(card):
+        if item.isVisible() and (item.property("text") or item.objectName() == "editConnection"):
+            assert item.mapToItem(card, QPointF(0, item.height())).y() <= card.height() + 1
+    _capture(window, "connection-saved-small")
+
+
+@pytest.mark.parametrize("entry", ["button", "shortcut"])
+def test_interview_coding_runs_visible_revision_and_shows_failure(scene, entry):
+    window, controller = scene
+    window.resize(1080, 680)
+    _enter_coding_round(controller)
+    # Practice output must never appear as the current interview's evidence.
+    controller._test_output = "unrelated Practice PASS"
+    controller.stateChanged.emit()
+    assert "unrelated" not in _find(window, "interviewCodingOutput").property("text")
+    _click(window, _find(window, "toggleInterviewCodingPrompt"))
+    editor = _find(window, "interviewCodingEditor")
+    editor.forceActiveFocus()
+    QTest.keyClick(window, Qt.Key_End, Qt.ControlModifier)
+    edit = QInputMethodEvent()
+    edit.setCommitString("\n# UAT latest editor revision\n")
+    QCoreApplication.sendEvent(editor, edit)
+    latest = editor.property("text")
+    assert "UAT latest editor revision" in latest
+    digest = hashlib.sha256(latest.encode()).hexdigest()
+    if entry == "shortcut":
+        QTest.keyClick(window, Qt.Key_R, Qt.ControlModifier)
+    else:
+        _click(window, _find(window, "runInterviewGrader"))
+    deadline = time.monotonic() + 30
+    while controller.busy and time.monotonic() < deadline:
+        QTest.qWait(50)
+        time.sleep(0.01)
+    assert not controller.busy
+    assert controller.interview["coding_tested_revision"] == digest
+    assert controller.interview["coding_test_status"] == "failed"  # Intentionally incomplete starter, real Grader.
+    status = _find(window, "interviewCodingStatus")
+    assert "测试未通过" in status.property("text") and digest[:7] in status.property("text")
+    assert status.property("tone") == "danger"
+    assert "FAILED" in _find(window, "interviewCodingOutput").property("text")
+    assert _find(window, "recordInterviewCodingRound").isEnabled()
+    viewport = _find(window, "interviewQuestionScroll").property("contentItem")
+    viewport.setProperty("contentY", max(0, viewport.property("contentHeight") - viewport.height()))
+    QTest.qWait(100)
+    _capture(window, f"coding-failed-{entry}")
+    if entry == "button":
+        _click(window, _find(window, "recordInterviewCodingRound"))
+        QTest.qWait(100)
+        assert not controller.interview.get("question")
+        assert controller.interview["status"] == "active"
+        assert _find(window, "interviewQuestionTitle").property("text") == "本场作答已完成"
+        assert _find(window, "finishInterviewButton").property("text") == "结束并查看复盘"
+        _capture(window, "interview-ready-to-finish")
+        _click(window, _find(window, "finishInterviewButton"))
+        dialog = window.findChild(QObject, "interviewFinishDialog")
+        assert dialog is not None and dialog.property("visible")
+        QMetaObject.invokeMethod(dialog, "accept")
+        QTest.qWait(100)
+        assert controller.interview["status"] == "completed"
+        assert not _find(window, "finishInterviewButton").isVisible()
+        _capture(window, "interview-completed-report")
+        return
+    editor.forceActiveFocus()
+    edit.setCommitString("# modified after test\n")
+    QCoreApplication.sendEvent(editor, edit)
+    assert not _find(window, "recordInterviewCodingRound").isEnabled()
+    assert "代码已修改" in status.property("text")
+    # Reload reads only this question's persisted result, not the global output.
+    controller._test_output = "unrelated Practice PASS"
+    controller._load_interview(controller.interview["interview_id"])
+    assert controller.interview["coding_test_status"] == "failed"
+    assert "unrelated" not in controller.interview["coding_test_output"]
+
+
+def test_interview_completion_copy_matches_session_state(scene):
+    window, controller = scene
+    controller.finishInterview()
+    QTest.qWait(100)
+    assert not _find(window, "finishInterviewButton").isVisible()
+    assert _find(window, "configureAnotherInterview").isVisible()
+    assert "选择岗位" not in _find(window, "interviewQuestionPrompt").property("text")
+    assert _find(window, "interviewQuestionTitle").property("text") == "本场复盘"
+    _capture(window, "interview-finished")
+
+
+def test_profile_switch_preserves_unsent_interview_answer(scene, tmp_path):
+    window, controller = scene
+    original_profile = controller.profileId
+    other_id = "other-" + uuid4().hex[:10]
+    other = AppController(controller.repo_root, profile_id=other_id, log_root=tmp_path / "other-logs")
+    try:
+        assert other.completeOnboarding(other_id, "post_training_engineer", "intern", "codex", "{}")
+        preview = other.dynamicInterviewContextPreview("post_training_engineer", "intern", "hard", "", False)
+        other.startDynamicPersonalizedInterview("post_training_engineer", "intern", "hard", "codex", "", False,
+                                               preview["context_sha256"])
+        assert other.interview["interview_id"] == controller.interview["interview_id"]
+    finally:
+        other.shutdown()
+    editor = _find(window, "interviewAnswerEditor")
+    _click(window, editor)
+    edit = QInputMethodEvent()
+    edit.setCommitString("尚未提交的合成回答，不应带入其他学习档案。")
+    QCoreApplication.sendEvent(editor, edit)
+    controller.navigate("settings")
+    assert not controller.switchProfile(other_id), "Switch must not silently discard or carry over an unsent answer"
+    assert controller.profileId == original_profile
+    controller.navigate("interview")
+    assert "尚未提交" in editor.property("text")
+    controller.lockInterviewAnswer(editor.property("text"))
+    QTest.qWait(50)
+    assert controller.switchProfile(other_id)
+    controller.navigate("interview")
+    QTest.qWait(50)
+    assert editor.property("text") == ""
+    assert controller.switchProfile(original_profile)
+    controller.navigate("interview")
+    QTest.qWait(50)
+    assert "尚未提交" in editor.property("text")
 
 
 @pytest.mark.parametrize("size", [(900, 620), (1280, 800)])

@@ -1,6 +1,53 @@
 # Luna Max 动态面试当前状态报告
 
-## 2026-09-06：真实 Codex 整场面试与修复结果（最新）
+## 2026-09-07：操作体验迭代与源码验收（最新）
+
+基线 `ef336e448ef1f5eb7228bd446ea7c42580fb853f`，分支 `fix/dynamic-interview-full-flow-20260905`。本轮不改变动态面试流程与评分规则，不构建应用，不触发 CI，不运行全量测试。
+
+### 已复现并处理
+
+1. **手撕入口藏在长题面底部**：Windows 正式窗口在 900×620、1280×800 的原始截图中，首屏找不到运行按钮。现在保留原题文字，题面/代码按需切换，底部固定保存、保存并测试、记录动作；只保留一个主强调按钮，去掉重复题目标题。
+2. **测试状态容易误读**：原来的 `coding_test_current` 表示“这个版本已经测过”，不表示 PASS，但 UI 一律使用绿色。现在明确显示通过/未通过及 revision；输出绑定本题，不读取刷题页的全局输出。按钮与 Ctrl+R 调用同一方法，测试最新编辑器文本，修改后阻止使用旧结果记录本轮。
+3. **连接编辑定位与层级**：点击列表中的编辑后自动回到配置表单并选中模型；保存主按钮使用统一样式。连接卡片按内容增高；只有结构化 `ready=true` 才显示绿色，未测试不再通过文案猜测为可用。
+4. **未提交面试回答时仍能切换档案**：用两个新建合成档案复现，两个档案拥有相同 Session/Question ID。现有切档入口补上未提交回答/未保存代码门控，页面身份包含 Profile ID；提交后切换，新档案不带入旧文本，切回仍能读到已锁定原回答。
+5. **结束状态反逻辑**：答完最后一题但尚未结束时显示“本场作答已完成 / 结束并查看复盘”；结束后显示真实复盘，不再出现开场指引和无效的结束按钮。移除“动态模式尚未衔接代码题”的过期说明。
+
+### 实际验证
+
+使用正式 `Main.qml`、真实 `AppController`、真实 Session 持久化和 Windows Qt 输入；QSettings 重定向到测试自己的 INI，没有操作真实学习档案或系统 Keyring。用于进入后续环节的模型回复是**明确标记的合成 fixture**，本轮没有再次调用真实 Codex/云 API，不将本轮 UI 测试算作新的一场真实 AI 实测。
+
+```powershell
+$env:PYTHONPATH = Join-Path (Get-Location) "src"
+$env:QT_QPA_PLATFORM = "windows"
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k 'coding_actions_stay_visible or edit_saved_connection_reveals or saved_connection_card or coding_runs_visible_revision or completion_copy or profile_switch_preserves_unsent or answer_hint_hides or question_switch_clears or answer_geometry or report_recognizes or reconfigure_preserve' -q
+# 18 passed, 17 deselected in 86.91s
+
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k 'coding_runs_visible_revision and button' -q
+# 1 passed, 34 deselected in 9.80s
+```
+
+第二个命令仅补验“记录真实失败的手撕结果 → 结束确认 → 生成完整流程报告”，没有重复整个领域。手撕使用未实现 starter，真实 Grader 结果为 failed；“完成流程”不等于代码通过或 mastered。
+
+开发前的定向复现：初版测试探针因预览 hash 字段与布局等待写错而失败，修正探针后得到 `2 failed, 1 passed`（两种窗口运行按钮均在视口外）；初次修改后 8 项通过。切档问题另有 `1 failed → 1 passed`，最后统一纳入上述 18 项验证。
+
+布局检查覆盖 900×620、1080×680、1280×800、1440×900；手撕分别检查浅色 100% 和深色 125% 字号，既有回答框测试也检查两主题的 100% / 125%。实际查看了小窗口手撕、失败输出、连接编辑、连接列表和复盘截图。完整题面、长代码和测试输出通过滚动阅读，不声称在小窗口一次显示全部内容。
+
+截图保存在 ignored `workspace/maintainer/ux-20260907/before/` 和 `after/`，不是 Phase 0 原型。代表文件：`coding-editor-900-light.png`、`coding-editor-900-dark.png`、`coding-failed-shortcut.png`、`connection-edit-small.png`、`connection-saved-small.png`、`interview-ready-to-finish.png`、`interview-completed-report.png`。报告截图分数来自合成口述评分与真实失败代码测试，仅用于验收 UI，不代表真实候选人水平。
+
+另外使用正常入口 `pythonw.exe -m llm_interview_lab.desktop.main` 启动了一个可交互 Windows 窗口，没有 `--smoke-test`、截图参数、预置档案或 DemoController。验收目录为 `workspace/maintainer/manual-uat/`，窗口标题为 `LLM Interview Lab`，窗口句柄有效且进程可响应。首次准备该目录的启动日志记录首窗口 **8341 ms**；这是一台设备的一次样本，不是所有启动的性能承诺。日志位于本轮 ignored 证据目录 `source-bootstrap.log`。
+
+已用解释器确认实际加载当前仓库 `src/llm_interview_lab/desktop/main.py`，`--version` 为 `0.4.0a3`。源码启动和保留验收数据的方法见 [桌面指南](../../docs/desktop-app.md#源码运行)。`git diff --check` 通过。
+
+### 未验证和剩余限制
+
+- 本轮没有真实云 API、Codex 重新联网测试、macOS 实机、全量 pytest、CI 或打包；上一轮真实 Codex 证据见下一节，不能外推为本轮全平台验证。
+- 上一轮 Codex 请求约 125–136 秒的延迟，本轮未解决；网络/模型兼容性仍需用户使用实际连接验收。
+- 尚未提交的口述草稿仍仅在当前窗口内；关闭前应提交并锁定，代码应保存。此次修复针对切档保护，不宣称实现崩溃草稿恢复。
+- 手撕保持本地冻结原题，部分题面仍为英文；不把本轮布局调整称为完整中文版 Coding Workbench。
+
+终局：`READY_FOR_SOURCE_UAT`。既有未跟踪文件和旧 UAT 目录保留，不入提交。
+
+## 2026-09-06：真实 Codex 整场面试与修复结果
 
 本节覆盖本次实际执行；下方旧记录保留，不代表当前仍只有首题。**本次完成了一场真实 Codex + Windows 正式 QML 的六题面试，并重启恢复报告。** 不是 DemoController，不是用 Fake 返回冒充真实模型，也没有发布新的桌面包。
 

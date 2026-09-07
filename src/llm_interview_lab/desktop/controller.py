@@ -402,6 +402,7 @@ class AppController(QObject):
         self._test_identity: tuple[str, str, str] | None = None
         self._test_output = ""
         self._interview: dict[str, Any] = {}
+        self._interview_draft_dirty = False
         self._interview_plan_preview: dict[str, Any] = {}
         self._interview_plan_request: dict[str, Any] | None = None
         self._voice_recorder = InterviewVoiceRecorder(self)
@@ -1800,6 +1801,10 @@ class AppController(QObject):
             )
         self.stateChanged.emit()
 
+    @Slot(bool)
+    def setInterviewDraftDirty(self, dirty: bool) -> None:
+        self._interview_draft_dirty = dirty
+
     @Slot(str, result=bool)
     def switchProfile(self, profile_id: str) -> bool:
         """Switch the desktop snapshot to one validated local Profile.
@@ -1869,6 +1874,16 @@ class AppController(QObject):
                 error_code="UNSAVED_CHANGES",
                 user_message=self._profile_switch_error,
                 recommended_action="先保存当前答案，或返回当前题目明确放弃修改。",
+            )
+            self.stateChanged.emit()
+            return False
+
+        if self._interview_draft_dirty:
+            self._profile_switch_error = "面试中还有未提交的回答或未保存的代码。请返回面试，提交回答、保存代码，或明确清空草稿后再切换档案。"
+            self._set_action_result(
+                success=False, operation_id=operation_id, error_code="UNSAVED_CHANGES",
+                user_message=self._profile_switch_error,
+                recommended_action="返回模拟面试处理当前草稿；本次没有切换档案。",
             )
             self.stateChanged.emit()
             return False
@@ -2849,6 +2864,12 @@ class AppController(QObject):
             self._interview_coding_tested_revision = tested_sha
             self._interview["coding_tested_revision"] = tested_sha
             self._interview["coding_test_current"] = bool(tested_sha and tested_sha == coding["sha256"])
+            self._interview["coding_test_status"] = evidence.get("status", "")
+            self._interview["coding_test_output"] = (
+                f"已保存的本轮测试：通过 {evidence.get('passed', 0)}，失败 {evidence.get('failed', 0)}"
+                f"\nrevision {tested_sha[:7]}\n重新测试可查看完整输出。"
+                if tested_sha else ""
+            )
             self._interview["coding_test_operation_id"] = self._interview_coding_test_operation_id
             self._interview["phase"] = "assessment" if self._interview["coding_test_current"] else "answering"
         else:
@@ -3099,8 +3120,12 @@ class AppController(QObject):
 
     @Slot(str, result=bool)
     def runInterviewCoding(self, text: str) -> bool:
+        if self._busy:
+            return False
         if self._profile_id == "demo":
             self._test_output = "4 passed in 0.16s\n\n代码证据：PASS"
+            self._interview["coding_test_output"] = self._test_output
+            self._interview["coding_test_status"] = "passed"
             self._interview["coding_test_current"] = True
             self._interview["coding_tested_revision"] = hashlib.sha256(
                 text.encode("utf-8")
@@ -3128,6 +3153,8 @@ class AppController(QObject):
         self._interview_coding_tested_revision = ""
         self._interview["coding_tested_revision"] = ""
         self._interview["coding_test_current"] = False
+        self._interview["coding_test_status"] = "running"
+        self._interview["coding_test_output"] = "正在运行本轮代码的公开测试…"
         self._interview["coding_test_operation_id"] = operation_id
         self._interview["phase"] = "answering"
         self.stateChanged.emit()
@@ -3166,6 +3193,8 @@ class AppController(QObject):
                     (result.output + "\n\n" if result.output else "")
                     + f"本地 Grader 未形成可评分证据：{result_status.upper() or 'UNKNOWN'}"
                 )
+                self._interview["coding_test_status"] = result_status or "error"
+                self._interview["coding_test_output"] = self._test_output
                 self.stateChanged.emit()
                 self._show_error(
                     "本地 Grader 未能形成可评分证据；请修正环境或代码后重试。"
@@ -3180,6 +3209,8 @@ class AppController(QObject):
                 (result.output + "\n\n" if result.output else "")
                 + f"代码证据：{result_status.upper()}"
             )
+            self._interview["coding_test_status"] = result_status
+            self._interview["coding_test_output"] = self._test_output
             self.stateChanged.emit()
 
         def failed(message: str) -> None:
@@ -3193,6 +3224,8 @@ class AppController(QObject):
             self._interview["coding_test_current"] = False
             self._interview["phase"] = "answering"
             self._test_output = "本地 Grader 未能运行：" + friendly_error(message)
+            self._interview["coding_test_status"] = "error"
+            self._interview["coding_test_output"] = self._test_output
             self.stateChanged.emit()
             self._show_error(message)
 
