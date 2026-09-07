@@ -76,8 +76,13 @@ class InterviewVoiceRecorder(QObject):
         self.changed.emit()
 
     def _duration_changed(self, value: int) -> None:
+        previous_second = self.duration_ms // 1000
         self.duration_ms = max(0, int(value))
-        self.changed.emit()
+        # Qt emits once per encoded audio packet (~94 times/s on Windows).
+        # The UI displays whole seconds; retain exact audio time, but do not
+        # flood its event queue with an unchanged displayed duration.
+        if self.duration_ms // 1000 != previous_second:
+            self.changed.emit()
 
     def _state_changed(self, value: QMediaRecorder.RecorderState) -> None:
         if value != QMediaRecorder.RecorderState.StoppedState or self.state != "recording":

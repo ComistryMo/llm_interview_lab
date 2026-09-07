@@ -74,3 +74,19 @@ $env:QT_QPA_PLATFORM = "windows"
 ```
 
 其中 `official-zh.wav` 是维护者已下载的模型仓库 `test_wavs/zh.wav`，不会随源码提交；新环境需要先准备这一公开测试文件。用户正常使用无需运行测试命令。
+
+## 录音计时停滞与停止卡死修复（2026-09-07）
+
+用户在 `065f5b6` 上报告录音时长停滞，点击停止后应用未响应。正式页面的真实麦克风测试复现了停顿和原生崩溃；栈经过 `durationChanged → _voice_state_changed → stateChanged → localStt → find_spec`。单独运行同一个录音器，观察到每秒约 94 次时长通知，停止可立即返回。问题来自高频音频通知触发全页面刷新，并在 QML getter 中重复访问文件系统和检查依赖，而不是 STT 推理慢。
+
+修复仅涉及该刷新链路：精确录音时长继续来自 Qt 音频，显示整秒改变时才通知；录音控件使用独立通知，不带动所有页面重算；模型安装状态在启动及下载结束时刷新，QML getter 只读快照。实际转录仍验证模型完整性，不靠缓存跳过校验。没有更换录音后端，也没有用虚假的墙钟计时掩盖音频问题。
+
+修复后在隔离档案的正式 Windows 页面连续实际录停三次：时长分别 3.56、3.63、3.63 秒，停止耗时 49、50、56 毫秒，均得到 48 kHz 双声道 WAV；每次停止后都实际输入文字，前次录音文件未被改写。已查看录音中和停止后的截图。短录音只用于本机故障验证，没有转录、播放给 AI 或上传。
+
+本次直接验证：
+
+- `python -m pytest tests/infrastructure/test_voice.py -q`：4 passed。
+- `python -m pytest tests/infrastructure/test_interview_input_runtime.py -k "local_stt or voice_error_and_transcription_choices or recording_failure_is_inline or recording_ticks_do_not_refresh_application" -q`：12 passed；真实本地模型测试使用上文两个显式路径。
+- 设置 `LLM_LAB_TEST_MICROPHONE=1`、`QT_QPA_PLATFORM=windows` 后，`python -m pytest tests/infrastructure/test_interview_input_runtime.py -k "real_microphone_start_stop_from_production_page" -q -s`：1 passed，包含连续三次录停和停止后输入。
+
+首次扩充录停测试时使用了不适用于 QQuickWindow 的 `QTest.keyClicks`，测试代码已改为逐键输入并重跑通过；这不是产品问题。未运行全量测试、CI 或打包。macOS 和其他麦克风设备仍未实机验证。

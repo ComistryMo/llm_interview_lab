@@ -200,6 +200,28 @@ def test_recording_failure_is_inline_and_logged(controller, monkeypatch, caplog,
     assert not controller.busy
 
 
+def test_recording_ticks_do_not_refresh_application_or_probe_stt(scene, monkeypatch):
+    window, controller = scene
+    _click(window, _find(window, "toggleInterviewVoice"))
+    QTest.qWait(100)
+    all_changes, voice_changes = [], []
+    controller.stateChanged.connect(lambda: all_changes.append(True))
+    controller.interviewVoiceChanged.connect(lambda: voice_changes.append(True))
+
+    def unexpected_probe():
+        pytest.fail("A QML refresh must not scan STT model files or Python import paths")
+
+    monkeypatch.setattr(controller._local_stt, "ready", unexpected_probe)
+    monkeypatch.setattr(controller._local_stt, "runtime_available", unexpected_probe)
+    for duration in range(10, 4011, 10):
+        controller._voice_recorder._duration_changed(duration)
+        assert "ready" in controller.localStt
+    assert not all_changes
+    assert len(voice_changes) == 4
+    assert controller.interviewVoice["duration_ms"] == 4010
+    assert "04" in _find(window, "interviewVoiceDuration").property("text")
+
+
 def test_interview_preferences_survive_process_restart_and_stay_profile_local(controller, tmp_path):
     from llm_interview_lab.workspace import init_profile
     # Existing users inherit their actual last session, then changes are saved
@@ -331,25 +353,44 @@ def test_real_microphone_start_stop_from_production_page(scene):
     window.resize(1280, 800)
     _click(window, _find(window, "toggleInterviewVoice"))
     QTest.qWait(150)
-    _click(window, _find(window, "startInterviewRecording"))
-    assert controller.interviewVoice["state"] == "recording", controller.interviewVoice
-    assert not controller.startInterviewRecording(), "Duplicate start must not replace the active recorder"
-    QTest.qWait(3500)
-    _capture(window, "voice-recording-windows")
-    _click(window, _find(window, "stopInterviewRecording"))
-    for _ in range(100):
-        QTest.qWait(50)
-        if controller.interviewVoice["state"] != "recording":
-            break
-    assert controller.interviewVoice["audio_ready"], controller.interviewVoice
-    path = controller._voice_recorder.path
-    with wave.open(str(path), "rb") as audio:
-        duration = audio.getnframes() / audio.getframerate()
-        assert duration >= 2, duration
-        print(f"REAL_MICROPHONE_OK duration={duration:.2f}s bytes={path.stat().st_size} channels={audio.getnchannels()} rate={audio.getframerate()}")
-    assert not controller.busy and not controller.interview["answer_locked"]
-    assert not _find(window, "interviewVoiceRemoteConsent").property("checked")
-    _capture(window, "voice-recorded-windows")
+    recordings = []
+    for cycle in range(3):
+        _click(window, _find(window, "startInterviewRecording"))
+        assert controller.interviewVoice["state"] == "recording", controller.interviewVoice
+        assert not controller.startInterviewRecording(), "Duplicate start must not replace the active recorder"
+        QTest.qWait(1700)
+        first_tick = controller.interviewVoice["duration_ms"]
+        assert first_tick >= 1000, "Recording must advance before Stop, not only when the file closes"
+        QTest.qWait(1700)
+        assert controller.interviewVoice["duration_ms"] > first_tick
+        display = _find(window, "interviewVoiceDuration").property("text")
+        assert "时长 00 秒" != display
+        _capture(window, f"voice-recording-windows-{cycle + 1}")
+        stopped_at = time.perf_counter()
+        _click(window, _find(window, "stopInterviewRecording"))
+        for _ in range(50):
+            QTest.qWait(20)
+            if controller.interviewVoice["state"] != "recording":
+                break
+        stop_seconds = time.perf_counter() - stopped_at
+        assert controller.interviewVoice["audio_ready"], controller.interviewVoice
+        assert stop_seconds < 2, f"Stop blocked the UI for {stop_seconds:.2f} seconds"
+        path = controller._voice_recorder.path
+        with wave.open(str(path), "rb") as audio:
+            duration = audio.getnframes() / audio.getframerate()
+            assert duration >= 2, duration
+            print(f"REAL_MICROPHONE_OK cycle={cycle + 1} stop_seconds={stop_seconds:.3f} duration={duration:.2f}s bytes={path.stat().st_size} channels={audio.getnchannels()} rate={audio.getframerate()}")
+        recordings.append((path, hashlib.sha256(path.read_bytes()).hexdigest()))
+        assert not controller.busy and not controller.interview["answer_locked"]
+        assert not _find(window, "interviewVoiceRemoteConsent").property("checked")
+        editor = _find(window, "interviewAnswerEditor")
+        _click(window, editor)
+        QTest.keyClick(window, Qt.Key_O)
+        QTest.keyClick(window, Qt.Key_K)
+        assert editor.property("text").endswith("ok"), "UI must accept input after Stop"
+        _capture(window, f"voice-recorded-windows-{cycle + 1}")
+    assert len({path for path, _ in recordings}) == 3
+    assert all(hashlib.sha256(path.read_bytes()).hexdigest() == digest for path, digest in recordings)
 
 
 def test_local_stt_model_download_is_single_background_action(scene, monkeypatch):
@@ -459,6 +500,7 @@ def test_real_local_stt_from_production_page(scene, monkeypatch, size):
 
     window, controller = scene
     controller._local_stt = LocalSpeechTranscriber(Path(os.environ["LLM_LAB_TEST_LOCAL_STT_MODEL_ROOT"]))
+    controller._refresh_local_stt_status()
     source = Path(os.environ["LLM_LAB_TEST_LOCAL_STT_AUDIO"])
     # Public Chinese sample stands in for a finished recording. This test
     # does not capture ambient sound or touch the user's existing Profile.

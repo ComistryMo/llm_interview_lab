@@ -69,3 +69,15 @@ def test_stopped_recording_without_output_emits_actionable_failure(
     assert recorder.state == "error"
     assert errors
     assert "录音" in errors[0]
+
+
+def test_audio_packet_updates_only_notify_on_displayed_second(qapp):
+    del qapp
+    recorder = InterviewVoiceRecorder()
+    changes = []
+    recorder.changed.connect(lambda: changes.append(recorder.duration_ms))
+    # Real Windows recorder emits roughly every 10 ms, not once per second.
+    for duration in range(10, 2991, 10):
+        recorder._duration_changed(duration)
+    assert changes == [1000, 2000]
+    assert recorder.duration_ms == 2990, "Keep actual audio time; do not fake an elapsed timer"

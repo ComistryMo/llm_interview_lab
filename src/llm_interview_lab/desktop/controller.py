@@ -337,6 +337,7 @@ class AppController(QObject):
     _CODEX_INTERVIEW_TURN_TIMEOUT_MS = 180_000
 
     stateChanged = Signal()
+    interviewVoiceChanged = Signal()
     busyChanged = Signal()
     pageChanged = Signal()
     toast = Signal(str)
@@ -434,11 +435,15 @@ class AppController(QObject):
         self._voice_transcription_operation_id = ""
         self._voice_question_key = ""
         self._local_stt = LocalSpeechTranscriber(self.repo_root / "models" / "stt" / "sensevoice-small-int8")
+        self._refresh_local_stt_status()
         self._local_stt_download_cancel: threading.Event | None = None
         self._local_stt_download_progress = 0
         self._local_stt_download_error = ""
         self._voice_recorder.changed.connect(self._voice_state_changed)
         self._voice_recorder.failed.connect(self._voice_failed)
+        # Profile/question/transcription changes still refresh voice controls;
+        # microphone duration changes must never refresh every page/property.
+        self.stateChanged.connect(self.interviewVoiceChanged)
         self._recent_interview: dict[str, Any] = {}
         self._connections: list[dict[str, Any]] = []
         self._connections_profile_id = ""
@@ -920,7 +925,7 @@ class AppController(QObject):
 
         return dict(self._interview_plan_preview)
 
-    @Property("QVariantMap", notify=stateChanged)
+    @Property("QVariantMap", notify=interviewVoiceChanged)
     def interviewVoice(self) -> dict[str, Any]:
         return {
             "state": self._voice_recorder.state,
@@ -955,12 +960,20 @@ class AppController(QObject):
     def localStt(self) -> dict[str, Any]:
         return {
             "connection_id": LOCAL_STT_ID, "model_name": MODEL_NAME,
-            "ready": self._local_stt.ready(), "runtime_available": self._local_stt.runtime_available(),
+            **self._local_stt_status,
             "downloading": self._local_stt_download_cancel is not None,
             "progress": self._local_stt_download_progress,
             "error": self._local_stt_download_error,
             "download_mb": round(DOWNLOAD_BYTES / 1_000_000),
             "license_url": MODEL_LICENSE_URL,
+        }
+
+    def _refresh_local_stt_status(self) -> None:
+        # Files/import paths change on install/download, not on every audio
+        # frame or QML binding evaluation. Inference still verifies the model.
+        self._local_stt_status = {
+            "ready": self._local_stt.ready(),
+            "runtime_available": self._local_stt.runtime_available(),
         }
 
     @Slot()
@@ -992,6 +1005,7 @@ class AppController(QObject):
             self._workers.discard(worker)
             self._local_stt_download_cancel = None
             self._local_stt_download_error = error
+            self._refresh_local_stt_status()
             self.stateChanged.emit()
 
         worker.signals.progress.connect(progress)
@@ -1376,11 +1390,11 @@ class AppController(QObject):
             self.busyChanged.emit()
 
     def _voice_state_changed(self) -> None:
-        self.stateChanged.emit()
+        self.interviewVoiceChanged.emit()
 
     def _voice_failed(self, message: str) -> None:
         self._voice_transcription_error = message
-        self.stateChanged.emit()
+        self.interviewVoiceChanged.emit()
 
     def _recording_failed(self, error: Exception) -> None:
         operation_id = uuid4().hex[:8]
