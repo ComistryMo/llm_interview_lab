@@ -19,7 +19,9 @@
 [**浏览课程（Browse Curriculum）**](#如何开始训练) ·
 [**连接 AI（Use with AI）**](#如何接入-ai)
 
-![LLM Interview Lab 中文桌面首页](docs/images/desktop-home.png)
+![当前源码：训练优先的中文首页](docs/images/home-polish-20260907/home-practice-dark.png)
+
+当前源码的正式页面，使用隔离合成档案；[深浅主题与小窗口证据](docs/images/home-polish-20260907/manifest.json)。旧安装包界面可参考[历史首页截图](docs/images/desktop-home.png)，未随本轮源码重新发布。
 
 **岗位路线 · 经过测试的练习 · AI 模拟面试 · 证据复盘 · 间隔复测**
 
@@ -32,7 +34,7 @@ LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）�
 
 - **求职材料：** 保存简历、求职意向、项目、论文、比赛、岗位 JD 与真实面试问题；只有逐场明确授权的材料才可进入 AI 上下文。
 - **刷题训练：** 固定题目按硬依赖组成 DAG，闯关路线（Quest）提供推荐顺序，综合关卡（Capstone）验证组合能力。
-- **模拟面试：** 按岗位、求职阶段、难度和时长确定流程；AI 先生成当前第一问，之后根据你的回答逐步追问。代码题仍来自经过验证的固定题库，结束后生成有证据的评分卡并留档。
+- **模拟面试：** 按岗位、求职阶段和难度确定流程；以自我介绍开场，AI 根据你的回答逐步追问。代码题仍来自经过验证的固定题库，结束后生成有证据的评分卡并留档。
 
 核心设计：
 
@@ -145,7 +147,7 @@ llm-lab quickstart
 
 ![两步首次启动](docs/images/desktop-onboarding.png)
 
-首页只突出两个动作：**继续训练** 与 **开始模拟面试**。完整课程、技能和连接配置不会挤在首页。
+当前源码首页把“现在做什么”放在第一位：优先继续未完成任务或面试，其次进入训练；学习记录移到下方，不再与主任务并排争抢空间。题库和进度保留次级入口。此布局尚未打包到旧 Release。
 
 <details>
 <summary>查看答题、面试和 AI 连接界面</summary>
@@ -203,17 +205,30 @@ llm-lab graph --quest tensor_and_autograd
 | Tensor & Stable Loss | 9 | Masked Sequence Classification Loss | Oracle + D+2 / D+7 |
 | Optimizer & Training Loop | 6 | Tiny Sequence Classifier Trainer | Oracle + D+2 / D+7 |
 
+### AI 手撕题（当前源码）
+
+已有 [SGD](curriculum/problems/OPT-001-sgd/task.md)、[交叉熵](curriculum/problems/LOSS-014-cross-entropy/task.md)、[MHA](curriculum/problems/ATT-004-multi-head-attention/task.md)、[GRPO Clipped Loss](curriculum/problems/PT-015-grpo-loss/task.md)；本轮补充相邻能力，不重复建同名题：
+
+| 新题 | 重点 |
+|---|---|
+| [OPT-003 · Nesterov SGD](curriculum/problems/OPT-003-nesterov-momentum/task.md) | 第一步、多步动量、状态归属与梯度边界 |
+| [LOSS-002 · 标签平滑交叉熵](curriculum/problems/LOSS-002-label-smoothing/task.md) | 稳定计算、ignore index、全忽略时的可导零 |
+| [ATT-003 · 因果与填充掩码](curriculum/problems/ATT-003-causal-padding-mask/task.md) | MHA 可见性、绝对位置、增量解码和 padding |
+| [PT-019 · GSPO 序列比率](curriculum/problems/PT-019-gspo-sequence-ratio/task.md) | 几何比率、序列级裁剪、长短回答权重 |
+
+四题均有中文完整题面、公开测试、口述追问和独立数值验证，需要 PyTorch。按已掌握的前置解锁；模拟面试另按岗位、级别及环境选题。**四题自身尚无 D+2/D+7，因此可以实现、测试和复盘，但不能宣称已掌握。** 不代表旧安装包已有这些内容。
+
 ## 如何进行模拟面试
 
 1. 选择岗位、求职阶段、难度和面试官模式。
 2. 可选一份已脱敏材料；文本型 PDF / DOCX 会在本地生成 SHA-绑定的只读文本快照，应用会展示 material ID、用途和当前 SHA-256，并逐场请求同意（扫描 PDF 暂不做 OCR）。
-3. 根据面试流程先生成当前一问；每次回答后才请求下一问。代码题只从 `ready` 且达到 `oracle / field / stable` 的固定题库选择。
+3. 从自我介绍开始；每次回答后才请求下一问，不预生成整场题单。代码题只从 `ready` 且达到 `oracle / field / stable` 的固定题库选择。
 4. 本地计时器和 Grader 是时间与代码结果的事实来源。
 5. 结束后生成整体摘要、Skill 分数、证据、关键缺口、不确定项与推荐训练节点，并保存到当前学习档案。
 
 面试分数不会改变刷题训练、间隔复测或 `mastered`。项目不会生成虚假的 Offer 概率。
 若桌面环境只缺 PyTorch 代码轮次，应用会将可选入口明确标成“非代码专项面试”；该结果始终是未完成的部分证据，不会伪装成完整岗位蓝图。其他内容缺口不会自动降级。
-连接普通 LLM API 或 Codex 面试官后，桌面端会先展示上下文预览，用户确认后只生成第一问；后续问题在读取当前回答后逐步请求，不会在开场生成整场计划。AI 只能生成非代码问题文字，Coding 题仍来自本地已验证题库。Codex 使用官方 App Server 的结构化 `outputSchema`，并使用“设置 → 模型与推理强度”中选择的模型和推理强度。非代码回答还可选择“录音 → 停止 → 转录 → 编辑 → 提交”，远程转录需要本场明确授权，失败时可直接改用文字。
+连接普通 LLM API 或 Codex 面试官后，桌面端会先展示上下文预览；用户确认后从本地自我介绍开场题进入面试。后续问题在读取当前回答后逐步请求，不会在开场生成整场计划。AI 只能生成非代码问题文字，Coding 题仍来自本地已验证题库。Codex 使用官方 App Server 的结构化 `outputSchema`，并使用“设置 → 模型与推理强度”中选择的模型和推理强度。非代码回答还可选择“录音 → 停止 → 转录 → 编辑 → 提交”，远程转录需要本场明确授权，失败时可直接改用文字。
 更多说明见[结构化模拟面试](docs/interviews.md)。
 
 ### 面经、八股与手撕题知识库
@@ -320,13 +335,13 @@ macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Home
 
 ## 项目状态
 
-当前 `v0.4.0-alpha.3` 的数字由 Catalog 与公共模型核对：
+下列数字来自当前源码的 Catalog 与公共模型；源码版本号仍为 `v0.4.0-alpha.3`，不代表旧 Release 的题量已经更新：
 
 | 指标 | 当前状态 |
 |---|---:|
-| Ready Problems | 45 |
-| Planned Problems | 184 |
-| Oracle-validated Problems | 33 |
+| Ready Problems | 49 |
+| Planned Problems | 180 |
+| Oracle-validated Problems | 37 |
 | Retention-ready Problems | 24 |
 | Field-tested runs | 0 |
 | Canonical Skills | 70 |

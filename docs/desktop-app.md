@@ -28,7 +28,9 @@ Intel Mac 没有经过真实 Artifact 启动验证，本版不提供 x86_64 或 
 
 ### 首页
 
-只提供两个主要动作：**继续训练** 与 **开始模拟面试**。次级信息包括目标岗位、当前路线、到期复测、最近面试和 AI 状态。
+当前任务占据首页主要区域：有未结束面试时先恢复面试，否则继续训练或处理到期复测。只突出一个当前主动作，题库、模拟面试和进度保留可发现的次级入口。学习记录在下方横向排列，不再使用挤压正文的并排大卡；小窗口可以继续滚动。最近未完成面试只提示查看记录，不将零分包装成完整面试结论。
+
+正式页面实图：[训练首页·浅色](images/home-polish-20260907/home-practice-light.png) / [训练首页·深色](images/home-polish-20260907/home-practice-dark.png) / [恢复面试](images/home-polish-20260907/home-interview-dark.png) / [900×620、125% 字号](images/home-polish-20260907/home-small-light.png)。使用合成测试档案，不含真实材料；尺寸、来源提交与 SHA 见[清单](images/home-polish-20260907/manifest.json)。这不是重新发布的安装包。
 
 ### 求职材料
 
@@ -73,6 +75,8 @@ Codex 与普通 API 使用同一套逐轮流程及本地结果校验。每次提
 上下文预览列出将发送的每个部分。普通 Provider 只接收确认文本；Codex 使用官方 App Server 作为面试官，不修改候选人的代码。连接页的 Codex 按钮直接连接面试官，不再提供教练或仓库代理模式。详见 [AI 连接](ai-connections.md)。
 
 经历环节先邀请候选人介绍一段与岗位相关的项目、实习、比赛或论文，再沿实际回答逐层追问；不知道或非本人负责时换角度取证。简历中的细节不等于候选人已经讲过。简单、标准、高压分别调整语气与追问深度，高压也不辱骂或补造经历。
+
+本轮进一步区分“级别决定责任范围、难度决定追问方式”：沿本人贡献、真实备选方案、证据缺口或条件变化择一追问，不一口气列出整套考点。八岗位有各自的追问角度，面经来源与置信度见[研究记录](research/post_training_agent_interview_sources.md)。用合成实习背景的 DeepSeek 简单/高压各三轮探针观察到了经历介绍→实现边界→换角度的连续提问；这不是八岗位、完整面试或所有模型的质量保证。
 
 策略实际由 [`dynamic-interviewer.md`](../coach/prompts/dynamic-interviewer.md) 和 [`interview_flow.py`](../src/llm_interview_lab/interview_flow.py) 的岗位关注点/难度指令发送给 Codex 与普通 API，不只是维护者文档。当前经历、原理环节各有最多四问的进程上限，不是无限聊天。
 

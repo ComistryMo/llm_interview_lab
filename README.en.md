@@ -135,7 +135,9 @@ Only fields selected in Context Preview are sent. API keys are stored in Windows
 
 ## Status
 
-The current `v0.4.0-alpha.3` release contains **45 Ready**, **184 Planned**, **33 Oracle-validated**, **24 Retention-ready**, **0 Field-tested runs**, **70 skills**, **8 roles**, **24 interview blueprints**, and **26 fixed non-coding interview items**.
+The current source Catalog contains **49 Ready**, **180 Planned**, **37 Oracle-validated**, **24 Retention-ready**, **0 Field-tested runs**, **70 skills**, **8 roles**, **24 interview blueprints**, and **26 fixed non-coding interview items**. The version is still `v0.4.0-alpha.3`; the existing desktop downloads have not been rebuilt with these source additions.
+
+New original exercises cover Nesterov SGD, label-smoothed cross entropy, causal/padding masks, and GSPO sequence ratios. They require PyTorch and have Chinese task descriptions, public tests, and independent numerical validation. Their own D+2/D+7 variants are not available yet, so passing these exercises cannot grant mastery. See the [Chinese source README](README.md#ai-手撕题当前源码) for details.
 
 This is an Alpha prerelease. Provider behavior varies by upstream service, Apple Developer ID signing/notarization is not configured, and no real Field Run is claimed.
 

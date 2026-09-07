@@ -1,0 +1,56 @@
+{
+  "version": "0.4.0a3",
+  "source_commit": "8038a20d123a2ac6f428ce94cce90996e730e0ab",
+  "captured_from": "matching source tree before commit; HomePage.qml unchanged after capture",
+  "language": "zh-CN",
+  "platform": "win32",
+  "qt_platform": "windows",
+  "synthetic": true,
+  "controller": "AppController",
+  "qml": "src/llm_interview_lab/desktop/qml/Main.qml",
+  "test": "tests/infrastructure/test_interview_input_runtime.py::test_home_layout_and_real_entry_points",
+  "device_pixel_ratio": 1.5,
+  "notes": "Native Windows QML with isolated persisted test profiles; no demo controller, no real candidate data. Codex discovery is mocked; screenshots do not prove Codex connectivity or macOS behavior.",
+  "screenshots": [
+    {
+      "path": "home-interview-dark.png",
+      "state": "resume-interview",
+      "logical_size": [1280, 800],
+      "pixel_size": [1920, 1200],
+      "font_scale": 1.0,
+      "theme": "dark",
+      "captured_at": "2026-09-07T10:21:44.9530366Z",
+      "sha256": "e6773ef473d78127b42a04e7ea3e2757cd5162f5e73f0317d03a3d4b2db400a9"
+    },
+    {
+      "path": "home-practice-dark.png",
+      "state": "start-practice-with-incomplete-interview-record",
+      "logical_size": [1440, 900],
+      "pixel_size": [2160, 1350],
+      "font_scale": 1.0,
+      "theme": "dark",
+      "captured_at": "2026-09-07T10:21:46.5768049Z",
+      "sha256": "f1a15dae44c3cdfe14ace8f981f21a5ff72d143f049f891890e497b89383e301"
+    },
+    {
+      "path": "home-practice-light.png",
+      "state": "start-practice-with-incomplete-interview-record",
+      "logical_size": [1440, 900],
+      "pixel_size": [2160, 1350],
+      "font_scale": 1.0,
+      "theme": "light",
+      "captured_at": "2026-09-07T10:21:41.1449105Z",
+      "sha256": "6d19c68f32f3d0c6c4c40e1827df857f0150aace5916a329635e442ec724957d"
+    },
+    {
+      "path": "home-small-light.png",
+      "state": "resume-interview-scrollable",
+      "logical_size": [900, 620],
+      "pixel_size": [1350, 930],
+      "font_scale": 1.25,
+      "theme": "light",
+      "captured_at": "2026-09-07T10:21:38.6676146Z",
+      "sha256": "0fbb60e64885f118aa21946d0668789b1b9a68c5d28ba4935b33984619bf9381"
+    }
+  ]
+}
