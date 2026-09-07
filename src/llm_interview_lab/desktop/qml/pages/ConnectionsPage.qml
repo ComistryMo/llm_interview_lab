@@ -13,6 +13,15 @@ Flickable {
     // Editing stays local to this form. The key itself is never read back
     // from the keyring; an empty key field means "keep existing".
     property string editingConnectionId: ""
+    property bool composingConnection: false
+    readonly property bool hasSavedKey: {
+        var values = app.connections || []
+        for (var i = 0; i < values.length; ++i) {
+            if (values[i].connection_id === connectionId.text && values[i].provider_id === provider.currentText)
+                return !!values[i].key_reference
+        }
+        return false
+    }
     property string formError: ""
     property bool saving: false
     readonly property bool deepSeek: provider.currentText === "deepseek"
@@ -96,6 +105,7 @@ Flickable {
     }
 
     function cancelEditConnection() {
+        root.composingConnection = false
         root.editingConnectionId = ""
         root.clearFormError()
         root.advanced = false
@@ -107,6 +117,17 @@ Flickable {
         endpoint.text = ""
         connectionId.text = provider.currentText + "-main"
         displayName.text = provider.currentText
+    }
+
+    function newConnectionId() {
+        var base = provider.currentText + "-main"
+        var ids = []
+        for (var i = 0; i < app.connections.length; ++i)
+            ids.push(app.connections[i].connection_id)
+        var candidate = base
+        for (var suffix = 2; ids.indexOf(candidate) >= 0; ++suffix)
+            candidate = base + "-" + suffix
+        return candidate
     }
     ScrollBar.vertical: ScrollBar {
         width: 6
@@ -151,9 +172,116 @@ Flickable {
         }
 
 
+        RowLayout {
+            Layout.fillWidth: true
+            Text { text: "已保存的连接"; color: root.colors.text; font.pixelSize: 18; font.bold: true; Layout.fillWidth: true }
+            LabButton {
+                objectName: "newConnection"
+                theme: root.theme; text: "新增连接"
+                visible: app.connections.length > 0 && !root.composingConnection
+                enabled: !app.busy
+                onClicked: {
+                    root.cancelEditConnection()
+                    connectionId.text = root.newConnectionId()
+                    root.composingConnection = true
+                }
+            }
+        }
+        Text { visible: app.connections.length === 0; text: "尚未配置。你可以直接使用无需 AI 的本地模式。"; color: root.colors.muted }
+        Repeater {
+            model: app.connections
+            delegate: LabCard {
+                required property var modelData
+                objectName: "savedConnectionCard"
+                // The old single-row delegate pushed three action buttons
+                // beyond the viewport at 900px.  A metadata row plus a
+                // wrapping action row keeps every action reachable without
+                // shrinking labels to unreadable glyphs.
+                Layout.fillWidth: true
+                Layout.minimumHeight: root.compactForm ? 142 : 116
+                cardColor: root.colors.surface; borderColor: root.colors.border
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            Text { text: modelData.display_name || modelData.connection_id; color: root.colors.text; font.bold: true; elide: Text.ElideRight; Layout.fillWidth: true }
+                            Text {
+                                text: modelData.provider_id + " · " + modelData.model
+                                      + (modelData.reasoning_effort
+                                         ? " · 推理 " + modelData.reasoning_effort : "")
+                                color: root.colors.muted
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                                font.pixelSize: 12
+                            }
+                            Text {
+                                objectName: "savedConnectionKeyStatus"
+                                text: modelData.key_reference ? "Key 已保存 · 重启后自动复用" : "本地服务 · 无需 API Key"
+                                color: root.colors.muted
+                                Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                                font.pixelSize: 12
+                            }
+                        }
+                        StatusPill {
+                            objectName: "savedConnectionStatus"
+                            text: modelData.status || "已保存，尚未测试"
+                            tone: modelData.ready === true ? root.colors.success
+                                  : modelData.status === "连接失败" ? root.colors.danger : root.colors.muted
+                            Layout.alignment: Qt.AlignTop
+                        }
+                    }
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        layoutDirection: Qt.LeftToRight
+                        Button {
+                            objectName: "editConnection"
+                            text: "修改模型 / Key"
+                            flat: true
+                            enabled: !root.saving && !app.busy
+                            implicitHeight: 32
+                            onClicked: root.beginEditConnection(modelData)
+                        }
+                        Button {
+                            objectName: "testSavedConnection"
+                            text: modelData.status === "测试中" ? "测试中…" : "测试连接"
+                            flat: true
+                            enabled: !app.busy
+                            implicitHeight: 32
+                            onClicked: app.testConnection(modelData.connection_id)
+                        }
+                        Button {
+                            objectName: "deleteSavedConnection"
+                            text: "删除连接与 Key"
+                            flat: true
+                            enabled: !root.saving && !app.busy
+                            implicitHeight: 32
+                            onClicked: root.requestDeleteConnection(modelData)
+                        }
+                    }
+                }
+            }
+        }
+
+        Text {
+            objectName: "savedConnectionError"
+            visible: !connectionForm.visible && (app.connectionError || "").length > 0
+            text: app.connectionError || ""
+            color: root.colors.danger
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+        }
+
         LabCard {
             id: connectionForm
             objectName: "connectionForm"
+            visible: root.composingConnection || root.editingConnectionId.length > 0 || app.connections.length === 0
             Layout.fillWidth: true
             // Let LabCard's implicit height follow the visible form rows.  A
             // fixed height used to let the privacy note spill into the next
@@ -205,7 +333,7 @@ Flickable {
                             root.formError = ""
                             app.testConnection(connectionId.text)
                             if (!isOllama) secretOrEndpoint.text = ""
-                            root.editingConnectionId = ""
+                            root.editingConnectionId = connectionId.text
                         } else {
                             root.formError = "保存失败。请检查连接 ID、模型和地址；远程服务的 API Key 必须可由系统密钥环保存。"
                         }
@@ -217,11 +345,12 @@ Flickable {
                     }
                 }
                 Text {
-                    text: root.deepSeek ? "官方地址已填好；只需选择模型并填写 Key。" : "填写模型与凭证，保存后自动测试。"
+                    text: root.hasSavedKey ? "已保存 Key，留空即可复用；输入新 Key 可替换。"
+                          : root.deepSeek ? "官方地址已填好；首次连接时填写 Key。" : "填写模型与凭证，保存后自动测试。"
                     color: root.colors.muted
                     font.pixelSize: 12
                     Layout.fillWidth: true
-                    elide: Text.ElideRight
+                    wrapMode: Text.Wrap
                 }
             }
             GridLayout {
@@ -238,6 +367,10 @@ Flickable {
                         reasoningEffort.currentIndex = 0
                         deepseekModel.currentIndex = 0
                         modelField.text = root.deepSeek ? "deepseek-v4-flash" : ""
+                        connectionId.text = root.newConnectionId()
+                        displayName.text = root.deepSeek ? "DeepSeek" : provider.currentText
+                        secretOrEndpoint.text = ""
+                        endpoint.text = ""
                     }
                 }
                 Text { text: "模型"; color: root.colors.muted }
@@ -308,9 +441,20 @@ Flickable {
                     id: secretOrEndpoint; Layout.fillWidth: true
                     objectName: "connectionSecretField"
                     theme: root.theme
-                    placeholderText: provider.currentText === "ollama" ? "http://127.0.0.1:11434" : "仅保存到系统密钥环"
+                    placeholderText: provider.currentText === "ollama" ? "http://127.0.0.1:11434"
+                                     : root.hasSavedKey ? "已保存，留空保留原 Key" : "首次填写，仅保存到系统密钥环"
                     echoMode: provider.currentText === "ollama" ? TextInput.Normal : TextInput.Password
                     onTextEdited: root.clearFormError()
+                }
+                Text {
+                    objectName: "savedApiKeyNotice"
+                    visible: provider.currentText !== "ollama" && root.hasSavedKey
+                    text: "Key 已保存在系统密钥环，重启后仍可使用。此处不回显密钥；只改模型或推理强度时无需重填。"
+                    color: root.colors.muted
+                    font.pixelSize: 12
+                    Layout.columnSpan: 2
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
                 }
                 Text {
                     visible: provider.currentText === "ollama"
@@ -493,78 +637,7 @@ Flickable {
             }
         }
 
-        Text { text: "已保存的连接"; color: root.colors.text; font.pixelSize: 18; font.bold: true }
-        Text { visible: app.connections.length === 0; text: "尚未配置。你可以直接使用无需 AI 的本地模式。"; color: root.colors.muted }
-        Repeater {
-            model: app.connections
-            delegate: LabCard {
-                required property var modelData
-                objectName: "savedConnectionCard"
-                // The old single-row delegate pushed three action buttons
-                // beyond the viewport at 900px.  A metadata row plus a
-                // wrapping action row keeps every action reachable without
-                // shrinking labels to unreadable glyphs.
-                Layout.fillWidth: true
-                Layout.minimumHeight: root.compactForm ? 142 : 116
-                cardColor: root.colors.surface; borderColor: root.colors.border
-                ColumnLayout {
-                    width: parent.width
-                    spacing: 8
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-                            Text { text: modelData.display_name || modelData.connection_id; color: root.colors.text; font.bold: true; elide: Text.ElideRight; Layout.fillWidth: true }
-                            Text {
-                                text: modelData.provider_id + " · " + modelData.model
-                                      + (modelData.reasoning_effort
-                                         ? " · 推理 " + modelData.reasoning_effort : "")
-                                color: root.colors.muted
-                                elide: Text.ElideRight
-                                Layout.fillWidth: true
-                                font.pixelSize: 12
-                            }
-                        }
-                        StatusPill {
-                            objectName: "savedConnectionStatus"
-                            text: modelData.status || "已保存，尚未测试"
-                            tone: modelData.ready === true ? root.colors.success
-                                  : modelData.status === "连接失败" ? root.colors.danger : root.colors.muted
-                            Layout.alignment: Qt.AlignTop
-                        }
-                    }
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: 6
-                        layoutDirection: Qt.LeftToRight
-                        Button {
-                            objectName: "editConnection"
-                            text: "编辑"
-                            flat: true
-                            enabled: !root.saving && !app.busy
-                            implicitHeight: 32
-                            onClicked: root.beginEditConnection(modelData)
-                        }
-                        Button {
-                            text: modelData.status === "测试中" ? "测试中…" : "测试连接"
-                            flat: true
-                            enabled: !app.busy
-                            implicitHeight: 32
-                            onClicked: app.testConnection(modelData.connection_id)
-                        }
-                        Button {
-                            text: "删除"
-                            flat: true
-                            enabled: !root.saving && !app.busy
-                            implicitHeight: 32
-                            onClicked: root.requestDeleteConnection(modelData)
-                        }
-                    }
-                }
-            }
-        }
+
     }
 
     Dialog {
@@ -578,8 +651,10 @@ Flickable {
         height: implicitHeight
         standardButtons: Dialog.Cancel | Dialog.Ok
         onAccepted: {
-            if (root.pendingDeleteConnectionId.length > 0)
-                app.deleteConnection(root.pendingDeleteConnectionId)
+            if (root.pendingDeleteConnectionId.length > 0
+                    && app.deleteConnection(root.pendingDeleteConnectionId)
+                    && root.editingConnectionId === root.pendingDeleteConnectionId)
+                root.cancelEditConnection()
             root.pendingDeleteConnectionId = ""
             root.pendingDeleteConnectionName = ""
         }
@@ -593,7 +668,7 @@ Flickable {
             // wraps at the minimum window.
             width: Math.min(360, Math.max(240, root.width - 96))
             text: "将删除“" + root.pendingDeleteConnectionName
-                  + "”的本地连接配置。系统密钥环中的 Key 不会被读取或展示；删除后仍可重新配置。"
+                  + "”的本地连接配置及系统密钥环中的 Key。不会删除档案、材料或面试记录；使用这个服务时需重新填写 Key。"
             color: root.colors.text
             wrapMode: Text.Wrap
         }

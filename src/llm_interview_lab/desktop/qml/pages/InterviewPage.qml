@@ -39,6 +39,7 @@ Item {
     // activation and a mouse click in the same event loop cannot create two
     // sessions.
     property bool startingDynamicInterview: false
+    property var pendingConnectionCheck: null
     // A coding round can only be recorded when the visible editor still
     // matches the revision that the local Grader tested. TextArea bindings are
     // intentionally broken after typing, so track edits explicitly.
@@ -71,7 +72,10 @@ Item {
         Qt.callLater(root.resetQuestionEditors)
     }
     onAnswerLockedChanged: Qt.callLater(root.syncQuestionEditors)
-    onVisibleChanged: if (visible && leftPanel.setupVisible) Qt.callLater(root.initializeSetup)
+    onVisibleChanged: {
+        if (!visible) root.pendingConnectionCheck = null
+        if (visible && leftPanel.setupVisible) Qt.callLater(root.initializeSetup)
+    }
 
     function statusText(value) {
         return ({active: "进行中", paused: "已暂停", ready: "待开始", completed: "已完成", incomplete: "未完成", timed_out: "已超时"})[value] || value || "未知"
@@ -161,6 +165,29 @@ Item {
         if (!item || typeof item !== "object")
             return false
         return item.ready === true
+    }
+
+    function prepareInterview() {
+        if (root.startingDynamicInterview || root.pendingConnectionCheck || app.busy)
+            return
+        if (aiMode.currentValue === "provider" && !root.providerIsReady(planConnection.currentValue)) {
+            root.pendingConnectionCheck = {profile: app.profileId, connection: planConnection.currentValue}
+            app.testConnection(planConnection.currentValue)
+            if (!app.busy) root.pendingConnectionCheck = null
+            return
+        }
+        root.openPersonalizedPlanContext()
+    }
+
+    function finishConnectionCheck() {
+        var pending = root.pendingConnectionCheck
+        root.pendingConnectionCheck = null
+        if (pending && root.visible && leftPanel.setupVisible
+                && pending.profile === app.profileId
+                && aiMode.currentValue === "provider"
+                && pending.connection === planConnection.currentValue
+                && root.providerIsReady(pending.connection))
+            root.openPersonalizedPlanContext()
     }
 
     function openPersonalizedPlanContext() {
@@ -559,6 +586,12 @@ Item {
 
     Connections {
         target: app
+        function onBusyChanged() {
+            // The worker publishes its connection result after clearing busy.
+            // Continue on the next UI tick, using the stored credential once.
+            if (!app.busy && root.pendingConnectionCheck)
+                Qt.callLater(root.finishConnectionCheck)
+        }
         function onAiStateChanged() {
             // Continue the original button action once the Codex interviewer
             // thread is ready; do not make the user click a second time.
@@ -814,7 +847,7 @@ Item {
                                      || !root.providerIsReady(planConnection.currentValue))
                         text: planConnection.currentIndex < 0
                               ? "尚未选择 AI 连接。"
-                              : "该连接尚未通过测试；请先到 AI 连接页保存并测试。"
+                              : "已保存的连接可以直接复用；点击开始后会先检测，无需重新填写 Key。"
                         color: root.colors.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: 11
@@ -993,17 +1026,6 @@ Item {
                         font.pixelSize: 11
                     }
                     Text {
-                        objectName: "dynamicInterviewError"
-                        width: parent.width
-                        visible: leftPanel.setupVisible
-                                 && app.interviewPlanPreview.status === "error"
-                        text: (app.interviewPlanPreview.user_message || "第一问生成失败。")
-                              + "\n" + (app.interviewPlanPreview.recommended_action || "请检查连接后重试。")
-                        color: root.colors.danger
-                        wrapMode: Text.Wrap
-                        font.pixelSize: 12
-                    }
-                    Text {
                         objectName: "personalizedInterviewAlphaScope"
                         width: parent.width
                         visible: false
@@ -1032,6 +1054,17 @@ Item {
                 }
             }
                 LabDivider { theme: root.theme; Layout.fillWidth: true }
+                LabText {
+                    objectName: "dynamicInterviewError"
+                    theme: root.theme
+                    Layout.fillWidth: true
+                    visible: app.interviewPlanPreview.status === "error"
+                             || (aiMode.currentValue === "provider" && (app.connectionError || "").length > 0)
+                    text: app.interviewPlanPreview.status === "error"
+                          ? app.interviewPlanPreview.user_message + "\n" + app.interviewPlanPreview.recommended_action
+                          : app.connectionError
+                    tone: "danger"; variant: "caption"; wrapMode: Text.Wrap
+                }
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 16
@@ -1050,17 +1083,16 @@ Item {
                         variant: "primary"
                         Layout.alignment: Qt.AlignRight
                         visible: leftPanel.setupVisible && aiMode.currentValue !== "disabled"
-                        text: app.busy ? "正在进入面试……" : "开始面试"
+                        text: root.pendingConnectionCheck ? "正在检测已保存连接……" : app.busy ? "正在进入面试……" : "开始面试"
                         enabled: !!role.currentValue
                                  && !app.busy
                                  && ((aiMode.currentValue === "provider"
-                                      && planConnection.currentIndex >= 0
-                                      && root.providerIsReady(planConnection.currentValue))
+                                      && planConnection.currentIndex >= 0)
                                       || aiMode.currentValue === "codex")
                                  && root.materialsReady()
                         // Confirm only the explicit first-turn context. Future
                         // questions are generated after the current answer.
-                        onClicked: root.openPersonalizedPlanContext()
+                        onClicked: root.prepareInterview()
                     }
                 }
         }

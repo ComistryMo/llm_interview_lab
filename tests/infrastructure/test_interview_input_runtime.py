@@ -207,6 +207,193 @@ def test_material_refresh_keeps_tested_connection_but_not_across_profiles(scene,
     assert controller.connections[0]["ready"] is False
 
 
+@pytest.mark.parametrize("with_material", [False, True])
+def test_restarted_profile_starts_from_form_with_saved_key(controller, monkeypatch, tmp_path, with_material):
+    from llm_interview_lab.ai.base import ChatEvent, ConnectionResult
+    from llm_interview_lab.ai.credentials import KeyringCredentialStore
+
+    secrets, probes, conversations = {}, [], []
+    class Keyring:
+        def set_password(self, service, reference, secret): secrets[reference] = secret
+        def get_password(self, service, reference): return secrets.get(reference)
+    store = KeyringCredentialStore(Keyring())
+    monkeypatch.setattr("llm_interview_lab.ai.connections.KeyringCredentialStore", lambda: store)
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.KeyringCredentialStore", lambda: store)
+    assert controller.saveConnection("deepseek-main", "deepseek", "deepseek-v4-flash", "DeepSeek", "", "synthetic-stored-key", "none")
+    if with_material:
+        source = tmp_path / "synthetic-resume.txt"
+        source.write_text("合成简历：独立完成偏好数据去重练习；目标是后训练实习。", encoding="utf-8")
+        assert controller.addMaterial(str(source), "resume", "合成简历", True)
+    controller.finishInterview()
+    previous_interview = controller.interview["interview_id"]
+    profile = controller.profileId
+    controller.shutdown()
+
+    # Real controller restoration, same settings + data. No saveConnection or
+    # direct start call is permitted after this point.
+    restored = AppController(controller.repo_root, log_root=tmp_path / "restart-logs")
+    assert restored.profileId == profile and not restored.onboardingRequired
+    assert restored.connections[0]["ready"] is False
+    skill = next(iter(restored.service.roles.roles["post_training_engineer"].skill_weights))
+    class Provider:
+        async def test_connection(self):
+            probes.append(True)
+            return ConnectionResult(True, "synthetic connection", 1)
+        async def stream_chat(self, messages, *, json_mode=False):
+            assert json_mode is True
+            conversations.append(messages)
+            question = restored.interview["question"]
+            yield ChatEvent("delta", text=json.dumps({
+                "scores": {name: 3 for name in question["rubric"]["dimensions"]},
+                "evidence": "候选人说明做过偏好数据去重练习，希望应聘后训练实习，尚未展开项目细节。", "confidence": "medium", "fatal_issues": [],
+                "next_stage": "experience", "follow_up": "先聊聊这次去重练习，你自己负责了哪一部分？",
+                "next_skill_ids": [skill], "coding_problem_id": "",
+            }))
+    def provider(config, *, api_key):
+        assert api_key == "synthetic-stored-key"
+        return Provider()
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.create_chat_provider", provider)
+    engine = QQmlApplicationEngine()
+    errors = []
+    engine.warnings.connect(lambda values: errors.extend(v.toString() for v in values))
+    engine.rootContext().setContextProperty("backend", restored)
+    engine.load(QUrl.fromLocalFile(str(QML)))
+    assert engine.rootObjects(), errors
+    window = engine.rootObjects()[0]
+    window.resize(1080, 680)
+    window.show()
+    try:
+        restored.navigate("connections")
+        QTest.qWait(100)
+        assert _find(window, "savedConnectionCard").isVisible()
+        assert _within_window(window, _find(window, "editConnection"))
+        assert not _find(window, "connectionForm").isVisible()
+        assert "重启后" in _find(window, "savedConnectionKeyStatus").property("text")
+        _capture(window, "saved-key-after-restart")
+        restored.navigate("interview")
+        QTest.qWait(100)
+        _click(window, _find(window, "configureAnotherInterview"))
+        _find(window, "interviewAiModeSelector").setProperty("currentIndex", 1)
+        _find(window, "interviewDifficultySelector").setProperty("currentIndex", 2)
+        _find(window, "interviewUseMaterials").setProperty("checked", with_material)
+        _find(window, "interviewMaterialConsent").setProperty("checked", with_material)
+        assert not _find(window, "interviewUseAdditionalMaterial").property("checked")
+        QTest.qWait(80)
+        start = _find(window, "startConfiguredInterview")
+        assert start.isEnabled() and _within_window(window, start)
+        _click(window, start)
+        for _ in range(150):
+            QTest.qWait(10)
+            time.sleep(0.005)
+            if window.findChild(QObject, "personalizedInterviewContextDialog").property("visible"):
+                break
+        assert probes == [True], restored.connectionError
+        confirm = _find(window, "confirmInterviewSetupContext")
+        assert confirm.isVisible() and confirm.isEnabled()
+        _capture(window, "restart-setup-context-with-material" if with_material else "restart-setup-context")
+        _click(window, confirm)
+        QTest.qWait(120)
+        assert restored.interview["interview_id"] != previous_interview
+        assert restored.interview["question"]["question_id"] == "q-001"
+        assert restored.interview["connection_id"] == "deepseek-main"
+        assert bool(restored.interview["material_refs"]) == with_material
+        answer = _find(window, "interviewAnswerEditor")
+        answer.forceActiveFocus()
+        event = QInputMethodEvent()
+        event.setCommitString("我做过偏好数据去重练习，希望应聘后训练实习。")
+        QCoreApplication.sendEvent(answer, event)
+        _click(window, _find(window, "lockInterviewAnswer"))
+        for _ in range(150):
+            QTest.qWait(10)
+            time.sleep(0.005)
+            if not restored.busy: break
+        assert restored.interview["question"]["question_id"] == "q-002", restored.interview.get("ai_error")
+        assert len(conversations) == 1 and probes == [True]
+        assert not errors
+    finally:
+        window.close()
+        restored.shutdown()
+        engine.deleteLater()
+        QCoreApplication.sendPostedEvents()
+        QCoreApplication.processEvents()
+
+
+def test_missing_interview_prompt_is_inline_and_retryable(scene, monkeypatch):
+    window, controller = scene
+    controller.finishInterview()
+    QTest.qWait(80)
+    _click(window, _find(window, "configureAnotherInterview"))
+    _find(window, "interviewAiModeSelector").setProperty("currentIndex", 2)
+    context = controller.service.dynamic_interview_context
+    def missing(*args, **kwargs):
+        raise FileNotFoundError("coach/prompts/dynamic-interviewer.md")
+    monkeypatch.setattr(controller.service, "dynamic_interview_context", missing)
+    _click(window, _find(window, "startConfiguredInterview"))
+    assert controller.interviewPlanPreview["error_code"] == "PUBLIC_ASSETS_MISSING"
+    notice = _find(window, "dynamicInterviewError")
+    assert notice.isVisible() and "重新启动" in notice.property("text")
+    assert "操作未完成" not in notice.property("text")
+    assert _within_window(window, notice)
+    assert _within_window(window, _find(window, "startConfiguredInterview"))
+    _capture(window, "missing-prompt-actionable-error")
+    monkeypatch.setattr(controller.service, "dynamic_interview_context", context)
+    _click(window, _find(window, "startConfiguredInterview"))
+    assert _find(window, "confirmInterviewSetupContext").isVisible()
+
+
+def test_saved_key_form_preserves_replaces_and_confirms_deletion(scene, monkeypatch):
+    from llm_interview_lab.ai.base import ConnectionResult
+    from llm_interview_lab.ai.credentials import KeyringCredentialStore
+    secrets, used_keys = {}, []
+    class Keyring:
+        def set_password(self, service, reference, secret): secrets[reference] = secret
+        def get_password(self, service, reference): return secrets.get(reference)
+        def delete_password(self, service, reference): secrets.pop(reference, None)
+    store = KeyringCredentialStore(Keyring())
+    monkeypatch.setattr("llm_interview_lab.ai.connections.KeyringCredentialStore", lambda: store)
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.KeyringCredentialStore", lambda: store)
+    class Provider:
+        async def test_connection(self): return ConnectionResult(True, "synthetic success", 1)
+    def provider(config, *, api_key):
+        used_keys.append(api_key)
+        return Provider()
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.create_chat_provider", provider)
+    window, controller = scene
+    assert controller.saveConnection("deepseek-main", "deepseek", "deepseek-v4-flash", "DeepSeek", "", "first-test-key", "none")
+    controller.navigate("connections")
+    QTest.qWait(80)
+    _click(window, _find(window, "editConnection"))
+    QTest.qWait(150)
+    page = _find(window, "connectionsPage")
+    secret = _find(window, "connectionSecretField")
+    assert secret.property("text") == ""
+    assert "留空保留" in secret.property("placeholderText")
+    assert _find(window, "savedApiKeyNotice").isVisible()
+    _capture(window, "edit-saved-key")
+    for key in ("", "replacement-test-key"):
+        secret.setProperty("text", key)
+        _click(window, _find(window, "saveAndTestConnection"))
+        for _ in range(100):
+            QTest.qWait(10)
+            time.sleep(0.005)
+            if not controller.busy: break
+        assert secret.property("text") == ""
+    assert used_keys == ["first-test-key", "replacement-test-key"]
+    assert list(secrets.values()) == ["replacement-test-key"]
+    # Adding another service must not silently overwrite the existing Key.
+    page.setProperty("contentY", 0)
+    QTest.qWait(100)
+    _click(window, _find(window, "newConnection"))
+    assert page.property("hasSavedKey") is False
+    assert controller.connections[0]["connection_id"] == "deepseek-main"
+    _click(window, _find(window, "deleteSavedConnection"))
+    dialog = window.findChild(QObject, "deleteConnectionDialog")
+    assert dialog.property("visible") and secrets
+    assert QMetaObject.invokeMethod(dialog, "accept")
+    QTest.qWait(100)
+    assert controller.connections == [] and not secrets
+
+
 def test_resaving_same_connection_invalidates_ready_even_with_unchanged_reference(controller):
     assert controller.saveConnection("local-main", "ollama", "synthetic-model", "本地面试", "http://localhost:11434", "", "")
     controller._connections[0].update(ready=True, status="已连接")
@@ -903,6 +1090,7 @@ def test_single_submit_provider_preserves_selected_connection_and_advances(contr
     assert len(calls) == 1 and configs[0].model == "selected-model" and configs[0].reasoning_effort == "high"
     controller._load_interview(controller.interview["interview_id"])
     assert controller.interview["connection_id"] == "local-selected"
+    assert next(c for c in controller.connections if c["connection_id"] == "local-selected")["ready"] is True
 
 
 def test_single_submit_rejects_revoked_material_and_retains_scene_consent(controller, tmp_path, monkeypatch):

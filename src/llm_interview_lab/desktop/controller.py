@@ -3615,6 +3615,11 @@ class AppController(QObject):
                     "assessments", {}
                 ):
                     return
+                # A valid response is also a successful connection check.
+                # Resuming a saved session need not probe or re-enter a Key.
+                for connection in self._connections:
+                    if connection["connection_id"] == connection_id:
+                        connection.update(ready=True, status="已连接")
                 if self._interview.get("delivery_mode") == "dynamic_ai":
                     self._advance_dynamic_answer(result, include_materials)
                     return
@@ -4168,7 +4173,11 @@ class AppController(QObject):
                 ],
             }
         except Exception as error:
-            self._show_error(error)
+            self._set_dynamic_initial_error(
+                error, operation_id=uuid4().hex,
+                code="PUBLIC_ASSETS_MISSING" if isinstance(error, FileNotFoundError) else "DYNAMIC_CONTEXT_INVALID",
+                stage="context_preview",
+            )
             return {"estimated_tokens": 0, "context_sha256": "", "parts": []}
 
     @staticmethod
@@ -4311,6 +4320,7 @@ class AppController(QObject):
         *,
         operation_id: str = "",
         code: str = "FIRST_QUESTION_FAILED",
+        stage: str = "first_question",
     ) -> None:
         """Publish and log one first-question failure without leaking content."""
 
@@ -4320,10 +4330,19 @@ class AppController(QObject):
                 detail = detail.replace(private_path, "<local-path>")
         detail = detail[:400]
         user_message = self._dynamic_initial_user_message(error)
+        recommended_action = "检查 Codex/AI 连接后重试，或改用普通 LLM。"
+        if isinstance(error, FileNotFoundError):
+            code = "PUBLIC_ASSETS_MISSING"
+            user_message = "面试运行资源缺失，尚未向 AI 发送请求。"
+            recommended_action = "请关闭并重新启动应用以同步课程和面试资源；档案、材料和已保存的 Key 不会被清除。"
+        elif stage == "context_preview":
+            user_message = "无法准备本场发送内容：" + friendly_error(error)
+            recommended_action = "请检查所选岗位和材料授权后重试；当前设置已保留。"
         logging.getLogger("llm_interview_lab.desktop").error(
-            "dynamic_interview_failed code=%s stage=first_question operation_id=%s "
+            "dynamic_interview_failed code=%s stage=%s operation_id=%s "
             "error_type=%s detail=%s",
             code,
+            stage,
             operation_id[:40],
             type(error).__name__,
             detail,
@@ -4333,7 +4352,7 @@ class AppController(QObject):
             "error_code": code,
             "user_message": user_message,
             "technical_message": detail,
-            "recommended_action": "检查 Codex/AI 连接后重试，或改用普通 LLM。",
+            "recommended_action": recommended_action,
             "operation_id": operation_id,
         }
         self.stateChanged.emit()

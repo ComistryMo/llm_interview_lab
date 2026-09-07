@@ -328,6 +328,8 @@ def friendly_error(error: BaseException | str) -> str:
         return "这道题尚无经过验证的复测资产，当前不能进入间隔复测。"
     if "d+2 retention must pass" in message:
         return "请先通过 D+2 间隔复测，再开始 D+7。"
+    if "api key is missing from the system keyring" in message:
+        return "系统密钥环中找不到这条连接的 Key。请在 AI 连接页点击“修改模型 / Key”，重新填写并保存；不用重新创建档案。"
     if "keyring" in message or "credential" in message:
         return TEXT["error.keyring"]
     if "codex" in message and ("not found" in message or "executable" in message):

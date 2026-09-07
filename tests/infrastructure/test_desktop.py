@@ -1211,6 +1211,38 @@ def test_standalone_runtime_seeds_public_assets_without_touching_profiles(
     assert sentinel.read_text(encoding="utf-8") == "private local evidence\n"
 
 
+@pytest.mark.parametrize("packaged", [False, True])
+def test_existing_desktop_data_receives_interview_prompt_without_changing_profile(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, packaged: bool,
+) -> None:
+    from llm_interview_lab.desktop.runtime import PUBLIC_ASSET_REVISION
+
+    data_root = tmp_path / "existing-app-data"
+    monkeypatch.setenv("LLM_LAB_BUNDLE_ROOT", str(REPO_ROOT))
+    monkeypatch.setenv("LLM_LAB_DESKTOP_DATA_ROOT", str(data_root))
+    monkeypatch.setenv("LLM_LAB_PACKAGED", "1" if packaged else "0")
+    root = prepare_desktop_repository()
+    created = init_profile(root, "existing-user")
+    sentinel = created.paths.root / "materials/keep-me.txt"
+    sentinel.write_text("synthetic private evidence", encoding="utf-8")
+    before = {path.relative_to(created.paths.root): path.read_bytes()
+              for path in created.paths.root.rglob("*") if path.is_file()}
+    # Reproduce an existing UAT root: same alpha version, missing newly added
+    # public prompt. Source edits also need to sync without a version bump.
+    prompt = root / "coach/prompts/dynamic-interviewer.md"
+    prompt.unlink()
+    marker = root / ".llm-lab-standalone.json"
+    value = json.loads(marker.read_text(encoding="utf-8"))
+    value["public_asset_revision"] = "role-interview-dynamic-stages-v3" if packaged else PUBLIC_ASSET_REVISION
+    marker.write_text(json.dumps(value), encoding="utf-8")
+
+    assert prepare_desktop_repository() == root
+    assert prompt.read_bytes() == (REPO_ROOT / "coach/prompts/dynamic-interviewer.md").read_bytes()
+    after = {path.relative_to(created.paths.root): path.read_bytes()
+             for path in created.paths.root.rglob("*") if path.is_file()}
+    assert after == before
+
+
 def test_desktop_release_configuration_is_portable_and_separate_from_core_ci() -> None:
     spec = (REPO_ROOT / "scripts/pysidedeploy.spec").read_text(encoding="utf-8")
     mac_spec = (REPO_ROOT / "scripts/pysidedeploy-macos.spec").read_text(

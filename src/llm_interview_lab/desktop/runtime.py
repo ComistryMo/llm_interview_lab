@@ -29,7 +29,7 @@ MIGRATION_MARKER = ".llm-lab-desktop-migration.json"
 # Keep a small explicit revision in the standalone marker so an existing app
 # data directory receives that public-asset update without ever touching the
 # private ``workspace/profiles`` tree.
-PUBLIC_ASSET_REVISION = "role-interview-dynamic-stages-v3"
+PUBLIC_ASSET_REVISION = "role-interview-strategy-v4"
 
 # Error messages can contain paths that are not one of the well-known roots
 # (for example a pytest temporary directory).  Keep bootstrap diagnostics
@@ -408,6 +408,9 @@ def prepare_desktop_repository() -> Path:
     if (
         installed_version != __version__
         or installed_asset_revision != PUBLIC_ASSET_REVISION
+        # Source UAT roots outlive edits made under the same alpha version.
+        # Sync only public assets on source launches; never touch Profiles.
+        or (not is_packaged_desktop() and destination != bundle)
     ):
         destination.mkdir(parents=True, exist_ok=True)
         _copy_public_assets(bundle, destination)

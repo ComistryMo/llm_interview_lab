@@ -109,6 +109,30 @@ def test_deepseek_connection_roundtrip_keeps_secret_in_keyring(tmp_path, effort)
     assert (root / "workspace/profiles/learner-one/connections.json").read_text(encoding="utf-8") == before
 
 
+def test_saved_deepseek_key_survives_reopen_edit_replace_and_delete(tmp_path):
+    root = _repository(tmp_path)
+    backend = MemoryKeyring()
+    options = dict(connection_id="deepseek-main", provider_id="deepseek",
+                   model="deepseek-v4-flash", display_name="DeepSeek", reasoning_effort="none")
+    saved = save_connection(root, "learner-one", api_key="first-test-key",
+                            credential_store=KeyringCredentialStore(backend), **options)
+    reopened_store = KeyringCredentialStore(backend)
+    restored = list_connections(root, "learner-one")[0]
+    assert reopened_store.load(restored.key_reference) == "first-test-key"
+    options.update(model="deepseek-v4-pro", reasoning_effort="high")
+    edited = save_connection(root, "learner-one", credential_store=reopened_store, **options)
+    assert edited.key_reference == saved.key_reference
+    assert reopened_store.load(edited.key_reference) == "first-test-key"
+    save_connection(root, "learner-one", api_key="replacement-test-key",
+                    credential_store=reopened_store, **options)
+    assert reopened_store.load(edited.key_reference) == "replacement-test-key"
+    metadata = (root / "workspace/profiles/learner-one/connections.json").read_text(encoding="utf-8")
+    assert "first-test-key" not in metadata and "replacement-test-key" not in metadata
+    assert delete_connection(root, "learner-one", saved.connection_id, credential_store=reopened_store)
+    assert list_connections(root, "learner-one") == () and not backend.values
+    assert "修改模型 / Key" in friendly_error("API key is missing from the system keyring")
+
+
 class FakeDelta:
     def __init__(self, text: str) -> None:
         self.choices = [type("Choice", (), {"delta": type("Delta", (), {"content": text})()})()]
