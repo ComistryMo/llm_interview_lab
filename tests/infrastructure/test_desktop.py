@@ -56,6 +56,7 @@ def _repository(tmp_path: Path) -> Path:
         "/workspace/profiles/*\n!/workspace/profiles/.gitkeep\n", encoding="utf-8"
     )
     shutil.copytree(REPO_ROOT / "curriculum", root / "curriculum")
+    shutil.copytree(REPO_ROOT / "coach", root / "coach")
     shutil.copytree(REPO_ROOT / "workspace/schema", root / "workspace/schema")
     shutil.copytree(REPO_ROOT / "workspace/templates", root / "workspace/templates")
     (root / "workspace/profiles").mkdir(parents=True)
@@ -263,7 +264,6 @@ def test_demo_controller_exposes_every_page_and_keeps_demo_settings_deterministi
         "learn",
         "exercise",
         "interview",
-        "coach",
         "progress",
         "connections",
         "settings",
@@ -1303,7 +1303,8 @@ def test_home_and_practice_expose_truthful_next_actions() -> None:
     assert "root.retentionBlockedText(retention)" in exercise
     assert "root.actions.retention_stage" not in exercise
     assert "root.actions.retention_due" not in exercise
-    assert 'app.navigate("coach")' in exercise
+    assert 'app.navigate("coach")' not in exercise
+    assert "coachDrawer" not in exercise and "coachOpen" not in exercise
     assert "startRetentionStage(\"d2\")" not in exercise
     assert "startRetentionStage(\"d7\")" not in exercise
     assert 'id: helpLevel' not in exercise

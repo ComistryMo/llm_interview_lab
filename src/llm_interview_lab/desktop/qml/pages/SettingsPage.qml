@@ -383,7 +383,7 @@ Flickable {
                        ? "当前题目有未保存的编辑。"
                        : "")
                       + (app.coachStreaming
-                         ? " Coach 正在生成回答。"
+                         ? " 有尚未结束的 AI 请求。"
                          : "")
                       + (app.busy && !app.coachStreaming
                          ? " 本地操作正在进行。"

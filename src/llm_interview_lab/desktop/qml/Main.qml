@@ -59,7 +59,6 @@ ApplicationWindow {
         {id: "home", label: "打开首页", hint: "继续训练或开始模拟面试"},
         {id: "learn", label: "打开刷题训练", hint: "按课程前置选择题目"},
         {id: "interview", label: "打开模拟面试", hint: "开始或恢复结构化面试"},
-        {id: "coach", label: "打开 AI 教练", hint: "查看上下文并请求只读帮助"},
         {id: "career", label: "打开求职材料", hint: "管理当前 Profile 的材料"},
         {id: "progress", label: "打开学习进度", hint: "查看当前 Profile 的进度"},
         {id: "connections", label: "打开 AI 连接", hint: "配置或测试普通 LLM"},
@@ -107,7 +106,6 @@ ApplicationWindow {
             interview: backend.uiText("nav.interview"),
             progress: backend.uiText("nav.progress"),
             career: backend.uiText("nav.career"),
-            coach: backend.uiText("nav.coach"),
             connections: backend.uiText("nav.connections"),
             settings: backend.uiText("nav.settings")
         }
@@ -334,7 +332,7 @@ ApplicationWindow {
                 LabText {
                     theme: appTheme
                     visible: !window.compactShell
-                    text: "复盘与辅助"
+                    text: "复盘与材料"
                     variant: "caption"
                     tone: "muted"
                     Layout.leftMargin: 12
@@ -342,8 +340,7 @@ ApplicationWindow {
                 Repeater {
                     model: [
                         {id: "progress", label: backend.uiText("nav.progress"), icon: "../resources/icons/chart.svg"},
-                        {id: "career", label: backend.uiText("nav.career"), icon: "../resources/icons/briefcase.svg"},
-                        {id: "coach", label: backend.uiText("nav.coach"), icon: "../resources/icons/messages.svg"}
+                        {id: "career", label: backend.uiText("nav.career"), icon: "../resources/icons/briefcase.svg"}
                     ]
                     delegate: navButtonDelegate
                 }
@@ -448,6 +445,7 @@ ApplicationWindow {
                     Item { Layout.fillWidth: true }
                     StatusPill {
                         objectName: "globalAiStatus"
+                        visible: backend.currentPage === "interview" || backend.currentPage === "connections"
                         readonly property string interviewRequestState: backend.currentPage === "interview"
                             ? (backend.interview.ai_assessment_state || "") : ""
                         readonly property bool apiReady: {
@@ -545,8 +543,9 @@ ApplicationWindow {
                 id: pages
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                currentIndex: ({home:0, career:1, learn:2, exercise:3, interview:4, coach:5, progress:6, connections:7, settings:8})[backend.currentPage] || 0
+                currentIndex: ({home:0, career:1, learn:2, exercise:3, interview:4, progress:5, connections:6, settings:7})[backend.currentPage] || 0
                 HomePage {
+                    objectName: "homePage"
                     app: backend
                     colors: window.colors
                     theme: appTheme
@@ -561,10 +560,9 @@ ApplicationWindow {
                 }
                 ExercisePage { app: backend; colors: window.colors; theme: appTheme }
                 InterviewPage { app: backend; colors: window.colors; theme: appTheme }
-                CoachPage { app: backend; colors: window.colors; theme: appTheme }
-                ProgressPage { app: backend; colors: window.colors }
-                ConnectionsPage { app: backend; colors: window.colors; theme: appTheme }
-                SettingsPage { app: backend; colors: window.colors; theme: appTheme }
+                ProgressPage { objectName: "progressPage"; app: backend; colors: window.colors }
+                ConnectionsPage { objectName: "connectionsPage"; app: backend; colors: window.colors; theme: appTheme }
+                SettingsPage { objectName: "settingsPage"; app: backend; colors: window.colors; theme: appTheme }
             }
         }
     }

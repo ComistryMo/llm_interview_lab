@@ -432,6 +432,7 @@ class AppController(QObject):
         self._voice_recorder.failed.connect(self._voice_failed)
         self._recent_interview: dict[str, Any] = {}
         self._connections: list[dict[str, Any]] = []
+        self._connections_profile_id = ""
         self._connection_error = ""
         self._materials: list[dict[str, Any]] = []
         # The interview knowledge bundle is a read-only, lazy-loaded UI
@@ -1439,10 +1440,19 @@ class AppController(QObject):
             self._test_identity = (
                 current["problem_id"], current["attempt_id"], self._profile_id
             )
-        self._connections = [
-            {**config.__dict__, "status": "已保存，尚未测试", "ready": False}
-            for config in list_connections(self.repo_root, self._profile_id)
-        ]
+        previous_connections = {
+            item["connection_id"]: item for item in self._connections
+        } if self._connections_profile_id == self._profile_id else {}
+        self._connections = []
+        for config in list_connections(self.repo_root, self._profile_id):
+            previous = previous_connections.get(config.connection_id, {})
+            if previous.get("ready") is True and all(
+                previous.get(key) == value for key, value in config.__dict__.items()
+            ):
+                self._connections.append(previous)
+            else:
+                self._connections.append({**config.__dict__, "status": "已保存，尚未测试", "ready": False})
+        self._connections_profile_id = self._profile_id
         self._connection_error = ""
         self._materials = self.service.material_cards(self._profile_id)
         self._load_coach_state()
@@ -1674,7 +1684,6 @@ class AppController(QObject):
             "learn",
             "exercise",
             "interview",
-            "coach",
             "progress",
             "connections",
             "settings",
@@ -3762,6 +3771,11 @@ class AppController(QObject):
                 api_key=api_key or None,
                 reasoning_effort=reasoning_effort or None,
             )
+            # A replaced secret has the same key_reference. Saving must still
+            # invalidate this connection's previous successful test.
+            for item in self._connections:
+                if item["connection_id"] == connection_id:
+                    item["ready"] = False
             self.refresh()
             self.toast.emit("连接已保存；API Key 仅存入系统密钥环。")
             return True

@@ -1187,6 +1187,15 @@ Item {
                         font.pixelSize: root.theme ? root.theme.fontTitle : 26
                         wrapMode: Text.Wrap
                     }
+                    LabText {
+                        objectName: "interviewCodingSelectionNotice"
+                        theme: root.theme
+                        width: parent.width
+                        visible: root.codingQuestion && app.interview.coding_selection_corrected === true
+                        text: "AI 建议的题目不在本地可运行范围内，已按本场技能改选当前真实题目，可以直接作答。"
+                        tone: "muted"
+                        wrapMode: Text.Wrap
+                    }
                     Text {
                         objectName: "interviewQuestionPrompt"
                         visible: !root.codingQuestion || root.showCodingPrompt

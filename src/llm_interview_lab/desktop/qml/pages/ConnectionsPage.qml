@@ -486,8 +486,7 @@ Flickable {
                     columns: root.compactOverview || codexCard.width < 500 ? 2 : 4
                     columnSpacing: 8
                     rowSpacing: root.compactOverview ? 4 : 6
-                    Button { visible: app.codexAvailable; enabled: app.aiStatusVariant !== "connecting"; Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "教练模式"; flat: true; onClicked: app.connectCodex("coach") }
-                    Button { visible: app.codexAvailable; enabled: app.aiStatusVariant !== "connecting"; Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "仓库代理模式"; flat: true; onClicked: app.connectCodex("repository_agent") }
+                    Button { visible: app.codexAvailable; enabled: app.aiStatusVariant !== "connecting"; Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "连接 Codex 面试官"; flat: true; onClicked: app.connectCodex("interviewer") }
                     Button { Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "重新检测"; flat: true; onClicked: app.refreshCodexAvailability() }
                     Button { Layout.fillWidth: true; Layout.preferredHeight: root.compactOverview ? 32 : 34; text: "查找设置"; flat: true; visible: !app.codexAvailable; onClicked: app.navigate("settings") }
                 }

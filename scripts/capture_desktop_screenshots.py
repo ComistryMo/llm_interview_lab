@@ -41,7 +41,6 @@ PAGES = (
     "learn",
     "exercise",
     "interview",
-    "coach",
     "connections",
     "settings",
 )
@@ -54,7 +53,7 @@ def _matrix_filename(page: str, size: str, theme: str) -> str:
 
     # Preserve the six historical 1280px names in the authoritative matrix;
     # the remaining legacy onboarding names are materialized as aliases after
-    # the 8x4x2 matrix is captured.  This keeps coverage exactly 64 cells.
+    # the current page/size/theme matrix is captured.
     legacy_names = {
         ("onboarding", "1280x800", "light"): "desktop-onboarding.png",
         ("home", "1280x800", "light"): "desktop-home.png",
@@ -76,7 +75,6 @@ def _expanded_specs() -> tuple[tuple[str, str, str, str], ...]:
         "learn": "recommended-filter",
         "exercise": "latest-submission",
         "interview": "active-question",
-        "coach": "resumable-session",
         "connections": "no-ai-default",
         "settings": "local-first-settings",
     }

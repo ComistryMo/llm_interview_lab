@@ -45,7 +45,7 @@ def public_repo(tmp_path_factory):
     root = tmp_path_factory.mktemp("interview-input-public")
     for name in ("pyproject.toml", ".gitignore"):
         shutil.copy2(REPO / name, root / name)
-    for name in ("curriculum", "workspace/schema", "workspace/templates"):
+    for name in ("curriculum", "coach", "workspace/schema", "workspace/templates"):
         shutil.copytree(REPO / name, root / name)
     (root / "workspace/profiles").mkdir()
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)
@@ -127,7 +127,7 @@ def _capture(window, name):
         assert window.grabWindow().save(str(destination / f"{name}.png"))
 
 
-def _enter_coding_round(controller):
+def _enter_coding_round(controller, coding_id="FND-002"):
     """Prepare a real persisted session; replies here are fixture data, not AI evidence."""
     for stage in ("experience", "experience", "theory", "theory", "coding"):
         question = controller.interview["question"]
@@ -139,7 +139,7 @@ def _enter_coding_round(controller):
             {"scores": {name: 3 for name in question["rubric"]["dimensions"]},
              "evidence": "合成验收数据，仅用于界面测试。", "confidence": "medium", "fatal_issues": [],
              "next_stage": stage, "follow_up": "如何验证你提到的数据去重？" if stage != "coding" else "",
-             "coding_problem_id": "FND-002" if stage == "coding" else "",
+             "coding_problem_id": coding_id if stage == "coding" else "",
              "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))]
                                if stage != "coding" else []},
             context_sha256=controller._interview_context_confirmation[-1],
@@ -154,6 +154,64 @@ def _within_window(window, item):
     return (start.x() >= 0 and start.y() >= 0
             and start.x() + item.width() <= window.width() + 1
             and start.y() + item.height() <= window.height() + 1)
+
+
+def test_corrected_coding_selection_opens_editor_and_shows_notice(scene):
+    window, controller = scene
+    window.resize(1080, 680)
+    _enter_coding_round(controller, "AI-INVENTED-404")
+    assert controller.interview["coding_selection_corrected"] is True
+    notice = _find(window, "interviewCodingSelectionNotice")
+    assert notice.isVisible() and "改选" in notice.property("text")
+    assert notice.property("contentHeight") <= notice.height() + 1
+    assert controller.interview["question"]["source"]["id"] in controller.service.catalog.problems
+    _capture(window, "coding-corrected-question")
+    _click(window, _find(window, "toggleInterviewCodingPrompt"))
+    assert _find(window, "interviewCodingEditor").isVisible()
+    assert controller.interview["coding_text"]
+    _capture(window, "coding-corrected-editor")
+
+
+def test_material_refresh_keeps_tested_connection_but_not_across_profiles(scene, monkeypatch, tmp_path):
+    from llm_interview_lab.ai.base import ConnectionResult
+    from llm_interview_lab.ai.connections import save_connection
+    from llm_interview_lab.workspace import init_profile
+
+    class Provider:
+        async def test_connection(self):
+            return ConnectionResult(True, "Synthetic test succeeded", 1)
+
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.create_chat_provider", lambda *args, **kwargs: Provider())
+    window, controller = scene
+    assert controller.saveConnection("local-main", "ollama", "synthetic-model", "本地面试", "http://localhost:11434", "", "")
+    controller.testConnection("local-main")
+    for _ in range(60):
+        QTest.qWait(20)
+        time.sleep(0.005)
+        if not controller.busy:
+            break
+    assert controller.connections[0]["ready"] is True
+    material = tmp_path / "synthetic-resume.txt"
+    material.write_text("合成材料，仅用于验证界面刷新，不会发送给 AI。", encoding="utf-8")
+    assert controller.addMaterial(str(material), "resume", "本地材料", False)
+    assert controller.connections[0]["ready"] is True
+    controller.navigate("connections")
+    QTest.qWait(50)
+    assert _find(window, "globalAiStatus").property("text") == "AI 服务就绪"
+
+    other = "connection-other-" + uuid4().hex[:8]
+    init_profile(controller.repo_root, other)
+    save_connection(controller.repo_root, other, connection_id="local-main", provider_id="ollama",
+                    model="synthetic-model", display_name="本地面试", base_url="http://localhost:11434")
+    assert controller.switchProfile(other)
+    assert controller.connections[0]["ready"] is False
+
+
+def test_resaving_same_connection_invalidates_ready_even_with_unchanged_reference(controller):
+    assert controller.saveConnection("local-main", "ollama", "synthetic-model", "本地面试", "http://localhost:11434", "", "")
+    controller._connections[0].update(ready=True, status="已连接")
+    assert controller.saveConnection("local-main", "ollama", "synthetic-model", "本地面试", "http://localhost:11434", "", "")
+    assert controller.connections[0]["ready"] is False
 
 
 @pytest.mark.parametrize("size", [(900, 620), (1080, 680), (1280, 800), (1440, 900)])
@@ -484,10 +542,12 @@ def test_onboarding_does_not_preview_a_nonexistent_practice_task(qapp, public_re
         QTest.qWait(80)
         assert controller.currentTask.get("problem_id")
         assert not messages, messages
+        previous_page = controller.currentPage
         controller.navigate("coach")
         QTest.qWait(80)
-        coach = window.findChild(QObject, "coachPage")
-        assert coach.property("preview")["parts"], "An opened task still has a usable Coach preview"
+        assert controller.currentPage == previous_page
+        assert window.findChild(QObject, "coachPage") is None
+        assert window.findChild(QObject, "exerciseCoachDrawer") is None
     finally:
         controller.shutdown()
         window.close()
@@ -1226,24 +1286,16 @@ def test_deepseek_connection_controls_and_coding_language_are_real(scene, monkey
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
-def test_shell_setup_home_coach_and_settings_have_readable_controls(scene, theme):
+def test_shell_setup_home_and_settings_have_readable_controls(scene, theme):
     window, controller = scene
     window.resize(1280, 800)
     window.setProperty("displayFontScaleOverride", 1.0)
     controller.setTheme(theme)
-    for page_id in ("home", "coach", "settings"):
+    for page_id in ("home", "settings", "progress", "connections"):
         controller.navigate(page_id)
         QTest.qWait(150)
-        if page_id == "coach":
-            editor = _find(window, "coachPrompt")
-            _click(window, editor)
-            QCoreApplication.sendEvent(editor, QInputMethodEvent("zhong", []))
-            assert not _visible_hints(editor)
-            event = QInputMethodEvent()
-            event.setCommitString("这是用于检查中文输入的合成文本")
-            QCoreApplication.sendEvent(editor, event)
-            assert not _visible_hints(editor)
-            assert editor.property("cursorRectangle").y() >= editor.property("topPadding") - 1
+        assert _find(window, page_id + "Page").isVisible()
+        assert window.findChild(QObject, "coachPage") is None
         title = _find(window, "shellRouteTitle")
         assert title.width() > 0 and title.height() >= title.property("contentHeight") - 1
         _capture(window, f"{page_id}-1280x800-{theme}")
@@ -1279,7 +1331,7 @@ def test_shell_setup_home_coach_and_settings_have_readable_controls(scene, theme
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
-def test_small_home_and_coach_keep_text_inside_controls(scene, theme):
+def test_small_home_keeps_text_inside_controls(scene, theme):
     window, controller = scene
     window.resize(900, 620)
     window.setProperty("displayFontScaleOverride", 1.25)
@@ -1293,18 +1345,3 @@ def test_small_home_and_coach_keep_text_inside_controls(scene, theme):
             if item.isVisible() and item.property("text") and item.property("contentHeight") is not None:
                 assert item.property("contentHeight") <= item.height() + 1, item.property("text")
                 assert item.mapToItem(card, QPointF(0, item.height())).y() <= card.height(), item.property("text")
-    controller.navigate("coach")
-    QTest.qWait(100)
-    start = _find(window, "coachEmptyStart")
-    assert start.property("resolvedBackground") != start.property("resolvedForeground")
-    editor = _find(window, "coachPrompt")
-    _click(window, editor)
-    QCoreApplication.sendEvent(editor, QInputMethodEvent("zhong", []))
-    assert not _visible_hints(editor)
-    event = QInputMethodEvent()
-    event.setCommitString("放大字体和窄窗口下的中文输入检查")
-    QCoreApplication.sendEvent(editor, event)
-    assert editor.property("cursorRectangle").bottom() < editor.height()
-    send = _find(window, "sendCoachTurn")
-    assert send.mapToScene(QPointF(0, send.height())).y() <= window.height()
-    _capture(window, f"coach-900x620-{theme}-1.25")

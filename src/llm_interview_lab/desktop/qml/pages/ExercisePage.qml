@@ -8,12 +8,8 @@ Item {
     required property var app
     required property var colors
     required property var theme
-    // Keep the editor as the primary workspace.  The Coach drawer remains
-    // available on demand, but opening it by default steals useful width from
-    // a long coding session on wide monitors.
-    property bool coachOpen: false
     // `width` is the page viewport after the shell/sidebar.  These thresholds
-    // therefore map to a 1440px window for the three-column view and keep the
+    // therefore map to a 1440px window for the two-column view and keep the
     // 900px minimum window on a single, usable editor surface.
     property bool wideLayout: width >= 1180
     // Only a completed test operation needs the expanded result viewport.
@@ -249,13 +245,6 @@ Item {
                             flat: true
                             palette.buttonText: root.colors.text
                             onClicked: detailsDrawer.open()
-                        }
-                        Button {
-                            visible: !root.wideLayout || !root.coachOpen
-                            text: "AI 辅助（可选）"
-                            flat: true
-                            palette.buttonText: root.colors.text
-                            onClicked: root.wideLayout ? root.coachOpen = true : coachDrawer.open()
                         }
                         Button { text: "保存"; flat: true; palette.buttonText: root.colors.text; enabled: root.hasTask && !app.busy; onClicked: app.saveSubmission(editor.text) }
                     }
@@ -508,31 +497,6 @@ Item {
             }
         }
 
-        Rectangle {
-            visible: root.wideLayout && root.coachOpen
-            SplitView.preferredWidth: root.coachOpen ? 310 : 0
-            SplitView.minimumWidth: root.coachOpen ? 270 : 0
-            color: root.colors.surface
-            border.color: root.colors.border
-            ColumnLayout {
-                anchors.fill: parent; anchors.margins: 16; spacing: 12
-                RowLayout {
-                    Layout.fillWidth: true
-                    Text { text: "AI 辅助（可选）"; color: root.colors.text; font.bold: true; font.pixelSize: 17 }
-                    Item { Layout.fillWidth: true }
-                    Button { text: "×"; flat: true; onClicked: root.coachOpen = false }
-                }
-                Text { text: "遵守 H0–H5 帮助边界；AI 辅助不会静默修改当前答案。"; color: root.colors.muted; wrapMode: Text.Wrap; Layout.fillWidth: true; font.pixelSize: 12 }
-                Text {
-                    Layout.fillWidth: true
-                    text: "需要提示或只读审查时，再打开 AI 辅助页面。模拟面试请进入“模拟面试”；本页不会自动占用训练流程。"
-                    color: root.colors.text
-                    wrapMode: Text.Wrap
-                }
-                Item { Layout.fillHeight: true }
-                Button { text: "在 AI 教练中打开当前任务（可选）"; Layout.fillWidth: true; onClicked: app.navigate("coach") }
-            }
-        }
     }
 
     Drawer {
@@ -563,23 +527,6 @@ Item {
         }
     }
 
-    Drawer {
-        id: coachDrawer
-        objectName: "exerciseCoachDrawer"
-        edge: Qt.RightEdge
-        width: Math.min(380, root.width * 0.82)
-        height: root.height
-        modal: true
-        contentItem: ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 16
-            spacing: 12
-            Text { text: "AI 辅助（可选）"; color: root.colors.text; font.pixelSize: 20; font.bold: true }
-            Text { text: "模拟面试请进入“模拟面试”。这里仅提供主动请求的解释和只读审查，不会自动修改答案。"; color: root.colors.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
-            Button { text: "打开 AI 辅助页面"; Layout.fillWidth: true; onClicked: { coachDrawer.close(); app.navigate("coach") } }
-            Item { Layout.fillHeight: true }
-        }
-    }
 
     Dialog {
         id: reviewDialog

@@ -78,7 +78,6 @@ def _parser() -> argparse.ArgumentParser:
             "learn",
             "exercise",
             "interview",
-            "coach",
             "progress",
             "connections",
             "settings",
