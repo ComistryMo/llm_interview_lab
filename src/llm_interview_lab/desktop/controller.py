@@ -337,6 +337,7 @@ class AppController(QObject):
     _CODEX_INTERVIEW_TURN_TIMEOUT_MS = 180_000
 
     stateChanged = Signal()
+    interviewChanged = Signal()
     interviewVoiceChanged = Signal()
     busyChanged = Signal()
     pageChanged = Signal()
@@ -446,6 +447,7 @@ class AppController(QObject):
         # Profile/question/transcription changes still refresh voice controls;
         # microphone duration changes must never refresh every page/property.
         self.stateChanged.connect(self.interviewVoiceChanged)
+        self.stateChanged.connect(self.interviewChanged)
         self._recent_interview: dict[str, Any] = {}
         self._connections: list[dict[str, Any]] = []
         self._connections_profile_id = ""
@@ -917,7 +919,7 @@ class AppController(QObject):
     def testOutput(self) -> str:
         return self._test_output
 
-    @Property("QVariantMap", notify=stateChanged)
+    @Property("QVariantMap", notify=interviewChanged)
     def interview(self) -> dict[str, Any]:
         return self._interview
 
@@ -1401,12 +1403,16 @@ class AppController(QObject):
 
     def _recording_ready(self, audio_path: str) -> None:
         request = self._voice_auto_transcription
-        self._voice_auto_transcription = None
         if request is None:
             return
         profile_id, interview_id, question_id, connection_id, consent_remote = request
 
         def transcribe() -> None:
+            # A pause/timeout/close can happen after Qt emits ready but before
+            # this queued callback. Consume only an intent still authorized.
+            if self._voice_auto_transcription is not request:
+                return
+            self._voice_auto_transcription = None
             if (
                 self._shutdown_done
                 or self._profile_id != profile_id
@@ -1421,6 +1427,17 @@ class AppController(QObject):
 
         # Let Qt finish closing the WAV before starting the existing worker.
         QTimer.singleShot(0, transcribe)
+
+    def _suspend_interview_voice(self, *, discard_transcription: bool = True) -> None:
+        """Stop capture, retaining this question's WAV and any existing draft."""
+        self._voice_auto_transcription = None
+        if discard_transcription:
+            self._voice_transcription_operation_id = ""
+            if self._voice_transcription_state == "transcribing":
+                self._voice_transcription_state = "idle"
+        if self._voice_recorder.state == "recording":
+            self.stopInterviewRecording()
+        self.interviewVoiceChanged.emit()
 
     def _recording_failed(self, error: Exception) -> None:
         operation_id = uuid4().hex[:8]
@@ -1853,6 +1870,10 @@ class AppController(QObject):
             "settings",
         }:
             return
+        if self._page == "interview" and page != "interview":
+            # The hidden page keeps its answer editor and receives an already
+            # running transcription, but must never keep sampling the mic.
+            self._suspend_interview_voice(discard_transcription=False)
         self._page = page
         self.pageChanged.emit()
 
@@ -3093,6 +3114,7 @@ class AppController(QObject):
             current = self.service.current_interview(self._profile_id, interview_id)
         except Exception as error:
             if "expired" in str(error).lower():
+                self._suspend_interview_voice()
                 self._interview["remaining_seconds"] = 0
                 self._interview["expired"] = True
                 self._interview["resume_available"] = False
@@ -3115,8 +3137,9 @@ class AppController(QObject):
         if current_question.get("question_id") != next_question.get("question_id"):
             self._load_interview(interview_id)
             return
-        self._interview["remaining_seconds"] = current["remaining_seconds"]
-        self.stateChanged.emit()
+        if self._interview.get("remaining_seconds") != current["remaining_seconds"]:
+            self._interview["remaining_seconds"] = current["remaining_seconds"]
+            self.interviewChanged.emit()
 
     @Slot()
     def resumeInterview(self) -> None:
@@ -3141,6 +3164,7 @@ class AppController(QObject):
             return False
         try:
             self.service.pause_interview(self._profile_id, interview_id)
+            self._suspend_interview_voice()
             self._load_interview(interview_id)
             self.toast.emit("面试已暂停；恢复后会继续使用剩余时间。")
             return True
@@ -3374,6 +3398,9 @@ class AppController(QObject):
 
         if self._profile_id == "demo":
             self.toast.emit("合成演示不会发送真实音频。")
+            return
+        if self._shutdown_done or self._interview.get("status") != "active":
+            self._voice_failed("当前面试不能转录；录音仍保留在本机。暂停后请先恢复面试，再手动重试。")
             return
         if self._voice_transcription_operation_id or self._busy:
             self._show_error("已有录音或转录操作正在进行，请等待完成。")
@@ -7774,6 +7801,7 @@ class AppController(QObject):
         if self._shutdown_done:
             return
         self._shutdown_done = True
+        self._suspend_interview_voice()
         self.cancelLocalSttDownload()
         if self._codex_loop and self._codex_backend:
             try:

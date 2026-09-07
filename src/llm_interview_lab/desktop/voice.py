@@ -41,22 +41,27 @@ class InterviewVoiceRecorder(QObject):
         self.path = destination
         self.duration_ms = 0
         self.error_message = ""
-        self._capture = QMediaCaptureSession(self)
-        self._audio_input = QAudioInput(QMediaDevices.defaultAudioInput(), self)
-        self._recorder = QMediaRecorder(self)
-        media_format = QMediaFormat()
-        media_format.setFileFormat(QMediaFormat.FileFormat.Wave)
-        media_format.setAudioCodec(QMediaFormat.AudioCodec.Wave)
-        if not media_format.isSupported(QMediaFormat.ConversionMode.Encode):
-            raise RuntimeError("当前系统的 Qt Multimedia 不支持 WAV 录音；请改用文字回答")
-        self._recorder.setMediaFormat(media_format)
-        self._recorder.setQuality(QMediaRecorder.Quality.NormalQuality)
+        if self._recorder is None:
+            media_format = QMediaFormat()
+            media_format.setFileFormat(QMediaFormat.FileFormat.Wave)
+            media_format.setAudioCodec(QMediaFormat.AudioCodec.Wave)
+            if not media_format.isSupported(QMediaFormat.ConversionMode.Encode):
+                raise RuntimeError("当前系统的 Qt Multimedia 不支持 WAV 录音；请改用文字回答")
+            self._capture = QMediaCaptureSession(self)
+            self._audio_input = QAudioInput(QMediaDevices.defaultAudioInput(), self)
+            self._recorder = QMediaRecorder(self)
+            self._recorder.setMediaFormat(media_format)
+            self._recorder.setQuality(QMediaRecorder.Quality.NormalQuality)
+            self._capture.setAudioInput(self._audio_input)
+            self._capture.setRecorder(self._recorder)
+            self._recorder.durationChanged.connect(self._duration_changed)
+            self._recorder.errorOccurred.connect(self._error)
+            self._recorder.recorderStateChanged.connect(self._state_changed)
+        else:
+            # Reuse one stopped capture graph; repeated answers must not leave
+            # three parent-owned native objects behind for every recording.
+            self._audio_input.setDevice(QMediaDevices.defaultAudioInput())
         self._recorder.setOutputLocation(QUrl.fromLocalFile(str(destination)))
-        self._capture.setAudioInput(self._audio_input)
-        self._capture.setRecorder(self._recorder)
-        self._recorder.durationChanged.connect(self._duration_changed)
-        self._recorder.errorOccurred.connect(self._error)
-        self._recorder.recorderStateChanged.connect(self._state_changed)
         self.state = "recording"
         self.changed.emit()
         self._recorder.record()
