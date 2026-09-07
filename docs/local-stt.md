@@ -1,0 +1,76 @@
+# 本地语音转文字（当前源码）
+
+模拟面试的「语音」区域已提供 **SenseVoiceSmall 本地转录**。不需要 API Key、PyTorch 或独立服务器；可以搭配 DeepSeek、Codex 等文字面试官。模型在 CPU 上识别，首次下载后不联网转录。
+
+这项更新属于当前源码，不代表 GitHub 上的旧 Windows/macOS 安装包已经更新。
+
+## 直接使用
+
+1. 在面试回答区点击「语音」，默认选中「SenseVoiceSmall · 本地中文转录」。如果之前选择过远程服务，也可从下拉框切回本地。
+2. 首次点击「下载本地模型」。下载量约 **240 MB**，有进度、取消和重试；开始前可打开模型许可。已校验的完整文件会复用，未完成的单个文件重试时重新下载。
+3. 点击「开始录音」，说完后点击「停止录音」。
+4. 点击「本地转录到回答框」，检查、修改识别结果，再点击「提交并继续」。
+
+转录结果追加到可编辑草稿，不覆盖已输入的文字，不自动提交，也不作为已锁定的回答证据。原 WAV 不会因转录失败被删除或改写。没有人声、模型未下载、网络下载失败等问题会显示具体提示。
+
+本地转录没有远程授权复选框；选择远程转录后才显示该授权。**本地失败不会自动切换远程服务。** 本地音频不会上传；你后续主动提交的回答文字仍属于面试中已经确认的 AI 发送范围。
+
+## 安装与保存位置
+
+源码环境安装或更新 `desktop` 依赖即可获得识别引擎：
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[desktop]"
+```
+
+模型权重不随 pip 下载，在应用内单独下载。引擎与模型首次识别时才加载，不阻塞普通应用启动。
+
+模型保存在当前应用数据根目录下的 `models/stt/sensevoice-small-int8/`。所有学习档案共用这一份公共权重，录音和答案仍分别保存在各自档案，不放进模型目录。切换数据根目录后需要下载到新目录，重新启动同一目录则直接复用。
+
+按[桌面指南](desktop-app.md#源码运行)使用 `workspace/maintainer/manual-uat` 时，位置为：
+
+```text
+workspace/maintainer/manual-uat/models/stt/sensevoice-small-int8/
+```
+
+当前维护者 Windows 环境已安装引擎，并已在这个目录下载、校验模型。重启当前源码应用后即可使用。模型和录音都不提交 Git。
+
+## 模型与许可
+
+- 识别模型：FunAudioLLM / Alibaba 的 **SenseVoiceSmall**；k2-fsa 提供 int8 ONNX 转换，[官方运行说明](https://k2-fsa.github.io/sherpa/onnx/sense-voice/pretrained.html)、[ONNX 模型仓库](https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17)。当前自动识别语言，适用于中文、英文等受支持语言；不宣称各种口音都已经实测。
+- 模型权重受独立的 **[FunASR Model Open Source License Agreement 1.1](https://github.com/modelscope/FunASR/blob/e19029adca384a06a2f60bd8c18cb98f1a0499aa/MODEL_LICENSE)** 约束，不应误标为本项目的 Apache-2.0 或 SenseVoice 代码的 MIT。下载即表示接受该模型许可；重新分发或商业使用前请阅读原文。
+- 推理引擎：[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)，Apache-2.0；语音分段：[Silero VAD](https://github.com/snakers4/silero-vad)，[MIT](https://github.com/snakers4/silero-vad/blob/867c2aa692646a1f1de3e94a15c9dd9f614c0acb/LICENSE)。两份模型许可随下载保存在模型目录中。
+
+下载使用固定来源与 SHA-256；大小或哈希不匹配的文件不作为可用模型。SenseVoice 文件固定于模型仓库提交 `2365baeacb507f821a0c8120fcee3d484dba7a07`：
+
+| 文件 | 字节数 | SHA-256 |
+|---|---:|---|
+| `model.int8.onnx` | 239233841 | `c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51` |
+| `tokens.txt` | 315894 | `f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc` |
+| `silero_vad.onnx` | 643854 | `9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6` |
+
+包含原模型许可指引与两份许可全文，共 **240200041 字节**。完整文件清单和许可校验值在 [`local_transcription.py`](../src/llm_interview_lab/ai/local_transcription.py)。
+
+## 实测与限制
+
+2026-09-07，当前 Windows 源码环境，sherpa-onnx 1.13.7、CPU 两线程：
+
+- 下载真实模型并校验全部文件；使用官方公开中文 WAV，不使用个人录音或简历。
+- 5.59 秒样例：命令行冷加载加转录约 1.7–2.7 秒；正式页面从点击到草稿完成约 7.2 秒（首次加载）和 2.6 秒（后续测试）。时间只代表本机和该样例，不是性能承诺。
+- 将同一公开片段合成为 39.55 秒、六段、48 kHz 双声道录音，约 1.4 秒识别完整；同时验证中文与含空格音频路径、静音提示、原音频 SHA 不变。
+- 上述推理测试禁用了网络连接，界面测试也禁止读取 Keyring；结果通过正式 QML 的后台转录路径进入可编辑回答区，不触发提交或 AI 请求。
+- 已人工查看 900×620（125% 字号）与 1280×800 正式页面截图；录音区域在小窗口内可滚动。
+
+这不是准确率基准：该短样例把「开放」误识为「开饭」，数字和后半句识别正确。专有名词、缩写、嘈杂环境和口音可能需要手工纠正。本轮没有验证 macOS 实机、真实远程 STT，也没有重建桌面安装包。
+
+默认测试不会下载模型或采集麦克风。真实模型验证需显式指定公共测试音频：
+
+```powershell
+$env:LLM_LAB_TEST_LOCAL_STT_MODEL_ROOT = Join-Path (Get-Location) "workspace/maintainer/manual-uat/models/stt/sensevoice-small-int8"
+$env:LLM_LAB_TEST_LOCAL_STT_AUDIO = Join-Path (Get-Location) "workspace/maintainer/local-stt-validation/official-zh.wav"
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_local_transcription.py tests/infrastructure/test_transcription.py -q -s
+$env:QT_QPA_PLATFORM = "windows"
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k "local_stt or voice_error_and_transcription_choices" -q -s
+```
+
+其中 `official-zh.wav` 是维护者已下载的模型仓库 `test_wavs/zh.wav`，不会随源码提交；新环境需要先准备这一公开测试文件。用户正常使用无需运行测试命令。

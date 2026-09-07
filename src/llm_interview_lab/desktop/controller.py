@@ -30,6 +30,10 @@ from ..ai.credentials import KeyringCredentialStore
 from ..ai.interview_planner import decode_dynamic_question, decode_personalized_questions
 from ..ai.providers import create_chat_provider
 from ..ai.transcription import OpenAICompatibleTranscriber, TRANSCRIPTION_PROVIDERS
+from ..ai.local_transcription import (
+    DOWNLOAD_BYTES, LOCAL_STT_ID, MODEL_LICENSE_URL, MODEL_NAME,
+    DownloadCancelled, LocalSpeechTranscriber,
+)
 from ..application import ApplicationError, ApplicationService
 from ..coach_sessions import (
     CoachSessionError,
@@ -429,6 +433,10 @@ class AppController(QObject):
         self._voice_transcription_error = ""
         self._voice_transcription_operation_id = ""
         self._voice_question_key = ""
+        self._local_stt = LocalSpeechTranscriber(self.repo_root / "models" / "stt" / "sensevoice-small-int8")
+        self._local_stt_download_cancel: threading.Event | None = None
+        self._local_stt_download_progress = 0
+        self._local_stt_download_error = ""
         self._voice_recorder.changed.connect(self._voice_state_changed)
         self._voice_recorder.failed.connect(self._voice_failed)
         self._recent_interview: dict[str, Any] = {}
@@ -936,6 +944,66 @@ class AppController(QObject):
     @Property("QVariantList", notify=stateChanged)
     def transcriptionConnections(self) -> list[dict[str, Any]]:
         return [item for item in self._connections if item["provider_id"] in TRANSCRIPTION_PROVIDERS]
+
+    @Property("QVariantList", notify=stateChanged)
+    def interviewTranscriptionOptions(self) -> list[dict[str, Any]]:
+        return [{"connection_id": LOCAL_STT_ID, "display_name": MODEL_NAME, "local": True}] + [
+            {**item, "local": False} for item in self.transcriptionConnections
+        ]
+
+    @Property("QVariantMap", notify=stateChanged)
+    def localStt(self) -> dict[str, Any]:
+        return {
+            "connection_id": LOCAL_STT_ID, "model_name": MODEL_NAME,
+            "ready": self._local_stt.ready(), "runtime_available": self._local_stt.runtime_available(),
+            "downloading": self._local_stt_download_cancel is not None,
+            "progress": self._local_stt_download_progress,
+            "error": self._local_stt_download_error,
+            "download_mb": round(DOWNLOAD_BYTES / 1_000_000),
+            "license_url": MODEL_LICENSE_URL,
+        }
+
+    @Slot()
+    def downloadLocalSttModel(self) -> None:
+        if self._demo_mode or self._local_stt_download_cancel is not None:
+            return
+        cancel = threading.Event()
+        self._local_stt_download_cancel = cancel
+        self._local_stt_download_error = ""
+        self._local_stt_download_progress = 0
+        # Model weights are public and shared by this data root. Downloading
+        # must not occupy the interview/recording busy gate or read a Profile.
+        def operation() -> bool:
+            try:
+                self._local_stt.download(worker.signals.progress.emit, cancel)
+                return True
+            except DownloadCancelled:
+                return False
+
+        worker = Worker(operation)
+        self._workers.add(worker)
+
+        def progress(value: int) -> None:
+            if self._local_stt_download_progress != value:
+                self._local_stt_download_progress = value
+                self.stateChanged.emit()
+
+        def finish(_result: bool = False, *, error: str = "") -> None:
+            self._workers.discard(worker)
+            self._local_stt_download_cancel = None
+            self._local_stt_download_error = error
+            self.stateChanged.emit()
+
+        worker.signals.progress.connect(progress)
+        worker.signals.completed.connect(finish)
+        worker.signals.failed.connect(lambda message: finish(error=message))
+        self.stateChanged.emit()
+        self._thread_pool.start(worker)
+
+    @Slot()
+    def cancelLocalSttDownload(self) -> None:
+        if self._local_stt_download_cancel is not None:
+            self._local_stt_download_cancel.set()
 
     @Property(str, notify=stateChanged)
     def connectionError(self) -> str:
@@ -3235,7 +3303,7 @@ class AppController(QObject):
     def transcribeInterviewRecording(
         self, connection_id: str, consent_remote: bool
     ) -> None:
-        """Send only the selected local WAV after one explicit consent."""
+        """Transcribe locally by default; remote audio still needs consent."""
 
         if self._profile_id == "demo":
             self.toast.emit("合成演示不会发送真实音频。")
@@ -3247,8 +3315,12 @@ class AppController(QObject):
         if self._voice_recorder.state != "recorded" or audio_path is None:
             self._show_error("请先完成一次有效录音；也可以直接输入文字回答。")
             return
-        if not consent_remote:
+        local = connection_id == LOCAL_STT_ID
+        if not local and not consent_remote:
             self._show_error("发送音频到远程转录服务前，需要勾选本次明确授权。")
+            return
+        if local and (not self._local_stt.ready() or self._local_stt_download_cancel is not None):
+            self._voice_failed("本地模型尚未下载完成。请先点击下载，完成后再转录；录音仍在本机。")
             return
         profile_id = self._profile_id
         interview_id = str(self._interview.get("interview_id") or "")
@@ -3260,6 +3332,8 @@ class AppController(QObject):
         self.stateChanged.emit()
 
         def operation() -> str:
+            if local:
+                return self._local_stt.transcribe(audio_path)
             config = next(
                 (
                     item
@@ -7633,6 +7707,7 @@ class AppController(QObject):
         if self._shutdown_done:
             return
         self._shutdown_done = True
+        self.cancelLocalSttDownload()
         if self._codex_loop and self._codex_backend:
             try:
                 future = asyncio.run_coroutine_threadsafe(

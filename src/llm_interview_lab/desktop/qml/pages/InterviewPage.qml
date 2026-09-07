@@ -42,6 +42,7 @@ Item {
     property var pendingConnectionCheck: null
     property string setupConnectionId: ""
     property string transcriptionConnectionId: ""
+    readonly property bool usingLocalStt: voiceConnection.currentValue === app.localStt.connection_id
     readonly property string setupProfileId: app.profileId
     onSetupProfileIdChanged: {
         Qt.callLater(root.initializeSetup)
@@ -651,7 +652,11 @@ Item {
             // Transcription is a draft only.  Keep the answer editable and
             // require the normal "submit and lock" action before it becomes
             // interview evidence.
-            answer.text = value || ""
+            if (!value)
+                return
+            // Dictation adds to an existing draft; never discard what the
+            // candidate typed while recognition was running.
+            answer.text = answer.text.trim().length ? answer.text + "\n" + value : value
             root.answerDraft = answer.text
             answer.forceActiveFocus()
         }
@@ -1377,7 +1382,8 @@ Item {
                                     text: app.interviewVoice.state === "recording"
                                           ? "录音中"
                                           : app.interviewVoice.transcription_state === "transcribing"
-                                            ? "转录中" : app.interviewVoice.state === "error" ? "录音失败"
+                                            ? "转录中" : app.interviewVoice.transcription_state === "transcribed"
+                                              ? "已转录" : app.interviewVoice.state === "error" ? "录音失败"
                                             : app.interviewVoice.audio_ready ? "已录音" : "未开始"
                                     tone: app.interviewVoice.state === "recording"
                                           ? root.colors.warning : root.colors.muted
@@ -1385,7 +1391,7 @@ Item {
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: "录音保存在当前学习档案；只有勾选本次授权并点击转录时，音频才会发送到所选 AI 服务。转录结果会先放入可编辑回答框。"
+                                text: "默认在本机将录音转成文字，不需要 API Key。识别结果追加到回答框，保留已写文字，你可以修改后再提交。只有选择远程转录并明确授权，音频才会发送到所选服务。"
                                 color: root.colors.muted
                                 font.pixelSize: 11
                                 wrapMode: Text.Wrap
@@ -1432,18 +1438,17 @@ Item {
                             }
                             GridLayout {
                                 Layout.fillWidth: true
-                                columns: root.compactInterviewLayout ? 1 : 3
+                                columns: root.compactInterviewLayout ? 1 : (root.usingLocalStt ? 2 : 3)
                                 ComboBox {
                                     id: voiceConnection
                                     objectName: "interviewVoiceConnection"
                                     Layout.fillWidth: true
                                     Layout.minimumWidth: 0
-                                    model: app.transcriptionConnections
+                                    model: app.interviewTranscriptionOptions
                                     textRole: "display_name"
                                     valueRole: "connection_id"
                                     displayText: currentIndex < 0 ? "请选择语音转录连接" : currentText
-                                    enabled: app.interviewVoice.audio_ready
-                                             && app.interviewVoice.transcription_state !== "transcribing"
+                                    enabled: app.interviewVoice.transcription_state !== "transcribing"
                                     onModelChanged: Qt.callLater(root.restoreTranscriptionConnection)
                                     onActivated: {
                                         voiceConsent.checked = false
@@ -1454,6 +1459,7 @@ Item {
                                 CheckBox {
                                     id: voiceConsent
                                     objectName: "interviewVoiceRemoteConsent"
+                                    visible: !root.usingLocalStt
                                     text: "本次允许远程转录"
                                     enabled: app.interviewVoice.audio_ready
                                              && voiceConnection.currentIndex >= 0
@@ -1462,9 +1468,12 @@ Item {
                                 Button {
                                     objectName: "transcribeInterviewRecording"
                                     text: app.interviewVoice.transcription_state === "transcribing"
-                                          ? "正在转录…" : "转录到回答框"
+                                          ? (root.usingLocalStt ? "正在本地识别…" : "正在远程转录…")
+                                          : (root.usingLocalStt ? "本地转录到回答框" : "远程转录到回答框")
                                     enabled: app.interviewVoice.audio_ready
-                                             && voiceConsent.checked
+                                             && (root.usingLocalStt
+                                                 ? app.localStt.ready && app.localStt.runtime_available && !app.localStt.downloading
+                                                 : voiceConsent.checked)
                                              && voiceConnection.currentValue
                                              && app.interviewVoice.transcription_state !== "transcribing"
                                              && !app.busy
@@ -1473,12 +1482,75 @@ Item {
                                     )
                                 }
                             }
+                            ColumnLayout {
+                                visible: root.usingLocalStt
+                                Layout.fillWidth: true
+                                spacing: 8
+                                Text {
+                                    objectName: "interviewLocalSttStatus"
+                                    Layout.fillWidth: true
+                                    text: !app.localStt.runtime_available
+                                          ? "当前环境缺少本地语音组件，请按桌面指南更新 desktop 依赖。"
+                                          : app.localStt.downloading
+                                            ? "正在下载本地模型：" + app.localStt.progress + "%（不会上传录音）"
+                                            : app.localStt.ready
+                                              ? "本地模型已下载 · 无需联网或 Key；首次识别会加载模型。"
+                                              : "首次需下载约 " + app.localStt.download_mb + " MB 模型，之后可离线转录中文或英文。"
+                                    color: root.colors.muted
+                                    font.pixelSize: 12
+                                    wrapMode: Text.Wrap
+                                }
+                                ProgressBar {
+                                    Layout.fillWidth: true
+                                    visible: app.localStt.downloading
+                                    from: 0; to: 100; value: app.localStt.progress
+                                }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    LabButton {
+                                        objectName: "downloadLocalSttModel"
+                                        theme: root.theme
+                                        compact: true
+                                        text: app.localStt.ready ? "检查 / 重新下载模型" : "下载本地模型"
+                                        enabled: !app.localStt.downloading && app.localStt.runtime_available
+                                                 && app.interviewVoice.transcription_state !== "transcribing"
+                                        onClicked: app.downloadLocalSttModel()
+                                    }
+                                    LabButton {
+                                        objectName: "cancelLocalSttDownload"
+                                        theme: root.theme
+                                        compact: true
+                                        text: "取消下载"
+                                        visible: app.localStt.downloading
+                                        onClicked: app.cancelLocalSttDownload()
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                }
+                                Text {
+                                    objectName: "interviewLocalSttDownloadError"
+                                    visible: !!app.localStt.error
+                                    Layout.fillWidth: true
+                                    text: app.localStt.error || ""
+                                    color: root.colors.danger
+                                    font.pixelSize: 12
+                                    wrapMode: Text.Wrap
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: "SenseVoiceSmall：FunAudioLLM / Alibaba；ONNX 由 k2-fsa 转换。点击下载表示同意 <a href='" + app.localStt.license_url + "'>模型使用许可</a>。"
+                                    textFormat: Text.RichText
+                                    color: root.colors.muted
+                                    linkColor: root.colors.accent
+                                    font.pixelSize: 11
+                                    wrapMode: Text.Wrap
+                                    onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+                                }
+                            }
                             Text {
                                 objectName: "interviewTranscriptionAvailability"
+                                visible: !root.usingLocalStt
                                 Layout.fillWidth: true
-                                text: (app.transcriptionConnections || []).length === 0
-                                      ? "本地录音不需要 AI。当前没有语音转录连接：本应用的 DeepSeek 连接仅用于文字面试。转录需在 AI 连接页配置支持 /audio/transcriptions 的 OpenAI 或兼容服务；也可以直接输入文字回答。"
-                                      : "转录使用独立的 whisper-1 模型；所选服务需要支持 /audio/transcriptions，不使用文字面试的模型。音频仅在你本次授权并点击转录后发送。"
+                                text: "远程转录使用 whisper-1，服务需支持 /audio/transcriptions。DeepSeek 仅用于文字面试，也可直接搭配上方的本地转录；选择本地时不需要远程授权。"
                                 color: root.colors.muted
                                 font.pixelSize: 11
                                 wrapMode: Text.Wrap
