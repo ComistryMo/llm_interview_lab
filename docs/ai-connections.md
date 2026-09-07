@@ -117,11 +117,11 @@ Key 只写入操作系统密钥环：
 - Cancel / Retry；
 - 文件 Diff；
 - 命令与文件写入审批；
-- Coach、Reviewer、Interviewer、Repository Agent 模式。
+- Interviewer 面试官模式。
 
-Coach、Reviewer 与 Interviewer 默认只读，不修改答案。Repository Agent 只面向维护者和贡献者，并使用显式审批。
+桌面端只保留面试官，不再提供 AI 辅助页、练习教练或仓库代理入口；面试官不修改答案。历史 CLI 能力与本地教练记录保留兼容，不删除用户数据。
 
-在桌面端“设置 → 模型与推理强度”中可以为 Codex 选择模型 ID 和 `default / low / medium / high / xhigh` 推理强度。该设置同时用于 Coach、面试评估和动态面试的当前问题；只影响新的 Codex 请求。面试设置页选择“Codex”后也会显示当前值并提供“修改”入口。动态面试每次只生成当前非代码问题，用户确认上下文后才创建会话，不会预先生成整场问题。
+在桌面端“设置 → 模型与推理强度”中可以为 Codex 选择模型 ID 和 `default / low / medium / high / xhigh` 推理强度。该设置用于面试评估和动态面试的下一问；只影响新的 Codex 请求。面试设置页选择“Codex”后也会显示当前值并提供“修改”入口。动态面试在用户确认上下文后创建会话，不会预先生成整场问题。
 
 同一场面试、模型和材料/背景授权快照不变时，应用复用同一 App Server Thread，通过新的 `turn/start` 继续。换档、换场、换模型、取消材料或 SHA 变化时，使用新 Thread 隔离旧上下文；本地 Session 仍是学习记录的事实源。这与 [Codex App Server 的 Thread / Turn 协议](https://learn.chatgpt.com/docs/app-server) 对齐，不是每次启动一个 Codex CLI。
 
@@ -158,7 +158,7 @@ Diff
 
 ## AI 行为边界
 
-AI 可以解释前置、给 H1 / H2 / H3 提示、分析 traceback、审查 Shape / Mask / Gradient / 数值稳定、进行口述追问和建议下一节点。
+桌面 AI 只围绕面试流程、目标岗位、获准背景和实际回答进行追问与评估，不在练习页提供教学或代写。H0–H5 等旧 CLI 规则仍见 Policy，不作为桌面可点击能力宣传。
 
 AI 不能自行：
 

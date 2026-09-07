@@ -308,27 +308,14 @@ def test_readme_quick_start_uses_real_clone_first_commands() -> None:
     assert 'python -m pip install -e ".[torch,dev]"' in readme
 
 
-def test_readme_ai_prompt_and_boundaries_match_the_coach_policy() -> None:
+def test_readme_ai_is_interview_only_and_keeps_safety_boundaries() -> None:
     readme = _readme()
     policy = (REPO_ROOT / "coach/POLICY.md").read_text(encoding="utf-8")
-    normalized_readme = readme.replace("–", "-").replace("—", "-")
-    normalized_policy = policy.replace("–", "-").replace("—", "-")
-
-    prompt_contract = (
-        "Read AGENTS.md and coach/POLICY.md.",
-        'Act in COACH mode for profile "default".',
-        "llm-lab next --profile default",
-        "Do not modify my submission.",
-        "Do not reveal a complete solution.",
-        "Do not mark a problem as mastered yourself.",
-    )
-    for text in prompt_contract:
-        assert text in readme, text
-
-    for term in ("TEACHER", "REVIEWER", "COACH", "H0-H5", "mastery"):
-        assert term.lower() in normalized_readme.lower(), term
-        assert term.lower() in normalized_policy.lower(), term
-
+    assert "已移除独立 AI 辅助页面" in readme
+    assert "一次只生成下一问" in readme
+    assert "不直接修改候选人答案" in readme
+    assert 'Act in COACH mode' not in readme
+    assert "mastered" in readme and "mastery" in policy
     assert "workspace/profiles/<id>/" in readme
     assert "Bring Your Own AI" in readme or "自带 AI" in readme
 

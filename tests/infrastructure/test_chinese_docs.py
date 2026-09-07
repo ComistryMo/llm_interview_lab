@@ -190,7 +190,6 @@ def test_gui_and_provider_user_terms_are_present() -> None:
             "home": ("首页",),
             "practice": ("刷题", "训练"),
             "interview": ("模拟面试",),
-            "coach": ("AI 教练",),
             "progress": ("进度",),
             "settings": ("设置",),
         },

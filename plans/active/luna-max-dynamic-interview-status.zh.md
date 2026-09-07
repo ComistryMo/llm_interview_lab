@@ -1,6 +1,76 @@
 # Luna Max 动态面试当前状态报告
 
-## 2026-09-07：DeepSeek、Codex 连续会话与中文题面（最新）
+## 2026-09-07：AI 仅用于面试、针对性追问与本地选题（最新）
+
+基线 `1940add3fbe659bf2ba48d3b5056d07dfa37e4ac`，沿用 `fix/dynamic-interview-full-flow-20260905`。当前源码变更，不代表安装包或 Release 已更新。
+
+实现提交：`2e1ae73`（面试策略与本地选题）、`04a6eb8`（删除 AI 辅助页、连接就绪状态及界面验证）。本轮全部提交使用 `[skip ci]`，保留现有未跟踪文件，不改写历史。
+
+### 实际修改
+
+- 删除正式 `CoachPage.qml`、导航、练习页 AI 面板/Drawer 及入口；连接页仅提供 Codex 面试官，不再显示教练/仓库代理模式。原页面可从 Git 历史恢复，用户教练历史和原有 CLI 不删除。
+- 新增真正发送给模型的 [`dynamic-interviewer.md`](../../coach/prompts/dynamic-interviewer.md)，配合 `interview_flow.py` 的八岗位关注点与三档难度。先听完整经历再深入，不把简历细节当作已经回答；不知道或非本人负责时换角度，保持单个主问题、专业语气，不预生成题单、不补造经历。
+- AI 返回不存在/空题号时，旧实现直接抛 `RoleInterviewError`，卡在已锁定的回答。现在仅从本地可运行、已经验证的候选里按已讨论技能和岗位权重更正；合法题号保留。更正写入当前 Session 时间线，并在题面上方提示。缺少题面、starter 或公开测试的节点不入池；无题可做时明确保留代码环节缺失，不虚构题目或通过记录。
+- 真实运行发现材料导入会重建连接列表，误把刚测试成功的连接清回 No-AI。现在同档案、同配置的成功测试状态可跨刷新保留；重新保存（含换 Key）及换档失效。只用结构化 `ready`，不以“已连接”字样推断。
+- README、桌面/连接文档和打包 QML 文件清单已同步；不改课程、评分、Mastery 或 Provider 架构。
+
+### 真实交互与质量审查
+
+使用正式 `desktop.main` / AppController / QML，在 Windows 上以鼠标和中文输入事件操作；合成后训练实习经历与 JD，未读取真实 Profile/简历。连接和材料准备由隔离脚本调用真实服务，提交由真实按钮触发。没有 demo controller 或假 AI 返回。
+
+- DeepSeek 先做两轮策略实验，每轮四次提交均成功，但仍有问题堆叠/重复，**未据此通过质量验收**。随后将策略移到明确的面试指令，并强调“简历不算已口头介绍”、一轮一个重点和换角度。
+- 最终策略四次真实接续：`q-001 → q-005`，耗时 **6.06 / 3.42 / 3.75 / 4.45 秒**。先邀请介绍经历；随后问去重边界；候选人表示不了解后转向其实际写过的脚本。
+- 连接状态修复后再验证两轮：**3.84 / 4.31 秒**，刷新后 `ready=true`。实际下一问先邀请介绍本人核心工作，再围绕回答中的 chosen/rejected 检查追问具体例子。
+- Codex `gpt-5.6-sol / low` 两轮均成功，同一 Thread；问题为“那就从星舟竞赛讲起……”及“你具体是怎样按用户划分训练集和留出集的？”。耗时 **123.84 / 14.62 秒**；第二轮没有重新创建面试线程。首轮慢仍未解决。
+- 真实场次没有作答/验证代码，本次均如实保存为 `incomplete`；手撕错题号更正、真实题面及 starter 的打开使用确定性定向测试验证，不冒充真实 AI 曾返回错误 ID。
+
+本地证据在 ignored 的 `workspace/maintainer/interview-focus-20260907/`：`strategy-`、`refined-` 为前两版，`final-live-result.json` 为最终四轮，`codex-live-result.json` 为 Codex，`ready-live-result.json` 为连接修正后两轮。已逐图查看 `ready-live-experience-dark.png`、`ready-live-small-light.png`、`ui-final/coding-corrected-question.png` / `coding-corrected-editor.png`。真实窗口尺寸为逻辑像素，Windows 缩放导致 PNG 物理像素更大。
+
+### 实际目标测试
+
+均使用仓库 `src` 作为 `PYTHONPATH`；以下 `python` 均指 `.venv\Scripts\python.exe`，GUI 使用 `QT_QPA_PLATFORM=windows`。仅目标测试，未调用全量回归。
+
+```text
+python -m pytest tests/infrastructure/test_dynamic_interview_flow.py -k unknown_coding_suggestion -q
+修复前：2 failed，复现不存在/空题号直接抛错。
+
+python -m pytest tests/infrastructure/test_dynamic_interview_flow.py -k "coding_suggestion or runtime_assets or invalid_ai_stage or context_keeps" -q
+6 passed, 6 deselected in 18.37s
+
+python -m pytest tests/infrastructure/test_interview_input_runtime.py -k "corrected_coding or onboarding_does_not_preview or shell_setup_home_and_settings or small_home_keeps" -q
+首次：5 passed / 1 failed；新增测试误用了不存在的属性名，已改为实际 coding_text，不修改产品来迎合断言。
+
+python -m pytest tests/infrastructure/test_dynamic_interview_flow.py tests/infrastructure/test_interview_input_runtime.py -k "conversation_strategy or corrected_coding or ui_single_submit_codex_response or single_submit_provider" -q
+5 passed, 57 deselected in 27.84s
+
+python -m pytest tests/infrastructure/test_dynamic_interview_flow.py -k "not full_flow" -q --tb=short
+13 passed, 1 deselected in 48.89s
+
+python -m pytest tests/infrastructure/test_chinese_docs.py tests/infrastructure/test_desktop_design_system.py tests/infrastructure/test_training_foundations_readme.py -k "all_readme_relative_links or gui_and_provider_user_terms or deploy_specs_exactly or readme_ai_is_interview_only or shell_breakpoints" -q --tb=short
+5 passed, 38 deselected in 0.31s
+
+python -m pytest tests/infrastructure/test_interview_input_runtime.py tests/infrastructure/test_desktop.py -k "material_refresh_keeps or resaving_same_connection or corrected_coding or demo_controller_exposes or home_and_practice_expose or shell_setup_home_and_settings" -q --tb=short
+7 passed, 82 deselected in 31.30s
+
+python workspace/maintainer/interview-focus-20260907/live.py
+DeepSeek：UAT_TURNS=4，分别使用 strategy-/refined-/final- 标签；修正连接后 UAT_TURNS=2、ready-。
+Codex：UAT_PROVIDER=codex、UAT_TURNS=2、codex-。
+
+git diff --check
+通过；仅 Git 行尾规范化提醒。
+```
+
+### 未运行与剩余风险
+
+- 未运行完整 pytest、课程 Oracle 全量、Windows/macOS 构建、RC/CI；未创建 Tag/Release，未合并 main。
+- 真实模型验证只覆盖合成后训练实习经历、DeepSeek Flash 关闭思考与 Codex low。八岗位/三档强度的上下文由测试覆盖，未把所有组合逐个付费实测。
+- 提问措辞仍有模型波动，个别表述仍可能包含补充询问；没有承诺始终像真人。经历/原理各最多四问的现有流程边界不变。
+- Codex 首轮高延迟、Windows `MS Sans Serif` DirectWrite 告警仍存在。本轮没有 QML 加载/绑定错误，不据此宣称 macOS 实机已经验证。
+- 未删除真实材料、Profile 或已有未跟踪文件。截图/日志/合成 Session 不提交；Key 只用指定验收连接的系统 Keyring，不写源码、报告或命令。
+
+状态：`WAITING_FOR_MANUAL_INTERVIEW_UAT`。
+
+## 2026-09-07：DeepSeek、Codex 连续会话与中文题面（前一切片）
 
 基线 `428efd63a6edfcf733938c1ee9b1a3d688fa7a3e`，主要实现提交 `0d3f0b24595c6ae6c5c937a68d9f57c2a17c68bc`、控件中线收尾提交 `29d8eaaeb8ce89a411369149380240b113b72637`；沿用 `fix/dynamic-interview-full-flow-20260905`。以下证据仅针对当前源码，不表示已更新任何安装包。
 

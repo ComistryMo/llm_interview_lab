@@ -16,7 +16,9 @@ A local-first, role-aware, AI-assisted interview workbench. It combines role ski
 
 ![Desktop home](docs/images/desktop-home.png)
 
-**Role-aware paths · Tested exercises · Structured interviews · AI coaching · Retention**
+**Role-aware paths · Tested exercises · AI interviews · Evidence review · Retention**
+
+Current source no longer has a standalone AI Coach page or a practice-side AI panel. AI is used for interviews: experience discussion, answer-based follow-ups and assessment. Invalid coding suggestions are resolved to runnable local exercises, not invented tasks. Older release screenshots are historical; this does not update the downloaded binaries.
 
 This is not a random question list, a one-pass mastery badge, or a way for AI to silently write a learner's answer. No AI connection is required.
 

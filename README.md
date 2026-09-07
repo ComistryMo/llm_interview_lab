@@ -21,7 +21,7 @@
 
 ![LLM Interview Lab 中文桌面首页](docs/images/desktop-home.png)
 
-**岗位路线 · 经过测试的练习 · 结构化模拟面试 · AI 教练 · 间隔复测**
+**岗位路线 · 经过测试的练习 · AI 模拟面试 · 证据复盘 · 间隔复测**
 
 这不是随机题单，不是一次测试通过就宣布掌握，也不是让 AI 代写答案。
 你可以只刷题，也可以结合自己的脱敏求职材料进行针对性模拟面试；不用连接 AI 也能完整使用确定性的本地功能。
@@ -154,7 +154,7 @@ llm-lab quickstart
 
 ![课程筛选](docs/images/desktop-learn.png)
 
-答题工作区把题面、答案、公开测试、审查和间隔复测放在一起；AI 教练通过独立页面入口打开，不会静默修改编辑器内容。
+答题工作区把题面、答案、公开测试、审查和间隔复测放在一起。当前源码已移除独立 AI 辅助页面及练习页入口：刷题保持本地，AI 只用于模拟面试；旧截图仅保留历史布局，不代表新的安装包。
 
 ![答题工作区](docs/images/desktop-exercise.png)
 
@@ -254,9 +254,9 @@ AI 是可选能力。支持两种不同用途：
 
 | 方式 | 适合什么场景 | 能力边界 |
 |---|---|---|
-| 普通 LLM API | 解释、分级提示、只读审查、动态第一问与后续追问、可选语音转录 | 只收到上下文预览中勾选的文本或明确授权的音频，不能操作仓库 |
-| Codex | 读取获准文件、逐步生成面试问题、运行测试、流式事件、显示 Diff | 使用官方 App Server；每次只生成当前非代码问题，命令和写文件遵守 Sandbox 与显式审批 |
-| 无 AI | 固定课程、测试、复测、手动模拟面试 | 完全本地，无需网络、账号或密钥 |
+| 普通 LLM API | 面试中的经历深挖、逐轮追问、评估与可选语音转录 | 只收到上下文预览中确认的文本或明确授权的音频，不能操作仓库 |
+| Codex | 作为面试官逐步提问与评估 | 使用官方 App Server；每次只生成下一问，不改候选人代码 |
+| 无 AI | 固定课程、公开测试、复盘与复测 | 完全本地；当前桌面的个性化面试需要连接 AI |
 
 桌面便携包重点验证 OpenAI、OpenAI-compatible 与 Ollama 协议；Anthropic / Gemini 的统一 Provider 适配器保留在源码安装中。
 CI 只使用 Fake Provider、Fake Codex 与 Mock Keyring，不调用真实付费 API。
@@ -275,27 +275,13 @@ macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Home
 
 任何写文件或高风险命令都会显示：操作、范围、文件、命令、原因、风险以及 Diff。应用不会自动批准全部写操作。
 
-### Repo-aware AI 启动 Prompt
+### 面试中的 AI
 
-在仓库根目录启动 Codex、Claude Code、Cursor Agent 等能够读取本地仓库的工具，然后复制：
+自我介绍之后，先围绕一段相关经历展开，再根据你的实际回答由浅入深地追问；回答不上来时可以换角度。岗位、JD 和明确授权的材料决定关注重点，简单 / 标准 / 高压决定提问强度。一次只生成下一问，不在开始时生成整场题单。
 
-```text
-Read AGENTS.md and coach/POLICY.md.
+手撕只使用当前可运行的本地验证题。AI 建议了不存在的题号时，系统按本场技能改选真实候选并说明原因；没有可用题时明确留下未完成环节，不编造题目或测试结果。
 
-Act in COACH mode for profile "default".
-Run `llm-lab next --profile default` and then
-`llm-lab context --profile default --mode coach`.
-Treat its read_allowlist as the complete set of additional files you may read.
-
-Do not modify my submission.
-Do not reveal a complete solution.
-Use the H0-H5 help policy.
-Switch to TEACHER only for an explicit H1/H2/H3 request.
-Switch to REVIEWER only after I ask for review.
-Do not mark a problem as mastered yourself.
-```
-
-浏览器中的 ChatGPT / Claude 无法访问本地仓库时，只提供当前 `task.md`、你主动选择的答案、脱敏后的测试输出和期望帮助等级；不要上传整个 `workspace/profiles/` 或任何公司内部材料。
+不上传整个 `workspace/profiles/` 或任何公司内部材料。旧 CLI 的受约束教练命令为兼容保留，见 [使用规范](docs/best-practices.md)，不再作为桌面功能入口。
 
 详见 [AI 连接与隐私](docs/ai-connections.md)。
 
@@ -303,8 +289,7 @@ Do not mark a problem as mastered yourself.
 
 - 普通 API 只处理你在上下文预览中确认发送的文本；它不能自行读取本地文件或运行命令。
 - Codex 是仓库感知 Agent，可在审批与 Sandbox 约束下读取获准文件、运行测试并提出 Diff。
-- Coach / Teacher / Reviewer / Interviewer 模式默认不直接修改学习者答案。
-- Repository Agent 只面向维护和贡献场景，写操作仍需审批。
+- 桌面端只提供面试官，不提供练习教练或仓库代理页面；面试 AI 不直接修改候选人答案。
 - 两者都不能依据一次测试通过授予 `mastered`。
 
 ## 项目的差异化
@@ -314,7 +299,7 @@ Do not mark a problem as mastered yourself.
 | 平铺随机题单 | 具有硬依赖的课程 DAG 与推荐闯关路线 |
 | 做完一次即结束 | 契约审查 + 口述答辩 + D+2 + D+7 |
 | 只看测试是否通过 | 代码、边界、解释、调试和迁移证据 |
-| AI 直接给答案 | H0–H5 受约束教练模式 |
+| AI 直接给答案 | 面试逐轮取证，不代写答案 |
 | 个人代码混入公共仓库 | Git 忽略的本地学习档案 |
 | 所有用户相同顺序 | 岗位画像 + 目标阶段 + 前置依赖 + 个人证据 |
 | 面试反馈是自由聊天 | 冻结蓝图、计时、Rubric、证据和本地报告 |
