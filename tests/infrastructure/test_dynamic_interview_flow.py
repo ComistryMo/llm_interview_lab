@@ -11,7 +11,7 @@ import pytest
 
 from llm_interview_lab.application import ApplicationService
 from llm_interview_lab.ai.context_builder import build_role_interview_context_preview, ContextBuilderError
-from llm_interview_lab.interview_flow import next_stages, flow_coverage
+from llm_interview_lab.interview_flow import DIFFICULTY_DIRECTIVES, ROLE_PROBE_FOCUS, next_stages, flow_coverage
 from llm_interview_lab.materials import add_material, set_material_ai_access
 from llm_interview_lab.role_interviews import dynamic_coding_candidates, RoleInterviewError
 from llm_interview_lab.workspace import init_profile
@@ -100,6 +100,29 @@ def test_context_keeps_resume_jd_and_prior_answers_not_future_questions(intervie
     assert "合成 JD" not in context(service, profile, iid, False).selected_text
 
 
+def test_conversation_strategy_and_selected_role_reach_each_turn(interview):
+    service, profile, iid, _ = interview
+    assert set(ROLE_PROBE_FOCUS) == set(service.roles.roles)
+    for role_id in service.roles.roles:
+        for difficulty in ("easy", "medium", "hard"):
+            preview = service.dynamic_interview_context(profile, role_id=role_id, seniority="intern", difficulty=difficulty)
+            contract = json.loads(next(p.content for p in preview.parts if p.id == "interview_contract"))
+            assert contract["role_probe_focus"] == ROLE_PROBE_FOCUS[role_id]
+            assert contract["difficulty_directive"] == DIFFICULTY_DIRECTIVES[difficulty]
+            assert "从自我介绍进入经历" in contract["conversation_strategy"]
+            assert "不是我负责" in contract["conversation_strategy"]
+            assert "不要把答案塞进问题" in contract["conversation_strategy"]
+            assert "未来问题" not in contract
+    advance(service, profile, iid, "experience")
+    lock(service, profile, iid, "我记不清 beta，这不是我负责的部分。我只做过偏好数据去重。")
+    followup = context(service, profile, iid)
+    parts = {p.id: p.content for p in followup.parts}
+    assert "只做过偏好数据去重" in parts["candidate_answer"]
+    assert "答不上来与换角度" in parts["policy"]
+    assert "不知道或非本人负责时换一个实际接触过的角度" in parts["interview_contract"]
+    assert "chosen" not in parts["dialogue_history"]  # No invented candidate facts.
+
+
 def test_revoked_material_blocks_send_not_answer_recovery(interview):
     service, profile, iid, refs = interview
     lock(service, profile, iid)
@@ -116,6 +139,61 @@ def test_invalid_ai_stage_does_not_commit_score_or_extra_question(interview):
         service.advance_dynamic_interview(profile, iid, qid, reply(service, profile, iid, "coding"), context_sha256="a" * 64)
     session = service.interview_session(profile, iid)
     assert session["answers"] and not session["assessments"] and len(session["questions"]) == 1
+
+
+@pytest.mark.parametrize("suggestion", ["NOT-A-LOCAL-PROBLEM", ""])
+def test_unknown_coding_suggestion_enters_real_local_task(interview, suggestion):
+    service, profile, iid, _ = interview
+    for stage in ("experience", "experience", "theory", "theory"):
+        advance(service, profile, iid, stage)
+    candidates = dynamic_coding_candidates(service.catalog, service.roles, service.interview_session(profile, iid))
+    after = advance(service, profile, iid, "coding", suggestion)
+    question = after["questions"][-1]
+    assert question["source"]["id"] in {p.id for p, _ in candidates}
+    problem = service.catalog.problems[question["source"]["id"]]
+    assert question["prompt"] == (problem.problem_dir / "task.md").read_text(encoding="utf-8")
+    assert service.current_interview_coding_submission(profile, iid)["text"] == (problem.problem_dir / "starter.py").read_text(encoding="utf-8")
+    assert after["timeline"][-1]["coding_selection_corrected"] is True
+    assert service.interview_state(profile, iid)["coding_selection_corrected"] is True
+    assert len(after["assessments"]) == 5
+
+
+def test_valid_coding_suggestion_is_preserved(interview):
+    service, profile, iid, _ = interview
+    for stage in ("experience", "experience", "theory", "theory"):
+        advance(service, profile, iid, stage)
+    candidates = dynamic_coding_candidates(service.catalog, service.roles, service.interview_session(profile, iid))
+    chosen = candidates[-1][0].id
+    after = advance(service, profile, iid, "coding", chosen)
+    assert after["questions"][-1]["source"]["id"] == chosen
+    assert not after["timeline"][-1].get("coding_selection_corrected")
+
+
+def test_dynamic_candidates_require_actual_runtime_assets(interview, tmp_path, monkeypatch):
+    from dataclasses import replace
+
+    service, profile, iid, _ = interview
+    session = service.interview_session(profile, iid)
+    before = dynamic_coding_candidates(service.catalog, service.roles, session)
+    missing = before[0][0]
+    monkeypatch.setitem(service.catalog.problems, missing.id, replace(missing, problem_dir=tmp_path / "missing-assets"))
+    after = dynamic_coding_candidates(service.catalog, service.roles, session)
+    assert missing.id not in {p.id for p, _ in after}
+    assert {p.id for p, _ in after} == {p.id for p, _ in before[1:]}
+
+
+def test_no_local_coding_assets_finishes_with_explicit_gap(interview, monkeypatch):
+    service, profile, iid, _ = interview
+    for stage in ("experience", "experience", "theory", "theory"):
+        advance(service, profile, iid, stage)
+    monkeypatch.setattr("llm_interview_lab.role_interviews.dynamic_coding_candidates", lambda *args: ())
+    session = advance(service, profile, iid, "coding", "AI-INVENTED-404")
+    assert len(session["questions"]) == 5
+    assert service.current_interview(profile, iid)["question"] is None
+    assert "coding" in flow_coverage(session)["missing_stages"]
+    final = service.finish_interview(profile, iid, confirm_incomplete=True)
+    assert final["status"] == "incomplete"
+    assert not final["coding_evidence"]
 
 
 def test_full_flow_reaches_real_coding_and_evidence_report(interview):

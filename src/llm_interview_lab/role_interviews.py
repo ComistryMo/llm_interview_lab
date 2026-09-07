@@ -1074,10 +1074,15 @@ def dynamic_coding_candidates(
     # Coding difficulty follows seniority; pressure lives in the interview
     # prompt. An intern choosing high pressure must still have runnable tasks.
     band = {"intern": "easy", "new_grad": "medium", "mid": "hard"}[session["seniority"]]
-    return _coding_candidates(
+    candidates = _coding_candidates(
         catalog, role_catalog, tuple(role.required_tracks), band,
         tuple(role.skill_weights), torch_available=importlib.util.find_spec("torch") is not None,
     )
+    return tuple((problem, skills) for problem, skills in candidates
+                 if problem.problem_dir is not None
+                 and (problem.problem_dir / "task.md").is_file()
+                 and (problem.problem_dir / "starter.py").is_file()
+                 and problem.public_tests is not None and problem.public_tests.is_file())
 
 
 def advance_dynamic_role_interview(
@@ -1092,15 +1097,31 @@ def advance_dynamic_role_interview(
         raise RoleInterviewError("this operation requires a dynamic interview")
     candidates = dynamic_coding_candidates(catalog, role_catalog, session)
     stage = assessment.get("next_stage")
-    if stage not in next_stages(session, coding_available=bool(candidates)):
+    allowed = next_stages(session, coding_available=bool(candidates))
+    if stage == "coding" and not candidates and "finish" in allowed:
+        # No actual exercise is available: leave coding explicitly incomplete,
+        # instead of inventing a task or forcing a model retry with the same ID.
+        stage = "finish"
+    if stage not in allowed:
         raise RoleInterviewError("AI 返回的面试阶段不符合当前流程；回答已保留，请重试")
     next_id = f"q-{len(session['questions']) + 1:03d}"
     appended = None
     problem = None
+    selection_corrected = False
     if stage == "coding":
         chosen = next((value for value in candidates if value[0].id == assessment.get("coding_problem_id")), None)
         if chosen is None:
-            raise RoleInterviewError("AI 选择的手撕题不在本地已验证候选中；请重试")
+            # AI suggests; local runnable assets remain authoritative. An
+            # invented ID must not strand a candidate's already-saved answer.
+            role = role_catalog.resolve_role(session["role_id"])
+            discussed = {skill for q in session["questions"] if q["question_id"] in session["answers"]
+                         and question_stage(q) in {"experience", "theory"}
+                         for skill in q["skills"]}
+            chosen = min(candidates, key=lambda item: (
+                -len(discussed.intersection(item[1])),
+                -sum(role.skill_weights[skill].weight for skill in item[1]), item[0].id,
+            ))
+            selection_corrected = True
         problem, skills = chosen
         appended = _coding_question(
             repo_root, problem, question_id=next_id, round_index=3,
@@ -1134,7 +1155,10 @@ def advance_dynamic_role_interview(
             if not submission.exists():
                 _atomic_write(submission, (problem.problem_dir / "starter.py").read_bytes())
         session["questions"].append(appended)
-        session["timeline"].append({"event": "question_generated", "question_id": next_id, "timestamp": _timestamp(now)})
+        event = {"event": "question_generated", "question_id": next_id, "timestamp": _timestamp(now)}
+        if selection_corrected:
+            event["coding_selection_corrected"] = True
+        session["timeline"].append(event)
     _save(repo_root, profile_id, session)
     return session
 
@@ -1533,8 +1557,13 @@ def role_interview_state(
             raise RoleInterviewError("role interview time has expired; finish it as incomplete")
     else:
         raise RoleInterviewError("role interview is not active or paused")
+    question = _next_role_question(session)
     return {
-        "question": _next_role_question(session),
+        "question": question,
+        "coding_selection_corrected": bool(question and any(
+            item.get("coding_selection_corrected") and item.get("question_id") == question["question_id"]
+            for item in session["timeline"]
+        )),
         "remaining_seconds": remaining,
         "status": status,
     }
@@ -1556,6 +1585,7 @@ def current_role_question(
     return {
         "question": state["question"],
         "remaining_seconds": state["remaining_seconds"],
+        "coding_selection_corrected": state["coding_selection_corrected"],
     }
 
 

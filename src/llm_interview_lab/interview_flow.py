@@ -13,6 +13,25 @@ STAGE_LABELS = {
 }
 STAGE_WEIGHTS = {"introduction": 0.1, "experience": 0.3, "theory": 0.3, "coding": 0.3}
 
+# Interview angles, not new skills or mandatory questions. Canonical role_skills
+# still determine which evidence can be counted for the selected role.
+ROLE_PROBE_FOCUS = {
+    "ai_product_manager": "从用户真实问题和本人产品决策切入，深挖需求取舍、离线评估与线上指标差异、质量/成本/延迟，以及失败后的人工兜底与发布决策。不要把产品岗面成算法术语考试。",
+    "applied_ai_engineer": "从端到端交付切入，追问 Prompt/RAG/微调的选型依据、检索或结构化输出的失败样例、评估集设计、成本与上线回滚；核实本人实现的环节。",
+    "ai_agent_engineer": "从一次真实任务轨迹切入，追问工具边界、参数与状态、超时/重试/幂等、失败恢复和任务级评估；区分模型能力问题与执行器工程问题。",
+    "ai_algorithm_research_engineer": "从研究假设和本人实验切入，追问基线公平性、消融、数据划分、复现、反证及结论的适用范围；有论文才问论文贡献，不假定发表经历。",
+    "post_training_engineer": "从实际负责的数据或训练实验切入，沿回答逐层核实偏好对/标注质量与泄漏、SFT/DPO/RL 方法选择、reference/beta/长度偏置、奖励与验证器偏差、训练稳定性及消融。先理解候选人的实验，不一次罗列所有算法。",
+    "ai_infra_engineer": "从训练或数据平台的一次工作负载切入，追问资源瓶颈、调度、分布式通信、检查点一致性、故障恢复、可观测性和成本；用真实约束而不是堆系统名词。",
+    "ai_inference_systems_engineer": "从请求负载与服务目标切入，追问首 token/尾延迟、KV Cache、批处理、内存预算、量化质量损失和容量规划；让候选人解释测量与权衡，而不是只背优化名称。",
+    "ai_evaluation_data_safety_engineer": "从评估或数据决策切入，追问代表性与污染、标注一致性、Judge 偏差、安全误报/漏报、可复现证据和上线监测；区分模型表现与测量误差。",
+}
+
+DIFFICULTY_DIRECTIVES = {
+    "easy": "语气放松、友好，允许先从本人熟悉的具体过程讲起；先核实一个基础点，回答充分才加一层追问。卡住时说清可以换个角度，不给答案、不无依据夸奖。",
+    "medium": "像正常技术面试交谈，沿本人决策、实现边界和验证证据逐步深入；既确认说清的事实，也追问缺口。遇到不知道时改问其接触过的环节，不重复施压。",
+    "hard": "语气直接、紧凑但尊重候选人；对含糊结论提出针对性质疑，逐轮检验反例、竞争解释、故障恢复或条件变化。先听经历，再由浅入深；不能第一问轰炸多个难点，不辱骂、不虚构时间压力、不把实习生当资深负责人。答不上来就换角度取证，不补答案。",
+}
+
 
 def question_stage(question: Mapping[str, Any]) -> str:
     # Legacy sessions keep their original questions; no historical rewrite.
@@ -55,8 +74,9 @@ def flow_coverage(session: Mapping[str, Any]) -> dict[str, Any]:
 def dialogue_instruction(dimensions: set[str], fatal_issues: set[str]) -> str:
     return (
         "这是逐轮面试，不是出题计划。只评估当前已锁定回答，再提出一个下一问。"
-        "下一问只聚焦一个考点，像面试官当面交谈，通常 40–160 个中文字；不要列出多道编号子问题。"
+        "下一问只聚焦一个考点，像面试官当面交谈，通常 20–100 个中文字，不为凑长度多问；只提出一个主问题。"
         "贡献、取舍、实验和反例可以在后续轮次逐步追问，不要在一段话中全部问完。"
+        "尤其不能用多个问号或‘以及、另外、同时’拼接不同考点。遵循 turn_focus 与面试策略，而不是仅按岗位关键词出题。"
         "严格使用上下文 allowed_next_stages，禁止提前结束或输出未来问题列表。"
         "experience 阶段根据简历/JD和前序回答，核实本人贡献、项目/比赛/论文/实习中的真实约束；"
         "必须对已给出的证据追问，不能捏造未提及经历。theory 阶段针对岗位技能与回答问原理、"

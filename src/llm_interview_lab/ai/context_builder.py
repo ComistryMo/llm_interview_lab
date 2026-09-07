@@ -10,7 +10,7 @@ from typing import Any, Mapping
 
 from .base import ContextPart, ContextPreview
 from ..catalog import Catalog, load_catalog
-from ..interview_flow import STAGES, dialogue_instruction, next_stages, question_stage
+from ..interview_flow import DIFFICULTY_DIRECTIVES, ROLE_PROBE_FOCUS, STAGES, dialogue_instruction, next_stages, question_stage
 from ..events import read_events, reduce_events
 from ..materials import MaterialError, get_material, resolve_material_text_path
 from ..role_interviews import (
@@ -244,11 +244,9 @@ def build_dynamic_role_interview_context_preview(
         "role": {"id": role.id, "title": role.title, "summary": role.summary},
         "seniority": seniority,
         "difficulty": difficulty,
-        "difficulty_directive": {
-            "easy": "以基础概念和一个直接应用为主；语气友好；一次只验证一个关键点。",
-            "medium": "要求独立说明实现、边界和至少一项真实权衡；追问应基于回答中的证据。",
-            "hard": "保持专业且有时间压力；加入反例、失败恢复和多层权衡；不主动给提示或补全答案。",
-        }[difficulty],
+        "difficulty_directive": DIFFICULTY_DIRECTIVES[difficulty],
+        "role_probe_focus": ROLE_PROBE_FOCUS[role.id],
+        "conversation_strategy": (repo_root / "coach/prompts/dynamic-interviewer.md").read_text(encoding="utf-8"),
         "interview_process": process,
         "role_skills": skills,
         "current_turn": "Generate the first appropriate non-coding question (usually a concise self-introduction or experience prompt).",
@@ -441,6 +439,7 @@ def build_role_interview_context_preview(
         frozen_contract = json.loads(next(p.content for p in base.parts if p.id == "interview_contract"))
         frozen_contract.pop("current_turn", None)
         frozen_contract.pop("output_schema", None)
+        strategy = frozen_contract.pop("conversation_strategy")
         candidates = dynamic_coding_candidates(catalog, role_catalog, session)
         frozen_contract.update({
             "current_stage": question_stage(question),
@@ -448,11 +447,19 @@ def build_role_interview_context_preview(
             "allowed_next_stages": next_stages(session, coding_available=bool(candidates)),
             "coding_candidates": [{"id": p.id, "title": p.title, "skills": list(skills)} for p, skills in candidates],
             "coding_unavailable": not bool(candidates),
-            "stage_guidance": "经历与八股各至少一个主问题及一次针对回答的追问，最多各四问；覆盖后再进入本地手撕。不要因个人材料未提到论文或实习就捏造经历。",
+            "stage_guidance": "经历与八股各至少一个主问题及一次针对回答的追问，最多各四问；经历概述后优先再深入一到两轮，已讲清的内容不重问。答不上来要换角度；覆盖后再进入本地手撕，不捏造经历。",
+            "turn_focus": (
+                "现在刚听完自我介绍。若回答只是履历概述，下一问只邀请介绍一段相关经历的目标与本人工作；"
+                "简历不算已经口头介绍过。只给一个开放的经历邀请，不列职责/方法/验证/效果清单；"
+                "先不问实现细节、方法原因、验证效果和反例。仅当本次回答已经讲清经历时才接一个深入问题。"
+                if question_stage(question) == "introduction" else
+                "对照刚才实际回答决定下一问：没有回答的问题不要换词重问；不知道或非本人负责时换一个实际接触过的角度。"
+                "从回答中的一个具体做法继续检验，已核实的前提不要重问；先核实做法，再问单个权衡或边界，不捏造技术机制。"
+            ),
         })
         parts[0] = _part("policy", "动态面试与评分规则", dialogue_instruction(
             set(question["rubric"]["dimensions"]), set(question["rubric"]["fatal_issues"]),
-        ) + paused_note)
+        ) + "\n\n" + strategy + "\n\n本轮提问重点：" + frozen_contract["turn_focus"] + paused_note)
         parts.extend([
             _part("interview_contract", "岗位技能、难度、流程与可用手撕范围", json.dumps(frozen_contract, ensure_ascii=False)),
             next(p for p in base.parts if p.id == "profile_context"),

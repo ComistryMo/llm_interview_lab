@@ -109,7 +109,8 @@
         "properties": {
         "event": {"enum": ["created", "started", "paused", "resumed", "answered", "coding_tested", "question_generated", "finished"]},
           "timestamp": {"type": "string", "format": "date-time"},
-          "question_id": {"type": "string", "pattern": "^q-[0-9]{3}$"}
+          "question_id": {"type": "string", "pattern": "^q-[0-9]{3}$"},
+          "coding_selection_corrected": {"type": "boolean"}
         },
         "additionalProperties": false
       }
