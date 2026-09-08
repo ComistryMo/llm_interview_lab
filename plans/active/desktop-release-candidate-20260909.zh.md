@@ -124,6 +124,13 @@ git diff --check
 - CI `34284301760` 的 macOS 为 942 passed / 1 failed / 8 skipped，未进入构建；剩余单个设置页测试在固定 80 ms 时读到中间态 36 px 宽度，没有 binding/polish loop 日志。只把测试改成最多 2 秒等待真实布局，保留边界、高度和主题/语言点击断言，并增加宽度与父布局一致断言。Windows 四尺寸直接复验 4 passed / 27.65 秒，macOS 仍须重新验证；未修改生产代码或以跳过测试放行。
 - 同轮 Ubuntu 三 Python、Windows 3.11/3.12、CPU PyTorch、中文文档通过；Windows 3.10 核心及桌面构建仍在执行。新的文档/测试提交不改变最后生产来源 2729e280，无需为此重复本地打包。
 
+#### 2026-09-09 06:44 HKT 证据补齐
+
+- 最终生产源码安静环境五次性能复测已完成（HEAD d7791ee，仅测试/文档晚于生产来源 2729e280，tracked diff 为空）：搜索 42.19 → 25.12 ms（-40.47%），启动 +5.40%，40 轮加载 +2.61%，最终工作集 +1.46%；所有预先冻结阈值通过，120 次命中与排序逐项一致。首次进程 6793 ms，保留原始值和 p95，不挑选较快样本。
+- 最终包打开 f0b173c 的旧合成数据，通过原生窗口返回旧题，代码逐字一致；Profile/events/submission 三份文件 SHA 与启动前相同。此前 4a → f0 的升级链也保留。均未触碰真实用户数据。
+- 远端 34284301760 的 Ubuntu 与 Windows 三 Python 核心矩阵现均成功：Ubuntu 各 649 passed / 32 skipped，Windows 各 648 passed / 33 skipped；CPU PyTorch 2 passed，中文文档 28 passed。跳过项来自这些纯 dev job 未安装桌面/Torch 等可选依赖，非本轮新增跳过。
+- 前一生产切片 9bebba5 的 Windows MSVC CI 已实际构建成功并通过 worker/隐私检查（83 个桌面目标测试通过），远端候选 Artifact 10079758302；最终 2729 生产切片的本地 MinGW 包已完成，当前 d779 CI 34286507207 继续核验平台。最后 macOS 结论未取得前，整体仍不可公开发布。
+
 #### 2026-09-09 06:04 HKT 续接
 
 - macOS 修复后全量为 939 passed / 3 failed / 8 skipped：两项 GridView 缓存 delegate 的异步生成未等待，一项已禁用的缺依赖关联题仍可通过直接 Controller 入口创建任务。未把失败改成跳过。

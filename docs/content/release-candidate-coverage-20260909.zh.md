@@ -29,7 +29,7 @@ Catalog 254 个节点；状态 {'ready': 96, 'planned': 158}；验证级别 {'or
 
 ## Windows 候选包内核对
 
-`f0b173c` 实际便携包使用包内 Python runtime 执行同一公共覆盖脚本，未设置 PYTHONPATH，PATH 仅保留 Windows 系统目录，没有读取 Profile：254 节点、96 ready、84 Oracle、12 contract、158 planned、255 知识卡及 258 来源与源码一致。641 个随包公共文件 SHA 与该源码逐项相符。
+`2729e280` 最终实际便携包使用包内 Python runtime 执行同一公共覆盖脚本，未设置 PYTHONPATH，PATH 仅保留 Windows 系统目录，没有读取 Profile：254 节点、96 ready、84 Oracle、12 contract、158 planned、255 知识卡及 258 来源与源码一致。641 个随包公共文件 SHA 与该源码逐项相符；前一 `f0b173c` 包的同项验证结果也保留。
 
 该包未内置 PyTorch，实际具备环境条件的已验证代码题是 **27 道，而不是开发机的 84 道**。按交叉 Track 分别为 ai_foundation 21、llm_algorithm 22、vlm_algorithm 8、post_training 3、agent 2、systems 2、traditional_ml 13、recommendation 3、computer_vision 1、traditional_rl 1；其余两个 planned-only Track 为 0。不能相加，也不等于这些题对每个新档案已解锁。
 
