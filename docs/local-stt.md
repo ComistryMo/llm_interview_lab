@@ -1,145 +1,82 @@
-# 本地语音转文字（当前源码）
+# 本地流式语音输入（当前源码）
 
-模拟面试的「语音输入」已提供 **SenseVoiceSmall 本地转录**。不需要 API Key、PyTorch 或独立服务器；可以搭配 DeepSeek、Codex 等文字面试官。模型在 CPU 上识别，首次下载后不联网转录。
+模拟面试默认使用 **Zipformer 中英双语流式模型**。录音期间即可看到识别文字，停录后只补齐尾句。SenseVoice 的推理、下载入口和选项已经移除，没有隐藏的 SenseVoice 回退。
 
-这项更新属于当前源码，不代表 GitHub 上的旧 Windows/macOS 安装包已经更新。
+不需要 API Key、PyTorch、服务器或新增桌面依赖。语音在 CPU 上本地识别，文字面试官仍可使用 DeepSeek、Codex 等；本次只更新源码，不代表旧 Windows/macOS 下载包已更新。
 
-## 直接使用
+## 使用
 
-1. 点击回答框下方的「语音输入」，直接开始录音。默认使用本地 SenseVoiceSmall，不需要选择面试 API。
-2. 说完后点击录音状态旁的「完成录音」，应用自动转成文字并追加到回答框，无需再点击转录。
-3. 检查、修改文字后，点击「提交并继续」。
+1. 在回答框点击「语音输入」，开始录音。正在说的话在回答框上方实时显示；可以同时手打，不会覆盖已有草稿。
+2. 说完点击「完成录音」。模型补齐尾句后，把本次识别结果一次性追加到回答框，不重复追加临时结果。
+3. 检查、修改，再点击「提交并继续」。识别不会自动提交、评分或生成下一问。
 
-首次尚未下载模型时，点击「语音输入」会展开「语音设置」，先点击「下载本地模型」。下载量约 **240 MB**，有进度、取消和重试；开始前可打开模型许可。完成后点击「语音输入」开始，之后不再需要重复设置。已校验的完整文件会复用，未完成的单个文件重试时重新下载。
+首次未安装时，在「语音设置」点击「下载本地模型」，约 **199 MB**。支持进度、取消和重试，已校验的完整文件复用。下载完成后可以离线使用；模型首次加载约需一段准备时间，录音仍会缓存，不丢掉开始说的话。后续录音复用已加载的模型，每次使用独立识别状态。
 
-模型状态、检查 / 重新下载、远程转录选择均收在可滚动的「语音设置」中。正常录音只在回答框旁显示状态、时长和结束动作，不再自动把题面滚到录音设置。当前是**结束录音后自动转文字**，不是说话时实时逐字显示；转录失败保留录音，可点击「重试转成文字」。
+录音、停止和模型加载不占用面试的全局 busy 状态。录音或尾句识别期间不允许提交半成品，但可继续编辑草稿。失败时保留原 WAV，可明确点击「重试转成文字」；重试使用同一个流式模型读取已有 WAV，不会改用 SenseVoice 或自动上传。
 
-转录结果追加到可编辑草稿，不覆盖已输入的文字，不自动提交，也不作为已锁定的回答证据。原 WAV 不会因转录失败被删除或改写。没有人声、模型未下载、网络下载失败等问题会显示具体提示。
+## 数据、授权与迁移
 
-离开面试页、暂停、到时或关闭应用时会停止采音，并取消尚未开始的自动转录，保留已录音频。在其他页面完成的同题转录仍追加到原回答，但不会抢走当前输入框的焦点。暂停后先恢复面试，再手动重试保留的录音；不会恢复后突然自动发送。
-
-本地转录没有远程授权复选框。如果之前选择过远程服务，可在「语音设置」中切回本地；远程模式必须在每次录音前明确授权，才会在结束后发送这一次音频。重试远程发送也需重新授权。**本地失败不会自动切换远程服务。** 本地音频不会上传；你后续主动提交的回答文字仍属于面试中已经确认的 AI 发送范围。
-
-## 流式识别与等待时间（2026-09-08）
-
-**有现成的本地流式模型，但当前页面尚未接入边说边出字。** sherpa-onnx 官方列出了中文及中英双语的 [Streaming Zipformer](https://k2-fsa.github.io/sherpa/onnx/pretrained_models/online-transducer/index.html)，并提供实时麦克风识别示例。它可以复用本项目已经安装的 sherpa-onnx 引擎，不必接入面试 API 或发送音频。具体模型权重的许可、大小与本机效果需要在选型时单独核实，不能把引擎许可当成所有模型许可。
-
-当前 SenseVoice 路径是 `完成录音 → 读取 WAV → VAD 分段 → 离线识别全部段 → 追加文字`。代码逐块读取 WAV 不等于实时识别麦克风；即使推理较快，用户仍要等待停录后才看到文字。首次加载与长段音频也可能增加等待。
-
-本次只用已有公开中文音频复验，禁止网络、没有采集麦克风或读取个人录音：
+模型保存于当前应用数据根目录的：
 
 ```text
-首次加载与短样例识别：1.64 秒
-39.55 秒、六段、48 kHz 双声道合成音频：1.35 秒
-test_local_transcription.py -k real_model_chinese：1 passed, 8 deselected in 4.47s
+models/stt/zipformer-bilingual-streaming-int8/
 ```
 
-这不是用户那段音频的耗时，也不是准确率或其他设备的速度保证。本轮没有更换模型、下载新权重或将现有停录后转录包装成流式。
-
-建议下一次语音迭代单独实现：后台接收实时 PCM → 流式识别器输出临时文字 → 停顿时确认片段 → 停录时补齐尾句。临时结果应更新同一草稿段而非重复追加，最终文字不覆盖手动输入、不自动提交；继续保留 Profile/问题隔离及原始 WAV。需要用公开音频回放测首字延迟、尾句丢失、重复词、停止与切页，再做真实 Windows 麦克风验收，不能仅切换模型名后宣布完成。
-
-## 安装与保存位置
-
-源码环境安装或更新 `desktop` 依赖即可获得识别引擎：
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -e ".[desktop]"
-```
-
-模型权重不随 pip 下载，在应用内单独下载。引擎与模型首次识别时才加载，不阻塞普通应用启动。
-
-模型保存在当前应用数据根目录下的 `models/stt/sensevoice-small-int8/`。所有学习档案共用这一份公共权重，录音和答案仍分别保存在各自档案，不放进模型目录。切换数据根目录后需要下载到新目录，重新启动同一目录则直接复用。
-
-按[桌面指南](desktop-app.md#源码运行)使用 `workspace/maintainer/manual-uat` 时，位置为：
+按[源码运行说明](desktop-app.md#源码运行)启动时，本机已经下载并逐文件验证：
 
 ```text
-workspace/maintainer/manual-uat/models/stt/sensevoice-small-int8/
+workspace/maintainer/manual-uat/models/stt/zipformer-bilingual-streaming-int8/
 ```
 
-当前维护者 Windows 环境已安装引擎，并已在这个目录下载、校验模型。重启当前源码应用后即可使用。模型和录音都不提交 Git。
+关闭旧源码进程，再按原命令启动即可使用，不需重新创建 Profile。换成其他数据根目录时需在对应目录下载模型。旧版本保存的本地转录选项恢复为新的本地流式选项，不会意外切到远程服务。
 
-## 模型与许可
+旧的 SenseVoice 模型缓存没有擅自删除，但当前代码不读取、不加载它。Profile、简历、回答和既有录音没有迁移或清空；模型、录音和截图均不进入源代码提交。
 
-- 识别模型：FunAudioLLM / Alibaba 的 **SenseVoiceSmall**；k2-fsa 提供 int8 ONNX 转换，[官方运行说明](https://k2-fsa.github.io/sherpa/onnx/sense-voice/pretrained.html)、[ONNX 模型仓库](https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17)。当前自动识别语言，适用于中文、英文等受支持语言；不宣称各种口音都已经实测。
-- 模型权重受独立的 **[FunASR Model Open Source License Agreement 1.1](https://github.com/modelscope/FunASR/blob/e19029adca384a06a2f60bd8c18cb98f1a0499aa/MODEL_LICENSE)** 约束，不应误标为本项目的 Apache-2.0 或 SenseVoice 代码的 MIT。下载即表示接受该模型许可；重新分发或商业使用前请阅读原文。
-- 推理引擎：[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)，Apache-2.0；语音分段：[Silero VAD](https://github.com/snakers4/silero-vad)，[MIT](https://github.com/snakers4/silero-vad/blob/867c2aa692646a1f1de3e94a15c9dd9f614c0acb/LICENSE)。两份模型许可随下载保存在模型目录中。
+- 本地识别只访问当前授权操作的 PCM / WAV，不读取其他 Profile、材料或 API Key。
+- 离开面试页会停止采音；同题已开始的识别可完成并回到原草稿，不抢其他页面焦点。
+- 暂停、结束、到时、切换 Profile / 问题或关闭时，取消流式结果写回。WAV 保留，恢复后可显式重试。
+- 可选远程 STT 仍是停录后上传，必须每次明确授权；本地失败不会自动切换远程。
+- **音频不上传不等于回答不发送**：随后主动提交的回答文字属于本场面试已确认的 AI 发送范围。
 
-下载使用固定来源与 SHA-256；大小或哈希不匹配的文件不作为可用模型。SenseVoice 文件固定于模型仓库提交 `2365baeacb507f821a0c8120fcee3d484dba7a07`：
+## 模型来源与许可
 
-| 文件 | 字节数 | SHA-256 |
-|---|---:|---|
-| `model.int8.onnx` | 239233841 | `c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51` |
-| `tokens.txt` | 315894 | `f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc` |
-| `silero_vad.onnx` | 643854 | `9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6` |
+采用 [sherpa-onnx 官方 Streaming Zipformer 模型](https://k2-fsa.github.io/sherpa/onnx/pretrained_models/online-transducer/zipformer-transducer-models.html#csukuangfj-sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20-bilingual-chinese-english)，模型仓库为 [csukuangfj/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20](https://huggingface.co/csukuangfj/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20)。
 
-包含原模型许可指引与两份许可全文，共 **240200041 字节**。完整文件清单和许可校验值在 [`local_transcription.py`](../src/llm_interview_lab/ai/local_transcription.py)。
+固定修订：`98590b7ed6443e77b714204da2757d75e1a642f4`。模型卡明确声明 [Apache-2.0](https://huggingface.co/csukuangfj/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/blob/98590b7ed6443e77b714204da2757d75e1a642f4/README.md)，模型卡也随权重保存。不是用引擎的许可推断权重许可。
 
-## 实测与限制
+`ai/local_transcription.py` 固定 encoder int8、decoder fp32、joiner int8、tokens 和模型卡的大小及 SHA-256。运行前校验，模型目录不含原始训练检查点。本次维护者下载因网络限制使用公开 HF 镜像，文件 SHA 与上游固定修订一致；应用下载默认仍指向原始 Hugging Face 来源。
 
-2026-09-07，当前 Windows 源码环境，sherpa-onnx 1.13.7、CPU 两线程：
+## 实现边界
 
-- 下载真实模型并校验全部文件；使用官方公开中文 WAV，不使用个人录音或简历。
-- 5.59 秒样例：命令行冷加载加转录约 1.7–2.7 秒；正式页面从点击到草稿完成约 7.2 秒（首次加载）和 2.6 秒（后续测试）。时间只代表本机和该样例，不是性能承诺。
-- 将同一公开片段合成为 39.55 秒、六段、48 kHz 双声道录音，约 1.4 秒识别完整；同时验证中文与含空格音频路径、静音提示、原音频 SHA 不变。
-- 上述推理测试禁用了网络连接，界面测试也禁止读取 Keyring；结果通过正式 QML 的后台转录路径进入可编辑回答区，不触发提交或 AI 请求。
-- 已人工查看 900×620（125% 字号）与 1280×800 正式页面截图；录音区域在小窗口内可滚动。
+单个 Qt `QAudioSource` 收音，PCM 同时写入 Profile 内 WAV 和后台队列。实际采集帧数决定时长，不用虚假墙钟。Qt 主线程每 80 ms 取音，不执行模型加载或推理；采集停止不等待 ASR。
 
-这不是准确率基准：该短样例把「开放」误识为「开饭」，数字和后半句识别正确。专有名词、缩写、嘈杂环境和口音可能需要手工纠正。本轮没有验证 macOS 实机、真实远程 STT，也没有重建桌面安装包。
+后台调用 `OnlineRecognizer`，每段停顿确认并重置当前语音段，整场累计文本保留。结束时提供右侧上下文、`input_finished()` 并取完尾句，不重新读取整场 WAV。实时结果受 Profile、Interview、Question、Operation ID 校验，只有最终文字追加到草稿。
 
-默认测试不会下载模型或采集麦克风。真实模型验证需显式指定公共测试音频：
+当前 PySide 的旧 `QAudio` 枚举与实际返回的 `QtAudio` 枚举不相等；源码使用 `QtAudio`，并在现有收音节拍中检查设备状态，避免旧 signal 签名转换错误。没有增加新的录音框架或服务。
+
+## 本次实际验证（2026-09-08）
+
+- 真实模型：公开中文音频约 5.59 秒，累计输入 **1.70 秒音频**时已有文字，停录前产生 7 次文本更新。首次加载与识别约 **1.12 秒**；39.55 秒、六段、48 kHz 双声道样例约 **2.10 秒**，六次「早上九点 / 下午五点」全部保留。推理期间禁止网络。
+- 正式 QML 页面逐帧回放同一公开音频：900×620 / 125% 字体与 1280×800 下，测试从开始等待到出现「早上」约 **2.90 / 2.84 秒**；停录后的尾句处理约 **0.54 / 0.49 秒**，保留原草稿、没有自动提交。
+- 真正 Windows 麦克风：连续三次录音 **3.68 / 3.70 / 3.70 秒**，停止响应 **66 / 59 / 60 毫秒**；每次均有实时 PCM、计时增长、有效 16 kHz 单声道 WAV，之前 WAV 哈希不变。此项用识别替身，**没有识别或上传私人环境声音**；实际识别由上一项公开音频单独证明。
+- 正式页面定向操作覆盖 900×620、1080×680、1280×800、1440×900，含深浅主题及 125% 字体，已查看代表截图。验证停录期间仍可键入、最终文本不重复、失效上下文不回写、原录音可重试，以及移除旧模型后的选项恢复。
+- 实现中的原生测试曾发现 `QAudio` / `QtAudio` 不兼容导致错误拒绝麦克风；已修复，并重新通过三次原生录停。
+
+证据保存在 ignored 的 `workspace/maintainer/streaming-stt-validation/screenshots/`，使用合成测试档案的正式页面，而非 demo 页面或真实简历。
+
+这些是样例/本机耗时，不是准确率基准或所有设备的速度保证。专有名词、口音、噪声、标点和数字格式仍可能需要修改；当前样例输出中文数字，未加入额外标点/ITN 模型。没有进行 macOS 实机、真实远程 STT、全量 pytest、CI 或桌面打包。
+
+### 可复验的目标命令
+
+默认测试不下载模型，不读取私人录音，不打开麦克风。真实模型需显式指定公开音频：
 
 ```powershell
-$env:LLM_LAB_TEST_LOCAL_STT_MODEL_ROOT = Join-Path (Get-Location) "workspace/maintainer/manual-uat/models/stt/sensevoice-small-int8"
+$env:PYTHONPATH = Join-Path (Get-Location) "src"
+$env:LLM_LAB_TEST_LOCAL_STT_MODEL_ROOT = Join-Path (Get-Location) "workspace/maintainer/manual-uat/models/stt/zipformer-bilingual-streaming-int8"
 $env:LLM_LAB_TEST_LOCAL_STT_AUDIO = Join-Path (Get-Location) "workspace/maintainer/local-stt-validation/official-zh.wav"
-.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_local_transcription.py tests/infrastructure/test_transcription.py -q -s
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_local_transcription.py tests/infrastructure/test_voice.py -q -s
 $env:QT_QPA_PLATFORM = "windows"
-.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k "local_stt or voice_error_and_transcription_choices" -q -s
+.\.venv\Scripts\python.exe -m pytest tests/infrastructure/test_interview_input_runtime.py -k "real_local_stt_from_production_page" -q -s
 ```
 
-其中 `official-zh.wav` 是维护者已下载的模型仓库 `test_wavs/zh.wav`，不会随源码提交；新环境需要先准备这一公开测试文件。用户正常使用无需运行测试命令。
-
-## 录音计时停滞与停止卡死修复（2026-09-07）
-
-用户在 `065f5b6` 上报告录音时长停滞，点击停止后应用未响应。正式页面的真实麦克风测试复现了停顿和原生崩溃；栈经过 `durationChanged → _voice_state_changed → stateChanged → localStt → find_spec`。单独运行同一个录音器，观察到每秒约 94 次时长通知，停止可立即返回。问题来自高频音频通知触发全页面刷新，并在 QML getter 中重复访问文件系统和检查依赖，而不是 STT 推理慢。
-
-修复仅涉及该刷新链路：精确录音时长继续来自 Qt 音频，显示整秒改变时才通知；录音控件使用独立通知，不带动所有页面重算；模型安装状态在启动及下载结束时刷新，QML getter 只读快照。实际转录仍验证模型完整性，不靠缓存跳过校验。没有更换录音后端，也没有用虚假的墙钟计时掩盖音频问题。
-
-修复后在隔离档案的正式 Windows 页面连续实际录停三次：时长分别 3.56、3.63、3.63 秒，停止耗时 49、50、56 毫秒，均得到 48 kHz 双声道 WAV；每次停止后都实际输入文字，前次录音文件未被改写。已查看录音中和停止后的截图。短录音只用于本机故障验证，没有转录、播放给 AI 或上传。
-
-本次直接验证：
-
-- `python -m pytest tests/infrastructure/test_voice.py -q`：4 passed。
-- `python -m pytest tests/infrastructure/test_interview_input_runtime.py -k "local_stt or voice_error_and_transcription_choices or recording_failure_is_inline or recording_ticks_do_not_refresh_application" -q`：12 passed；真实本地模型测试使用上文两个显式路径。
-- 设置 `LLM_LAB_TEST_MICROPHONE=1`、`QT_QPA_PLATFORM=windows` 后，`python -m pytest tests/infrastructure/test_interview_input_runtime.py -k "real_microphone_start_stop_from_production_page" -q -s`：1 passed，包含连续三次录停和停止后输入。
-
-首次扩充录停测试时使用了不适用于 QQuickWindow 的 `QTest.keyClicks`，测试代码已改为逐键输入并重跑通过；这不是产品问题。未运行全量测试、CI 或打包。macOS 和其他麦克风设备仍未实机验证。
-
-## 一键语音输入与连接页收紧（2026-09-07）
-
-正常流程改为一次点击开始、同一个按钮结束、自动转文字。模型与远程设置默认折叠；录音中禁止提交半成品回答。自动转录等 Qt 确认 WAV 就绪后，调用原有后台转录入口，不在 GUI 线程加载模型。切换档案、问题或结束面试后，旧录音不会自动转到新上下文。之前的整秒通知与模型状态缓存修复继续保留。
-
-连接页将 Codex 与普通 API 改为同宽纵向条目；无需 AI 的本地能力改为一行常驻说明，不再用两张内容不等长的大卡片并排占位。没有改变 API Key 的保存、修改、删除逻辑。
-
-本轮最终通过 **25 个不同的相关用例**，分批按修改范围运行，没有全量回归：
-
-- `test_interview_input_runtime.py -k "dictation or recording_ticks_do_not"`：新增点击录音、停止自动追加、上下文隔离、远程逐次授权、失败后保留草稿/WAV并重试；其中失败重试用例在后续批次补充验证。
-- 同文件定向覆盖 `voice_error_and_transcription_choices`、`local_stt_model_download`、`real_local_stt_from_production_page`、`composer_tools`：缺失麦克风、首次下载、公开中文音频自动识别、原草稿保留。
-- 同文件定向覆盖 `connections_compact`、`connections_found_codex`、`saved_key_form`、`saved_connection_card_fits`：四种窗口下对齐、Codex 入口点击、原有连接编辑与删除确认。
-- `real_microphone_start_stop_from_production_page`：真实 Windows 麦克风连续三次录音，分别 3.58、3.64、3.66 秒；停止响应 85、64、77 毫秒；每次自动进入转录后仍可输入。该硬件测试使用识别函数替身，不识别环境中的私人对话；真实 SenseVoice 识别另用公开中文 WAV 验证，禁用网络及 Keyring 读取。
-- `test_desktop.py::test_interview_setup_uses_profile_role_availability_and_real_report`：对应静态契约已同步新的语音入口、追加草稿行为，并纠正一个已删除的重复范围文案断言。
-
-开发中修正了测试自身的页面属性名及多行编辑器光标定位假设，失败用例均已定向重跑通过。窗口覆盖 900×620、1080×680、1280×800、1440×900，含浅色、深色与 125% 字号；已人工查看正式页面截图。测试截图位于 ignored 的 `workspace/maintainer/dictation-ux-20260907/`，合成档案位于 pytest 临时目录；未使用真实档案，也不是实际外部用户或真实 AI 连接成功的证据。
-
-未进行完整 pytest、CI、Windows/macOS 打包或发布；macOS 实机及真实远程 STT 本轮未验证。当前打开的源码应用不会热更新，保留当前回答后重启才能看到新交互。
-
-### 后续独立审查与原生录停复验
-
-同日的独立审查进一步发现暂停、到时和离开面试页仍可能采音，以及每次录音遗留三个 Qt 对象的问题。当前源码在这些操作和退出时主动停止采音，撤销尚未执行的自动转录，并复用同一组录音对象。已开始的同题转录在切页后仍可回到原草稿，不抢其他页面输入焦点。
-
-合并后在隔离 Profile 的正式 Windows 页面连续录停三次：时长 **3.53 / 3.64 / 3.62 秒**，停止响应 **63 / 59 / 58 毫秒**。每轮使用同一组原生 Capture / Input / Recorder，直属对象数始终为 **3**，此前的 WAV 哈希不变；停止后可以继续输入。此项用识别替身，不识别或上传环境声音，不等同于再次测试真实 STT。
-
-性能探针中，同一秒内 40 次计时检查的全局刷新通知由 40 次降为 0；时间实际变化时仍通知面试页。权威 Session 读盘及校验没有减少，单次检查耗时未证明改善，不能据此宣称 AI 或识别推理变快。上述指标只代表本机，不是跨平台承诺。
-
-这轮按修改范围分批通过 37 个不同的直接用例：`test_desktop_polish_core.py` 的 12 项、`test_desktop_polish_ui.py` 的 10 项、原界面文件中的 14 项集成检查，以及上述 1 项三轮原生录停。独立验收另执行 5 项探针，发现并复验修复“切页仍采音”和“后台转录抢焦点、重置模型输入”；最终均通过。模型编辑复验使用真实键盘输入，而非直接设置 QML 的 text 属性。
-
-正式页面覆盖四种窗口大小、深浅主题及放大字体，独立视觉复核未发现新的高优先级遮挡问题。录音与截图使用隔离档案；未访问真实求职材料、账户或密钥。没有运行完整 pytest、CI、跨平台打包或发布；macOS、真实远程 STT 与完整 AI 面试不属于本轮验证结论。
+真实麦克风测试另需显式 `LLM_LAB_TEST_MICROPHONE=1`，用识别替身保护环境音。用户正常使用不必执行测试命令。

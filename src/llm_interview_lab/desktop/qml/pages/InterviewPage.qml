@@ -16,6 +16,7 @@ Item {
     property bool showVoiceSettings: false
     readonly property bool voiceRecording: app.interviewVoice.state === "recording"
     readonly property bool voiceTranscribing: app.interviewVoice.transcription_state === "transcribing"
+                                              || app.interviewVoice.transcription_state === "loading"
     readonly property string voiceActionText: root.voiceRecording ? "完成录音" : root.voiceTranscribing ? "正在转成文字…" : "语音输入"
     property var activeQuestion: app.interview.question || null
     property var rubricScores: ({})
@@ -452,8 +453,9 @@ Item {
     }
 
     function restoreTranscriptionConnection() {
-        voiceConnection.currentIndex = root.transcriptionConnectionId
-            ? voiceConnection.indexOfValue(root.transcriptionConnectionId) : (voiceConnection.count ? 0 : -1)
+        var savedIndex = voiceConnection.indexOfValue(root.transcriptionConnectionId)
+        // Removed/local or missing saved options return to local, never remote.
+        voiceConnection.currentIndex = savedIndex >= 0 ? savedIndex : (voiceConnection.count ? 0 : -1)
     }
 
     function clearSetupConsent() {
@@ -1431,8 +1433,9 @@ Item {
                                 LabText {
                                     objectName: "interviewVoiceState"
                                     theme: root.theme
-                                    text: root.voiceRecording ? "正在听，请说话…"
-                                          : root.voiceTranscribing ? "正在转成文字…"
+                                    text: app.interviewVoice.transcription_state === "loading" ? "正在加载流式模型，可以继续说话…"
+                                          : root.voiceRecording ? (root.usingLocalStt ? "正在听 · 实时转文字" : "正在录音 · 完成后远程转录")
+                                          : root.voiceTranscribing ? (root.usingLocalStt ? "正在补齐最后一句…" : "正在转成文字…")
                                           : app.interviewVoice.error ? "语音输入未完成"
                                           : app.interviewVoice.transcription_state === "transcribed" ? "已添加到回答框" : "语音输入"
                                     tone: root.voiceRecording ? "warning" : "muted"
@@ -1468,6 +1471,29 @@ Item {
                                     onClicked: root.showVoiceSettings = true
                                 }
                             }
+                            ScrollView {
+                                id: liveTranscriptViewport
+                                objectName: "interviewLiveTranscriptViewport"
+                                visible: !!app.interviewVoice.live_text
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: Math.min(96 * root.theme.fontScale, liveTranscript.implicitHeight + 8)
+                                contentWidth: availableWidth
+                                clip: true
+                                Text {
+                                    id: liveTranscript
+                                    objectName: "interviewLiveTranscript"
+                                    width: liveTranscriptViewport.availableWidth
+                                    text: app.interviewVoice.live_text || ""
+                                    color: root.colors.text
+                                    font.family: root.theme.uiFontFamily
+                                    font.pixelSize: root.theme.fontBody
+                                    wrapMode: Text.Wrap
+                                    onTextChanged: Qt.callLater(function() {
+                                        if (liveTranscriptViewport.contentItem)
+                                            liveTranscriptViewport.contentItem.contentY = Math.max(0, liveTranscript.height - liveTranscriptViewport.availableHeight)
+                                    })
+                                }
+                            }
                             Text {
                                 objectName: "interviewVoiceError"
                                 visible: !!app.interviewVoice.error
@@ -1501,7 +1527,7 @@ Item {
                                     Layout.fillWidth: true
                                     variant: "caption"; tone: "muted"; wrapMode: Text.Wrap
                                     text: root.usingLocalStt
-                                          ? "结束录音后自动在本机转成文字，不上传音频。文字会加入回答草稿，由你确认提交。"
+                                          ? "边说边在本机识别，下方实时显示文字。完成录音后补齐尾句并加入草稿，不覆盖手打内容、不自动提交，也不上传音频。"
                                           : "远程转录需你明确授权。结束录音后自动转文字；不会自动提交回答。"
                                 }
                                 GridLayout {
@@ -1552,8 +1578,8 @@ Item {
                                               : app.localStt.downloading
                                                 ? "正在下载本地模型：" + app.localStt.progress + "%（不会上传录音）"
                                                 : app.localStt.ready
-                                                  ? "本地模型已下载 · 无需联网或 Key；首次识别会加载模型。"
-                                                  : "首次需下载约 " + app.localStt.download_mb + " MB 模型，之后可离线转录中文或英文。"
+                                                  ? "本地模型已下载 · 边说边识别；无需联网或 Key，首次使用会加载模型。"
+                                                  : "首次需下载约 " + app.localStt.download_mb + " MB 流式模型，之后可离线转录中文或英文。"
                                         color: root.colors.muted
                                         font.pixelSize: 12
                                         wrapMode: Text.Wrap
@@ -1595,7 +1621,7 @@ Item {
                                     }
                                     Text {
                                         Layout.fillWidth: true
-                                        text: "SenseVoiceSmall：FunAudioLLM / Alibaba；ONNX 由 k2-fsa 转换。点击下载表示同意 <a href='" + app.localStt.license_url + "'>模型使用许可</a>。"
+                                        text: "Zipformer 流式中英模型 · sherpa-onnx 本地推理。点击下载表示同意 <a href='" + app.localStt.license_url + "'>模型使用许可</a>。"
                                         textFormat: Text.RichText
                                         color: root.colors.muted
                                         linkColor: root.colors.accent

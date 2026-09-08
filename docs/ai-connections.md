@@ -60,7 +60,7 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 - OpenAI-compatible；
 - Ollama `/v1`。
 
-源码安装的统一 Provider 层还支持 Anthropic 与 Gemini。语音默认使用 [SenseVoiceSmall 本地转录](local-stt.md)，可选远程转录走 OpenAI / OpenAI-compatible 的 `/audio/transcriptions` 接口；它是面试回答的草稿工具，不会自动提交或评分。Embedding、图像生成、RAG、MCP Runtime 与 Tool Marketplace 不在本版本范围内。
+源码安装的统一 Provider 层还支持 Anthropic 与 Gemini。语音默认使用 [Zipformer 本地流式转录](local-stt.md)，录音期间实时显示文字，SenseVoice 已移除。可选远程转录仍在停录后走 OpenAI / OpenAI-compatible 的 `/audio/transcriptions` 接口，需单次授权；语音只是回答草稿工具，不会自动提交或评分。Embedding、图像生成、RAG、MCP Runtime 与 Tool Marketplace 不在本版本范围内。
 
 ### 安装
 

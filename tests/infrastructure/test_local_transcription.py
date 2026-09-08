@@ -1,4 +1,4 @@
-"""Offline STT boundaries; real model checks are explicit, never auto-download."""
+"""Streaming STT boundaries; real model checks never auto-download."""
 
 from __future__ import annotations
 
@@ -136,12 +136,12 @@ def test_real_model_chinese_stereo_long_and_silence_offline(tmp_path, monkeypatc
     monkeypatch.setattr(local.urllib.request, "urlopen", no_network)
     start = time.perf_counter()
     transcript = transcriber.transcribe(source)
-    assert "早上9点至下午5点" in transcript, transcript
+    assert "早上九点" in transcript and "下午五点" in transcript, transcript
     print(f"LOCAL_STT_COLD seconds={time.perf_counter() - start:.2f} text={transcript}")
     samples, rate = sf.read(source, dtype="float32")
     assert rate == 16000
-    # Qt on Windows writes 48 kHz stereo. Six passages also cross VAD's
-    # long-audio boundary and catch accidental truncation to the final window.
+    # Accept 48 kHz stereo as well as native 16 kHz PCM; endpoint resets must
+    # neither duplicate sentences nor truncate the final segment.
     passage = np.concatenate([samples, np.zeros(16000, dtype=np.float32)])
     mono = resample_poly(np.tile(passage, 6), 3, 1)
     stereo = tmp_path / "中文录音 有空格.wav"
@@ -149,7 +149,7 @@ def test_real_model_chinese_stereo_long_and_silence_offline(tmp_path, monkeypatc
     stereo_sha = hashlib.sha256(stereo.read_bytes()).hexdigest()
     start = time.perf_counter()
     transcript = transcriber.transcribe(stereo)
-    assert transcript.count("早上9点至下午5点") == 6, transcript
+    assert transcript.count("早上九点") == 6 and transcript.count("下午五点") == 6, transcript
     print(f"LOCAL_STT_LONG seconds={time.perf_counter() - start:.2f} audio_seconds={len(mono) / 48000:.2f} segments=6")
     assert hashlib.sha256(source.read_bytes()).hexdigest() == original_sha
     assert hashlib.sha256(stereo.read_bytes()).hexdigest() == stereo_sha
@@ -157,3 +157,46 @@ def test_real_model_chinese_stereo_long_and_silence_offline(tmp_path, monkeypatc
     sf.write(silence, np.zeros(16000 * 2, dtype=np.float32), 16000)
     with pytest.raises(TranscriptionError, match="没有识别到清晰的人声"):
         transcriber.transcribe(silence)
+
+
+@pytest.mark.skipif(not os.environ.get("LLM_LAB_TEST_LOCAL_STT_MODEL_ROOT"), reason="Explicit public model/audio paths required")
+def test_real_stream_emits_text_before_input_finished(monkeypatch):
+    import soundfile as sf
+    transcriber = local.LocalSpeechTranscriber(Path(os.environ["LLM_LAB_TEST_LOCAL_STT_MODEL_ROOT"]))
+    monkeypatch.setattr(socket.socket, "connect", lambda *a, **k: pytest.fail("Unexpected network"))
+    monkeypatch.setattr(local.urllib.request, "urlopen", lambda *a, **k: pytest.fail("Unexpected download"))
+    updates = []
+    fed_seconds = 0
+    eof = False
+    loaded = time.perf_counter()
+    def blocks():
+        nonlocal fed_seconds, eof
+        with sf.SoundFile(os.environ["LLM_LAB_TEST_LOCAL_STT_AUDIO"]) as source:
+            for chunk in source.blocks(blocksize=source.samplerate // 10, dtype="int16", always_2d=True):
+                fed_seconds += len(chunk) / source.samplerate
+                yield chunk.tobytes(), source.samplerate, source.channels
+        eof = True
+    def update(value):
+        if value:
+            updates.append((eof, fed_seconds, value))
+    text = transcriber.stream(blocks(), update, threading.Event())
+    assert len([item for item in updates if not item[0]]) >= 3
+    assert updates[0][1] < fed_seconds, "Speech must appear while input is still open"
+    assert "下午五点" in text and text.count("早上九点") == 1
+    assert updates[-1][2] == text
+    print(f"STREAM_REAL first_audio_seconds={updates[0][1]:.2f} updates={len(updates)} decode_seconds={time.perf_counter()-loaded:.2f}")
+
+
+def test_stream_cancel_does_not_flush_or_publish_late_text(tmp_path, monkeypatch):
+    cancel = threading.Event()
+    updates = []
+    class Stream:
+        def accept_waveform(self, *args): pytest.fail("Cancelled stream decoded input")
+        def input_finished(self): pytest.fail("Cancelled stream flushed")
+    class Recognizer:
+        def create_stream(self): return Stream()
+    transcriber = local.LocalSpeechTranscriber(tmp_path)
+    monkeypatch.setattr(transcriber, "_load", lambda: Recognizer())
+    cancel.set()
+    assert transcriber.stream([], updates.append, cancel) == ""
+    assert not [u for u in updates if u]

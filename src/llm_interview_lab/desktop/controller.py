@@ -9,6 +9,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from queue import Queue, Empty
 import threading
 from typing import Any, Callable, Mapping
 from uuid import uuid4
@@ -438,8 +439,11 @@ class AppController(QObject):
         self._voice_transcription_error = ""
         self._voice_transcription_operation_id = ""
         self._voice_auto_transcription: tuple[str, str, str, str, bool] | None = None
+        self._voice_stream_queue: Queue | None = None
+        self._voice_stream_cancel: threading.Event | None = None
+        self._voice_live_text = ""
         self._voice_question_key = ""
-        self._local_stt = LocalSpeechTranscriber(self.repo_root / "models" / "stt" / "sensevoice-small-int8")
+        self._local_stt = LocalSpeechTranscriber(self.repo_root / "models" / "stt" / "zipformer-bilingual-streaming-int8")
         self._refresh_local_stt_status()
         self._local_stt_download_cancel: threading.Event | None = None
         self._local_stt_download_progress = 0
@@ -447,6 +451,7 @@ class AppController(QObject):
         self._voice_recorder.changed.connect(self._voice_state_changed)
         self._voice_recorder.failed.connect(self._voice_failed)
         self._voice_recorder.ready.connect(self._recording_ready)
+        self._voice_recorder.pcmReady.connect(self._voice_pcm)
         # Profile/question/transcription changes still refresh voice controls;
         # microphone duration changes must never refresh every page/property.
         self.stateChanged.connect(self.interviewVoiceChanged)
@@ -941,6 +946,7 @@ class AppController(QObject):
             "error": self._voice_recorder.error_message
             or self._voice_transcription_error,
             "transcription_state": self._voice_transcription_state,
+            "live_text": self._voice_live_text,
         }
 
     @Property("QVariantMap", notify=stateChanged)
@@ -985,7 +991,8 @@ class AppController(QObject):
 
     @Slot()
     def downloadLocalSttModel(self) -> None:
-        if self._demo_mode or self._local_stt_download_cancel is not None:
+        if (self._demo_mode or self._local_stt_download_cancel is not None
+                or self._voice_transcription_operation_id or self._voice_recorder.state == "recording"):
             return
         cancel = threading.Event()
         self._local_stt_download_cancel = cancel
@@ -1401,10 +1408,29 @@ class AppController(QObject):
 
     def _voice_failed(self, message: str) -> None:
         self._voice_auto_transcription = None
+        self._cancel_voice_stream()
         self._voice_transcription_error = message
         self.interviewVoiceChanged.emit()
 
+    def _voice_pcm(self, data: bytes, rate: int, channels: int) -> None:
+        if self._voice_stream_queue is not None:
+            self._voice_stream_queue.put((data, rate, channels))
+
+    def _cancel_voice_stream(self) -> None:
+        if self._voice_stream_cancel is not None:
+            self._voice_stream_cancel.set()
+            self._voice_stream_cancel = None
+            self._voice_stream_queue = None
+            self._voice_transcription_operation_id = ""
+            self._voice_transcription_state = "idle"
+        self._voice_live_text = ""
+
     def _recording_ready(self, audio_path: str) -> None:
+        if self._voice_stream_queue is not None:
+            self._voice_stream_queue.put(None)
+            self._voice_transcription_state = "transcribing"
+            self.interviewVoiceChanged.emit()
+            return
         request = self._voice_auto_transcription
         if request is None:
             return
@@ -1435,6 +1461,7 @@ class AppController(QObject):
         """Stop capture, retaining this question's WAV and any existing draft."""
         self._voice_auto_transcription = None
         if discard_transcription:
+            self._cancel_voice_stream()
             self._voice_transcription_operation_id = ""
             if self._voice_transcription_state == "transcribing":
                 self._voice_transcription_state = "idle"
@@ -1646,6 +1673,7 @@ class AppController(QObject):
         # identity fence in ``_load_interview`` handles active sessions; this
         # reset covers the no-session branch as well.
         self._voice_auto_transcription = None
+        self._cancel_voice_stream()
         self._voice_recorder.reset()
         self._voice_transcription_state = "idle"
         self._voice_transcription_error = ""
@@ -1991,6 +2019,7 @@ class AppController(QObject):
             # A missing Profile must not leave a recording or transcription
             # draft from the previously selected Profile visible in QML.
             self._voice_auto_transcription = None
+            self._cancel_voice_stream()
             self._voice_recorder.reset()
             self._voice_transcription_state = "idle"
             self._voice_transcription_error = ""
@@ -3035,6 +3064,7 @@ class AppController(QObject):
             else f"{self._profile_id}::"
         )
         if voice_question_key != self._voice_question_key:
+            self._cancel_voice_stream()
             self._voice_auto_transcription = None
             self._voice_recorder.reset()
             self._voice_transcription_state = "idle"
@@ -3358,7 +3388,7 @@ class AppController(QObject):
             self._voice_transcription_state = "idle"
             self._voice_transcription_error = ""
             self._voice_recorder.start(destination)
-            return True
+            return self._voice_recorder.state == "recording"
         except Exception as error:
             self._recording_failed(error)
             return False
@@ -3374,7 +3404,7 @@ class AppController(QObject):
 
     @Slot(str, bool, result=bool)
     def startInterviewDictation(self, connection_id: str, consent_remote: bool) -> bool:
-        """Record now, then transcribe this recording automatically on stop."""
+        """Local PCM is decoded live; remote transcription waits for Stop."""
         if self._busy or self._voice_recorder.state == "recording" or self._voice_transcription_operation_id:
             return False
         if connection_id == LOCAL_STT_ID:
@@ -3385,6 +3415,14 @@ class AppController(QObject):
         elif not consent_remote:
             self._voice_failed("请在语音设置中明确授权本次远程转录；也可以选择无需联网的本地语音。")
             return False
+        if connection_id == LOCAL_STT_ID:
+            self._voice_stream_queue = Queue()
+            self._voice_live_text = ""
+            if not self.startInterviewRecording():
+                self._voice_stream_queue = None
+                return False
+            self._start_voice_stream()
+            return True
         self._voice_auto_transcription = (
             self._profile_id,
             str(self._interview.get("interview_id") or ""),
@@ -3395,6 +3433,71 @@ class AppController(QObject):
             self._voice_auto_transcription = None
             return False
         return self._voice_recorder.state == "recording"
+
+    def _start_voice_stream(self) -> None:
+        frames = self._voice_stream_queue
+        cancel = threading.Event()
+        self._voice_stream_cancel = cancel
+        operation_id = uuid4().hex
+        self._voice_transcription_operation_id = operation_id
+        self._voice_transcription_state = "loading"
+        identity = (self._profile_id, self._interview.get("interview_id"),
+                    (self._interview.get("question") or {}).get("question_id"))
+
+        def current() -> bool:
+            return (not self._shutdown_done and not cancel.is_set()
+                    and self._voice_transcription_operation_id == operation_id
+                    and self._interview.get("status") == "active"
+                    and not self._interview.get("answer_locked")
+                    and identity == (self._profile_id, self._interview.get("interview_id"),
+                                     (self._interview.get("question") or {}).get("question_id")))
+
+        def blocks():
+            while not cancel.is_set():
+                try:
+                    value = frames.get(timeout=0.1)
+                except Empty:
+                    continue
+                if value is None:
+                    break
+                yield value
+
+        worker = Worker(lambda: self._local_stt.stream(blocks(), worker.signals.progress.emit, cancel))
+        self._workers.add(worker)
+
+        def progress(value: str) -> None:
+            if current():
+                self._voice_live_text = value
+                self._voice_transcription_state = "streaming" if self._voice_recorder.state == "recording" else "transcribing"
+                self.interviewVoiceChanged.emit()
+
+        def finish(value: str = "", *, error: str = "") -> None:
+            self._workers.discard(worker)
+            if not current():
+                # A changed Profile/question must not receive even a partial.
+                if self._voice_transcription_operation_id == operation_id:
+                    self._cancel_voice_stream()
+                    self.interviewVoiceChanged.emit()
+                return
+            self._voice_stream_queue = None
+            self._voice_stream_cancel = None
+            self._voice_transcription_operation_id = ""
+            if error and self._voice_recorder.state == "recording":
+                self.stopInterviewRecording()
+            self._voice_transcription_state = "error" if error else "transcribed"
+            self._voice_transcription_error = error
+            if not error:
+                self._voice_live_text = ""
+            self.interviewVoiceChanged.emit()
+            if value and not error:
+                self.interviewTranscriptReady.emit(value)
+
+        worker.signals.progress.connect(progress)
+        worker.signals.completed.connect(finish)
+        worker.signals.failed.connect(lambda message: finish(error=message))
+        self.interviewVoiceChanged.emit()
+        # Do not use the interview-wide busy gate: typing and Stop stay usable.
+        self._thread_pool.start(worker)
 
     @Slot(str, bool)
     def transcribeInterviewRecording(
@@ -3429,6 +3532,7 @@ class AppController(QObject):
         self._voice_transcription_operation_id = operation_id
         self._voice_transcription_state = "transcribing"
         self._voice_transcription_error = ""
+        self._voice_live_text = ""
         self.stateChanged.emit()
 
         def operation() -> str:

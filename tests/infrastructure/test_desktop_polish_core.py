@@ -7,8 +7,7 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from PySide6.QtCore import QCoreApplication, QEvent, QObject, Signal
-from PySide6.QtMultimedia import QMediaFormat, QMediaRecorder
+from PySide6.QtCore import QCoreApplication, QObject
 from PySide6.QtTest import QTest
 
 from llm_interview_lab.ai.local_transcription import LOCAL_STT_ID
@@ -176,7 +175,7 @@ def test_navigation_stops_capture_but_keeps_an_explicit_transcription(scene, mon
     monkeypatch.setattr(controller, "_background", lambda operation, complete, failed: callbacks.append((complete, failed)))
     answer = _find(window, "interviewAnswerEditor")
     answer.setProperty("text", "离开页面之前的合成草稿。")
-    assert controller.startInterviewDictation(LOCAL_STT_ID, False)
+    assert controller.startInterviewRecording()
     path = controller._voice_recorder.path
     controller.navigate("connections")
     QTest.qWait(30)
@@ -198,67 +197,50 @@ def test_navigation_stops_capture_but_keeps_an_explicit_transcription(scene, mon
 
 
 def test_repeated_recording_reuses_one_qt_capture_graph(qapp, tmp_path, monkeypatch):
-    class Capture(QObject):
-        def setAudioInput(self, value):
-            self.audio = value
-        def setRecorder(self, value):
-            self.recorder = value
+    import wave
+    from PySide6.QtCore import QBuffer, QIODevice, QByteArray
+    from PySide6.QtMultimedia import QAudioFormat, QtAudio
 
-    class Input(QObject):
-        def __init__(self, device, parent):
+    class Device:
+        def id(self): return b"synthetic-input"
+        def isFormatSupported(self, value): return True
+
+    class Source(QObject):
+        def __init__(self, device, audio_format, parent):
             super().__init__(parent)
-            self.devices = [device]
-        def setDevice(self, value):
-            self.devices.append(value)
-
-    class Recorder(QObject):
-        durationChanged = Signal(int)
-        errorOccurred = Signal(int, str)
-        recorderStateChanged = Signal(object)
-        Quality = QMediaRecorder.Quality
-        RecorderState = QMediaRecorder.RecorderState
-        def setMediaFormat(self, value):
-            pass
-        def setQuality(self, value):
-            pass
-        def setOutputLocation(self, value):
-            self.output = Path(value.toLocalFile())
-        def record(self):
-            self.output.write_bytes(b"synthetic QObject recording fixture")
+            self.buffer = QBuffer(self)
+            self.current_state = QtAudio.State.StoppedState
+        def setBufferSize(self, value): pass
+        def start(self):
+            self.buffer.setData(QByteArray(b"\x01\x00" * 1600))
+            self.buffer.open(QIODevice.ReadOnly)
+            self.current_state = QtAudio.State.ActiveState
+            return self.buffer
         def stop(self):
-            self.recorderStateChanged.emit(self.RecorderState.StoppedState)
+            self.buffer.close()
+            self.current_state = QtAudio.State.StoppedState
+        def reset(self): self.stop()
+        def error(self): return QtAudio.Error.NoError
+        def state(self): return self.current_state
 
-    class Format:
-        FileFormat = QMediaFormat.FileFormat
-        AudioCodec = QMediaFormat.AudioCodec
-        ConversionMode = QMediaFormat.ConversionMode
-        def setFileFormat(self, value):
-            pass
-        def setAudioCodec(self, value):
-            pass
-        def isSupported(self, value):
-            return True
-
-    monkeypatch.setattr(voice, "QMediaCaptureSession", Capture)
-    monkeypatch.setattr(voice, "QAudioInput", Input)
-    monkeypatch.setattr(voice, "QMediaRecorder", Recorder)
-    monkeypatch.setattr(voice, "QMediaFormat", Format)
-    monkeypatch.setattr(voice.QMediaDevices, "audioInputs", lambda: ["synthetic microphone"])
-    monkeypatch.setattr(voice.QMediaDevices, "defaultAudioInput", lambda: "synthetic microphone")
+    monkeypatch.setattr(voice, "QAudioSource", Source)
+    monkeypatch.setattr(voice.QMediaDevices, "audioInputs", lambda: [Device()])
+    monkeypatch.setattr(voice.QMediaDevices, "defaultAudioInput", Device)
     recorder = voice.InterviewVoiceRecorder()
     ready = []
     recorder.ready.connect(ready.append)
     identities = []
     for index in range(20):
         recorder.start(tmp_path / f"synthetic-{index}.wav")
+        assert recorder.state == "recording"
         recorder.stop()
-        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         QCoreApplication.processEvents()
-        assert len(recorder.children()) == 3
-        identities.append((id(recorder._capture), id(recorder._audio_input), id(recorder._recorder)))
+        assert len(recorder.children()) == 2
+        identities.append(id(recorder._source))
     assert len(set(identities)) == 1
-    assert len(ready) == 20, "Reusing the recorder must not duplicate signal connections"
-    assert len(recorder._audio_input.devices) == 20
+    assert len(ready) == 20, "No duplicate signal or PCM delivery between recordings"
     recorder.reset()
     assert recorder.path is None and recorder.state == "idle"
-    assert all(Path(path).read_bytes() == b"synthetic QObject recording fixture" for path in ready)
+    for path in ready:
+        with wave.open(path) as audio:
+            assert audio.readframes(1600) == b"\x01\x00" * 1600

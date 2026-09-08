@@ -19,7 +19,7 @@ os.environ.setdefault("QT_QUICK_BACKEND", "software")
 os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Material")
 pytest.importorskip("PySide6")
 
-from PySide6.QtCore import QCoreApplication, QMetaObject, QObject, QPoint, QPointF, QSettings, Qt, QUrl
+from PySide6.QtCore import QCoreApplication, QMetaObject, QObject, QPoint, QPointF, QSettings, Qt, QTimer, QUrl
 from PySide6.QtGui import QFont, QGuiApplication, QInputMethodEvent
 from PySide6.QtWidgets import QApplication
 from PySide6.QtQml import QQmlApplicationEngine
@@ -28,6 +28,7 @@ from PySide6.QtTest import QTest
 
 from llm_interview_lab.desktop.controller import AppController
 from llm_interview_lab.ai.codex_backend import CodexEvent
+from llm_interview_lab.ai.local_transcription import LOCAL_STT_ID
 
 REPO = Path(__file__).resolve().parents[2]
 QML = REPO / "src/llm_interview_lab/desktop/qml/Main.qml"
@@ -176,11 +177,26 @@ def _scroll_to_voice_control(window, item):
 def _stub_dictation_capture(controller, monkeypatch, source=None):
     """Inject only the microphone, never a demo controller or transcript UI."""
     recorder = controller._voice_recorder
+    timer = QTimer(recorder)
+    chunks = []
+
+    def feed():
+        if chunks:
+            data, rate, channels = chunks.pop(0)
+            recorder.pcmReady.emit(data, rate, channels)
+            recorder._duration_changed(recorder.duration_ms + len(data) * 1000 // (2 * channels * rate))
+        else:
+            timer.stop()
+    timer.timeout.connect(feed)
 
     def start(path):
         path.parent.mkdir(parents=True, exist_ok=True)
         if source:
             shutil.copy2(source, path)
+            import soundfile as sf
+            with sf.SoundFile(str(source)) as wav:
+                chunks.extend((b.tobytes(), wav.samplerate, wav.channels) for b in wav.blocks(blocksize=wav.samplerate // 10, dtype="int16", always_2d=True))
+            timer.start(100)
         else:
             path.write_bytes(b"synthetic audio for stub decoder")
         recorder.path = path
@@ -188,8 +204,13 @@ def _stub_dictation_capture(controller, monkeypatch, source=None):
         recorder.error_message = ""
         recorder.duration_ms = 0
         recorder.changed.emit()
+        if not source:
+            recorder.pcmReady.emit(b"\x00\x00" * 1600, 16000, 1)
 
     def stop():
+        timer.stop()
+        while chunks:
+            feed()
         recorder.state = "recorded"
         recorder.changed.emit()
         recorder.ready.emit(str(recorder.path))
@@ -215,11 +236,13 @@ def test_dictation_click_records_and_stop_automatically_appends(scene, monkeypat
     _stub_dictation_capture(controller, monkeypatch)
     calls = []
 
-    def transcribe(path):
-        calls.append(path)
+    def stream(blocks, update, cancel):
+        calls.append(True)
+        for _ in blocks:
+            update("我负责数据清洗…")
         return "合成转录：我负责数据清洗和离线评估。"
 
-    monkeypatch.setattr(controller._local_stt, "transcribe", transcribe)
+    monkeypatch.setattr(controller._local_stt, "stream", stream)
     controller.setTheme(theme)
     window.resize(*size)
     window.setProperty("displayFontScaleOverride", scale)
@@ -230,6 +253,15 @@ def test_dictation_click_records_and_stop_automatically_appends(scene, monkeypat
     _click(window, button)
     QTest.qWait(80)
     assert controller.interviewVoice["state"] == "recording"
+    for _ in range(100):
+        QTest.qWait(10)
+        time.sleep(.002)
+        if controller.interviewVoice["live_text"]:
+            break
+    preview = _find(window, "interviewLiveTranscript")
+    assert preview.isVisible() and preview.property("text") == "我负责数据清洗…"
+    assert answer.property("text") == "保留原有回答。"
+    answer.setProperty("text", "保留原有回答。录音时继续打字。")
     stop = _find(window, "finishInterviewDictation")
     assert stop.isVisible() and stop.property("text") == "完成录音"
     assert not button.isVisible(), "Only one recording action should be visible"
@@ -238,7 +270,7 @@ def test_dictation_click_records_and_stop_automatically_appends(scene, monkeypat
     assert not _find(window, "downloadLocalSttModel").isVisible()
     assert not _find(window, "transcribeInterviewRecording").isVisible()
     card = _find(window, "interviewVoiceCard")
-    assert card.height() < 150, "Ordinary dictation must not expand the entire settings form"
+    assert card.height() < 200, "Live text must not expand the entire settings form"
     assert _within_window(window, card) and _within_window(window, stop)
     for item in _items(card):
         if item.isVisible() and item.property("text"):
@@ -253,7 +285,8 @@ def test_dictation_click_records_and_stop_automatically_appends(scene, monkeypat
             break
     assert len(calls) == 1
     assert controller.interviewVoice["transcription_state"] == "transcribed"
-    assert answer.property("text") == "保留原有回答。\n合成转录：我负责数据清洗和离线评估。"
+    assert answer.property("text") == "保留原有回答。录音时继续打字。\n合成转录：我负责数据清洗和离线评估。"
+    assert not controller.interviewVoice["live_text"]
     assert not controller.interview["answer_locked"] and not controller.busy
     assert button.property("text") == "语音输入"
     assert not _find(window, "transcribeInterviewRecording").isVisible()
@@ -261,12 +294,20 @@ def test_dictation_click_records_and_stop_automatically_appends(scene, monkeypat
 
 
 @pytest.mark.parametrize("changed", ["profile", "question", "finished"])
-def test_dictation_stop_cannot_start_inference_in_changed_context(controller, monkeypatch, changed):
+def test_streaming_dictation_late_text_cannot_cross_context(controller, monkeypatch, changed):
+    import threading
     _dictation_model_ready(controller, monkeypatch)
     _stub_dictation_capture(controller, monkeypatch)
-    monkeypatch.setattr(controller._local_stt, "transcribe", lambda _: pytest.fail("Stale recording must not be transcribed"))
-    assert controller.startInterviewDictation("local-sensevoice", False)
-    assert not controller.startInterviewDictation("local-sensevoice", False)
+    release = threading.Event()
+    results = []
+    controller.interviewTranscriptReady.connect(results.append)
+    def stream(blocks, update, cancel):
+        assert release.wait(5)
+        update("旧问题的临时转录")
+        return "旧问题的最终转录"
+    monkeypatch.setattr(controller._local_stt, "stream", stream)
+    assert controller.startInterviewDictation(LOCAL_STT_ID, False)
+    assert not controller.startInterviewDictation(LOCAL_STT_ID, False)
     assert controller.stopInterviewRecording()
     if changed == "profile":
         controller._profile_id = "another-synthetic-profile"
@@ -274,8 +315,89 @@ def test_dictation_stop_cannot_start_inference_in_changed_context(controller, mo
         controller._interview["question"] = {**controller.interview["question"], "question_id": "q-002"}
     else:
         controller._interview["status"] = "incomplete"
-    QTest.qWait(80)
+    release.set()
+    for _ in range(100):
+        QTest.qWait(10)
+        if not controller._voice_transcription_operation_id:
+            break
     assert not controller.busy and not controller._voice_auto_transcription
+    assert not results and not controller.interviewVoice["live_text"]
+
+
+def test_streaming_stop_remains_responsive_while_decoder_finishes(scene, monkeypatch):
+    import threading
+    window, controller = scene
+    _dictation_model_ready(controller, monkeypatch)
+    _stub_dictation_capture(controller, monkeypatch)
+    draining, release = threading.Event(), threading.Event()
+    def stream(blocks, update, cancel):
+        for _ in blocks:
+            update("正在识别的一句")
+        draining.set()
+        assert release.wait(5)
+        return "最后一句已经补齐。"
+    monkeypatch.setattr(controller._local_stt, "stream", stream)
+    _click(window, _find(window, "toggleInterviewVoice"))
+    started = time.perf_counter()
+    _click(window, _find(window, "finishInterviewDictation"))
+    assert time.perf_counter() - started < .5
+    try:
+        for _ in range(100):
+            QTest.qWait(10)
+            if draining.is_set(): break
+        assert draining.is_set() and not controller.busy
+        assert not controller.startInterviewDictation(LOCAL_STT_ID, False)
+        assert not _find(window, "lockInterviewAnswer").isEnabled()
+        editor = _find(window, "interviewAnswerEditor")
+        assert not editor.property("readOnly")
+        _click(window, editor)
+        QTest.keyClick(window, Qt.Key_O)
+        QTest.keyClick(window, Qt.Key_K)
+        assert "ok" in editor.property("text")
+    finally:
+        release.set()
+    for _ in range(100):
+        QTest.qWait(10)
+        if controller.interviewVoice["transcription_state"] == "transcribed": break
+    assert editor.property("text") == "ok\n最后一句已经补齐。"
+
+
+@pytest.mark.parametrize("action", ["pause", "shutdown"])
+def test_streaming_pause_or_close_cancels_live_result_but_keeps_audio(controller, monkeypatch, action):
+    _dictation_model_ready(controller, monkeypatch)
+    _stub_dictation_capture(controller, monkeypatch)
+    results = []
+    controller.interviewTranscriptReady.connect(results.append)
+    def stream(blocks, update, cancel):
+        for _ in blocks: update("尚未确认的识别文字")
+        return "迟到的尾句"
+    monkeypatch.setattr(controller._local_stt, "stream", stream)
+    assert controller.startInterviewDictation(LOCAL_STT_ID, False)
+    for _ in range(100):
+        QTest.qWait(10)
+        if controller.interviewVoice["live_text"]: break
+    assert controller.interviewVoice["live_text"]
+    audio = controller._voice_recorder.path
+    before = audio.read_bytes()
+    if action == "pause":
+        assert controller.pauseInterview()
+        controller.resumeInterview()
+    else:
+        controller.shutdown()
+    QTest.qWait(150)
+    assert controller._voice_recorder.state == "recorded"
+    assert audio.read_bytes() == before
+    assert not controller.interviewVoice["live_text"] and not results
+    assert not controller._voice_transcription_operation_id
+
+
+def test_removed_stt_preference_restores_local_streaming_not_remote(scene):
+    window, controller = scene
+    controller.saveInterviewPreferences({"transcription_connection_id": "local-sensevoice"})
+    controller.stateChanged.emit()
+    QTest.qWait(100)
+    assert _find(window, "interviewVoiceConnection").property("currentValue") == LOCAL_STT_ID
+    assert all("sensevoice" not in str(item).lower() for item in controller.interviewTranscriptionOptions)
 
 
 def test_dictation_remote_consent_is_explicit_and_only_for_one_recording(controller, monkeypatch):
@@ -301,10 +423,12 @@ def test_dictation_failure_keeps_draft_and_audio_and_retries(scene, monkeypatch)
     answer = _find(window, "interviewAnswerEditor")
     answer.setProperty("text", "已有文字不能丢失。")
 
-    def fail(_):
+    def fail(blocks, update, cancel):
+        for _ in blocks:
+            update("识别中的临时文本")
         raise RuntimeError("未听到清晰的人声，请重试。")
 
-    monkeypatch.setattr(controller._local_stt, "transcribe", fail)
+    monkeypatch.setattr(controller._local_stt, "stream", fail)
     _click(window, _find(window, "toggleInterviewVoice"))
     _click(window, _find(window, "finishInterviewDictation"))
     for _ in range(100):
@@ -335,7 +459,10 @@ def test_dictation_failure_keeps_draft_and_audio_and_retries(scene, monkeypatch)
 def test_recording_start_reaches_recorder_with_profile_local_path(controller, monkeypatch):
     destinations = []
     errors = []
-    monkeypatch.setattr(controller._voice_recorder, "start", destinations.append)
+    def start(path):
+        destinations.append(path)
+        controller._voice_recorder.state = "recording"
+    monkeypatch.setattr(controller._voice_recorder, "start", start)
     monkeypatch.setattr(controller, "_show_error", errors.append)
     assert controller.startInterviewRecording(), [
         f"{type(error).__name__}: {error}" for error in errors
@@ -504,7 +631,7 @@ def test_voice_error_and_transcription_choices_use_real_capabilities(scene, monk
     QTest.qWait(100)
     assert "本地模型已下载" in _find(window, "interviewLocalSttStatus").property("text")
     assert _find(window, "interviewVoiceConnection").property("count") == 1
-    assert _find(window, "interviewVoiceConnection").property("currentValue") == "local-sensevoice"
+    assert _find(window, "interviewVoiceConnection").property("currentValue") == LOCAL_STT_ID
     assert not _find(window, "interviewVoiceRemoteConsent").isVisible()
     assert _find(window, "downloadLocalSttModel").isEnabled()
     assert not _find(window, "transcribeInterviewRecording").isVisible()
@@ -521,7 +648,11 @@ def test_real_microphone_start_stop_from_production_page(scene, monkeypatch):
     _dictation_model_ready(controller, monkeypatch)
     # Exercise the real microphone but do not decode ambient/private speech.
     # The real decoder is independently checked using the public Chinese WAV.
-    monkeypatch.setattr(controller._local_stt, "transcribe", lambda _: "合成转录测试结果。")
+    def stream(blocks, update, cancel):
+        for _ in blocks:
+            update("合成实时转录，未识别环境音。")
+        return "合成转录测试结果。"
+    monkeypatch.setattr(controller._local_stt, "stream", stream)
     QTest.qWait(150)
     recordings = []
     capture_graphs = []
@@ -529,8 +660,8 @@ def test_real_microphone_start_stop_from_production_page(scene, monkeypatch):
         _click(window, _find(window, "toggleInterviewVoice"))
         assert controller.interviewVoice["state"] == "recording", controller.interviewVoice
         recorder = controller._voice_recorder
-        capture_graphs.append((recorder._capture, recorder._audio_input, recorder._recorder))
-        assert len(recorder.children()) == 3, "Native capture objects must not accumulate between answers"
+        capture_graphs.append(recorder._source)
+        assert len(recorder.children()) == 2, "Native capture objects must not accumulate between answers"
         assert not controller.startInterviewRecording(), "Duplicate start must not replace the active recorder"
         QTest.qWait(1700)
         first_tick = controller.interviewVoice["duration_ms"]
@@ -539,6 +670,7 @@ def test_real_microphone_start_stop_from_production_page(scene, monkeypatch):
         assert controller.interviewVoice["duration_ms"] > first_tick
         display = _find(window, "interviewVoiceDuration").property("text")
         assert display != "0:00"
+        assert controller.interviewVoice["live_text"], "Native PCM must reach the worker while recording"
         _capture(window, f"voice-recording-windows-{cycle + 1}")
         stopped_at = time.perf_counter()
         _click(window, _find(window, "finishInterviewDictation"))
@@ -700,11 +832,22 @@ def test_real_local_stt_from_production_page(scene, monkeypatch, size):
     QTest.qWait(150)
     assert controller.interviewVoice["state"] == "recording"
     combo = _find(window, "interviewVoiceConnection")
-    assert combo.property("currentValue") == "local-sensevoice"
+    assert combo.property("currentValue") == LOCAL_STT_ID
     assert not _find(window, "interviewVoiceRemoteConsent").isVisible()
     button = _find(window, "finishInterviewDictation")
     assert button.isEnabled() and _within_window(window, button)
     _capture(window, f"local-stt-ready-{size[0]}")
+    first_word_at = time.perf_counter()
+    for _ in range(250):
+        QTest.qWait(20)
+        time.sleep(.005)
+        if "早上" in controller.interviewVoice["live_text"]:
+            break
+    assert controller.interviewVoice["state"] == "recording"
+    assert "早上" in controller.interviewVoice["live_text"], controller.interviewVoice
+    assert _find(window, "interviewLiveTranscript").isVisible()
+    print(f"LOCAL_STT_FIRST_TEXT_QML width={size[0]} seconds={time.perf_counter() - first_word_at:.2f}")
+    _capture(window, f"local-stt-streaming-{size[0]}")
     started = time.perf_counter()
     _click(window, button)
     assert controller.interviewVoice["transcription_state"] == "transcribing"
@@ -715,11 +858,11 @@ def test_real_local_stt_from_production_page(scene, monkeypatch, size):
         # Unlike app.exec(), QTest.qWait repeatedly holds the Python GIL.
         # Let the cold native-module imports on the worker thread progress.
         time.sleep(0.01)
-        if not controller.busy:
+        if controller.interviewVoice["transcription_state"] in {"transcribed", "error"}:
             break
     assert controller.interviewVoice["transcription_state"] == "transcribed", controller.interviewVoice
     answer = _find(window, "interviewAnswerEditor")
-    assert "早上9点至下午5点" in answer.property("text")
+    assert "早上九点" in answer.property("text") and "下午五点" in answer.property("text")
     assert answer.property("text").startswith("先保留这句已输入的回答。\n")
     assert _find(window, "interviewVoiceState").property("text") == "已添加到回答框"
     assert not answer.property("readOnly") and not controller.interview["answer_locked"]
