@@ -201,7 +201,7 @@ $env:LLM_LAB_DESKTOP_DATA_ROOT = Join-Path (Get-Location) "workspace\maintainer\
 
 这会使用当前工作区的源码，不依赖可能指向旧 Worktree 的 `llm-lab-gui` 可编辑安装。这里的 `manual-uat` 是独立验收数据目录，第一次使用需创建学习档案；以后重复以上命令会继续使用同一目录，不会重置数据。不使用 `--smoke-test` 或 `--screenshot`，以免进入合成演示。若要继续先前验收的档案，将数据目录指向先前的同一目录，不需要搬运或删除旧数据。
 
-旧源码环境如缺少本地语音组件，先执行 `.\.venv\Scripts\python.exe -m pip install -e ".[desktop]"` 更新依赖。当前维护者 Windows 环境已安装并准备好模型，关闭后重新启动应用即可看到本地转录选项。
+旧源码环境如缺少本地语音组件，先执行 `.\.venv\Scripts\python.exe -m pip install -e ".[desktop]"` 更新依赖。首次使用语音时根据应用提示下载本地模型；模型权重不随便携包分发，也不意味着每台用户机器已经准备好。
 
 仅在新机器尚未安装依赖时，先创建虚拟环境并安装：
 
@@ -212,7 +212,7 @@ python -m pip install -e ".[desktop,ai,dev]"
 llm-lab-gui
 ```
 
-当前源码仍标记 `0.4.0a3`；界面修订由 Git Commit 区分，不代表已发布新的桌面安装包。
+当前候选源码标记 `0.4.0a4`，公开下载仍以已发布的 GitHub Release 为准；候选 Commit 和本地打包不代表新版已公开发布。候选产物、已运行检查和限制见[本轮验收报告](desktop-candidate-20260909-report.zh.md)。
 
 离屏 Smoke：
 
@@ -226,8 +226,8 @@ llm-lab-gui --screenshot desktop-home.png --screenshot-page home
 Windows 使用：
 
 ```powershell
-python scripts/generate_desktop_icons.py --output dist/icons
-pyside6-deploy -c scripts/pysidedeploy.spec -f
+python scripts/build_windows_desktop.py --output dist/release
+python scripts/check_desktop_artifact.py dist/release/LLMInterviewLab/LLMInterviewLab.exe --report dist/release/desktop-nuitka-report.xml --archive dist/release/LLMInterviewLab-Windows-x64-portable.zip
 ```
 
 macOS Apple Silicon 使用：

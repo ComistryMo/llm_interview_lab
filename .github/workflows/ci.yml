@@ -29,7 +29,10 @@ jobs:
     if: github.event_name != 'workflow_dispatch' || inputs.job == 'all'
     name: ${{ matrix.os }} / Python ${{ matrix.python }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 12
+    # Windows core-only runs now collect 660 tests. Candidate run 34281371924
+    # reached 349–399 passes before the old 12-minute job budget cancelled it.
+    # Keep all checks; allow the slower Windows process/file operations to finish.
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:

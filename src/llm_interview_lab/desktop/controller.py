@@ -2735,6 +2735,9 @@ class AppController(QObject):
     def _open_problem(self, problem_id: str) -> None:
         current = self.service.current_submission(self._profile_id)
         if current is None or current["problem_id"] != problem_id:
+            environment = self.service._problem_environment(self.service.catalog.get(problem_id))
+            if not environment["environment_available"]:
+                raise ApplicationError("缺少练习依赖：" + environment["environment"])
             self.service.start_practice(self._profile_id, problem_id)
             current = self.service.current_submission(self._profile_id)
         assert current is not None
@@ -2776,7 +2779,11 @@ class AppController(QObject):
             return True
         except Exception as error:
             message = str(error).lower()
-            if "prerequisite" in message or "not mastered" in message:
+            if "缺少练习依赖" in message:
+                code = "PRACTICE_DEPENDENCY_MISSING"
+                user_message = str(error) + "。"
+                action = "请先选择当前可运行的题目；源码用户可按桌面指南安装所需依赖。"
+            elif "prerequisite" in message or "not mastered" in message:
                 code = "NO_UNLOCKED_PROBLEM"
                 user_message = "这道题的前置能力尚未完成，请先完成已解锁的训练。"
                 action = "返回刷题训练，先完成前置题目。"

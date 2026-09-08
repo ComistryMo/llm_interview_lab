@@ -26,3 +26,11 @@ Catalog 254 个节点；状态 {'ready': 96, 'planned': 158}；验证级别 {'or
 ## 候选闭环缺口
 
 当前主要缺口是部分已验证训练题尚无 D+2/D+7 资产，而不是继续堆叠同主题主问题。新变式须经 Oracle/property 验证及准入检查后再登记；待审资产不得算进上表。
+
+## Windows 候选包内核对
+
+`f0b173c` 实际便携包使用包内 Python runtime 执行同一公共覆盖脚本，未设置 PYTHONPATH，PATH 仅保留 Windows 系统目录，没有读取 Profile：254 节点、96 ready、84 Oracle、12 contract、158 planned、255 知识卡及 258 来源与源码一致。641 个随包公共文件 SHA 与该源码逐项相符。
+
+该包未内置 PyTorch，实际具备环境条件的已验证代码题是 **27 道，而不是开发机的 84 道**。按交叉 Track 分别为 ai_foundation 21、llm_algorithm 22、vlm_algorithm 8、post_training 3、agent 2、systems 2、traditional_ml 13、recommendation 3、computer_vision 1、traditional_rl 1；其余两个 planned-only Track 为 0。不能相加，也不等于这些题对每个新档案已解锁。
+
+全部题面与公共测试资产仍随包提供；依赖不满足的题显示具体原因，不能宣称执行成功。NNL-018 的 D+2/D+7 AUTHOR 候选通过本轮原创 property/CPU 验证，但仍待独立准入审查，不计入 24 道 retention-ready。

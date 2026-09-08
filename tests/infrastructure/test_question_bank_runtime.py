@@ -198,6 +198,34 @@ def test_knowledge_related_mla_button_opens_real_coding_workspace(scene):
     _click(window, button)
     assert controller.lastActionResult["success"], controller.lastActionResult.get("technical_message")
     assert controller.currentTask["problem_id"] == "ATT-023"
+    assert _find(window, "practiceOutputHeading").property("text") == "执行输出"
     assert "def mla_attention" in controller.submissionText
     assert "NotImplementedError" in controller.submissionText
     assert controller.service.knowledge_answer(controller.profileId, "EGT-QB-059").startswith("先解释")
+
+
+def test_missing_practice_dependency_blocks_new_task_but_preserves_existing(controller, monkeypatch):
+    current = controller.service.current_submission(controller.profileId)
+    assert current
+    events = profile_paths(controller.repo_root, controller.profileId).events_file
+    before = events.read_bytes()
+    available = controller.service._problem_environment_available
+    monkeypatch.setattr(controller.service, "_problem_environment_available",
+                        lambda problem: False if problem.raw.get("interface", {}).get("framework") == "pytorch"
+                        else available(problem))
+    # Restoring saved work remains possible after an environment change.
+    assert controller.openProblem(current["problem_id"]), controller.lastActionResult
+    assert controller.submissionText == current["text"]
+    assert events.read_bytes() == before
+
+    fresh = "missing-dependency-" + uuid4().hex[:8]
+    init_profile(controller.repo_root, fresh, track_ids=("llm_algorithm",))
+    assert controller.switchProfile(fresh)
+    events = profile_paths(controller.repo_root, fresh).events_file
+    before = events.read_bytes()
+    assert not controller.openProblem("ATT-023")
+    assert controller.lastActionResult["error_code"] == "PRACTICE_DEPENDENCY_MISSING"
+    assert "PyTorch" in controller.lastActionResult["user_message"]
+    assert controller.lastActionResult["recommended_action"]
+    assert controller.service.current_submission(fresh) is None
+    assert events.read_bytes() == before

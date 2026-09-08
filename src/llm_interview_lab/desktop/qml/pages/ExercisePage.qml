@@ -408,7 +408,8 @@ Item {
                         anchors.margins: 12
                         spacing: 6
                         LabText { theme: root.theme;
-                            text: "公开测试输出"
+                            objectName: "practiceOutputHeading"
+                            text: "执行输出"
                             color: root.colors.muted
                             strong: true
                             font.pixelSize: root.theme.scaledPx(12)
@@ -419,7 +420,7 @@ Item {
                             clip: true
                             LabText { theme: root.theme;
                                 width: parent.width
-                                text: app.testOutput || "运行公开测试后，结果会显示在这里。"
+                                text: app.testOutput || "运行代码或公开测试后，结果会显示在这里。"
                                 color: root.colors.text
                                 font.family: root.codeFontFamily
                                 font.pixelSize: root.theme.scaledPx(12)

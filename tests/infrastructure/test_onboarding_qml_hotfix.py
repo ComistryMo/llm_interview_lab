@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import time
 
 import pytest
 
@@ -99,11 +100,15 @@ def _role_cards(scene) -> list[QQuickItem]:
     _, _, page, _ = scene
     grid = page.findChild(QQuickItem, "onboardingRoleGrid")
     assert grid is not None
-    cards = [
-        item
-        for item in _descendants(grid)
-        if item.objectName().startswith("onboardingRoleCard-")
-    ]
+    # GridView fills its cache asynchronously after a resize. Merely draining
+    # events does not advance the incubation timer on every Qt platform.
+    deadline = time.monotonic() + 2
+    while True:
+        cards = [item for item in _descendants(grid)
+                 if item.objectName().startswith("onboardingRoleCard-")]
+        if len(cards) == len(ROLE_IDS) or time.monotonic() >= deadline:
+            break
+        QTest.qWait(20)
     return sorted(cards, key=lambda item: int(item.property("index")))
 
 
