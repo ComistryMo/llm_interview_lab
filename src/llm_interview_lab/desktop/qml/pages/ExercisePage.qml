@@ -156,6 +156,12 @@ Item {
         editor.text = app.submissionText || ""
         root.syncingEditor = false
     }
+    function flushDraft() {
+        if (!root.hasTask || !app.submissionDirty) return true
+        if (editor.preeditText.length) return false
+        // Closing saves editing state only; it never runs or submits code.
+        return app.saveSubmission(editor.text)
+    }
 
     onActiveProblemIdChanged: {
         root.showOriginalContract = false
@@ -316,6 +322,7 @@ Item {
                         }
                         LabCodeEditor {
                             id: editor
+                            objectName: "practiceCodeEditor"
                             theme: root.theme
                             Layout.fillWidth: true; Layout.fillHeight: true
                             text: app.submissionText

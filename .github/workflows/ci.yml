@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, "refactor/**"]
+    branches: [main, "refactor/**", "candidate/**"]
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
@@ -15,6 +15,11 @@ on:
         options:
           - all
           - desktop-windows
+      publish:
+        description: "Explicitly publish this already-created version tag after ALL gates (never overwrites a Release)"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -109,43 +114,14 @@ jobs:
       - name: Build Windows standalone application
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path dist/desktop | Out-Null
-          $scripts = python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
-          $env:PATH = "$scripts;$env:PATH"
           $env:NUITKA_CACHE_DIR = "$env:RUNNER_TEMP\\nuitka-cache"
-          New-Item -ItemType Directory -Force -Path $env:NUITKA_CACHE_DIR | Out-Null
-          Copy-Item -LiteralPath scripts/pysidedeploy.spec -Destination dist/pysidedeploy-ci.spec
-          python scripts/generate_desktop_icons.py --output dist/icons
-          pyside6-deploy -c dist/pysidedeploy-ci.spec -f
-          # pyside6-deploy names the executable after the input file (main.exe)
-          # inside the title-named .dist directory.  Normalize that generated
-          # name only in the release bundle so the public launch path stays
-          # stable for Explorer users.
-          $executables = @(Get-ChildItem -Path dist/desktop -Recurse -File -Filter *.exe |
-            Where-Object { $_.Directory.Name -eq 'LLMInterviewLab.dist' })
-          if ($executables.Count -ne 1) {
-            throw "Expected one standalone executable in LLMInterviewLab.dist, found $($executables.Count)"
-          }
-          New-Item -ItemType Directory -Force -Path dist/release | Out-Null
-          Copy-Item -LiteralPath $executables[0].Directory.FullName -Destination dist/release/LLMInterviewLab -Recurse
-          $releaseExecutable = Join-Path dist/release/LLMInterviewLab 'LLMInterviewLab.exe'
-          $generatedExecutable = Join-Path dist/release/LLMInterviewLab $executables[0].Name
-          if ($generatedExecutable -ne $releaseExecutable) {
-            Rename-Item -LiteralPath $generatedExecutable -NewName 'LLMInterviewLab.exe'
-          }
-          Copy-Item -LiteralPath LICENSE -Destination dist/release/LLMInterviewLab/
-          Copy-Item -LiteralPath docs/third-party-notices.md -Destination dist/release/LLMInterviewLab/THIRD_PARTY_NOTICES.md
-          Copy-Item -LiteralPath docs/desktop-app.md -Destination dist/release/LLMInterviewLab/README.md
-          Compress-Archive -Path dist/release/LLMInterviewLab -DestinationPath dist/release/LLMInterviewLab-Windows-x64-portable.zip
-          $file = 'dist/release/LLMInterviewLab-Windows-x64-portable.zip'
-          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLowerInvariant()
-          Set-Content -LiteralPath dist/release/SHA256SUMS-Windows.txt -Value "$hash  $([IO.Path]::GetFileName($file))" -Encoding utf8
+          python scripts/build_windows_desktop.py --output dist/release
       - name: Verify standalone executable and privacy boundary
         run: >-
           python scripts/check_desktop_artifact.py
           dist/release/LLMInterviewLab/LLMInterviewLab.exe
           --bundle-root dist/release/LLMInterviewLab
-          --report desktop-nuitka-report.xml
+          --report dist/release/desktop-nuitka-report.xml
           --archive dist/release/LLMInterviewLab-Windows-x64-portable.zip
       - name: Upload Windows portable artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -203,9 +179,11 @@ jobs:
             dist/release-macos/SHA256SUMS.txt
           if-no-files-found: error
 
-  publish-alpha3:
-    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.4.0-alpha.3'
-    name: Publish v0.4.0-alpha.3 Release
+  publish-release:
+    # Candidate pushes build only. Publishing needs explicit manual consent,
+    # a matching existing tag, and every test/artifact job in THIS run.
+    if: github.event_name == 'workflow_dispatch' && inputs.job == 'all' && inputs.publish == true && startsWith(github.ref, 'refs/tags/v')
+    name: Publish verified version tag
     needs:
       - repository-health
       - cpu-pytorch-validation
@@ -219,57 +197,45 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           fetch-depth: 0
-      - name: Download desktop artifacts
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.11"
+      - name: Check source version, notes, and the requested tag
+        id: version
+        env:
+          PYTHONPATH: src
+        run: python scripts/release_metadata.py --tag "$GITHUB_REF_NAME" --github-output "$GITHUB_OUTPUT"
+      - name: Download desktop artifacts from this run
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
         with:
           pattern: LLMInterviewLab-*
           path: dist/downloads
           merge-multiple: false
-      - name: Assemble release assets and checksums
+      - name: Verify original platform checksums and assemble release
+        env:
+          PYTHONPATH: src
+        run: python scripts/release_metadata.py --downloads dist/downloads --output dist/release
+      - name: Create a new Release without overwriting any existing Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_NOTES: ${{ steps.version.outputs.notes }}
+          IS_PRERELEASE: ${{ steps.version.outputs.prerelease }}
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p dist/release
-          windows_zip="$(find dist/downloads -type f -name 'LLMInterviewLab-Windows-x64-portable.zip' -print -quit)"
-          mac_zip="$(find dist/downloads -type f -name 'LLMInterviewLab-macOS-arm64.app.zip' -print -quit)"
-          mac_dmg="$(find dist/downloads -type f -name 'LLMInterviewLab-macOS-arm64.dmg' -print -quit)"
-          windows_sum="$(find dist/downloads -type f -name 'SHA256SUMS-Windows.txt' -print -quit)"
-          mac_sum="$(find dist/downloads -type f -name 'SHA256SUMS.txt' -print -quit)"
-          test -n "$windows_zip" && test -n "$mac_zip" && test -n "$mac_dmg"
-          test -n "$windows_sum" && test -n "$mac_sum"
-          cp "$windows_zip" dist/release/
-          cp "$mac_zip" dist/release/
-          cp "$mac_dmg" dist/release/
-          cp "$windows_sum" dist/release/SHA256SUMS-Windows.txt
-          cp "$mac_sum" dist/release/SHA256SUMS-macOS.txt
-          sha256sum \
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists. No assets were changed."
+            exit 1
+          fi
+          options=()
+          if [[ "$IS_PRERELEASE" == "true" ]]; then options+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" --verify-tag \
+            --repo "$GITHUB_REPOSITORY" --title "$RELEASE_TAG · LLM Interview Lab" \
+            --notes-file "$RELEASE_NOTES" "${options[@]}" \
             dist/release/LLMInterviewLab-Windows-x64-portable.zip \
             dist/release/LLMInterviewLab-macOS-arm64.app.zip \
             dist/release/LLMInterviewLab-macOS-arm64.dmg \
-            | sed 's#dist/release/##' > dist/release/SHA256SUMS.txt
-          cat dist/release/SHA256SUMS.txt
-      - name: Create or refresh GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          tag="$GITHUB_REF_NAME"
-          assets=(
-            dist/release/LLMInterviewLab-Windows-x64-portable.zip
-            dist/release/LLMInterviewLab-macOS-arm64.app.zip
-            dist/release/LLMInterviewLab-macOS-arm64.dmg
-            dist/release/SHA256SUMS.txt
-            dist/release/SHA256SUMS-Windows.txt
+            dist/release/SHA256SUMS.txt \
+            dist/release/SHA256SUMS-Windows.txt \
             dist/release/SHA256SUMS-macOS.txt
-          )
-          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber "${assets[@]}"
-          else
-            gh release create "$tag" \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "v0.4.0-alpha.3 · 真实交互与可靠训练" \
-              --notes-file docs/release-notes-v0.4.0-alpha.3.md \
-              --prerelease \
-              "${assets[@]}"
-          fi

@@ -205,7 +205,7 @@ ApplicationWindow {
 
     onClosing: function(close) {
         Qt.inputMethod.commit()
-        close.accepted = interviewPage.flushDraft() && learnPage.flushDraft()
+        close.accepted = interviewPage.flushDraft() && learnPage.flushDraft() && exercisePage.flushDraft()
         if (close.accepted) backend.shutdown()
     }
 
@@ -524,7 +524,7 @@ ApplicationWindow {
                     theme: appTheme
                     layoutMode: window.layoutMode
                 }
-                ExercisePage { app: backend; colors: window.colors; theme: appTheme }
+                ExercisePage { id: exercisePage; app: backend; colors: window.colors; theme: appTheme }
                 InterviewPage {
                     id: interviewPage
                     app: backend; colors: window.colors; theme: appTheme

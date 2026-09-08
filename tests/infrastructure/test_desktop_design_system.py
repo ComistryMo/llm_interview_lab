@@ -202,10 +202,12 @@ def test_shell_breakpoints_and_exercise_route_are_permanent() -> None:
     source = _read(MAIN_QML_PATH)
     assert 'width < 1040 ? "compact"' in source
     assert 'width < 1400 ? "standard" : "wide"' in source
-    assert 'property bool compactShell: width < 1180 || height < 700' in source
+    assert 'property bool compactShell: backend.sidebarMode === "collapsed"' in source
+    assert 'backend.sidebarMode === "auto" && (width < 1180 || height < 700)' in source
     assert 'sidebarWidth: compactShell ? 64 : 220' in source
-    assert source.count('{id: "exercise"') == 1
-    assert "ExercisePage { app: backend; colors: window.colors; theme: appTheme }" in source
+    # The actual work route persists, without a permanent empty workspace nav.
+    assert source.count('{id: "exercise"') == 0
+    assert "ExercisePage { id: exercisePage; app: backend; colors: window.colors; theme: appTheme }" in source
     assert "exercise:3" in source
     assert 'sequences: ["Ctrl+R", "Meta+R"]' in source
     assert "onActivated: backend.runTests()" in source
@@ -220,16 +222,19 @@ def test_shell_and_legacy_home_actions_use_accessible_theme_foregrounds() -> Non
     assert "readonly property color accentForeground: theme.accentForeground" in theme_source
     assert "return theme ? theme.primaryForeground" in button_source
     assert "color: control.resolvedForeground" in button_source
-    assert 'id: continueTrainingButton' in home_source
+    assert 'objectName: "homePrimaryAction"' in home_source
+    assert 'objectName: "homeCurrentPractice"' in home_source
     assert 'variant: "primary"' in home_source
-    assert 'variant: "secondary"' in shell_source
+    assert 'variant: "secondary"' in home_source
     assert 'text: window.pageTitle(backend.currentPage)' in shell_source
 
 
-def test_shell_uses_native_window_actions_without_a_command_palette() -> None:
+def test_shell_retains_existing_keyboard_actions_without_a_permanent_search_bar() -> None:
     source = _read(MAIN_QML_PATH)
     assert 'visible: Qt.platform.os === "osx"' in source
-    assert 'id: commandPalette' not in source
+    assert 'id: commandPalette' in source
+    assert 'objectName: "commandPaletteSearch"' in source
+    assert 'sequences: ["Ctrl+K", "Meta+K"]' in source
     assert '搜索或执行命令' not in source
     assert "aboutDialog.open()" in source
     assert "Qt.quit()" in source
@@ -310,6 +315,6 @@ def test_shell_automation_object_names_remain_stable() -> None:
     }
     for object_name in required:
         assert f'objectName: "{object_name}"' in source
-    assert "commandPalette" not in source
+    assert 'objectName: "commandPalette"' in source
     assert "搜索或执行命令" not in source
-    assert 'sequences: ["Ctrl+K", "Meta+K"]' not in source
+    assert 'sequences: ["Ctrl+K", "Meta+K"]' in source

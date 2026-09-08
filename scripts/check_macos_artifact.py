@@ -10,6 +10,8 @@ import sys
 import tempfile
 import zipfile
 
+from llm_interview_lab.release_version import release_metadata
+
 
 FORBIDDEN = (
     "workspace/profiles/",
@@ -42,10 +44,11 @@ def main() -> int:
             name for name in names if name.endswith(".app/Contents/Info.plist")
         )
         info = plistlib.loads(archive.read(plist_name))
+    release = release_metadata()
     expected = {
         "CFBundleIdentifier": "io.github.comistrymo.llminterviewlab",
-        "CFBundleShortVersionString": "0.4.0",
-        "CFBundleVersion": "3",
+        "CFBundleShortVersionString": release["short_version"],
+        "CFBundleVersion": release["bundle_version"],
         "LSMinimumSystemVersion": "12.0",
     }
     for key, value in expected.items():

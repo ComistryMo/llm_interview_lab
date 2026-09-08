@@ -1262,7 +1262,7 @@ def test_desktop_release_configuration_is_portable_and_separate_from_core_ci() -
     assert "torch" not in desktop_job.lower()
     assert "check_desktop_artifact.py" in desktop_job
     assert "LLMInterviewLab-Windows-x64-portable.zip" in desktop_job
-    assert "New-Item -ItemType Directory -Force -Path dist/desktop" in desktop_job
+    assert "python scripts/build_windows_desktop.py --output dist/release" in desktop_job
     assert "mode = standalone" in spec
     assert "mode = onefile" not in spec
     assert "--bundle-root dist/release/LLMInterviewLab" in desktop_job
@@ -1291,7 +1291,7 @@ def test_desktop_release_configuration_is_portable_and_separate_from_core_ci() -
     assert 'text: "保存并测试"' in connections_qml
     assert 'objectName: "codexModelEffortSummary"' in connections_qml
     assert 'objectName: "openCodexModelSettings"' in connections_qml
-    assert 'text: "模型与推理强度"' in connections_qml
+    assert 'text: app.codexAvailable ? "模型与推理强度" : "安装 / 路径设置"' in connections_qml
     assert "if (saved)" in connections_qml
     assert "app.testConnection(connectionId.text)" in connections_qml
     assert "desktop-macos-arm64:" in workflow

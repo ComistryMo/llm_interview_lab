@@ -14,6 +14,8 @@ Item {
     property string section: "courses"
     property string filterMode: "recommended"
     property string query: ""
+    property int codingLevel: 0
+    property bool environmentOnly: false
     property var filteredProblems: []
     property var selectedProblem: ({})
     property bool compactDetail: false
@@ -87,12 +89,16 @@ Item {
         return card.status === "in_progress" ? "继续训练" : "开始训练"
     }
     function emptyMessage() {
+        if (codingLevel || environmentOnly)
+            return "没有符合当前难度与环境筛选的题目。可恢复全部难度，或查看需要其他运行环境的题目。"
         if (query.trim().length > 0)
             return "没有匹配“" + query.trim() + "”的题目。试试标题、技能或 Problem ID。"
         if (filterMode === "experimental")
             return "当前没有已登记的实验性题目。"
         if (filterMode === "available")
             return "当前没有已解锁且环境可用的待练题目。先完成前置能力，或检查题目所需的运行环境。"
+        if (filterMode === "verified")
+            return "没有匹配的已验证题目。试试其他标题、技能或 Problem ID。"
         return "当前没有新的推荐题。先完成进行中的任务或到期复测。"
     }
     function refreshList() {
@@ -106,7 +112,9 @@ Item {
                             && card.asset_status !== "planned"
                             && card.environment_available !== false
                             && card.status !== "mastered"
-            var matches = !needle || searchable(card).indexOf(needle) >= 0
+            var matches = (!needle || searchable(card).indexOf(needle) >= 0)
+                       && (!root.codingLevel || Number((card.difficulty || {}).coding) === root.codingLevel)
+                       && (!root.environmentOnly || card.environment_available !== false)
             var include = false
             if (filterMode === "recommended")
                 include = available
@@ -117,6 +125,8 @@ Item {
                 include = available && ["oracle", "field", "stable"].indexOf(validation) >= 0
             else if (filterMode === "experimental")
                 include = validation === "contract"
+            else if (filterMode === "verified")
+                include = card.asset_status !== "planned" && ["oracle", "field", "stable"].indexOf(validation) >= 0
             if (include && matches)
                 result.push(card)
         }
@@ -173,6 +183,7 @@ Item {
         if (knowledgeAnswer.preeditText.length) return false
         return knowledgeDetailContent.saveDraft()
     }
+    onVisibleChanged: if (!visible) root.flushDraft()
     Timer {
         id: knowledgeDraftSave; interval: 600
         onTriggered: root.flushDraft()
@@ -280,9 +291,9 @@ Item {
                         theme: root.theme
                         accessibleLabel: "课程筛选"
                         Layout.preferredWidth: root.compactLayout ? 150 : 172
-                        model: ["推荐", "已解锁待练", "实验性"]
+                        model: ["推荐", "已解锁待练", "实验性", "全部已验证"]
                         onCurrentIndexChanged: {
-                            root.filterMode = ["recommended", "available", "experimental"][currentIndex]
+                            root.filterMode = ["recommended", "available", "experimental", "verified"][currentIndex]
                             root.refreshList()
                         }
                     }
@@ -291,7 +302,7 @@ Item {
                         objectName: "learnResultSummary"
                         theme: root.theme
                         Layout.fillWidth: true
-                        text: ({recommended: "推荐", available: "已解锁待练", experimental: "实验性"}[root.filterMode]
+                        text: ({recommended: "推荐", available: "已解锁待练", experimental: "实验性", verified: "已验证"}[root.filterMode]
                                || "当前") + " · " + root.filteredProblems.length + " 道"
                         tone: "muted"
                         horizontalAlignment: Text.AlignRight
@@ -307,6 +318,21 @@ Item {
                     onTextChanged: {
                         root.query = text
                         root.refreshList()
+                    }
+                }
+                Flow {
+                    Layout.fillWidth: true; Layout.preferredHeight: childrenRect.height; spacing: 8
+                    LabComboBox {
+                        theme: root.theme; objectName: "learnCodingLevel"; width: 170
+                        accessibleLabel: "编码难度筛选"
+                        model: ["编码难度不限", "编码难度 1", "编码难度 2", "编码难度 3", "编码难度 4", "编码难度 5"]
+                        onActivated: { root.codingLevel = currentIndex; root.refreshList() }
+                    }
+                    LabComboBox {
+                        theme: root.theme; objectName: "learnEnvironmentFilter"; width: 200
+                        accessibleLabel: "运行环境筛选"
+                        model: ["运行环境不限", "当前环境可运行"]
+                        onActivated: { root.environmentOnly = currentIndex === 1; root.refreshList() }
                     }
                 }
 

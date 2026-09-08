@@ -70,6 +70,7 @@ from .i18n import (
 )
 from .runtime import is_packaged_desktop, migrate_legacy_desktop_data
 from .voice import InterviewVoiceRecorder
+from .updates import UpdateManager
 
 
 class WorkerSignals(QObject):
@@ -521,6 +522,7 @@ class AppController(QObject):
         self._workers: set[Worker] = set()
         self._thread_pool = QThreadPool.globalInstance()
         self._settings = QSettings("ComistryMo", "LLMInterviewLab")
+        self._updates = UpdateManager(self._settings, parent=self)
         language = str(self._settings.value("language", "zh-CN") or "zh-CN")
         self._language = language if language in {"zh-CN", "en"} else "zh-CN"
         self._ai_status = text("status.ai_offline", language=self._language)
@@ -993,6 +995,10 @@ class AppController(QObject):
     @Property("QVariantMap", notify=stateChanged)
     def dashboard(self) -> dict[str, Any]:
         return self._dashboard
+
+    @Property(QObject, constant=True)
+    def updateManager(self) -> QObject:
+        return self._updates
 
     @Property("QVariantList", notify=stateChanged)
     def problems(self) -> list[dict[str, Any]]:
@@ -8492,6 +8498,7 @@ class AppController(QObject):
         if not self.flushInterviewDraft():
             return
         self._shutdown_done = True
+        self._updates.close()
         self._suspend_interview_voice()
         self.cancelLocalSttDownload()
         if self._codex_loop and self._codex_backend:

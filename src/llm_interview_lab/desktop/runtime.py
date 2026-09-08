@@ -29,7 +29,7 @@ MIGRATION_MARKER = ".llm-lab-desktop-migration.json"
 # Keep a small explicit revision in the standalone marker so an existing app
 # data directory receives that public-asset update without ever touching the
 # private ``workspace/profiles`` tree.
-PUBLIC_ASSET_REVISION = "role-interview-strategy-v4"
+PUBLIC_ASSET_REVISION = "desktop-candidate-20260909"
 
 # Error messages can contain paths that are not one of the well-known roots
 # (for example a pytest temporary directory).  Keep bootstrap diagnostics
@@ -414,19 +414,23 @@ def prepare_desktop_repository() -> Path:
     ):
         destination.mkdir(parents=True, exist_ok=True)
         _copy_public_assets(bundle, destination)
-        marker.write_text(
-            json.dumps(
+        marker_text = json.dumps(
                 {
                     "schema_version": 1,
                     "version": __version__,
                     "public_asset_revision": PUBLIC_ASSET_REVISION,
-                    "synthetic": True,
+                    "public_assets_only": True,
                 },
                 sort_keys=True,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
+            ) + "\n"
+        # A partially written version marker must not hide an interrupted
+        # public-asset upgrade. Profiles/model caches are outside this write.
+        temporary = marker.with_name(f".{marker.name}-{uuid4().hex}.tmp")
+        try:
+            temporary.write_text(marker_text, encoding="utf-8")
+            os.replace(temporary, marker)
+        finally:
+            temporary.unlink(missing_ok=True)
     # Only a genuinely frozen executable understands the private worker
     # protocol used by the packaged grader.  Tests and source launches may
     # set ``LLM_LAB_PACKAGED`` to exercise the platform data path, but their

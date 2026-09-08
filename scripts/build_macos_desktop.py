@@ -13,9 +13,14 @@ import sys
 import sysconfig
 import tempfile
 
+from llm_interview_lab import __version__
+from llm_interview_lab.release_version import release_metadata
+from release_metadata import write_build_metadata
+
 
 APP_NAME = "LLMInterviewLab"
-VERSION = "0.4.0-alpha.3"
+VERSION = __version__
+RELEASE = release_metadata()
 MINIMUM_MACOS = "12.0"
 
 
@@ -114,10 +119,11 @@ def main() -> int:
             "CFBundleName": "LLM Interview Lab",
             "CFBundleDisplayName": "LLM Interview Lab",
             "CFBundleIdentifier": "io.github.comistrymo.llminterviewlab",
-            "CFBundleShortVersionString": "0.4.0",
-            "CFBundleVersion": "3",
+            "CFBundleShortVersionString": RELEASE["short_version"],
+            "CFBundleVersion": RELEASE["bundle_version"],
             "LSMinimumSystemVersion": MINIMUM_MACOS,
             "NSHighResolutionCapable": True,
+            "NSMicrophoneUsageDescription": "仅在你开启语音输入时使用麦克风，默认在本机识别；不会自动发送录音。",
             "LSMultipleInstancesProhibited": True,
             "CFBundleIconFile": icon_candidates[0].name,
         }
@@ -125,6 +131,11 @@ def main() -> int:
     with plist_path.open("wb") as stream:
         plistlib.dump(info, stream, sort_keys=True)
     executable = app / "Contents/MacOS" / info["CFBundleExecutable"]
+
+    asset_roots = list(app.rglob("runtime_assets"))
+    if len(asset_roots) != 1:
+        raise RuntimeError("expected one public asset directory in the app")
+    write_build_metadata(root, asset_roots[0])
 
     run("plutil", "-lint", plist_path)
     architecture = run("file", executable, capture_output=True).stdout
@@ -142,7 +153,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="llm-lab-macos-smoke-") as directory:
         environment["LLM_LAB_DESKTOP_DATA_ROOT"] = str(Path(directory) / "应用 数据")
         version = run(executable, "--version", capture_output=True, env=environment)
-        if VERSION.replace("-alpha.", "a") not in version.stdout:
+        if VERSION not in version.stdout:
             raise RuntimeError(f"unexpected packaged version: {version.stdout.strip()}")
         run(executable, "--smoke-test", capture_output=True, env=environment, timeout=120)
 

@@ -141,7 +141,10 @@ def test_published_alpha3_links_and_release_workflow_are_consistent() -> None:
     assert "LLMInterviewLab-Windows-x64.exe" not in windows
     assert "SHA256SUMS-Windows.txt" in windows
     assert "SHA256SUMS-Windows.txt" in workflow
-    assert "publish-alpha3:" in workflow
+    assert "publish-release:" in workflow
+    assert "inputs.publish == true" in workflow
+    assert "--verify-tag" in workflow
+    assert "--clobber" not in workflow
     assert "contents: write" in workflow
     assert "actions/download-artifact@" in workflow
     assert "compare/v0.4.0-alpha.2...v0.4.0-alpha.3" in changelog
@@ -201,7 +204,7 @@ def test_gui_and_provider_user_terms_are_present() -> None:
         concepts={
             "profile creation": ("创建你的学习档案", "创建学习档案"),
             "role selection": ("选择目标岗位", "请选择一个目标岗位"),
-            "optional AI": ("No-AI", "暂不连接 AI", "无需 AI"),
+            "optional AI": ("No-AI", "暂不连接 AI", "无需 AI", "连接 AI 不是必选项"),
             "primary action": ("开始训练",),
         },
     )
@@ -229,7 +232,9 @@ def test_screenshots_are_real_png_assets_and_documented() -> None:
         path = REPO_ROOT / "docs/images" / name
         assert path.is_file(), name
         assert path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
-        assert name in readme
+        # README now features newer formal interview/workbench captures; the
+        # original Alpha screenshots stay documented as historical evidence.
+        assert name in readme or name in _read("docs/desktop-app.md")
 
 
 def test_community_templates_are_chinese_and_preserve_privacy_fields() -> None:

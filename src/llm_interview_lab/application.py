@@ -111,6 +111,8 @@ class ApplicationService:
         # read-only surface and may be absent in older/fixture repositories.
         self._knowledge_catalog: KnowledgeCatalog | None = None
         self._knowledge_curriculum_checked = False
+        self._knowledge_source_signature = None
+        self._knowledge_search_documents: dict[str, str] = {}
 
     def knowledge_catalog(
         self,
@@ -131,7 +133,11 @@ class ApplicationService:
         needs_curriculum_check = (
             validate_curriculum and not self._knowledge_curriculum_checked
         )
-        if self._knowledge_catalog is None or reload or needs_curriculum_check:
+        paths = (self.repo_root / "curriculum/interviews/knowledge.yaml",
+                 self.repo_root / "curriculum/schema/knowledge.schema.json")
+        signature = tuple((path.stat().st_mtime_ns, path.stat().st_size) if path.is_file() else None for path in paths)
+        if (self._knowledge_catalog is None or reload or needs_curriculum_check
+                or signature != self._knowledge_source_signature):
             curriculum = self.catalog if validate_curriculum else None
             try:
                 self._knowledge_catalog = load_knowledge(
@@ -139,6 +145,8 @@ class ApplicationService:
                     curriculum=curriculum,
                 )
                 self._knowledge_curriculum_checked = validate_curriculum
+                self._knowledge_source_signature = signature
+                self._knowledge_search_documents.clear()
             except KnowledgeError:
                 # Preserve the domain-specific error for callers that want
                 # to distinguish malformed public content from a Practice
@@ -266,10 +274,15 @@ class ApplicationService:
             )
         terms = tuple(part.casefold() for part in (query or "").split() if part)
         if terms:
+            def search_document(card: KnowledgeCard) -> str:
+                if card.id not in self._knowledge_search_documents:
+                    self._knowledge_search_documents[card.id] = self._knowledge_search_text(card)
+                return self._knowledge_search_documents[card.id]
+
             cards = tuple(
                 card
                 for card in cards
-                if all(term in self._knowledge_search_text(card) for term in terms)
+                if all(term in search_document(card) for term in terms)
             )
         result = list(cards)
         return result[:limit] if limit is not None else result
@@ -1090,6 +1103,7 @@ class ApplicationService:
                     "title": problem.title,
                     "status": state.problem_status(problem.id),
                     "asset_status": problem.status,
+                    "kind": problem.kind,
                     "validation": problem.validation_level if problem.ready else "planned",
                     "difficulty": problem.raw["difficulty"],
                     "skills": list(skills),

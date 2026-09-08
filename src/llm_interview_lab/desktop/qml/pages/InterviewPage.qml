@@ -43,6 +43,10 @@ Item {
         }
     }
     function flushDraft() {
+        if (root.codingQuestion && root.codingEditorDirty) {
+            if (codingEditor.preeditText.length || !app.saveInterviewCoding(codingEditor.text)) return false
+            root.codingEditorDirty = false
+        }
         if (!root.answerLocked && answer.preeditText.length) {
             root.draftCompositionPending = true
             return false

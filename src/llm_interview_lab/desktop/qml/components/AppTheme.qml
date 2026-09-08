@@ -45,7 +45,7 @@ QtObject {
     readonly property color borderDefault: darkMode ? "#404040" : "#dcdcd7"
     readonly property color borderStrong: darkMode ? "#9c9c9c" : "#62625f"
     readonly property color border: borderDefault
-    readonly property color controlBorder: darkMode ? "#555555" : "#c5c5c0"
+    readonly property color controlBorder: darkMode ? "#777777" : "#8b8b87"
     readonly property color focusRing: darkMode ? "#8baacf" : "#4a6f98"
 
     readonly property color accent: darkMode ? "#93b4dc" : "#3c638e"

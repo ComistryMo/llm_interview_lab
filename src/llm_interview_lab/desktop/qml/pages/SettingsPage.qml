@@ -412,6 +412,12 @@ Flickable {
             LabText { theme: root.theme; width: parent.width; text: "本地 Grader 只用于运行你本人信任的代码，不是恶意代码安全沙箱。连接远程 AI 前请核对上下文预览。"; color: root.colors.muted; wrapMode: Text.Wrap }
         }
 
+        LabDivider { theme: root.theme; Layout.fillWidth: true }
+        UpdateSettings {
+            Layout.fillWidth: true
+            manager: app.updateManager
+            theme: root.theme
+        }
         LabText { theme: root.theme; text: "LLM Interview Lab v" + Qt.application.version + " · 中文优先桌面体验"; color: root.colors.muted; font.pixelSize: root.theme.scaledPx(12) }
     }
 

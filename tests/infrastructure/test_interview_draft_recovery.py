@@ -146,3 +146,32 @@ def test_knowledge_draft_debounce_and_close_use_existing_save(scene):
     editor.setProperty("text", "知识页退出前最后一段")
     window.close()
     assert controller.service.knowledge_answer(controller.profileId, "EGT-QB-028") == "知识页退出前最后一段"
+
+
+def test_practice_close_saves_code_without_testing_or_submitting(scene):
+    window, controller = scene
+    controller.navigate("exercise")
+    editor = _find(window, "practiceCodeEditor")
+    code = "# 合成关闭保存验收；不是参考答案\nraise NotImplementedError\n"
+    editor.setProperty("text", code)
+    assert controller.submissionDirty
+    window.close()
+    assert controller._shutdown_done
+    saved = controller.service.current_submission(controller.profileId)
+    assert saved["text"] == code
+    assert not controller.testedRevision and not controller.submissionDirty
+
+
+def test_interview_code_close_saves_current_revision(scene):
+    from tests.infrastructure.test_interview_input_runtime import _enter_coding_round
+    window, controller = scene
+    _enter_coding_round(controller)
+    QTest.qWait(50)
+    editor = _find(window, "interviewCodingEditor")
+    code = "# 合成手撕草稿，尚未作答\nraise NotImplementedError\n"
+    editor.setProperty("text", code)
+    window.close()
+    assert controller._shutdown_done
+    result = controller.service.current_interview_coding_submission(controller.profileId, controller.interview["interview_id"])
+    assert result["text"] == code
+    assert not controller.interview.get("coding_test_current")

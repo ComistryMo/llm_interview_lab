@@ -343,9 +343,9 @@ macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Home
 
 | 指标 | 当前状态 |
 |---|---:|
-| Ready Problems | 49 |
-| Planned Problems | 180 |
-| Oracle-validated Problems | 37 |
+| Ready Problems | 96 |
+| Planned Problems | 158 |
+| Oracle-validated Problems | 84 |
 | Retention-ready Problems | 24 |
 | Field-tested runs | 0 |
 | Canonical Skills | 70 |
