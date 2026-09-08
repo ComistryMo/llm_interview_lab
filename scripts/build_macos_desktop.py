@@ -22,7 +22,8 @@ from check_desktop_workers import check_workers
 APP_NAME = "LLMInterviewLab"
 VERSION = __version__
 RELEASE = release_metadata()
-MINIMUM_MACOS = "12.0"
+# The candidate uses Qt 6.11 wheels tagged macosx_13_0 (also Qt's support floor).
+MINIMUM_MACOS = "13.0"
 
 
 def run(*arguments: str | Path, **kwargs) -> subprocess.CompletedProcess[str]:

@@ -49,7 +49,7 @@ def main() -> int:
         "CFBundleIdentifier": "io.github.comistrymo.llminterviewlab",
         "CFBundleShortVersionString": release["short_version"],
         "CFBundleVersion": release["bundle_version"],
-        "LSMinimumSystemVersion": "12.0",
+        "LSMinimumSystemVersion": "13.0",
     }
     for key, value in expected.items():
         if info.get(key) != value:

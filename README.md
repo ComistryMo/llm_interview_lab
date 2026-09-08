@@ -66,6 +66,8 @@ LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）�
 
 候选包完整携带 96 道 ready 题资产；未内置 PyTorch 的 Windows 包中，27 道已验证代码题具备运行环境，不能按开发机的 84 道宣传全题可运行。详见[覆盖口径](docs/content/release-candidate-coverage-20260909.zh.md)及[同机性能数据](docs/performance/desktop-candidate-20260909.zh.md)。
 
+Alpha.4 macOS 候选使用 Qt 6.11，要求 Apple Silicon / macOS 13+；不沿用旧 Alpha.3 的 macOS 12 声明。实测平台状态见[候选报告](docs/desktop-candidate-20260909-report.zh.md)。
+
 | 你使用的环境 | 推荐方式 |
 |---|---|
 | Windows 10 / 11 x64 | 下载 `LLMInterviewLab-Windows-x64-portable.zip`，完整解压后运行 |

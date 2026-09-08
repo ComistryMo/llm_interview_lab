@@ -131,6 +131,12 @@ git diff --check
 - 远端 34284301760 的 Ubuntu 与 Windows 三 Python 核心矩阵现均成功：Ubuntu 各 649 passed / 32 skipped，Windows 各 648 passed / 33 skipped；CPU PyTorch 2 passed，中文文档 28 passed。跳过项来自这些纯 dev job 未安装桌面/Torch 等可选依赖，非本轮新增跳过。
 - 前一生产切片 9bebba5 的 Windows MSVC CI 已实际构建成功并通过 worker/隐私检查（83 个桌面目标测试通过），远端候选 Artifact 10079758302；最终 2729 生产切片的本地 MinGW 包已完成，当前 d779 CI 34286507207 继续核验平台。最后 macOS 结论未取得前，整体仍不可公开发布。
 
+#### 2026-09-09 06:51 HKT macOS 运行时声明修正
+
+- 最终发布说明审阅发现真实版本冲突：CI 使用 `pyside6-6.11.2-cp310-abi3-macosx_13_0_universal2.whl`，旧 plist、Nuitka 参数和安装指南仍宣称 macOS 12。对照 [Qt 6.11 官方支持范围](https://doc.qt.io/qt-6/supported-platforms.html#macos) 后，将候选最低系统统一为 13.0；保留旧 Alpha.3 的历史 12+ 说明，不降级依赖或声称在 12 上验证过。
+- 仅修改 macOS 打包声明、对应 Artifact 断言、一个一致性目标及安装文档；直接目标 5 passed / 0.42 秒。没有修改应用逻辑、UI、Windows spec、公共课程或用户数据，因此最终 Windows 本地包、图片及性能仍对应同一应用源码，不需重建本地 Windows。
+- macOS 必须使用修正后的构建来源获得 CI/Artifact；运行时声明为 12 的旧候选即使编译成功，也不作为最终 macOS 交付。
+
 #### 2026-09-09 06:04 HKT 续接
 
 - macOS 修复后全量为 939 passed / 3 failed / 8 skipped：两项 GridView 缓存 delegate 的异步生成未等待，一项已禁用的缺依赖关联题仍可通过直接 Controller 入口创建任务。未把失败改成跳过。
