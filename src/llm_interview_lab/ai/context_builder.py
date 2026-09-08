@@ -10,7 +10,7 @@ from typing import Any, Mapping
 
 from .base import ContextPart, ContextPreview
 from ..catalog import Catalog, load_catalog
-from ..interview_flow import CODING_REVIEW_DIRECTIVE, DIFFICULTY_DIRECTIVES, ROLE_PROBE_FOCUS, STAGES, dialogue_instruction, next_stages, question_stage, stage_minimums
+from ..interview_flow import CODING_REVIEW_DIRECTIVE, DIFFICULTY_DIRECTIVES, ROLE_PROBE_FOCUS, STAGES, TIME_BUDGETS, coverage_targets, dialogue_instruction, next_question_instruction, next_stages, question_stage, stage_minimums
 from ..events import read_events, reduce_events
 from ..knowledge import KnowledgeCatalog, load_knowledge
 from ..materials import MaterialError, get_material, resolve_material_text_path
@@ -343,7 +343,7 @@ def build_practice_context_preview(
             _part(
                 "role",
                 "Target role",
-                f"role={role['primary_role']} seniority={role['seniority']}",
+                f"role={role['primary_role']}" + (f" seniority={role['seniority']}" if "seniority" in role else ""),
             )
         )
     if mode == "teacher":
@@ -390,6 +390,7 @@ def build_role_interview_context_preview(
     catalog: Catalog | None = None,
     role_catalog: RoleCatalog | None = None,
     knowledge: KnowledgeCatalog | None = None,
+    assessment_question_id: str | None = None,
 ) -> ContextPreview:
     """Build one current-question interview context from frozen, consented facts."""
 
@@ -401,7 +402,9 @@ def build_role_interview_context_preview(
     # keep the frozen question visible so the user can inspect what would be
     # sent, while Controller send/assessment entry points continue to reject
     # network turns until the clock is resumed.
-    current = (
+    if assessment_question_id is not None and (session.get("interaction_version") != 2 or session["status"] not in {"completed", "incomplete"}):
+        raise ContextBuilderError("只能在已结束的新动态面试中读取逐题评分上下文。")
+    current = {"question": next((q for q in session["questions"] if q["question_id"] == assessment_question_id), None)} if assessment_question_id else (
         role_interview_state(repo_root, profile_id, interview_id, now=now)
         if session.get("status") == "paused"
         else current_role_question(repo_root, profile_id, interview_id, now=now)
@@ -431,7 +434,7 @@ def build_role_interview_context_preview(
         _part("policy", "Interviewer policy", policy),
         _part("question", "Frozen current question and rubric", contract),
     ]
-    if session.get("delivery_mode") == "dynamic_ai":
+    if session.get("delivery_mode") == "dynamic_ai" and not assessment_question_id:
         catalog = catalog or load_catalog(repo_root)
         role_catalog = role_catalog or load_role_catalog(repo_root, curriculum=catalog)
         base = build_dynamic_role_interview_context_preview(
@@ -449,12 +452,12 @@ def build_role_interview_context_preview(
         # The live session clock still decides expiry on every mutation.
         clock_event = next(e for e in reversed(session["timeline"])
                            if e["event"] in {"started", "resumed", "question_generated"})
-        turn_clock = role_interview_state(repo_root, profile_id, interview_id,
-                                         now=datetime.fromisoformat(clock_event["timestamp"].replace("Z", "+00:00")))
+        clock_at = datetime.fromisoformat((session.get("ai_wait_started_at") or clock_event["timestamp"]).replace("Z", "+00:00"))
+        turn_clock = role_interview_state(repo_root, profile_id, interview_id, now=clock_at)
         frozen_contract.update({
             "current_stage": question_stage(question),
             "stage_sequence": list(STAGES),
-            "allowed_next_stages": next_stages(session, coding_available=bool(candidates)),
+            "allowed_next_stages": next_stages(session, coding_available=bool(candidates), now=clock_at),
             "coding_candidates": [{"id": p.id, "title": p.title, "skills": list(skills)} for p, skills in candidates],
             "coding_unavailable": not bool(candidates),
             "stage_counts": {stage: sum(question_stage(q) == stage for q in session["questions"]) for stage in STAGES},
@@ -472,10 +475,21 @@ def build_role_interview_context_preview(
                 "在原理阶段核对已问主题：先保证三个（困难四个）不同的相关主题，再按薄弱处追深；一次只问一个问题，不在一个问题里凑三个考点。"
             ),
         })
+        if session.get("interaction_version") == 2:
+            frozen_contract.pop("stage_minimums", None)
+            frozen_contract.update(
+                coverage_targets=coverage_targets(session),
+                observed_coverage=session.get("turn_decisions", {}), time_budgets=TIME_BUDGETS,
+                suggested_coding_reserve_seconds=round(session["duration_minutes"] * 60 * 0.30),
+                stage_guidance="按真实证据与可用时间推进，不设最低或最多轮数。经历多个角度取证后转原理；简单/标准三个相关主题，困难四个。答不出换角度并保留缺口。覆盖充分可提前转场，时间不足也要转场，为手撕留30%时间，不为凑问数挤掉手撕。",
+            )
         parts[0] = _part("policy", "动态面试与评分规则", dialogue_instruction(
             set(question["rubric"]["dimensions"]), set(question["rubric"]["fatal_issues"]),
         ) + "\n\n" + strategy + "\n\n本轮提问重点：" + frozen_contract["turn_focus"]
             + ("\n\n" + CODING_REVIEW_DIRECTIVE if question["kind"] == "coding" else "") + paused_note)
+        if session.get("interaction_version") == 2:
+            parts[0] = _part("policy", "逐问面试规则", next_question_instruction() + "\n\n" + strategy + "\n" + frozen_contract["turn_focus"] + paused_note)
+            parts[1] = _part("question", "当前已展示的问题", f"{question['question_id']} {question['prompt']}")
         parts.extend([
             _part("interview_contract", "岗位技能、难度、流程与可用手撕范围", json.dumps(frozen_contract, ensure_ascii=False)),
             next(p for p in base.parts if p.id == "profile_context"),
@@ -524,7 +538,7 @@ def build_role_interview_context_preview(
                 sensitive=True,
             )
         )
-    if session.get("delivery_mode") == "dynamic_ai" and "theory" in frozen_contract["allowed_next_stages"]:
+    if session.get("delivery_mode") == "dynamic_ai" and not assessment_question_id and "theory" in frozen_contract["allowed_next_stages"]:
         # The real dynamic path (both Codex and ordinary APIs) gets reviewed
         # questions, not merely a count or a link to the knowledge browser.
         # Reuse the GUI's lazy catalog when provided; direct API/CLI callers
@@ -553,4 +567,14 @@ def build_role_interview_context_preview(
                            "related_problems": list(card.related_problems)} for card in pool],
             }, ensure_ascii=False),
         ))
+    if assessment_question_id:
+        answer = role_interview_answer_text(repo_root, profile_id, interview_id, assessment_question_id)
+        catalog = catalog or load_catalog(repo_root)
+        role_catalog = role_catalog or load_role_catalog(repo_root, curriculum=catalog)
+        background = build_dynamic_role_interview_context_preview(repo_root, profile_id, role_catalog,
+            role_id=session["role_id"], difficulty=session["difficulty"], duration_minutes=session["duration_minutes"])
+        parts.append(next(p for p in background.parts if p.id == "profile_context"))
+        parts = [part for part in parts if part.id != "candidate_answer"]
+        parts.append(_part("candidate_answer", "本题已锁定回答", answer, sensitive=True))
+        parts[0] = _part("policy", "结束后逐题评分", "本场已经结束，只评分当前指定题目的真实证据，不生成下一问。相同证据使用相同锚点，不根据难度、学历、身份或年限改变评分。evidence必须引用回答或代码；没有证据标记未评分。不能编造运行通过、公司事实、Offer概率或Mastery。" + (CODING_REVIEW_DIRECTIVE if question["kind"] == "coding" else ""))
     return ContextPreview("interviewer", profile_id, tuple(parts))

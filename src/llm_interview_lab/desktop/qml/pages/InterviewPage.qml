@@ -44,6 +44,8 @@ Item {
     property bool setupExpanded: false
     property var historyItems: []
     property bool followLatest: true
+    property string nextPreview: app.interview.next_question_preview || ""
+    onNextPreviewChanged: if (root.followLatest && nextPreview) Qt.callLater(root.scrollToLatest)
     property bool showCodingHistory: false
     property bool syncingQuestionEditors: false
     // The context confirmation is a single, synchronous hand-off to the
@@ -1421,6 +1423,12 @@ Item {
                         tone: "warning"
                         wrapMode: Text.Wrap
                     }
+                    Column {
+                        width: parent.width; spacing: 8
+                        visible: !!app.interview.next_question_preview && app.interview.ai_assessment_state === "streaming"
+                        LabText { theme: root.theme; text: "正在生成下一问 · 完成校验后可回答"; variant: "caption"; tone: "muted" }
+                        LabText { objectName: "interviewStreamingQuestion"; theme: root.theme; width: parent.width; text: app.interview.next_question_preview || ""; wrapMode: Text.Wrap; font.pixelSize: root.theme.fontBodyLarge }
+                    }
                     LabText {
                         objectName: "interviewQuestionTitle"
                         visible: true
@@ -1884,6 +1892,35 @@ Item {
                         cardColor: "transparent"
                         borderColor: "transparent"
                         padding: 0
+                        Column {
+                            width: parent.width; spacing: 8
+                            visible: app.interview.interaction_version === 2
+                            LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; text: "问答已保存。详细评分在后台逐题完成；没有证据的项目保持未评分。" }
+                            LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; tone: "muted"; text: app.interview.grading_message || ("待评分 " + (app.interview.unscored_questions || 0) + " 题 · 已评分题目不会重复请求") }
+                            Repeater {
+                                model: Object.keys((app.interview.grading || {}).questions || {})
+                                Column {
+                                    required property string modelData
+                                    property var record: ((app.interview.grading || {}).questions || {})[modelData] || ({})
+                                    width: parent.width; spacing: 4; visible: record.status === "failed"
+                                    LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; tone: "warning"; text: parent.modelData + "：" + (parent.record.error || "评分失败，可单独重试") }
+                                    LabButton { theme: root.theme; text: "重试该题评分"; enabled: !app.busy; onClicked: app.retryInterviewQuestionGrading(parent.modelData) }
+                                }
+                            }
+                            LabButton { objectName: "retryInterviewGrading"; theme: root.theme; text: "继续未完成评分"; enabled: !app.busy; visible: (app.interview.unscored_questions || 0) > 0; onClicked: app.retryInterviewGrading() }
+                            LabButton {
+                                theme: root.theme; text: "确认评分发送范围"; variant: "ghost"
+                                visible: (app.interview.unscored_questions || 0) > 0; enabled: !app.busy
+                                onClicked: {
+                                    root.aiPreview = app.previewInterviewGrading()
+                                    if (root.aiPreview.parts.length) {
+                                        root.pendingAIAction = "grading"
+                                        contextDialog.title = "评分发送范围 · " + root.aiPreview.recipient
+                                        contextDialog.open()
+                                    }
+                                }
+                            }
+                        }
                         Rectangle {
                             width: parent.width
                             height: reportSummary.implicitHeight + 40
@@ -2440,12 +2477,12 @@ Item {
                         objectName: "stopCodexInterviewRequest"
                         theme: root.theme
                         variant: "secondary"
-                        visible: app.interview.ai_mode === "codex" && app.busy
+                        visible: app.busy
                                  && (app.interview.ai_assessment_state === "streaming"
                                      || app.interview.ai_assessment_state === "connecting"
                                      || app.interview.ai_assessment_state === "retrying")
                         text: "停止请求"
-                        onClicked: app.cancelCodex()
+                        onClicked: app.stopInterviewGeneration()
                     }
                     LabButton {
                         theme: root.theme
@@ -2596,7 +2633,9 @@ Item {
             }
         }
         onAccepted: {
-            if (root.pendingAIAction === "submit") {
+            if (root.pendingAIAction === "grading") {
+                app.authorizeInterviewGrading(root.aiPreview.scope_sha256)
+            } else if (root.pendingAIAction === "submit") {
                 if (app.authorizeInterviewConversation(root.codingQuestion ? app.interview.answer_text : answer.text, root.pendingConnection, includeInterviewMaterials.checked))
                     root.submitAnswer()
             } else if (root.pendingAIAction === "provider")

@@ -184,7 +184,9 @@ def test_personalized_plan_is_previewed_then_freezes_ai_questions_and_catalog_co
         "ai_generated",
         "ai_generated",
     ]
-    assert preview["questions"][0]["source"]["id"] == "PT-005"
+    coding_id = preview["questions"][0]["source"]["id"]
+    assert service.catalog.problems[coding_id].recommendable
+    assert set(preview["questions"][0]["skills"]).intersection(blueprint.rounds[0].skills)
     assert all(
         question["source"].get("context_sha256") == context_sha
         for question in preview["questions"][1:]
@@ -201,6 +203,7 @@ def test_personalized_plan_is_previewed_then_freezes_ai_questions_and_catalog_co
         consent_materials=True,
     )
     assert session["plan_mode"] == "ai_generated"
+    assert session["questions"][0]["source"]["id"] == coding_id
     assert session["plan_context_sha256"] == context_sha
     assert session["material_refs"] == [
         {

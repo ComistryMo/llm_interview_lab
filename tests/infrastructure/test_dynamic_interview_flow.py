@@ -1,4 +1,8 @@
-"""One-question-at-a-time flow, authorized background and real local grading."""
+"""Legacy dynamic-session restoration, authorized background and local grading.
+
+The v2 product contract lives in test_question_first_interview/desktop. This
+fixture explicitly reconstructs a pre-v2 saved session to protect old records.
+"""
 import hashlib
 import asyncio
 import json
@@ -13,8 +17,8 @@ from llm_interview_lab.application import ApplicationService
 from llm_interview_lab.ai.context_builder import build_role_interview_context_preview, ContextBuilderError
 from llm_interview_lab.interview_flow import DIFFICULTY_DIRECTIVES, ROLE_PROBE_FOCUS, next_stages, flow_coverage
 from llm_interview_lab.materials import add_material, set_material_ai_access
-from llm_interview_lab.role_interviews import dynamic_coding_candidates, RoleInterviewError
-from llm_interview_lab.workspace import init_profile
+from llm_interview_lab.role_interviews import dynamic_coding_candidates, RoleInterviewError, _write_session
+from llm_interview_lab.workspace import init_profile, profile_paths
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -46,6 +50,11 @@ def interview(public_repo, tmp_path):
     session = service.create_dynamic_interview(profile, role_id="post_training_engineer", seniority="intern", difficulty="hard", ai_mode="codex",
         initial_question={"kind": "oral", "title": "自我介绍", "prompt": "请先介绍你本人在后训练项目中完成的工作。", "source_kind": "process_opening"},
         context_sha256=hashlib.sha256(preview.selected_text.encode()).hexdigest(), material_ids=refs, consent_materials=True)
+    # Historical protocol: frozen stage bucket and immediate per-turn scores.
+    session.pop("interaction_version")
+    session["seniority"] = "intern"
+    session["blueprint_id"] = service.roles.blueprint_for("post_training_engineer", "intern").id
+    _write_session(public_repo, profile_paths(public_repo, profile).interviews_root / session["interview_id"] / "session.json", session)
     service.start_interview(profile, session["interview_id"])
     return service, profile, session["interview_id"], refs
 
@@ -94,7 +103,8 @@ def test_context_keeps_resume_jd_and_prior_answers_not_future_questions(intervie
     assert "q-003" not in preview.selected_text
     contract = json.loads(parts["interview_contract"])
     assert contract["role_skills"][0]["description"]
-    assert contract["difficulty_directive"] and contract["seniority"] == "intern"
+    assert contract["difficulty_directive"]
+    assert service.interview_session(profile, iid)["seniority"] == "intern"
     assert contract["allowed_next_stages"] == ["experience"]
     assert contract["coding_candidates"]
     assert "合成 JD" not in context(service, profile, iid, False).selected_text
@@ -112,7 +122,7 @@ def test_conversation_strategy_and_selected_role_reach_each_turn(interview):
             assert "从自我介绍进入经历" in contract["conversation_strategy"]
             assert "不是我负责" in contract["conversation_strategy"]
             assert "不要把答案塞进问题" in contract["conversation_strategy"]
-            assert "级别决定责任范围" in contract["conversation_strategy"]
+            assert "级别决定责任范围" not in contract["conversation_strategy"]
             assert "改变一个约束" in contract["conversation_strategy"]
             assert "温和指出两处实际表述" in contract["conversation_strategy"]
             assert "未来问题" not in contract

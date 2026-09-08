@@ -134,19 +134,29 @@ def _capture(window, name):
 
 def _enter_coding_round(controller, coding_id="FND-002"):
     """Prepare a real persisted session; replies here are fixture data, not AI evidence."""
-    for stage in (["experience"] * 8 + ["theory"] * 4 + ["coding"]):
+    stages = ["experience", "theory", "coding"] if controller.interview.get("interaction_version") == 2 else (["experience"] * 8 + ["theory"] * 4 + ["coding"])
+    for stage in stages:
         question = controller.interview["question"]
         controller.lockInterviewAnswer("合成验收回答：我负责偏好数据去重，用独立留出集验证。")
         preview = controller.interviewContextPreview(controller.interview["answer_text"], False)
         assert preview["parts"]
-        controller.service.advance_dynamic_interview(
-            controller.profileId, controller.interview["interview_id"], question["question_id"],
-            {"scores": {name: 3 for name in question["rubric"]["dimensions"]},
+        response = {"scores": {name: 3 for name in question["rubric"]["dimensions"]},
              "evidence": "合成验收数据，仅用于界面测试。", "confidence": "medium", "fatal_issues": [],
              "next_stage": stage, "follow_up": "如何验证你提到的数据去重？" if stage != "coding" else "",
              "coding_problem_id": coding_id if stage == "coding" else "",
              "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))]
-                               if stage != "coding" else []},
+                               if stage != "coding" else []}
+        if controller.interview.get("interaction_version") == 2:
+            from llm_interview_lab.role_interviews import dynamic_coding_candidates
+            for key in ("scores", "evidence", "confidence", "fatal_issues"):
+                response.pop(key)
+            response["coverage"] = {"experience": "合成项目", "angle": "评测", "topic": "数据", "evidence": "", "sufficient": False}
+            if stage == "coding":
+                session = controller.service.interview_session(controller.profileId, controller.interview["interview_id"])
+                candidates = dynamic_coding_candidates(controller.service.catalog, controller.service.roles, session)
+                response["coding_problem_id"] = next((p.id for p, _ in candidates if p.id == coding_id), candidates[0][0].id)
+        controller.service.advance_dynamic_interview(
+            controller.profileId, controller.interview["interview_id"], question["question_id"], response,
             context_sha256=controller._interview_context_confirmation[-1],
         )
         controller._load_interview(controller.interview["interview_id"])

@@ -1119,7 +1119,7 @@ def advance_dynamic_role_interview(
         raise RoleInterviewError("this operation requires a dynamic interview")
     candidates = dynamic_coding_candidates(catalog, role_catalog, session)
     stage = assessment.get("next_stage")
-    allowed = next_stages(session, coding_available=bool(candidates))
+    allowed = next_stages(session, coding_available=bool(candidates), now=now)
     if stage == "coding" and not candidates and "finish" in allowed:
         # No actual exercise is available: leave coding explicitly incomplete,
         # instead of inventing a task or forcing a model retry with the same ID.
@@ -1132,6 +1132,8 @@ def advance_dynamic_role_interview(
     selection_corrected = False
     if stage == "coding":
         chosen = next((value for value in candidates if value[0].id == assessment.get("coding_problem_id")), None)
+        if chosen is None and session.get("interaction_version") == 2:
+            raise RoleInterviewError("AI 建议的手撕题不在本场可运行候选中；回答已保留，请重试选题。")
         if chosen is None:
             # AI suggests; local runnable assets remain authoritative. An
             # invented ID must not strand a candidate's already-saved answer.
@@ -1181,11 +1183,26 @@ def advance_dynamic_role_interview(
         appended["stage"] = stage
     # Reuse all existing answer/rubric/identity checks. Defer persistence so a
     # malformed next question cannot leave an assessed, unresumable last turn.
-    session = record_role_assessment(
-        repo_root, profile_id, interview_id, question_id, assessment["scores"],
-        evidence=assessment["evidence"], source="ai", confidence=assessment["confidence"],
-        fatal_issues=assessment["fatal_issues"], now=now, _persist=False,
-    )
+    if session.get("interaction_version") == 2:
+        from .interview_flow import decode_next_question
+        decision = decode_next_question(json.dumps(dict(assessment), ensure_ascii=False))
+        current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
+        if not current or current["question_id"] != question_id or question_id not in session["answers"]:
+            raise RoleInterviewError("只能继续当前已提交的回答，不能重复生成或串题。")
+        answer = role_interview_answer_text(repo_root, profile_id, interview_id, question_id)
+        quote = decision["coverage"]["evidence"]
+        if quote and quote not in answer:
+            raise RoleInterviewError("AI 覆盖记录引用的内容不在本次回答中；请重试。")
+        if decision["coverage"]["sufficient"] and not quote:
+            raise RoleInterviewError("AI 覆盖判断缺少回答证据；请重试。")
+        session.setdefault("turn_decisions", {})[question_id] = decision
+        _end_ai_wait(session, now)
+    else:
+        session = record_role_assessment(
+            repo_root, profile_id, interview_id, question_id, assessment["scores"],
+            evidence=assessment["evidence"], source="ai", confidence=assessment["confidence"],
+            fatal_issues=assessment["fatal_issues"], now=now, _persist=False,
+        )
     if appended is not None:
         if problem is not None:
             target = _session_root(repo_root, profile_id, interview_id) / "coding" / next_id
@@ -1534,6 +1551,9 @@ def start_role_interview(
 
 
 def _remaining_seconds(session: Mapping[str, Any], now: datetime | None = None) -> int:
+    if session.get("interaction_version") == 2:
+        from .interview_flow import candidate_remaining
+        return int(candidate_remaining(session, now))
     if session["deadline"] is None:
         return session["duration_minutes"] * 60
     return max(
@@ -1560,7 +1580,34 @@ def _is_complete(session: Mapping[str, Any], question: Mapping[str, Any]) -> boo
     """A question advances only after response evidence and assessment exist."""
 
     question_id = question["question_id"]
+    if session.get("interaction_version") == 2:
+        return _has_response(session, question) and question_id in session.get("turn_decisions", {})
     return _has_response(session, question) and question_id in session["assessments"]
+
+
+def _end_ai_wait(session: dict[str, Any], now: datetime | None = None) -> None:
+    started = session.pop("ai_wait_started_at", None)
+    if not started:
+        return
+    seconds = max(0.0, (_parse_timestamp(_timestamp(now)) - _parse_timestamp(started)).total_seconds())
+    if session["status"] == "active" and session.get("deadline"):
+        session["deadline"] = _timestamp(_parse_timestamp(session["deadline"]) + timedelta(seconds=seconds))
+    session["ai_wait_seconds"] = session.get("ai_wait_seconds", 0) + seconds
+
+
+def set_role_ai_wait(repo_root: Path, profile_id: str, interview_id: str, waiting: bool, *, now: datetime | None = None) -> dict[str, Any]:
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    if session.get("interaction_version") != 2:
+        return session
+    if waiting:
+        if session["status"] != "active" or _remaining_seconds(session, now) <= 0:
+            raise RoleInterviewError("本场已暂停或到时，请恢复或结束面试。")
+        if not session.get("ai_wait_started_at"):
+            session["ai_wait_started_at"] = _timestamp(now)
+    else:
+        _end_ai_wait(session, now)
+    _save(repo_root, profile_id, session)
+    return session
 
 
 def _next_role_question(session: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -1645,6 +1692,7 @@ def pause_role_interview(
     if remaining <= 0:
         raise RoleInterviewError("role interview time has expired; finish it as incomplete")
     paused_at = _timestamp(current)
+    _end_ai_wait(session, current)
     session["status"] = "paused"
     session["paused_at"] = paused_at
     session["paused_remaining_seconds"] = remaining
@@ -2004,9 +2052,11 @@ def record_role_assessment(
     now: datetime | None = None,
     followup_ids: Iterable[str] = (),
     _persist: bool = True,
+    _finished: bool = False,
 ) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
-    if session["status"] != "active":
+    post_interview = _finished and session.get("interaction_version") == 2 and session["status"] in {"completed", "incomplete"}
+    if session["status"] != "active" and not post_interview:
         raise RoleInterviewError("assessment may only be recorded for an active interview")
     if question_id in session["assessments"]:
         raise RoleInterviewError("the current question already has recorded assessment evidence")
@@ -2054,9 +2104,10 @@ def record_role_assessment(
         answer_record = (session.get("answers") or {}).get(question_id)
         if isinstance(answer_record, Mapping):
             answer_sha256 = str(answer_record.get("sha256") or "")
-    current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
-    if current is None or current["question_id"] != question_id:
-        raise RoleInterviewError("only the current question may be assessed")
+    if not post_interview:
+        current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
+        if current is None or current["question_id"] != question_id:
+            raise RoleInterviewError("only the current question may be assessed")
     expected = set(question["rubric"]["dimensions"])
     if set(scores) != expected or any(type(value) is not int or value < 1 or value > 5 for value in scores.values()):
         raise RoleInterviewError("assessment must score every rubric dimension from 1 to 5")
@@ -2120,11 +2171,15 @@ def finish_role_interview(
     summary: str = "",
     confirm_incomplete: bool = False,
     now: datetime | None = None,
+    _refresh: bool = False,
 ) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
-    paused = session["status"] == "paused"
-    if session["status"] not in {"active", "paused"}:
+    paused = session["status"] == "paused" or bool(_refresh and (session.get("result") or {}).get("ended_while_paused"))
+    refreshing = _refresh and session.get("interaction_version") == 2 and session["status"] in {"completed", "incomplete"}
+    if session["status"] not in {"active", "paused"} and not refreshing:
         raise RoleInterviewError("only an active or paused role interview can be finished")
+    if not refreshing:
+        _end_ai_wait(session, now)
     if paused and not confirm_incomplete:
         raise RoleInterviewError("paused interview requires explicit incomplete confirmation")
     unanswered = [
@@ -2135,7 +2190,7 @@ def finish_role_interview(
         for q in session["questions"]
         if _has_response(session, q) and q["question_id"] not in session["assessments"]
     ]
-    expired = (not paused) and _remaining_seconds(session, now) == 0
+    expired = session["result"]["expired"] if refreshing else (not paused) and _remaining_seconds(session, now) == 0
     if (unanswered or unscored) and not (confirm_incomplete or expired):
         raise RoleInterviewError("interview evidence is incomplete; use explicit incomplete confirmation")
 
@@ -2203,17 +2258,54 @@ def finish_role_interview(
         "unscored": unscored,
         "critical_gaps": weakest,
         "summary": summary.strip(),
-        "finished_at": _timestamp(now),
+        "finished_at": session["result"]["finished_at"] if refreshing else _timestamp(now),
         "expired": expired,
+        **({"ended_while_paused": paused} if session.get("interaction_version") == 2 else {}),
     }
     session["result"] = result
     session["status"] = "completed" if completed else "incomplete"
-    session["timeline"].append(
-        {"event": "finished", "timestamp": result["finished_at"]}
-    )
+    if not refreshing:
+        session["timeline"].append({"event": "finished", "timestamp": result["finished_at"]})
+    if session.get("interaction_version") == 2:
+        session.setdefault("grading", {}).setdefault("questions", {})
+        for qid in unscored:
+            session["grading"]["questions"].setdefault(qid, {"status": "pending", "error": ""})
     _save(repo_root, profile_id, session)
     _write_role_report(repo_root, profile_id, session)
     return session
+
+
+def update_finished_grading(repo_root: Path, profile_id: str, interview_id: str, question_id: str,
+                            *, result: Mapping[str, Any] | None = None, error: str = "") -> dict[str, Any]:
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    if session.get("interaction_version") != 2 or session["status"] not in {"completed", "incomplete"}:
+        raise RoleInterviewError("详细评分只能在本场结束后进行。")
+    if question_id in session["assessments"]:
+        return session
+    if question_id not in session["answers"]:
+        raise RoleInterviewError("没有已保存回答，不能评分。")
+    if result is not None:
+        answer = role_interview_answer_text(repo_root, profile_id, interview_id, question_id)
+        quote = result.get("evidence_quote", "")
+        if not quote or quote not in answer:
+            raise RoleInterviewError("评分引用的原文不在本题回答中；该题保持未评分，可单独重试。")
+        session = record_role_assessment(repo_root, profile_id, interview_id, question_id, result["scores"],
+            evidence=f"回答引文：{quote}\n{result['evidence']}", source="ai", confidence=result["confidence"],
+            fatal_issues=result["fatal_issues"], _finished=True, _persist=False)
+    session.setdefault("grading", {}).setdefault("questions", {})[question_id] = {
+        "status": "complete" if result is not None else "failed", "error": error[:500],
+    }
+    _save(repo_root, profile_id, session)
+    return finish_role_interview(repo_root, profile_id, interview_id,
+        summary=(session.get("result") or {}).get("summary", ""), confirm_incomplete=True, _refresh=True)
+
+
+def configure_interview_grading(repo_root: Path, profile_id: str, interview_id: str,
+                                *, connection_id: str, include_materials: bool) -> None:
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    if session.get("interaction_version") == 2:
+        session.setdefault("grading", {}).update(connection_id=connection_id, include_materials=include_materials)
+        _save(repo_root, profile_id, session)
 
 
 def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, Any]) -> None:

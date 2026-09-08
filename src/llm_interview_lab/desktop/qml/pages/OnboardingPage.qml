@@ -109,16 +109,13 @@ Rectangle {
             return
         }
 
-        // The first run is deliberately local and deterministic. Seniority
-        // and AI connections remain editable after onboarding.
+        // First run stores the role only. AI is configured separately.
         var displayName = profileName.text.trim()
         var roleId = root.selectedRole
         root.submitting = true
         Qt.callLater(function() {
             try {
-                var accepted = app.completeOnboardingWithDisplayName(
-                    displayName, roleId, "new_grad", "disabled", "{}"
-                )
+                var accepted = app.createLearningProfile(displayName, roleId)
                 if (!accepted && !app.onboardingBusy)
                     root.submitting = false
             } catch (error) {

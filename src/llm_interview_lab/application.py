@@ -468,7 +468,7 @@ class ApplicationService:
         *,
         display_name: str | None = None,
         role_id: str | None = None,
-        seniority: str = "new_grad",
+        seniority: str | None = None,
         skill_self_assessment: Mapping[str, int] | None = None,
         ai_mode: str = "disabled",
     ) -> dict[str, Any]:
@@ -496,7 +496,7 @@ class ApplicationService:
                 profile_id,
                 {
                     "primary_role": role.id,
-                    "seniority": seniority,
+                    **({"seniority": seniority} if seniority else {}),
                     "skill_self_assessment": values,
                     "ai_mode": ai_mode,
                 },
@@ -516,7 +516,7 @@ class ApplicationService:
         display_name: str,
         *,
         role_id: str | None = None,
-        seniority: str = "new_grad",
+        seniority: str | None = None,
         skill_self_assessment: Mapping[str, int] | None = None,
         ai_mode: str = "disabled",
     ) -> dict[str, Any]:
@@ -563,14 +563,14 @@ class ApplicationService:
         self,
         role_id: str,
         *,
-        seniority: str,
+        seniority: str | None,
         skill_self_assessment: Mapping[str, int] | None,
         ai_mode: str,
     ):
         """Validate onboarding inputs before any Profile file is created."""
 
         role = self.roles.resolve_role(role_id)
-        if seniority not in role.seniority:
+        if seniority is not None and seniority not in role.seniority:
             raise ApplicationError(f"unsupported seniority for {role.id}: {seniority}")
         if ai_mode not in {"disabled", "provider", "codex"}:
             raise ApplicationError("AI mode must be disabled, provider, or codex")
@@ -877,7 +877,7 @@ class ApplicationService:
     def _role_readiness(
         self,
         role: RoleProfile,
-        seniority: str,
+        seniority: str | None,
         assessment: Mapping[str, int],
         state: WorkspaceState,
     ) -> list[dict[str, Any]]:

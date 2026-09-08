@@ -13,6 +13,15 @@
   ],
   "properties": {
     "interaction_version": {"const": 2},
+    "ai_wait_started_at": {"type": "string", "format": "date-time"},
+    "ai_wait_seconds": {"type": "number", "minimum": 0},
+    "turn_decisions": {"type": "object", "patternProperties": {"^q-[0-9]{3}$": {"type": "object"}}, "additionalProperties": false},
+    "grading": {"type": "object", "properties": {
+      "connection_id": {"type": "string"}, "include_materials": {"type": "boolean"},
+      "questions": {"type": "object", "additionalProperties": {"type": "object", "required": ["status", "error"], "properties": {
+        "status": {"enum": ["pending", "failed", "complete"]}, "error": {"type": "string"}
+      }, "additionalProperties": false}}
+    }, "additionalProperties": false},
     "schema_version": {"const": 1},
     "interview_id": {"type": "string", "pattern": "^role-interview-[0-9]{4}$"},
     "profile_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
@@ -288,7 +297,8 @@
         "critical_gaps": {"type": "array", "items": {"type": "string"}},
         "summary": {"type": "string"},
         "finished_at": {"type": "string", "format": "date-time"},
-        "expired": {"type": "boolean"}
+        "expired": {"type": "boolean"},
+        "ended_while_paused": {"type": "boolean"}
       }
     }
   }

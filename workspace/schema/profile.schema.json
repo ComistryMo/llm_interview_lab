@@ -110,7 +110,7 @@
     "role_preferences": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["primary_role", "seniority", "skill_self_assessment", "ai_mode"],
+      "required": ["primary_role", "skill_self_assessment", "ai_mode"],
       "properties": {
         "primary_role": {
           "type": "string",
