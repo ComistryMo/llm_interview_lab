@@ -116,6 +116,14 @@ git diff --check
 
 ### 当前定向证据与待查
 
+#### 2026-09-09 06:35 HKT 续接
+
+- 最终 Windows `2729e280` 包已构建并通过加强后的 Artifact 检查：181,570,046 字节，SHA-256 `6990867f0b18043b9c2c9d4818ddb93e963cda6192e158998d3a64c3e0758840`，位置 `dist/candidate-final-windows/LLMInterviewLab-Windows-x64-portable.zip`。641 个公共文件 SHA 全部与源码相符；包内覆盖仍为 27 道环境可运行验证题。
+- 新的中文/空格路径和全新 synthetic-final 档案，PATH 不含 Python。原生窗口完成 FND-001 保存、脚本输出 2、17 个公开测试通过、提交实现、显示“开始自助复盘”；events 没有 task_mastered。关闭后重新启动，只有原档案、代码及待复盘状态完整恢复，侧栏仍收起。仅此处使用本轮 ignored 空间新写的 AUTHOR 验收实现，没有读取历史 Oracle 或真实学习者作答。
+- 包内实际验证流式识别与 Qwen 0.6B ONNX 工厂及 NumPy/SciPy/soundfile 运行库可导入。未下载模型、未打开麦克风、未执行真实识别，不能据此宣称准确率通过。
+- CI `34284301760` 的 macOS 为 942 passed / 1 failed / 8 skipped，未进入构建；剩余单个设置页测试在固定 80 ms 时读到中间态 36 px 宽度，没有 binding/polish loop 日志。只把测试改成最多 2 秒等待真实布局，保留边界、高度和主题/语言点击断言，并增加宽度与父布局一致断言。Windows 四尺寸直接复验 4 passed / 27.65 秒，macOS 仍须重新验证；未修改生产代码或以跳过测试放行。
+- 同轮 Ubuntu 三 Python、Windows 3.11/3.12、CPU PyTorch、中文文档通过；Windows 3.10 核心及桌面构建仍在执行。新的文档/测试提交不改变最后生产来源 2729e280，无需为此重复本地打包。
+
 #### 2026-09-09 06:04 HKT 续接
 
 - macOS 修复后全量为 939 passed / 3 failed / 8 skipped：两项 GridView 缓存 delegate 的异步生成未等待，一项已禁用的缺依赖关联题仍可通过直接 Controller 入口创建任务。未把失败改成跳过。

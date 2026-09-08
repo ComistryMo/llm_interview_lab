@@ -100,9 +100,18 @@ def test_setup_ai_summary_and_compact_appearance(scene, size, theme, scale):
     assert controller.currentPage == "connections"
 
     controller.navigate("settings")
-    QTest.qWait(80)
     card = _find(window, "settingsAppearanceCard")
-    assert _within_window(window, card)
+    # StackLayout polishes the formerly hidden page on a scheduled frame.
+    # macOS CI observed its transient 36 px implicit width at a fixed 80 ms.
+    # Wait for actual geometry, retaining all size and real-click assertions.
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline:
+        QTest.qWait(20)
+        if (_within_window(window, card) and card.height() < 250 * scale
+                and abs(card.width() - card.parentItem().width()) <= 1):
+            break
+    assert _within_window(window, card), (card.size(), card.mapToScene(QPointF()))
+    assert abs(card.width() - card.parentItem().width()) <= 1
     assert card.height() < 250 * scale
     assert _find(window, "settingsFontScale").width() <= 280
     _click(window, _find(window, "settingsTheme-light" if theme == "dark" else "settingsTheme-dark"))
