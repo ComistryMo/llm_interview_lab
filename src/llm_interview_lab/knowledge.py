@@ -342,7 +342,7 @@ class KnowledgeCatalog:
             return card.title.casefold() in query or bool(named & answer_terms)
 
         eligible = [card for card in self.cards.values()
-                    if card.kind == "eight_stock" and (seniority in card.seniority or explicit_topic(card))
+                    if card.kind == "eight_stock" and (seniority is None or seniority in card.seniority or explicit_topic(card))
                     and skills.intersection(card.skills) and tracks.intersection(card.tracks)]
 
         def score(card: KnowledgeCard) -> tuple[float, str]:

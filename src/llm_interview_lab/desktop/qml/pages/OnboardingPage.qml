@@ -334,7 +334,7 @@ Rectangle {
                         Text {
                             Layout.fillWidth: true
                             text: root.step === 0
-                                  ? "只需一个名称；首次使用默认按校招、No-AI 开始。"
+                                  ? "只需一个名称；首次使用无需连接 AI，随时可以开始练习。"
                                   : "岗位只影响推荐路线和面试蓝图，不会改变公共课程。"
                             color: root.theme ? root.theme.text : root.colors.muted
                             font.pixelSize: root.scaledPx(13)

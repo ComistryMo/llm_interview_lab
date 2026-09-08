@@ -189,10 +189,11 @@ def build_dynamic_role_interview_context_preview(
     role_catalog: RoleCatalog,
     *,
     role_id: str,
-    seniority: str,
+    seniority: str | None = None,
     difficulty: str,
     material_ids: tuple[str, ...] = (),
     consent_materials: bool = False,
+    duration_minutes: int = 60,
 ) -> ContextPreview:
     """Build the small start-of-interview context for one-turn generation.
 
@@ -221,7 +222,7 @@ def build_dynamic_role_interview_context_preview(
                 "id": skill.id,
                 "title": skill.title,
                 "description": skill.description,
-                "target_level": target.target_level.get(seniority, 0),
+                "weight": target.weight,
             }
         )
     process = {
@@ -243,7 +244,7 @@ def build_dynamic_role_interview_context_preview(
     )
     contract = {
         "role": {"id": role.id, "title": role.title, "summary": role.summary},
-        "seniority": seniority,
+        "duration_minutes": duration_minutes,
         "difficulty": difficulty,
         "difficulty_directive": DIFFICULTY_DIRECTIVES[difficulty],
         "role_probe_focus": ROLE_PROBE_FOCUS[role.id],
@@ -260,7 +261,8 @@ def build_dynamic_role_interview_context_preview(
     profile_context = {
         "display_name": profile.get("display_name", profile_id),
         "career_intent": profile.get("career_intent"),
-        "role_preferences": profile.get("role_preferences"),
+        "role_preferences": {key: value for key, value in (profile.get("role_preferences") or {}).items()
+                             if key != "seniority"},
     }
     parts.append(
         _part(
@@ -420,7 +422,7 @@ def build_role_interview_context_preview(
         + paused_note
     )
     contract = (
-        f"role={session['role_id']} seniority={session['seniority']} "
+        f"role={session['role_id']} "
         f"difficulty={session['difficulty']} question_id={question['question_id']}\n"
         f"kind={question['kind']} skills={','.join(question['skills'])}\n\n"
         f"{question['prompt']}\n\nRubric:\n{question['rubric']}"
@@ -434,7 +436,7 @@ def build_role_interview_context_preview(
         role_catalog = role_catalog or load_role_catalog(repo_root, curriculum=catalog)
         base = build_dynamic_role_interview_context_preview(
             repo_root, profile_id, role_catalog, role_id=session["role_id"],
-            seniority=session["seniority"], difficulty=session["difficulty"],
+            difficulty=session["difficulty"], duration_minutes=session["duration_minutes"],
         )
         # Include role prose, difficulty and background on EVERY request.
         # Ordinary APIs are stateless; a Codex thread is not the truth source.
@@ -533,7 +535,7 @@ def build_role_interview_context_preview(
         relevant_context = "\n".join(p.content for p in parts if p.sensitive)
         pool = knowledge.interview_candidates(
             skills=set(role.skill_weights), tracks=set(role.required_tracks),
-            seniority=session["seniority"], context=relevant_context,
+            seniority=session.get("seniority"), context=relevant_context,
             current_answer=candidate_answer or "",
             asked_questions=tuple(q["prompt"] for q in session["questions"]),
         )

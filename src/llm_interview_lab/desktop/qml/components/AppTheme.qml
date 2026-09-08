@@ -78,7 +78,7 @@ QtObject {
     readonly property int fontBody: scaledPx(14)
     readonly property int fontBodyLarge: scaledPx(15)
     readonly property int fontSection: scaledPx(18)
-    readonly property int fontTitle: scaledPx(26)
+    readonly property int fontTitle: scaledPx(24)
     readonly property int controlHeight: Math.max(40, scaledPx(28) + 12)
     readonly property int controlHeightCompact: Math.max(34, scaledPx(24) + 10)
     readonly property int pagePadding: 24

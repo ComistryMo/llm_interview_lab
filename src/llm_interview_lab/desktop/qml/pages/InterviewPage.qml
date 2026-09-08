@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
+import QtQuick.Window
 import "../components"
 
 Item {
@@ -39,6 +40,11 @@ Item {
     property string activeQuestionKey: String(app.profileId || "") + "::" + String(app.interview.interview_id || "")
                                   + "::" + String(activeQuestion ? activeQuestion.question_id : "")
     property bool configuringNewInterview: false
+    property bool showingHistory: false
+    property bool setupExpanded: false
+    property var historyItems: []
+    property bool followLatest: true
+    property bool showCodingHistory: false
     property bool syncingQuestionEditors: false
     // The context confirmation is a single, synchronous hand-off to the
     // controller.  Keep a local gate as well as ``app.busy`` so keyboard
@@ -78,6 +84,7 @@ Item {
     readonly property string preferredQuestionLanguage: app.language
     onPreferredQuestionLanguageChanged: showEnglishQuestion = preferredQuestionLanguage === "en"
     readonly property bool codingQuestion: !!activeQuestion && activeQuestion.kind === "coding"
+    readonly property bool wideCoding: codingQuestion && root.Window.window && root.Window.window.width >= 1180
     readonly property bool interviewFinished: app.interview.status === "completed" || app.interview.status === "incomplete"
     readonly property bool hasUnsubmittedDraft: !!activeQuestion && (root.codingQuestion
         ? root.codingEditorDirty
@@ -99,6 +106,8 @@ Item {
         if (app.interview.status === "active")
             root.configuringNewInterview = false
         Qt.callLater(root.resetQuestionEditors)
+        if (root.followLatest)
+            Qt.callLater(root.scrollToLatest)
     }
     onAnswerLockedChanged: Qt.callLater(root.syncQuestionEditors)
     onVisibleChanged: {
@@ -242,9 +251,8 @@ Item {
     function openPersonalizedPlanContext() {
         if (root.startingDynamicInterview || app.busy)
             return
-        root.planContext = app.dynamicInterviewContextPreview(
+        root.planContext = app.previewInterviewSettings(
             role.currentValue,
-            seniority.currentValue,
             difficulty.currentValue,
             root.selectedMaterials(),
             useMaterial.checked ? consent.checked : false
@@ -324,10 +332,6 @@ Item {
             value = match ? match[1] : ""
         }
         return value ? "已校验 · SHA-256 " + value.slice(0, 8) : ""
-    }
-
-    function seniorityText(value) {
-        return ({intern: "实习", new_grad: "校招", mid: "有经验", senior: "高级"})[value] || value || "未设置"
     }
 
     function difficultyText(value) {
@@ -418,8 +422,8 @@ Item {
                                       : "请选择一个目标岗位后再开始面试。"})
             return
         }
-        if (typeof app.interviewConfiguration === "function")
-            root.configuration = app.interviewConfiguration(roleId, seniority.currentValue, difficulty.currentValue)
+        if (typeof app.dynamicInterviewConfiguration === "function")
+            root.configuration = app.dynamicInterviewConfiguration(roleId, difficulty.currentValue)
         else
             root.configuration = ({"available": true, "user_message": "", "missing_rounds": [], "missing_environment": []})
     }
@@ -427,7 +431,7 @@ Item {
     function initializeSetup() {
         var saved = app.interviewPreferences()
         role.currentIndex = root.roleIndex(saved.role_id)
-        seniority.currentIndex = seniority.indexOfValue(saved.seniority)
+        duration.value = Number(saved.duration_minutes || 60)
         difficulty.currentIndex = difficulty.indexOfValue(saved.difficulty)
         aiMode.currentIndex = aiMode.indexOfValue(saved.ai_mode)
         root.setupConnectionId = saved.connection_id || ""
@@ -440,7 +444,7 @@ Item {
     function saveSetup() {
         root.setupConnectionId = planConnection.currentValue || root.setupConnectionId
         app.saveInterviewPreferences({
-            role_id: role.currentValue || "", seniority: seniority.currentValue || "",
+            role_id: role.currentValue || "", duration_minutes: String(duration.value),
             difficulty: difficulty.currentValue || "", ai_mode: aiMode.currentValue || "disabled",
             connection_id: root.setupConnectionId
         })
@@ -668,6 +672,15 @@ Item {
 
     Connections {
         target: app
+        function onInterviewSetupRequested() {
+            root.showingHistory = false
+            root.configuringNewInterview = !root.interviewCanEdit
+            root.setupExpanded = false
+        }
+        function onInterviewHistoryRequested() {
+            root.historyItems = app.interviewHistory()
+            root.showingHistory = true
+        }
         function onBusyChanged() {
             // The worker publishes its connection result after clearing busy.
             // Continue on the next UI tick, using the stored credential once.
@@ -729,13 +742,64 @@ Item {
     }
 
     RowLayout {
+        id: interviewNavigation
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: Math.min(root.width - 32, root.theme ? root.theme.readingWidth : 760)
+        visible: leftPanel.setupVisible || root.interviewFinished || root.showingHistory
+        spacing: 8
+        LabButton {
+            theme: root.theme; text: "准备面试"; variant: root.showingHistory ? "ghost" : "secondary"
+            onClicked: { root.showingHistory = false; root.configuringNewInterview = !root.interviewCanEdit }
+        }
+        LabButton {
+            theme: root.theme; text: "面试记录"; variant: root.showingHistory ? "secondary" : "ghost"
+            onClicked: { root.historyItems = app.interviewHistory(); root.showingHistory = true }
+        }
+        Item { Layout.fillWidth: true }
+    }
+
+    function scrollToLatest() {
+        questionScroll.contentItem.contentY = Math.max(0, questionScroll.contentHeight - questionScroll.height)
+        root.followLatest = true
+    }
+
+    ScrollView {
+        anchors.top: interviewNavigation.bottom; anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter; width: interviewNavigation.width
+        visible: root.showingHistory; clip: true; contentWidth: availableWidth
+        ColumnLayout {
+            width: parent.width; spacing: 12
+            LabText { theme: root.theme; text: "你的面试记录"; variant: "section"; strong: true; Layout.topMargin: 20 }
+            LabText { theme: root.theme; visible: root.historyItems.length === 0; text: "还没有面试记录。完成第一场后，问答与复盘会保存在这里。"; Layout.fillWidth: true; wrapMode: Text.Wrap; tone: "muted" }
+            Repeater {
+                model: root.historyItems
+                RowLayout {
+                    required property var modelData
+                    Layout.fillWidth: true; spacing: 12
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        LabText { theme: root.theme; text: modelData.role_title; Layout.fillWidth: true; wrapMode: Text.Wrap; strong: true }
+                        LabText { theme: root.theme; text: modelData.created_at.slice(0, 10) + " · " + root.difficultyText(modelData.difficulty) + " · " + modelData.question_count + " 问"; tone: "muted"; variant: "caption" }
+                    }
+                    LabButton {
+                        theme: root.theme; text: ["active", "paused"].indexOf(modelData.status) >= 0 ? "继续" : "查看记录"; variant: "secondary"
+                        onClicked: { app.openInterview(modelData.interview_id); root.showingHistory = false; root.configuringNewInterview = false }
+                    }
+                }
+            }
+        }
+    }
+
+    RowLayout {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        anchors.topMargin: root.compactInterviewLayout ? 12 : 24
+        anchors.topMargin: interviewNavigation.visible ? 58 : root.compactInterviewLayout ? 12 : 24
         anchors.bottomMargin: 12
         width: Math.min(root.width - (root.compactInterviewLayout ? 32 : 64),
-                        root.codingQuestion ? 920 : root.theme ? root.theme.readingWidth : 760)
+                        root.codingQuestion ? 1600 : root.theme ? root.theme.readingWidth : 760)
+        visible: !root.showingHistory
         spacing: 0
         clip: true
 
@@ -744,7 +808,9 @@ Item {
             visible: setupVisible
             Layout.fillWidth: true
             Layout.minimumWidth: 0
-            Layout.fillHeight: true
+            Layout.fillHeight: root.setupExpanded || !role.currentValue
+            Layout.preferredHeight: Math.min(parent.height, setupScroll.contentHeight + 150)
+            Layout.alignment: Qt.AlignTop
             theme: root.theme
             cardColor: "transparent"
             borderColor: "transparent"
@@ -782,6 +848,18 @@ Item {
                     spacing: root.compactInterviewLayout ? 10 : 12
                     LabText { width: parent.width; theme: root.theme; text: "开始新面试"; variant: "section"; strong: true; wrapMode: Text.Wrap }
                     LabText { width: parent.width; theme: root.theme; text: "自我介绍 → 经历深挖 → 岗位原理 → 手撕验证"; variant: "caption"; tone: "muted"; wrapMode: Text.Wrap }
+                    LabText {
+                        width: parent.width; theme: root.theme; variant: "body"; wrapMode: Text.Wrap
+                        text: (role.currentText || "请选择岗位") + " · " + (difficulty.currentText || "标准") + " · " + duration.value + " 分钟\n" + root.setupAiSummary
+                    }
+                    LabButton {
+                        objectName: "interviewEditSettings"; theme: root.theme; variant: "secondary"
+                        text: root.setupExpanded ? "收起配置" : "修改岗位、难度与材料"
+                        onClicked: root.setupExpanded = !root.setupExpanded
+                    }
+                    Column {
+                    width: parent.width; spacing: 12
+                    visible: root.setupExpanded || !role.currentValue
                     LabDivider { width: parent.width; theme: root.theme }
                     LabText { theme: root.theme; text: "目标岗位"; variant: "caption"; tone: "muted" }
                     LabComboBox { theme: root.theme; id: role; objectName: "interviewRoleSelector"; width: parent.width; textRole: "title"; valueRole: "id"; model: app.roles; currentIndex: -1; onActivated: root.saveSetup() }
@@ -790,10 +868,10 @@ Item {
                         columns: 2
                         columnSpacing: 16
                         rowSpacing: 8
-                        LabText { theme: root.theme; text: "求职阶段"; variant: "caption"; tone: "muted" }
                         LabText { theme: root.theme; text: "难度"; variant: "caption"; tone: "muted" }
-                        LabComboBox { theme: root.theme; id: seniority; objectName: "interviewSenioritySelector"; Layout.fillWidth: true; Layout.minimumWidth: 0; model: [{id:"intern", label:"实习"}, {id:"new_grad", label:"校招"}, {id:"mid", label:"有经验"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.saveSetup() }
-                        LabComboBox { theme: root.theme; id: difficulty; objectName: "interviewDifficultySelector"; Layout.fillWidth: true; Layout.minimumWidth: 0; model: [{id:"easy", label:"基础"}, {id:"medium", label:"标准"}, {id:"hard", label:"高压"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.saveSetup() }
+                        LabText { theme: root.theme; text: "时长（分钟）"; variant: "caption"; tone: "muted" }
+                        LabComboBox { theme: root.theme; id: difficulty; objectName: "interviewDifficultySelector"; Layout.fillWidth: true; Layout.minimumWidth: 0; model: [{id:"easy", label:"简单"}, {id:"medium", label:"标准"}, {id:"hard", label:"困难"}]; textRole: "label"; valueRole: "id"; currentIndex: 1; onActivated: root.saveSetup() }
+                        SpinBox { id: duration; objectName: "interviewDurationSelector"; Layout.fillWidth: true; Layout.minimumWidth: 0; from: 1; to: 150; value: 60; stepSize: 5; editable: true; onValueModified: root.saveSetup() }
                     }
                     Text {
                         objectName: "interviewDifficultyHint"
@@ -1145,6 +1223,7 @@ Item {
                         onClicked: root.configuringNewInterview = false
                     }
                     Text { width: parent.width; text: "面试结果仅用于复盘，不改变刷题训练的掌握状态。"; color: root.colors.muted; wrapMode: Text.Wrap; font.pixelSize: root.theme ? root.theme.fontCaption : 12 }
+                    }
                 }
             }
                 LabDivider { theme: root.theme; Layout.fillWidth: true }
@@ -1268,17 +1347,27 @@ Item {
                                ? app.resumeInterview() : pauseInterviewDialog.open()
                 }
                 }
+                SplitView {
+                id: interviewWorkSplit
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                orientation: Qt.Horizontal
                 ScrollView {
                 id: questionScroll
                 objectName: "interviewQuestionScroll"
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                SplitView.fillWidth: !root.wideCoding
+                SplitView.preferredWidth: root.wideCoding ? interviewWorkSplit.width * 0.4 : interviewWorkSplit.width
+                SplitView.minimumWidth: 230
                 clip: true
                 // Keep the question column tied to the panel viewport.  Without
                 // an explicit content width, Qt sizes the Flickable content to
                 // the TextArea's implicit width, leaving the editor as a narrow
                 // strip and making the phase controls collide on small screens.
                 contentWidth: availableWidth
+                Connections {
+                    target: questionScroll.contentItem
+                    function onMovementEnded() { root.followLatest = questionScroll.contentItem.atYEnd }
+                }
                 ScrollBar.vertical: LabScrollBar {
                     theme: root.theme
                     objectName: "interviewQuestionScrollBar"
@@ -1291,6 +1380,30 @@ Item {
                     id: questionContent
                     width: questionScroll.availableWidth - 12
                     spacing: 18
+                    LabButton {
+                        objectName: "interviewReturnToLatest"
+                        theme: root.theme; text: "回到最新"; variant: "ghost"
+                        visible: root.dynamicInterview && !root.followLatest
+                        onClicked: root.scrollToLatest()
+                    }
+                    LabButton {
+                        objectName: "interviewCodingHistory"
+                        theme: root.theme; text: root.showCodingHistory ? "收起前序问答" : "前序问答"; variant: "ghost"
+                        visible: root.codingQuestion
+                        onClicked: { root.showCodingHistory = !root.showCodingHistory; questionScroll.contentItem.contentY = 0 }
+                    }
+                    Repeater {
+                        model: root.dynamicInterview && (!root.codingQuestion || root.showCodingHistory) ? (app.interview.dialogue || []) : []
+                        ColumnLayout {
+                            required property var modelData
+                            width: questionContent.width; spacing: 8
+                            LabText { theme: root.theme; text: "面试官 · " + modelData.question_id; variant: "caption"; tone: "muted" }
+                            LabText { theme: root.theme; Layout.fillWidth: true; text: modelData.question; wrapMode: Text.Wrap; font.pixelSize: root.theme.fontBodyLarge }
+                            LabText { theme: root.theme; text: "你的回答"; variant: "caption"; tone: "muted"; Layout.topMargin: 8 }
+                            LabText { theme: root.theme; Layout.fillWidth: true; text: modelData.answer; wrapMode: Text.Wrap }
+                            LabDivider { theme: root.theme; Layout.fillWidth: true; Layout.topMargin: 12; Layout.bottomMargin: 12 }
+                        }
+                    }
                     LabText {
                         width: parent.width
                         theme: root.theme
@@ -1334,7 +1447,7 @@ Item {
                     }
                     Text {
                         objectName: "interviewQuestionPrompt"
-                        visible: !root.codingQuestion || root.showCodingPrompt
+                        visible: !root.codingQuestion || root.showCodingPrompt || root.wideCoding
                         width: parent.width
                         // Markdown's default implicit height does not include
                         // the complete custom paragraph leading on Qt/Windows.
@@ -1354,7 +1467,7 @@ Item {
                     LabButton {
                         objectName: "toggleInterviewQuestionLanguage"
                         theme: root.theme
-                        visible: root.codingQuestion && root.showCodingPrompt
+                        visible: root.codingQuestion && (root.showCodingPrompt || root.wideCoding)
                                  && (root.activeQuestion.prompt || "").indexOf("\n## 任务\n") < 0
                         text: root.showEnglishQuestion ? "查看中文题目" : "查看英文题目"
                         compact: true
@@ -1957,15 +2070,19 @@ Item {
                         }
                     }
                     ColumnLayout {
-                        visible: root.codingQuestion && !root.showCodingPrompt
-                        width: parent.width; spacing: 10
+                        id: codingWorkspace
+                        parent: root.wideCoding ? codingHost.contentItem : questionContent
+                        onParentChanged: { x = 0; y = 0 }
+                        visible: root.codingQuestion && (!root.showCodingPrompt || root.wideCoding)
+                        width: root.wideCoding ? codingHost.availableWidth - 12 : questionContent.width
+                        spacing: 10
                         Text { text: "本场手撕代码"; color: root.colors.text; font.bold: true }
                         LabText {
                             theme: root.theme; Layout.fillWidth: true; wrapMode: Text.Wrap
                             text: "可以直接写样例、调用函数、print 查看输出；注释可说明思路和未完成部分。不必先通过单测才能交给面试官。"
                             variant: "caption"; tone: "muted"
                         }
-                        LabTextArea {
+                        LabCodeEditor {
                             id: codingEditor
                             objectName: "interviewCodingEditor"
                             theme: root.theme
@@ -1974,11 +2091,9 @@ Item {
                             readOnly: !root.interviewCanEdit || root.answerLocked || app.busy
                             color: root.colors.text
                             font.family: root.codeFontFamily
-                            font.pixelSize: 13
+                            font.pixelSize: root.theme ? root.theme.scaledPx(14) : 14
                             wrapMode: TextEdit.NoWrap
-                            padding: 12
                             clip: true
-                            background: Rectangle { color: root.colors.surfaceAlt; radius: 8; border.color: root.colors.border }
                             Accessible.name: "限时代码面试编辑器"
                             onTextChanged: if (!root.syncingQuestionEditors) root.codingEditorDirty = true
                         }
@@ -2043,6 +2158,17 @@ Item {
                     }
                 }
                 }
+                ScrollView {
+                    id: codingHost
+                    objectName: "interviewCodingWorkspace"
+                    visible: root.wideCoding
+                    SplitView.fillWidth: true
+                    SplitView.minimumWidth: 320
+                    contentWidth: availableWidth
+                    contentHeight: codingWorkspace.implicitHeight
+                    clip: true
+                }
+                }
                 ColumnLayout {
                     visible: root.codingQuestion
                     Layout.fillWidth: true
@@ -2071,6 +2197,7 @@ Item {
                         spacing: 8
                         LabButton {
                             objectName: "toggleInterviewCodingPrompt"
+                            visible: !root.wideCoding
                             theme: root.theme
                             text: root.showCodingPrompt ? "开始作答" : "查看题面"
                             onClicked: {
@@ -2597,9 +2724,8 @@ Item {
                 return
             planContextDialog.submitting = true
             root.startingDynamicInterview = true
-            app.startDynamicPersonalizedInterview(
+            app.startConfiguredInterview(
                 role.currentValue,
-                seniority.currentValue,
                 difficulty.currentValue,
                 aiMode.currentValue === "codex" ? "codex" : planConnection.currentValue,
                 root.selectedMaterials(),
@@ -2772,7 +2898,7 @@ Item {
             if (useMaterial.checked)
                 app.createTailoredInterview(
                     role.currentValue,
-                    seniority.currentValue,
+                    app.interview.seniority || "",
                     difficulty.currentValue,
                     material.currentValue,
                     consent.checked,
@@ -2781,7 +2907,7 @@ Item {
             else
                 app.createConfiguredInterview(
                     role.currentValue,
-                    seniority.currentValue,
+                    app.interview.seniority || "",
                     difficulty.currentValue,
                     aiMode.currentValue
                 )
@@ -2798,7 +2924,6 @@ Item {
             Text {
                 Layout.fillWidth: true
                 text: "岗位：" + (role.currentText || "未选择")
-                      + "\n求职阶段：" + root.seniorityText(seniority.currentValue)
                       + "\n难度：" + root.difficultyText(difficulty.currentValue)
                       + "\n面试官：" + (aiMode.currentText || "手动 / 无 AI")
                 color: root.colors.text
@@ -2933,7 +3058,7 @@ Item {
                     nonCodingInterviewDialog.close()
                     app.createNonCodingInterview(
                         role.currentValue,
-                        seniority.currentValue,
+                        app.interview.seniority || "",
                         difficulty.currentValue,
                         aiMode.currentValue,
                         useMaterial.checked ? material.currentValue : "",

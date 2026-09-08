@@ -317,7 +317,6 @@ ApplicationWindow {
                     model: [
                         {id: "home", label: backend.uiText("nav.home"), icon: "../resources/icons/home.svg"},
                         {id: "learn", label: backend.uiText("nav.learn"), icon: "../resources/icons/book-open.svg"},
-                        {id: "exercise", label: backend.uiText("page.exercise"), icon: "../resources/icons/code.svg"},
                         {id: "interview", label: backend.uiText("nav.interview"), icon: "../resources/icons/interview.svg"}
                     ]
                     delegate: navButtonDelegate

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from . import code_highlighter  # Register the shared native QML editor type.
+
 import asyncio
 from datetime import datetime, timezone
 import hashlib
@@ -342,6 +344,8 @@ class AppController(QObject):
 
     stateChanged = Signal()
     interviewChanged = Signal()
+    interviewSetupRequested = Signal()
+    interviewHistoryRequested = Signal()
     interviewVoiceChanged = Signal()
     busyChanged = Signal()
     pageChanged = Signal()
@@ -851,6 +855,22 @@ class AppController(QObject):
     ) -> dict[str, Any]:
         return self.service.interview_configuration(role_id, seniority, difficulty)
 
+    @Slot(str, str, result="QVariantMap")
+    def dynamicInterviewConfiguration(self, role_id: str, difficulty: str) -> dict[str, Any]:
+        role = self.service.roles.resolve_role(role_id)
+        return {"available": difficulty in {"easy", "medium", "hard"},
+                "role_id": role.id, "duration_minutes": 60, "user_message": ""}
+
+    @Slot(str, str, str, bool, result="QVariantMap")
+    def previewInterviewSettings(self, role_id: str, difficulty: str, materials: str, consent: bool) -> dict[str, Any]:
+        return self.dynamicInterviewContextPreview(role_id, None, difficulty, materials, consent)
+
+    @Slot(str, str, str, str, bool, str)
+    def startConfiguredInterview(self, role_id: str, difficulty: str, connection: str,
+                                 materials: str, consent: bool, context_sha256: str) -> None:
+        self.startDynamicPersonalizedInterview(role_id, None, difficulty, connection,
+                                              materials, consent, context_sha256)
+
     def _interview_preferences_key(self) -> str:
         identity = f"{self.repo_root}:{self._profile_id}"
         return "interviewPreferences/" + hashlib.sha256(identity.encode("utf-8")).hexdigest()[:24]
@@ -861,21 +881,23 @@ class AppController(QObject):
         role = self._dashboard.get("role") or {}
         defaults = {
             "role_id": self._interview.get("role_id") or role.get("primary_role", ""),
-            "seniority": self._interview.get("seniority") or role.get("seniority", "new_grad"),
+            "duration_minutes": str(self._interview.get("duration_minutes", 60)),
             "difficulty": self._interview.get("difficulty", "medium"),
             "ai_mode": self._interview.get("ai_mode", "disabled"),
             "connection_id": (self._interview.get("connection_id", "")
                               if self._interview.get("ai_mode") == "provider" else ""),
             "transcription_connection_id": "",
         }
-        return {**defaults, **self._settings.value(self._interview_preferences_key(), {})}
+        restored = {**defaults, **self._settings.value(self._interview_preferences_key(), {})}
+        restored.pop("seniority", None)
+        return restored
 
     @Slot("QVariantMap")
     def saveInterviewPreferences(self, preferences: Mapping[str, Any]) -> None:
         # Only selection IDs belong here. Models/effort stay in existing AI
         # settings, credentials in Keyring, and authorization in each session.
         saved = self.interviewPreferences()
-        for key in ("role_id", "seniority", "difficulty", "ai_mode", "connection_id",
+        for key in ("role_id", "difficulty", "duration_minutes", "ai_mode", "connection_id",
                     "transcription_connection_id"):
             if key in preferences:
                 if key == "connection_id" and preferences[key] == "codex":
@@ -2670,6 +2692,44 @@ class AppController(QObject):
             self._test_state = "结果已过期"
         self.stateChanged.emit()
 
+    @Slot(str, str)
+    def runPracticeScript(self, text: str, stdin: str = "") -> None:
+        if self._busy or not self._current_task or self._demo_mode:
+            return
+        profile_id = self._profile_id
+        problem_id = self._current_task["problem_id"]
+        current = self.service.current_submission(profile_id)
+        if not current or current["problem_id"] != problem_id:
+            self._show_error("当前作答已变化，请重新打开题目后运行。")
+            return
+        revision = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        self._submission = text
+        self._test_state = "运行代码"
+        self._test_output = "正在运行当前 Python 脚本…"
+        self.stateChanged.emit()
+        def complete(result):
+            if self._profile_id != profile_id or self._current_task.get("problem_id") != problem_id:
+                return
+            active = self.service.current_submission(profile_id)
+            if not active or active["attempt_id"] != current["attempt_id"]:
+                return
+            self._test_state = "脚本已结束"
+            if self.submissionRevision == revision:
+                self._submission_saved_revision = result["submission_sha256"]
+            self._test_output = ("脚本执行 · " + result["status"] + " · 退出码 " + str(result["exit_code"])
+                                 + "\n" + result["stdout"] + "\n" + result["stderr"]
+                                 + "\n运行输出不是公开测试通过或已掌握证据。")
+            self.stateChanged.emit()
+        def failed(message):
+            if self._profile_id != profile_id or self._current_task.get("problem_id") != problem_id:
+                return
+            self._test_state = "运行失败"
+            self._test_output = message
+            self.stateChanged.emit()
+            self._show_error(message)
+        self._background(lambda: self.service.run_practice_script(
+            profile_id, problem_id, text, stdin, attempt_id=current["attempt_id"]), complete, failed)
+
     @Slot()
     def runTests(self) -> None:
         self.runTestsForCurrentSubmission(self._submission)
@@ -2975,6 +3035,34 @@ class AppController(QObject):
         except Exception as error:
             self._show_error(error)
 
+    @Slot(result="QVariantList")
+    def interviewHistory(self) -> list[dict[str, Any]]:
+        if self._demo_mode or not self._profile_id:
+            return []
+        return self.service.interview_history(self._profile_id)
+
+    @Slot()
+    def prepareInterview(self) -> None:
+        self.navigate("interview")
+        self.interviewSetupRequested.emit()
+
+    @Slot()
+    def showInterviewHistory(self) -> None:
+        self.navigate("interview")
+        self.interviewHistoryRequested.emit()
+
+    @Slot(str)
+    def openInterview(self, interview_id: str) -> None:
+        if self._busy or self._interview_draft_dirty:
+            self._show_error("请先提交或清空当前未保存的回答，再打开其他面试。")
+            return
+        try:
+            self._suspend_interview_voice()
+            self._load_interview(interview_id)
+            self.navigate("interview")
+        except Exception as error:
+            self._show_error(error)
+
     def _load_interview(self, interview_id: str) -> None:
         # Rebuilding the frozen question snapshot invalidates any provider
         # assessment callback that still belongs to the previous view.
@@ -3033,7 +3121,9 @@ class AppController(QObject):
                 ),
                 session["role_id"].replace("_", " ").title(),
             ),
-            "seniority": session["seniority"],
+            "seniority": session.get("seniority"),
+            "interaction_version": session.get("interaction_version", 1),
+            "duration_minutes": session["duration_minutes"],
             "difficulty": session["difficulty"],
             "blueprint_id": session["blueprint_id"],
             "delivery_mode": session.get("delivery_mode", "full_blueprint"),
@@ -3041,6 +3131,10 @@ class AppController(QObject):
             "ai_mode": session["ai_mode"],
             "material_refs": session["material_refs"],
             "total_questions": len(questions),
+            "dialogue": [{"question_id": q["question_id"], "question": q["prompt"],
+                          "answer": self.service.interview_answer_text(self._profile_id, interview_id, q["question_id"])}
+                         for q in questions if q["question_id"] in session["answers"]
+                         and q != current.get("question")],
             "completed_questions": len(completed),
             "unanswered_questions": len(questions) - len(answered),
             "unscored_questions": len(answered - assessed),
@@ -3260,8 +3354,8 @@ class AppController(QObject):
         """Reuse the scene's material allowlist; store only a consent fingerprint."""
         session = self.service.interview_session(self._profile_id, self._interview["interview_id"])
         preview = self.service.dynamic_interview_context(
-            self._profile_id, role_id=session["role_id"], seniority=session["seniority"],
-            difficulty=session["difficulty"],
+            self._profile_id, role_id=session["role_id"],
+            difficulty=session["difficulty"], duration_minutes=session["duration_minutes"],
             material_ids=tuple(ref["id"] for ref in session["material_refs"]) if include_materials else (),
             consent_materials=include_materials,
         )
@@ -4579,7 +4673,7 @@ class AppController(QObject):
             preview = self.service.dynamic_interview_context(
                 self._profile_id,
                 role_id=role_id,
-                seniority=seniority,
+                duration_minutes=int(self.interviewPreferences()["duration_minutes"]),
                 difficulty=difficulty,
                 material_ids=selected,
                 consent_materials=bool(selected),
@@ -4629,7 +4723,7 @@ class AppController(QObject):
             context = self.service.dynamic_interview_context(
                 self._profile_id,
                 role_id=str(request["role_id"]),
-                seniority=str(request["seniority"]),
+                duration_minutes=int(request["duration_minutes"]),
                 difficulty=str(request["difficulty"]),
                 material_ids=self._interview_material_ids(str(request["material_id"]), bool(request.get("consent"))),
                 consent_materials=bool(request.get("consent")),
@@ -4640,7 +4734,7 @@ class AppController(QObject):
             session = self.service.create_dynamic_interview(
                 self._profile_id,
                 role_id=str(request["role_id"]),
-                seniority=str(request["seniority"]),
+                duration_minutes=int(request["duration_minutes"]),
                 difficulty=str(request["difficulty"]),
                 ai_mode=str(request["ai_mode"]),
                 initial_question=question,
@@ -4662,7 +4756,7 @@ class AppController(QObject):
             self._interview["connection_id"] = str(request.get("connection_id") or "codex")
             self.saveInterviewPreferences({
                 field: self._interview[field]
-                for field in ("role_id", "seniority", "difficulty", "ai_mode", "connection_id")
+                for field in ("role_id", "difficulty", "duration_minutes", "ai_mode", "connection_id")
             })
             self._settings.sync()
             self.stateChanged.emit()
@@ -4825,7 +4919,7 @@ class AppController(QObject):
             preview = self.service.dynamic_interview_context(
                 self._profile_id,
                 role_id=role_id,
-                seniority=seniority,
+                duration_minutes=int(self.interviewPreferences()["duration_minutes"]),
                 difficulty=difficulty,
                 material_ids=self._interview_material_ids(material_id, consent),
                 consent_materials=bool(material_id and consent),
@@ -4833,7 +4927,8 @@ class AppController(QObject):
             current_sha = hashlib.sha256(preview.selected_text.encode("utf-8")).hexdigest()
             if current_sha != approved_context_sha256:
                 raise RuntimeError("面试上下文在确认后发生变化，请重新预览")
-            blueprint = self.service.roles.blueprint_for(role_id, seniority)
+            blueprint = self.service.roles.dynamic_blueprint_for(
+                role_id, int(self.interviewPreferences()["duration_minutes"]))
             role_profile = self.service.roles.resolve_role(role_id)
             non_coding_rounds = [
                 round_value for round_value in blueprint.rounds
@@ -4851,7 +4946,7 @@ class AppController(QObject):
             "profile_id": profile_id,
             "operation_id": operation_id,
             "role_id": role_id,
-            "seniority": seniority,
+            "duration_minutes": int(self.interviewPreferences()["duration_minutes"]),
             "difficulty": difficulty,
             "material_id": material_id,
             "consent": bool(material_id and consent),
@@ -4868,7 +4963,8 @@ class AppController(QObject):
         self._finish_dynamic_initial_question(
             self._dynamic_opening_question(
                 round_type=allowed[0],
-                role_title=role_profile.title,
+                role_title=next((card["title"] for card in self.service.role_cards()
+                                 if card["id"] == role_profile.id), role_profile.title),
                 difficulty=difficulty,
             )
         )

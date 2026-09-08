@@ -35,9 +35,7 @@ Flickable {
                                        ? app.dashboard.unlocks[0] : null
     readonly property string focusKind: expiredInterview ? "expired_interview"
                                          : activeInterview ? "interview"
-                                         : currentPractice ? "practice"
-                                         : actionableRetention ? "retention"
-                                         : firstUnlock ? "unlock" : "empty"
+                                         : "new_interview"
     readonly property var focusProblem: focusKind === "practice" ? currentPractice
                                         : focusKind === "unlock" ? firstUnlock : null
     readonly property bool focusProblemRunnable: !!focusProblem
@@ -89,11 +87,6 @@ Flickable {
                  mastered: "已掌握"})[value] || value || "未开始"
     }
 
-    function seniorityText(value) {
-        return ({intern: "实习", new_grad: "校招", mid: "有经验", senior: "高级"})[value]
-               || value || "未设置"
-    }
-
     function currentNextStep(status) {
         return ({
             not_started: "尚未开始；打开题目后先完成一次独立实现。",
@@ -119,6 +112,7 @@ Flickable {
     }
 
     function focusEyebrow() {
+        if (focusKind === "new_interview") return "模拟面试"
         if (focusKind === "expired_interview") return "需要处理"
         if (focusKind === "interview") return "未完成面试"
         if (focusKind === "practice") return "继续训练"
@@ -137,6 +131,7 @@ Flickable {
     }
 
     function focusTitle() {
+        if (focusKind === "new_interview") return "从你的经历开始，逐步深入"
         if (focusKind === "expired_interview" || focusKind === "interview")
             return interviewRoleTitle()
         if (focusKind === "retention")
@@ -147,6 +142,7 @@ Flickable {
     }
 
     function focusDescription() {
+        if (focusKind === "new_interview") return "从你的经历出发，逐步讨论项目、岗位原理和代码。回答后接着追问，结束后按证据复盘。"
         // During a task switch, the derived focus updates one binding at a
         // time. Do not dereference its previous task in that loading frame.
         if ((focusKind === "practice" || focusKind === "unlock") && !focusProblem)
@@ -171,6 +167,7 @@ Flickable {
     }
 
     function primaryLabel() {
+        if (focusKind === "new_interview") return "开始面试"
         if (focusKind === "expired_interview") return "完成并留档"
         if (focusKind === "interview") return "继续面试"
         if (focusKind === "practice") return focusProblemRunnable ? "继续训练" : "查看可运行题目"
@@ -180,6 +177,10 @@ Flickable {
     }
 
     function executePrimary() {
+        if (focusKind === "new_interview") {
+            app.prepareInterview()
+            return
+        }
         if (focusKind === "expired_interview") {
             app.finishInterview()
             return
@@ -213,7 +214,7 @@ Flickable {
         x: (root.width - width) / 2
         y: root.compactLayout ? 20 : 32
         width: Math.min(1000, root.width - (root.compactLayout ? 36 : 64))
-        spacing: 24
+        spacing: 20
 
         ColumnLayout {
             Layout.fillWidth: true
@@ -221,7 +222,7 @@ Flickable {
             LabText {
                 theme: root.theme
                 Layout.fillWidth: true
-                text: "今天，从这里开始"
+                text: "今天，准备好下一场面试"
                 variant: "title"
                 strong: true
                 wrapMode: Text.Wrap
@@ -230,9 +231,8 @@ Flickable {
                 theme: root.theme
                 Layout.fillWidth: true
                 text: app.dashboard.role
-                      ? (app.dashboard.role.title || "目标岗位") + " · "
-                        + root.seniorityText(app.dashboard.role.seniority)
-                      : "先完成一次练习，再用面试检验你的表达。"
+                      ? (app.dashboard.role.title || "目标岗位")
+                      : "练习、面试、复盘，都从真实问题出发。"
                 tone: "muted"
                 wrapMode: Text.Wrap
             }
@@ -245,12 +245,12 @@ Flickable {
             Layout.fillWidth: true
             Layout.preferredHeight: focusContent.implicitHeight + padding * 2
             level: "base"
-            padding: root.compactLayout ? 20 : 28
+            padding: 20
 
             ColumnLayout {
                 id: focusContent
                 anchors.fill: parent
-                spacing: 16
+                spacing: 12
                 RowLayout {
                     Layout.fillWidth: true
                     LabText {
@@ -281,7 +281,7 @@ Flickable {
                     theme: root.theme
                     Layout.fillWidth: true
                     text: root.focusTitle()
-                    variant: "title"
+                    variant: "section"
                     strong: true
                     wrapMode: Text.Wrap
                 }
@@ -316,10 +316,10 @@ Flickable {
                         objectName: "homeInterviewSecondaryAction"
                         theme: root.theme
                         visible: !root.expiredInterview
-                        text: root.activeInterview ? "结束并留档" : "开始模拟面试"
+                        text: root.activeInterview ? "结束并留档" : "面试记录"
                         variant: "ghost"
                         onClicked: root.activeInterview
-                                   ? abandonInterviewDialog.open() : app.navigate("interview")
+                                   ? abandonInterviewDialog.open() : app.showInterviewHistory()
                     }
                     Item { Layout.fillWidth: true }
                 }
@@ -327,22 +327,23 @@ Flickable {
         }
 
         RowLayout {
+            objectName: "homeCurrentPractice"
             Layout.fillWidth: true
-            LabText {
-                theme: root.theme
+            spacing: 16
+            ColumnLayout {
                 Layout.fillWidth: true
-                text: "按节奏练习，不必一次做完"
-                tone: "muted"
-                variant: "caption"
-                wrapMode: Text.Wrap
+                LabText { theme: root.theme; text: "当前练习"; variant: "section"; strong: true }
+                LabText {
+                    theme: root.theme; Layout.fillWidth: true; wrapMode: Text.Wrap
+                    text: root.currentPractice
+                          ? app.problemTitle(root.currentPractice.problem_id, root.currentPractice.title || root.currentPractice.problem_id)
+                          : "选择一道可运行题目，独立实现，再检查与复盘。"
+                    tone: "muted"
+                }
             }
             LabButton {
-                objectName: "homeBrowseTraining"
-                theme: root.theme
-                text: "浏览题库 →"
-                variant: "ghost"
-                compact: true
-                onClicked: app.navigate("learn")
+                theme: root.theme; text: root.currentPractice ? "继续练习" : "浏览题目"; variant: "secondary"
+                onClicked: root.currentPractice ? app.openProblem(root.currentPractice.problem_id) : app.navigate("learn")
             }
         }
 
@@ -376,6 +377,7 @@ Flickable {
                 }
                 RowLayout {
                     objectName: "homeEvidenceMetrics"
+                    visible: (app.dashboard.mastered_count || 0) + root.dueRetentionCount + root.dueReviewCount > 0
                     Layout.fillWidth: true
                     spacing: 16
                     Repeater {
@@ -543,7 +545,7 @@ Flickable {
                     variant: "ghost"
                     compact: true
                     Layout.minimumWidth: 72
-                    onClicked: app.navigate("interview")
+                    onClicked: app.openInterview(app.recentInterview.interview_id)
                 }
             }
         }

@@ -809,11 +809,10 @@ class ApplicationService:
         role_readiness: list[dict[str, Any]] = []
         if role_preferences:
             role = self.roles.roles.get(role_preferences.get("primary_role"))
-            seniority = role_preferences.get("seniority", "new_grad")
             assessment = role_preferences.get("skill_self_assessment", {})
-            if role is not None and seniority in role.seniority:
+            if role is not None:
                 role_readiness = self._role_readiness(
-                    role, seniority, assessment, state
+                    role, None, assessment, state
                 )
         role_view = None
         if role_preferences:
@@ -920,7 +919,7 @@ class ApplicationService:
             bucket["assessable"].update(assessable)
             bucket["assessed"].update(assessed)
             bucket["mastered"].update(mastered)
-            target_level = max(1, target.target_level[seniority])
+            target_level = max(1, target.target_level[seniority]) if seniority else 4
             related = set(skill.related_problems)
             legacy_verified_level = (
                 3 * len(related.intersection(state.mastered)) / len(related)
@@ -1197,6 +1196,13 @@ class ApplicationService:
             operation_id=operation_id,
         )
 
+    def run_practice_script(self, profile_id: str, problem_id: str, text: str,
+                            stdin: str = "", *, attempt_id: str | None = None) -> dict[str, Any]:
+        from .script_runner import run_local_python
+        saved = self.save_practice_submission(profile_id, problem_id, text, attempt_id=attempt_id)
+        return {**run_local_python(Path(saved["path"]), stdin, repo_root=self.repo_root),
+                "submission_sha256": saved["sha256"], "attempt_id": saved["attempt_id"]}
+
     def _run_practice_tests(
         self,
         profile_id: str,
@@ -1382,10 +1388,11 @@ class ApplicationService:
         profile_id: str,
         *,
         role_id: str,
-        seniority: str,
+        seniority: str | None = None,
         difficulty: str,
         material_ids: Iterable[str] = (),
         consent_materials: bool = False,
+        duration_minutes: int = 60,
     ):
         """Return start-of-interview context without a future question plan."""
 
@@ -1398,6 +1405,7 @@ class ApplicationService:
             difficulty=difficulty,
             material_ids=tuple(material_ids),
             consent_materials=consent_materials,
+            duration_minutes=duration_minutes,
         )
 
     def create_dynamic_interview(
@@ -1405,13 +1413,14 @@ class ApplicationService:
         profile_id: str,
         *,
         role_id: str,
-        seniority: str,
+        seniority: str | None = None,
         difficulty: str,
         ai_mode: str,
         initial_question: Mapping[str, Any],
         context_sha256: str,
         material_ids: Iterable[str] = (),
         consent_materials: bool = False,
+        duration_minutes: int = 60,
     ) -> dict[str, Any]:
         refs: list[dict[str, Any]] = []
         selected = tuple(material_ids)
@@ -1441,6 +1450,7 @@ class ApplicationService:
             initial_question=initial_question,
             plan_context_sha256=context_sha256,
             material_refs=refs,
+            duration_minutes=duration_minutes,
         )
 
     def append_dynamic_interview_question(
@@ -1630,7 +1640,7 @@ class ApplicationService:
             # must not consume/reveal active-session timing or future prompts.
             session = load_role_interview(self.repo_root, profile_id, interview_id)
             role_id = session["role_id"]
-            session_seniority = session["seniority"]
+            session_seniority = session.get("seniority")
             if seniority is not None and seniority != session_seniority:
                 raise ApplicationError(
                     "seniority does not match the selected role interview"
@@ -1645,9 +1655,7 @@ class ApplicationService:
 
         assert role_id is not None
         role = self.roles.resolve_role(role_id)
-        if seniority is None:
-            seniority = "new_grad"
-        if seniority not in role.seniority:
+        if seniority is not None and seniority not in role.seniority:
             raise ApplicationError(
                 f"unsupported seniority for {role.id}: {seniority}"
             )
@@ -2016,7 +2024,7 @@ class ApplicationService:
             "interview_id": interview_id,
             "status": session["status"],
             "role_id": session["role_id"],
-            "seniority": session["seniority"],
+            "seniority": session.get("seniority"),
             "difficulty": session["difficulty"],
             "completion_status": result["completion_status"],
             "overall_score": result["overall_score"],
@@ -2066,3 +2074,10 @@ class ApplicationService:
         if result is not None:
             return {"kind": "result", **result}
         return None
+
+    def interview_history(self, profile_id: str) -> list[dict[str, Any]]:
+        return [{"interview_id": value["interview_id"], "role_id": value["role_id"],
+                 "role_title": self.roles.resolve_role(value["role_id"]).title,
+                 "status": value["status"], "difficulty": value["difficulty"],
+                 "created_at": value["created_at"], "question_count": len(value["questions"])}
+                for value in reversed(list_role_interviews(self.repo_root, profile_id))]

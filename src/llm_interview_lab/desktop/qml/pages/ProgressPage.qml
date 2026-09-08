@@ -91,9 +91,7 @@ Flickable {
                         }
                     }
                     Text {
-                        text: readinessEvidence.hasSelfAssessment
-                              ? "自评达成 " + Math.round(modelData.self_assessed_attainment * 100) + "% · 已填写 " + Math.round(modelData.self_assessment_coverage * 100) + "%"
-                              : "未填写自评"
+                        text: "自评填写覆盖 " + Math.round(modelData.self_assessment_coverage * 100) + "% · 不作为面试评分"
                         color: root.colors.muted; font.pixelSize: 11
                     }
                 }

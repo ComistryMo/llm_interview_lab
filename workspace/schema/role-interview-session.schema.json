@@ -6,12 +6,13 @@
   "additionalProperties": false,
   "required": [
     "schema_version", "interview_id", "profile_id", "status", "created_at",
-    "role_id", "seniority", "difficulty", "blueprint_id", "duration_minutes",
+    "role_id", "difficulty", "blueprint_id", "duration_minutes",
     "ai_mode", "material_refs", "questions", "plan_fingerprint", "started_at",
     "deadline", "answers", "coding_evidence", "assessments", "followups",
     "timeline", "result"
   ],
   "properties": {
+    "interaction_version": {"const": 2},
     "schema_version": {"const": 1},
     "interview_id": {"type": "string", "pattern": "^role-interview-[0-9]{4}$"},
     "profile_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
@@ -118,6 +119,11 @@
     "result": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/result"}]}
   },
   "allOf": [
+    {
+      "if": {"required": ["interaction_version"], "properties": {"interaction_version": {"const": 2}}},
+      "then": {"not": {"required": ["seniority"]}},
+      "else": {"required": ["seniority"]}
+    },
     {
       "if": {
         "required": ["plan_mode"],

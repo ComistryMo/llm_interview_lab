@@ -30,6 +30,7 @@ from .interview_flow import STAGE_LABELS, STAGE_WEIGHTS, flow_coverage, next_sta
 from .materials import MaterialError, get_material
 from .roles import InterviewItem, RoleCatalog, RoleCatalogError
 from .submissions import SubmissionError, inspect_submission
+from .script_runner import run_local_python
 from .workspace import (
     WorkspaceError,
     ensure_profile_is_ignored,
@@ -129,7 +130,6 @@ def _atomic_write(path: Path, content: bytes) -> None:
 def _plan_value(session: Mapping[str, Any]) -> dict[str, Any]:
     value = {
         "role_id": session["role_id"],
-        "seniority": session["seniority"],
         "difficulty": session["difficulty"],
         "blueprint_id": session["blueprint_id"],
         "duration_minutes": session["duration_minutes"],
@@ -137,6 +137,8 @@ def _plan_value(session: Mapping[str, Any]) -> dict[str, Any]:
         "material_refs": session["material_refs"],
         "questions": session["questions"],
     }
+    if "seniority" in session:
+        value["seniority"] = session["seniority"]
     # Alpha.3 fallback sessions freeze their reduced delivery contract too.
     # Preserve the exact legacy payload for existing/full sessions so their
     # already-persisted fingerprints remain valid without a migration.
@@ -145,6 +147,7 @@ def _plan_value(session: Mapping[str, Any]) -> dict[str, Any]:
         "blueprint_coverage",
         "plan_mode",
         "plan_context_sha256",
+        "interaction_version",
     ):
         if key in session:
             value[key] = session[key]
@@ -214,8 +217,9 @@ def _coding_candidates(
     required_skills: tuple[str, ...],
     *,
     torch_available: bool,
+    coding_band: frozenset[int] | None = None,
 ) -> tuple[tuple[Problem, tuple[str, ...]], ...]:
-    band = DIFFICULTY_BANDS[difficulty]
+    band = coding_band if coding_band is not None else DIFFICULTY_BANDS[difficulty]
     tracks = set(track_ids)
     wanted = set(required_skills)
     candidates: list[tuple[Problem, tuple[str, ...]]] = []
@@ -873,7 +877,7 @@ def _create_session_from_plan(
     profile_id: str,
     *,
     role_id: str,
-    seniority: str,
+    seniority: str | None,
     difficulty: str,
     blueprint_id: str,
     duration_minutes: int,
@@ -884,6 +888,7 @@ def _create_session_from_plan(
     blueprint_coverage: Mapping[str, Any] | None,
     plan_context_sha256: str | None,
     now: datetime | None,
+    interaction_version: int = 1,
 ) -> dict[str, Any]:
     paths = profile_paths(repo_root, profile_id)
     paths.interviews_root.mkdir(exist_ok=True)
@@ -919,6 +924,9 @@ def _create_session_from_plan(
         "timeline": [{"event": "created", "timestamp": created_at}],
         "result": None,
     }
+    if interaction_version == 2:
+        session.pop("seniority")
+        session["interaction_version"] = 2
     if delivery_mode == "non_coding_fallback" and blueprint_coverage is not None:
         session["delivery_mode"] = delivery_mode
         session["blueprint_coverage"] = dict(blueprint_coverage)
@@ -949,13 +957,14 @@ def create_dynamic_role_interview(
     role_catalog: RoleCatalog,
     *,
     role_id: str,
-    seniority: str,
+    seniority: str | None = None,
     difficulty: str,
     ai_mode: str,
     initial_question: Mapping[str, Any],
     plan_context_sha256: str,
     material_refs: list[dict[str, Any]],
     now: datetime | None = None,
+    duration_minutes: int = 60,
 ) -> dict[str, Any]:
     """Create a dynamic interview containing only its first real question.
 
@@ -971,7 +980,7 @@ def create_dynamic_role_interview(
     if any(character not in "0123456789abcdef" for character in plan_context_sha256):
         raise RoleInterviewError("dynamic interview needs a valid context SHA-256")
     role = role_catalog.resolve_role(role_id)
-    blueprint = role_catalog.blueprint_for(role.id, seniority)
+    blueprint = role_catalog.dynamic_blueprint_for(role.id, duration_minutes)
     non_coding = [
         (index, round_value)
         for index, round_value in enumerate(blueprint.rounds)
@@ -1012,6 +1021,7 @@ def create_dynamic_role_interview(
         blueprint_coverage=None,
         plan_context_sha256=plan_context_sha256,
         now=now,
+        interaction_version=2,
     )
 
 
@@ -1039,7 +1049,9 @@ def append_dynamic_role_question(
     if session.get("plan_context_sha256") != plan_context_sha256:
         raise RoleInterviewError("dynamic interview context is stale; start a new turn")
     role = role_catalog.resolve_role(session["role_id"])
-    blueprint = role_catalog.blueprint_for(role.id, session["seniority"])
+    blueprint = (role_catalog.dynamic_blueprint_for(role.id, session["duration_minutes"])
+                 if session.get("interaction_version") == 2
+                 else role_catalog.blueprint_for(role.id, session["seniority"]))
     requested_kind = question.get("kind")
     matching = [
         (index, round_value)
@@ -1079,11 +1091,15 @@ def dynamic_coding_candidates(
     role = role_catalog.resolve_role(session["role_id"])
     # Coding difficulty follows seniority; pressure lives in the interview
     # prompt. An intern choosing high pressure must still have runnable tasks.
-    band = {"intern": "easy", "new_grad": "medium", "mid": "hard"}[session["seniority"]]
+    unified = session.get("interaction_version") == 2
+    band = session["difficulty"] if unified else {"intern": "easy", "new_grad": "medium", "mid": "hard"}[session["seniority"]]
     candidates = _coding_candidates(
         catalog, role_catalog, tuple(role.required_tracks), band,
         tuple(role.skill_weights), torch_available=importlib.util.find_spec("torch") is not None,
+        coding_band=frozenset({3, 4, 5}) if unified and band == "hard" else None,
     )
+    if unified and band == "hard":
+        candidates = tuple(sorted(candidates, key=lambda item: (-item[0].raw["difficulty"]["coding"], item[0].id)))
     return tuple((problem, skills) for problem, skills in candidates
                  if problem.problem_dir is not None
                  and (problem.problem_dir / "task.md").is_file()
@@ -1733,47 +1749,8 @@ def run_role_coding_script(
         raise RoleInterviewError("代码已提交并锁定；不能覆盖本轮执行证据。")
     path = _coding_path(repo_root, profile_id, interview_id, qid)
     sha = inspect_submission(path, path.parent).sha256
-    started = time.monotonic()
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"}
-    # A common print-loop bug must not accumulate unlimited output in GUI memory.
-    with (tempfile.TemporaryFile(dir=path.parent) as source_input,
-          tempfile.TemporaryFile(dir=path.parent) as out, tempfile.TemporaryFile(dir=path.parent) as err):
-        source_input.write(stdin.encode("utf-8"))
-        source_input.seek(0)
-        with subprocess.Popen(
-            [os.environ.get("LLM_LAB_GRADER_EXECUTABLE") or sys.executable, str(path)],
-            stdin=source_input, stdout=out, stderr=err, cwd=path.parent, env=env,
-            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
-        ) as process:
-            status = "finished"
-            while True:
-                try:
-                    process.wait(timeout=0.05)
-                    break
-                except subprocess.TimeoutExpired:
-                    if os.fstat(out.fileno()).st_size + os.fstat(err.fileno()).st_size > 64 * 1024:
-                        status = "output_limited"
-                    elif time.monotonic() - started >= timeout:
-                        status = "timed_out"
-                    else:
-                        continue
-                    process.kill()
-                    process.wait()
-                    break
-            exit_code = process.returncode if status == "finished" else None
-        out.seek(0)
-        err.seek(0)
-        stdout, stderr = out.read(32 * 1024), err.read(32 * 1024)
-    def output(value):
-        value = value.decode("utf-8", errors="replace") if isinstance(value, bytes) else value
-        value = value.replace("\r\n", "\n")
-        value = value.replace(str(path.parent), "<coding>").replace(str(repo_root), "<app>")
-        return value[:8000] + ("\n[输出已截断]" if len(value) > 8000 else "")
-    result = {"question_id": qid, "submission_sha256": sha, "status": status,
-              "exit_code": exit_code, "stdin": stdin, "stdout": output(stdout), "stderr": output(stderr),
-              "duration_ms": round((time.monotonic() - started) * 1000), "recorded_at": _timestamp()}
-    if status == "output_limited":
-        result["stderr"] = "输出超过 64 KB，已停止脚本；请检查循环或减少打印后重试。\n" + result["stderr"]
+    result = {**run_local_python(path, stdin, repo_root=repo_root, timeout=timeout),
+              "question_id": qid, "submission_sha256": sha, "recorded_at": _timestamp()}
     target = ensure_profile_path_is_safe(repo_root, profile_id, path.with_name("run.json"))
     _atomic_write(target, (json.dumps(result, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
     return result
@@ -2263,7 +2240,7 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
         f"# {session['interview_id']} — {session['role_id']}",
         "",
         f"- Status: **{result['completion_status']}**",
-        f"- Seniority: `{session['seniority']}`",
+        *([f"- Seniority: `{session['seniority']}`"] if "seniority" in session else []),
         f"- Blueprint: `{session['blueprint_id']}`",
         f"- Difficulty band: `{session['difficulty']}`",
         overall_line,

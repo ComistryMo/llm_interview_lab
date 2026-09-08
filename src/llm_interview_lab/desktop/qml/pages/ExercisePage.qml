@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 import "../components"
 
 Item {
@@ -11,12 +12,12 @@ Item {
     // `width` is the page viewport after the shell/sidebar.  These thresholds
     // therefore map to a 1440px window for the two-column view and keep the
     // 900px minimum window on a single, usable editor surface.
-    property bool wideLayout: width >= 1180
+    property bool wideLayout: root.Window.window && root.Window.window.width >= 1180
     // Only a completed test operation needs the expanded result viewport.
     // Save/retention notices stay compact so the editor and primary action
     // remain visible on a first visit.
-    property bool testResultExpanded: ["测试通过", "测试失败", "保存失败", "结果已过期"].indexOf(app.testState) >= 0
-    property bool mediumLayout: width >= 820
+    property bool testResultExpanded: ["测试通过", "测试失败", "保存失败", "结果已过期", "运行代码", "脚本已结束", "运行失败"].indexOf(app.testState) >= 0
+    property bool mediumLayout: wideLayout
     property bool compactHeight: height < 600
     property var actions: (app.currentTask && app.currentTask.actions) || ({})
     property string activeProblemId: app.currentTask && app.currentTask.problem_id
@@ -248,6 +249,7 @@ Item {
                             onClicked: detailsDrawer.open()
                         }
                         Button { text: "保存"; flat: true; palette.buttonText: root.colors.text; enabled: root.hasTask && !app.busy; onClicked: app.saveSubmission(editor.text) }
+                        LabButton { objectName: "runPracticeScript"; theme: root.theme; text: "运行代码"; variant: "secondary"; enabled: root.hasTask && !app.busy; onClicked: app.runPracticeScript(editor.text, "") }
                     }
                 }
                 Rectangle {
@@ -306,12 +308,12 @@ Item {
                                 anchors.rightMargin: 12
                                 spacing: 10
                                 Text { text: "Python"; color: root.colors.accent; font.bold: true; font.pixelSize: 11 }
-                                Text { text: "纯文本编辑"; color: root.colors.muted; font.pixelSize: 11 }
+                                Text { text: "本地作答"; color: root.colors.muted; font.pixelSize: 11 }
                                 Item { Layout.fillWidth: true }
                                 Text { text: app.submissionDirty ? "本地草稿 · 尚未保存" : "本地草稿 · 已保存"; color: app.submissionDirty ? root.colors.warning : root.colors.muted; font.pixelSize: 11 }
                             }
                         }
-                        LabTextArea {
+                        LabCodeEditor {
                             id: editor
                             theme: root.theme
                             Layout.fillWidth: true; Layout.fillHeight: true
@@ -324,9 +326,7 @@ Item {
                             font.pixelSize: 14
                             wrapMode: TextEdit.NoWrap
                             tabStopDistance: 32
-                            padding: 12
                             clip: true
-                            background: Rectangle { color: "transparent" }
                             Accessible.name: "Submission editor"
                             onTextChanged: if (!root.syncingEditor) app.updateSubmissionDraft(text)
                         }

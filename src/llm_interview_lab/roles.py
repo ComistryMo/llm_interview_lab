@@ -80,7 +80,7 @@ class InterviewRound:
 class InterviewBlueprint:
     id: str
     role: str
-    seniority: str
+    seniority: str | None
     duration_minutes: int
     rounds: tuple[InterviewRound, ...]
 
@@ -142,6 +142,18 @@ class RoleCatalog:
             raise RoleCatalogError(
                 f"role {role.id} has no interview blueprint for {seniority}"
             ) from error
+
+    def dynamic_blueprint_for(self, role_id: str, duration_minutes: int = 60) -> InterviewBlueprint:
+        """A question-free process shared by every candidate for this role."""
+        role = self.resolve_role(role_id)
+        if not 1 <= duration_minutes <= 150:
+            raise RoleCatalogError("面试时长应为 1–150 分钟")
+        skills = tuple(role.skill_weights)
+        return InterviewBlueprint(
+            f"interview.{role.id}.dynamic", role.id, None, duration_minutes,
+            (InterviewRound("oral", max(1, round(duration_minutes * 0.7)), 0.7, skills, 1),
+             InterviewRound("coding", max(1, round(duration_minutes * 0.3)), 0.3, skills, 1)),
+        )
 
     def eligible_items(
         self,
