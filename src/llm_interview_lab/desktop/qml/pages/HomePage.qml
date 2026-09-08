@@ -214,7 +214,7 @@ Flickable {
         x: (root.width - width) / 2
         y: root.compactLayout ? 20 : 32
         width: Math.min(1000, root.width - (root.compactLayout ? 36 : 64))
-        spacing: 20
+        spacing: 24
 
         ColumnLayout {
             Layout.fillWidth: true
@@ -244,8 +244,9 @@ Flickable {
             theme: root.theme
             Layout.fillWidth: true
             Layout.preferredHeight: focusContent.implicitHeight + padding * 2
-            level: "base"
-            padding: 20
+            level: "canvas"
+            outlined: false
+            padding: 0
 
             ColumnLayout {
                 id: focusContent
@@ -299,7 +300,6 @@ Flickable {
                     variant: "caption"
                     tone: "muted"
                 }
-                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: root.quietBorder }
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 12
@@ -500,8 +500,9 @@ Flickable {
             // narrow widths.  A fixed 82px row clipped the second line and
             // made the report action appear to overlap the interview summary.
             Layout.preferredHeight: recentSummary.implicitHeight + padding * 2
-            level: "base"
-            padding: 14
+            level: "canvas"
+            outlined: false
+            padding: 0
 
             RowLayout {
                 id: recentSummary

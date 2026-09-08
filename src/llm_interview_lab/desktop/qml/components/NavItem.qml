@@ -29,7 +29,7 @@ Basic.Button {
     leftPadding: compact ? 10 : 12
     rightPadding: compact ? 10 : 12
     spacing: 10
-    font.pixelSize: theme ? theme.scaledPx(13) : 13
+    font.pixelSize: theme ? theme.fontBody : 14
     font.family: theme ? theme.uiFontFamily : ""
     font.weight: selected ? Font.DemiBold : Font.Normal
     display: compact ? AbstractButton.IconOnly : AbstractButton.TextBesideIcon

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Basic as Basic
+import QtQuick.Controls.impl
 
 Basic.ComboBox {
     id: control
@@ -10,7 +11,7 @@ Basic.ComboBox {
 
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
-    implicitHeight: theme ? theme.controlHeight : 40
+    implicitHeight: Math.max(theme ? theme.controlHeight : 40, contentItem.implicitHeight + topPadding + bottomPadding)
     topInset: 0
     bottomInset: 0
     topPadding: 8
@@ -36,12 +37,13 @@ Basic.ComboBox {
         elide: Text.ElideRight
     }
 
-    indicator: Text {
+    indicator: ColorImage {
         x: control.width - width - 12
         anchors.verticalCenter: parent.verticalCenter
-        text: "⌄"
+        width: 16
+        height: 16
+        source: "../../resources/icons/chevron-down.svg"
         color: control.theme ? control.theme.muted : "#666961"
-        font.pixelSize: control.theme ? control.theme.scaledPx(16) : 16
     }
 
     background: Rectangle {
@@ -81,7 +83,7 @@ Basic.ComboBox {
         required property var modelData
         required property int index
         width: control.width - 8
-        height: control.theme ? control.theme.controlHeight : 40
+        height: Math.max(control.theme ? control.theme.controlHeight : 40, contentItem.implicitHeight + 16)
         highlighted: control.highlightedIndex === index
         hoverEnabled: true
         contentItem: Text {

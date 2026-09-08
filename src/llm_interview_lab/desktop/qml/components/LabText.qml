@@ -25,7 +25,7 @@ Text {
         return theme ? (strong ? theme.textStrong : theme.text) : "#2c2e29"
     }
     readonly property int resolvedSize: {
-        var base = variant === "title" ? 26
+        var base = variant === "title" ? 24
                  : variant === "section" ? 18
                  : variant === "bodyLarge" ? 15
                  : variant === "caption" ? 12 : 14
@@ -39,7 +39,8 @@ Text {
     font.family: monospace
                  ? (theme ? theme.monospaceFontFamily : "monospace")
                  : (theme ? theme.uiFontFamily : "")
-    lineHeight: variant === "title" ? 1.15 : 1.35
+    lineHeight: variant === "title" || variant === "section" ? 1.25
+                : variant === "bodyLarge" ? 1.6 : 1.45
     wrapMode: Text.NoWrap
     elide: wrapMode === Text.NoWrap ? Text.ElideRight : Text.ElideNone
     Accessible.role: Accessible.StaticText

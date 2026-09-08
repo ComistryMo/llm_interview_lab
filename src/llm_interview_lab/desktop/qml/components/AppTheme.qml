@@ -45,7 +45,7 @@ QtObject {
     readonly property color borderDefault: darkMode ? "#404040" : "#dcdcd7"
     readonly property color borderStrong: darkMode ? "#9c9c9c" : "#62625f"
     readonly property color border: borderDefault
-    readonly property color controlBorder: darkMode ? "#808080" : "#8d8d89"
+    readonly property color controlBorder: darkMode ? "#555555" : "#c5c5c0"
     readonly property color focusRing: darkMode ? "#8baacf" : "#4a6f98"
 
     readonly property color accent: darkMode ? "#93b4dc" : "#3c638e"
@@ -69,8 +69,8 @@ QtObject {
     readonly property int space6: 24
     readonly property int space8: 32
 
-    readonly property int radiusSmall: 6
-    readonly property int radiusMedium: 10
+    readonly property int radiusSmall: 8
+    readonly property int radiusMedium: 8
     readonly property int radiusLarge: 12
     readonly property int radiusRound: 999
 
@@ -79,12 +79,17 @@ QtObject {
     readonly property int fontBodyLarge: scaledPx(15)
     readonly property int fontSection: scaledPx(18)
     readonly property int fontTitle: scaledPx(24)
-    readonly property int controlHeight: Math.max(40, scaledPx(28) + 12)
-    readonly property int controlHeightCompact: Math.max(34, scaledPx(24) + 10)
+    readonly property int controlHeight: Math.max(40, scaledPx(20) + 16)
+    readonly property int controlHeightCompact: controlHeight
     readonly property int pagePadding: 24
     // Reading and composing share one measure; code workspaces remain wider.
     readonly property int readingWidth: 760
-    readonly property int composerRadius: 18
+    readonly property int formWidth: 720
+    readonly property int listWidth: 1000
+    readonly property int composerRadius: 16
+    readonly property real titleLineHeight: 1.25
+    readonly property real bodyLineHeight: 1.45
+    readonly property real readingLineHeight: 1.6
 
     readonly property int breakpointCompact: 1040
     readonly property int breakpointWide: 1400

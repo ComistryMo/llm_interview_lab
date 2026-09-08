@@ -252,7 +252,7 @@ ApplicationWindow {
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
-                        Text {
+                        LabText { theme: appTheme;
                             id: brandTitle
                             text: "Interview Lab"
                             color: window.colors.text
@@ -273,7 +273,7 @@ ApplicationWindow {
                                 acceptedButtons: Qt.NoButton
                             }
                         }
-                        Text {
+                        LabText { theme: appTheme;
                             text: "练习 · 面试 · 复盘"
                             color: window.colors.muted
                             font.pixelSize: appTheme.scaledPx(11)
@@ -380,7 +380,7 @@ ApplicationWindow {
                             Layout.preferredWidth: 32; Layout.preferredHeight: 32
                             radius: 16
                             color: appTheme.surfaceHover
-                            Text {
+                            LabText { theme: appTheme;
                                 anchors.centerIn: parent
                                 text: (backend.profileDisplayName || backend.profileId || "我").slice(0, 1)
                                 color: appTheme.textStrong
@@ -676,7 +676,7 @@ ApplicationWindow {
                     if (currentIndex >= 0 && currentIndex < count)
                         window.triggerPaletteAction(window.paletteItems()[currentIndex].id)
                 }
-                delegate: Button {
+                delegate: LabButton { theme: appTheme;
                     required property var modelData
                     required property int index
                     property bool selected: index === paletteList.currentIndex
@@ -748,7 +748,7 @@ ApplicationWindow {
             border.color: appTheme.borderStrong
             border.width: 1
         }
-        contentItem: Text {
+        contentItem: LabText { theme: appTheme;
             id: message
             color: appTheme.toastForeground
             font.pixelSize: appTheme.fontBody

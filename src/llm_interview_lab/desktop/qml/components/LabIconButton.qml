@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.Basic as Basic
 
-Button {
+Basic.Button {
     id: control
 
     property var theme: null
@@ -25,6 +26,8 @@ Button {
     implicitWidth: buttonSize
     implicitHeight: buttonSize
     padding: 9
+    topInset: 0
+    bottomInset: 0
     display: AbstractButton.IconOnly
     icon.source: iconSource
     icon.color: foreground

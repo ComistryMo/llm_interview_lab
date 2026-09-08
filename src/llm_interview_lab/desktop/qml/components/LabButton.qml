@@ -7,7 +7,7 @@ Basic.Button {
     id: control
 
     property var theme: null
-    property string variant: "secondary"
+    property string variant: highlighted ? "primary" : flat ? "ghost" : "secondary"
     property bool busy: false
     property bool compact: false
     property url iconSource: ""
@@ -85,8 +85,7 @@ Basic.Button {
     Accessible.pressed: down
 
     background: Rectangle {
-        radius: control.variant === "primary" ? Math.min(20, height / 2)
-                                             : control.theme ? control.theme.radiusMedium : 10
+        radius: control.theme ? control.theme.radiusMedium : 8
         color: control.resolvedBackground
         border.color: control.resolvedBorder
         border.width: control.activeFocus ? 2 : 1
