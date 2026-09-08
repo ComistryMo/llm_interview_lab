@@ -2635,6 +2635,179 @@ sources:
     license_or_usage: 仅链接与原创事实转述；不转载图表、代码或数据。
     license_risk: link_and_paraphrase_only
     reliability: high
+coding_reviews:
+  OPT-002:
+    task_sha256: 23600aa35fb07012954ac70ac8729704da967af78863e3040b67bd25998f2e8a
+    summary: 在已有 SGD 练习上加入逐参数动量状态。重点是连续两步更新及状态与梯度的边界，而不是调用现成优化器。
+    logic_points:
+    - 核对新动量参与当前步更新、无梯度项跳过、返回状态与调用者状态不共享；部分实现应分别评价数学关系与状态处理。
+    - 学习率不应在速度和参数更新处重复乘入；momentum 为零应退化到本题 SGD 语义。
+    self_checks:
+    - 一维参数 1、梯度依次 2 和 1、lr=0.1、momentum=0.5；两步参数应为 0.8、0.6。请自行写调用和输出比较。
+    - 加一个 grad=None 参数；修改返回的速度，检查原速度是否被意外修改。
+    common_bugs:
+    - 每次调用重置速度、拿旧速度更新、无梯度仍衰减速度、返回有梯度图的别名。
+    follow_ups:
+    - 当前题不含 dampening 或 Nesterov；若加入其中之一，哪一条更新顺序必须改变？
+    - 两个参数更新到一半才发现另一梯度形状错误，会破坏什么事实？
+    knowledge_ids: [EGT-QB-001]
+  LOSS-014:
+    task_sha256: f790751b9f1051234c121bf3c557ff2b6826324faaa21afeef84b34ad57654e9
+    summary: 从 logits 计算多类别交叉熵，明确 ignore_index 和三种归约；保持梯度，不用概率截断代替稳定计算。
+    logic_points:
+    - 核对稳定计算、目标类别选取、忽略行的分子分母和全忽略时的可微零；核心数学正确与接口完整度分开评价。
+    self_checks:
+    - 两行全零、三类别，一行有效一行忽略：有效损失应为 log(3)，mean 不应再除以二。
+    - 所有标签忽略后执行 backward；检查 loss 有限为零且 logits 梯度为零。
+    common_bugs:
+    - softmax 后直接 log、用忽略标签直接 gather、mean 除以总 batch、用脱图常量返回零。
+    follow_ups:
+    - 将 logits 每行加同一个常数后，损失和梯度是否应变化？
+    - 加权 CE 和 label smoothing 的分母是否能沿用当前接口？先说明新契约。
+    knowledge_ids: [EGT-QB-014, EGT-QB-048]
+  LOSS-016:
+    task_sha256: a965f41571fc01b61b0f5202b6e0054bf5b6e5e450929ddae0d38d65d269e42f
+    summary: 手写 NumPy Softmax 前向和任意上游向量对应的反向；不构造每行 D×D Jacobian。
+    logic_points:
+    - 前向按正确轴稳定归一化，反向是 VJP 而不是只有 sum(output) 的特殊情形；O(BD) 目标与输入不变性分别核对。
+    self_checks:
+    - 每行相等的 logits 得到均匀概率；上游梯度全一时输入梯度为零。
+    - 自行选非均匀上游梯度做中心差分对照，并检查每行输入梯度和接近零；差分仅用于自测。
+    common_bugs:
+    - 忘记跨类别耦合项、归约丢维造成错广播、把概率值当 logits、显式创建大 Jacobian。
+    follow_ups:
+    - 为什么先减最大值只改变数值稳定性，却不能消除 softmax 饱和？
+    - 加温度后反向多出什么尺度？请说明导数所对应的变量。
+    knowledge_ids: [EGT-QB-048]
+  NNL-018:
+    task_sha256: e3dcff01ee36417d0fb181171c0b891dde8920b3805a3abeb436d2f9442d5d29
+    summary: 对最后一维为特征的 Linear 手算 VJP，支持向量、序列和空 batch；参数梯度累加全部前导位置。
+    logic_points:
+    - 核对权重布局为 O×I、输入/权重/偏置梯度形状，所有前导轴都参与参数归约；本接口不能擅自平均。
+    self_checks:
+    - 先构造一个向量与一组任意上游梯度，再把相同样本复制两次：参数梯度应翻倍。
+    - 使用非连续视图及零长度 batch；空 batch 的参数梯度为零，bias=False 返回 None。
+    common_bugs:
+    - 把 weight 当 I×O、只归约 batch 不归约 token、无故除以样本数、只验证上游全一。
+    follow_ups:
+    - loss 的 mean 应在本接口还是上游体现？重复样本测试能区分什么错误？
+    - 如何把这个 VJP 用于检查 LoRA 的两个低秩矩阵，而不是调用 autograd 得出答案？
+    knowledge_ids: [EGT-QB-068]
+  NNL-008:
+    task_sha256: 7103ec5b534c3159eb958f7d3a7dcc33bff05e5191f2c2c4aca407cc183837fe
+    summary: 实现仅沿末维归一化的 RMSNorm，带可学习 scale；区别于减均值的 LayerNorm，明确半精度累加。
+    logic_points:
+    - 核对归一化轴、eps 在平方根内、scale 注册与梯度连接；半精度累计策略必须符合原题。
+    self_checks:
+    - 零输入输出为零；改变前导 batch/token 维不应改变单个向量的结果。
+    - 选较大幅度的半精度输入，与 FP32 计算后转换的结果比较，并检查 scale 梯度存在。
+    common_bugs:
+    - 误减均值、沿所有维度求均方、先在 FP16 平方再升精度、把 scale 当普通不注册张量。
+    follow_ups:
+    - eps 非零时是否严格尺度不变？给出接近零向量的反例。
+    - mixed precision 的前向累加与主权重各解决什么问题？
+    knowledge_ids: [EGT-QB-002, EGT-QB-048]
+  ATT-019:
+    task_sha256: 12bdc83f725db580d7edd2de180675466d35d453c290d36e71d420ac3ca37a9d
+    summary: 带 Q/K/V/O 投影的多头注意力，覆盖交叉长度、组合 mask 与整行不可见；不仅是一次矩阵乘法。
+    logic_points:
+    - 按投影、拆头、缩放、mask、概率聚合、合头、输出投影逐步核对 shape；核心链路正确与边界未完成分别记录。
+    - 整行无可见 key 时最终输出须零；本题投影不含 bias，不能将 NaN 隐藏成正确结果。
+    self_checks:
+    - 用很小的单位投影和两 token 检查数值，再换成 query/context 长度不同的交叉注意力。
+    - 同时施加因果和 padding mask，构造一行全部不可见；检查输出为零、结果与梯度有限。
+    common_bugs:
+    - True/False mask 语义反转、head 与序列轴混淆、错误缩放、全遮蔽行归一化 NaN。
+    follow_ups:
+    - 只写对核心 attention 但没有投影或 padding 时，分别还缺哪部分证据？
+    - 从 MHA 改为 GQA 哪些形状、参数量和缓存发生变化，哪些计算不会同比下降？
+    knowledge_ids: [EGT-QB-048, EGT-QB-058]
+  ATT-021:
+    task_sha256: a95191b0d5bb512ff33bb5dc19924f30490868a521aad8580e5ace9080a62b85
+    summary: 按每个样本的真实 position_ids 进行相邻偶奇配对 RoPE；支持位置偏移，不额外旋转 V。
+    logic_points:
+    - 配对布局、频率指数、位置广播和半精度三角计算都需与题面一致；分块不能把位置归零。
+    self_checks:
+    - position=0 应与输入一致；检查旋转前后向量范数，以及 Q/K 同时平移位置后的内积。
+    - 使用不同样本的位置偏移，比较一次整段和从位置 4 开始的分块输出。
+    common_bugs:
+    - 混用 half-split 与相邻布局、旋转 V、缓存 K 重复旋转、用局部下标替代真实位置。
+    follow_ups:
+    - 为什么同一位置平移保持 QK 内积，但分别移动两侧不保证？
+    - 长上下文的频率精度与长度外推是同一个问题吗？
+    knowledge_ids: [EGT-QB-011, EGT-QB-058]
+  ATT-020:
+    task_sha256: 0ac03b3a6409110af67a41eee4faa59a74315e25c14eb15728a66f66501ae813
+    summary: 已投影 Q/K/V 的 GQA 增量前向；按绝对位置施加因果限制，仅缓存 Hkv 个头，保留旧缓存不变。
+    logic_points:
+    - 核对分组头映射、P+i 的 query 位置、缓存追加和返回 shape；不能物化 Hq 头后当持久 cache 保存。
+    self_checks:
+    - 对长度 7 的相同输入比较整段、逐 token 和 [3,1,3] 分块输出。
+    - 检查旧 cache 没有变化，新 cache 长 P+L；Hq=4、Hkv=2 时两组 Q 头的映射应稳定。
+    common_bugs:
+    - 使用左上角 tril 而忽略历史长度、重复旋转历史 K、错误交错 KV 头、拼接时污染旧状态。
+    follow_ups:
+    - 如果 batch 中样本历史长度不同，需要新增什么事实而不能只改一个 mask？
+    - beam 重排或 prefix 分叉后，如何验证 cache 对应的是正确序列？
+    knowledge_ids: [EGT-QB-011, EGT-QB-058]
+  PT-003:
+    task_sha256: eac82aeae3f1d704ac71336961995c454df68c8d0b7c273d85386b11f505a72f
+    summary: 对已对齐预测位置的 token logits 计算有效 token 均值损失；本题不再额外 shift，避免与 SFT 标签构造混淆。
+    logic_points:
+    - 核对数值稳定计算、有效位置 gather、有效分母与忽略位置零梯度；极大公共偏置不能吞掉类别差值中的 logsum 部分。
+    self_checks:
+    - 原题给定两个相同的 1e20 logits，标签 0 的损失仍为 log(2)。
+    - 改变 labels 等于 ignore_index 位置的 logits，检查有效损失不变、该位置梯度仍为零；全忽略仍能 backward。
+    common_bugs:
+    - 不该 shift 却又 shift、按 B×T 而非有效 token 归约、先 gather -100、将稳定式拆开后发生大数相消。
+    follow_ups:
+    - 有效 token 数不同的微批次如何累积，才能与合并 batch 的目标一致？
+    - 如果改为每回答均值再跨回答平均，哪些长短样本的权重会改变？
+    knowledge_ids: [EGT-QB-014, EGT-QB-021]
+  PT-022:
+    task_sha256: 006ab35e80cb1b2d89870004cbb5070f33b8054c9e7646de7f020ffa8a2980aa
+    summary: 将因果位置错位、completion mask 与 DPO 偏好比较打通；reference 冻结，序列 logprob 按回答 token 求和。
+    logic_points:
+    - 先核对 logits/targets/mask 的共同 shift，再核对 chosen/rejected 列及 reference 相对量；两个函数可分开评价。
+    self_checks:
+    - 构造带 prompt、两个回答 token、EOS 和 padding 的一条样本，逐位置确认计入目标的 token。
+    - policy 与 reference 的成对 logprob 相同时偏好损失应为 log(2)；检查 reference 无梯度。
+    common_bugs:
+    - mask 与标签错位一位、把 prompt 算入、把 sum 改为 mean、chosen/rejected 反向、reference 未 detach。
+    follow_ups:
+    - 偏好两端必须同 prompt 的推导依据是什么？
+    - 长度不同的回答在当前目标下如何比较，怎样区分数据偏置与擅改目标？
+    knowledge_ids: [EGT-QB-026, EGT-QB-014, EGT-QB-030]
+  PT-023:
+    task_sha256: 7c261c948e83e97abe7915bb6c998433616b29e6708a0e1977ebc7d36dadc809
+    summary: 实现本题明确规定的 GRPO 组内标准化、PPO 裁剪、k3 KL 与每回答均值归约；不把所有 GRPO 变体混称同一公式。
+    logic_points:
+    - 核对组内总体标准差、优势/old/reference detach、正负优势裁剪及仅有效 token 的指数运算。
+    - 先各回答有效 token 均值、再跨组和 batch 平均；beta=0 不应因无关 reference 指数溢出而失败。
+    self_checks:
+    - 全相等奖励且 beta=0 时策略项应为零；ratio=1 时分别检查正负优势符号。
+    - 两个回答长度不同、改变 padding 数目，检查每回答权重不变；检查梯度只沿 new logprob。
+    common_bugs:
+    - std 使用样本修正、错用全 token 均值、负优势 clip 分支相反、padding 先求指数、old/reference 梯度泄漏。
+    follow_ups:
+    - reward 全对/全错时缺少何种学习信号？增加组大小一定有用吗？
+    - k3 比值方向、采样分布和长度归约各改变哪一项统计意义？
+    knowledge_ids: [EGT-QB-028, EGT-QB-025, EGT-QB-030]
+  PT-010:
+    task_sha256: 5a6e9444825e5ac0494df16850acf1074e76feee2ddd612442d2e07a4955df7a
+    summary: 区分终止与轨迹边界的 NumPy GAE，允许时间截断 bootstrap，但不能让优势跨到下一段样本。
+    logic_points:
+    - 核对 TD 中 terminated 与递推中 boundary 的职责、逆序递推和 return=advantage+value；不是共用一个 done。
+    self_checks:
+    - lambda=0 时优势等于逐步 TD 残差；一个真实终止和一个截断使用相同 reward 时，比较 next_value 的影响。
+    - 串接两段轨迹后，改变第二段奖励，第一段的优势不应变化；空序列返回空数组。
+    common_bugs:
+    - 截断时丢弃 bootstrap、边界处仍向后传播、使用 reset 后 observation、忘记末步 boundary。
+    follow_ups:
+    - gamma 与 lambda 分别控制什么，value 有偏时如何设计敏感性实验？
+    - LLM 超长生成被判失败时，终止契约与一般时间限制环境有什么区别？
+    knowledge_ids: [EGT-QB-037, EGT-QB-025]
+
 cards:
   - id: EGT-TRN-001
     kind: eight_stock
@@ -8818,6 +8991,19 @@ cards:
     provenance: 用户整理资料中的日期口径：正文明确面试日 2026-08-14；约 70 分钟。页面显示 `09-04 13:56 已编辑`，完整发布日期未核验。 样本分组：单篇作者自述，不是公司官方标准；MJ15-MJ16-MJ17
       同作者；后两篇同岗位续轮。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。
   - id: EGT-QB-001
+    interview_guidance:
+      entry_signals:
+      - 回答中提到调 weight decay、AdamW 参数组、恢复训练后 loss 变化；先核实本人改过哪一项。
+      deepen:
+      - 请沿一次真实更新解释梯度、矩估计和衰减的先后；再选择一个参数组问为什么这样配置。
+      - 公式正确后，给两个二阶矩尺度不同的坐标，让候选人比较耦合 L2 与解耦衰减；最后问怎样用对照实验验证解释。
+      weak_answer:
+      - 不会推导时，从一维 SGD 的两步更新入手，再只改变优化器；不能把忘记符号等同于不会排查训练问题。
+      variations:
+      - 梯度为零与 grad=None 是否应当相同？以所用优化器的实际语义回答。
+      - 恢复时丢失 m、v、step，如何区分学习率调度错误与矩估计重启？
+      stop_when:
+      - 已解释更新顺序、预条件差异并提出可证伪实验，转混合精度或恢复状态，不反复要求背完整公式。
     kind: eight_stock
     title: Adam 与 AdamW：衰减项经过了谁的预条件器
     domain: optimization
@@ -8875,6 +9061,19 @@ cards:
     provenance:
     - 用户题目集编号：T001
   - id: EGT-QB-002
+    interview_guidance:
+      entry_signals:
+      - 简历或回答出现 BF16/FP16、梯度累积、溢出、训练吞吐；先让其说明实际精度路径。
+      deepen:
+      - 选一层追踪输入、累加、权重、梯度和优化器状态的 dtype，再定位最先可能损失精度的步骤。
+      - 能解释 loss scaling 后，问累积、unscale、clip、step 的顺序及怎样避免把溢出批次写入更新。
+      weak_answer:
+      - 给出 FP32 正常而 FP16 异常的单个算子，让其提出最小对照，不要求先背所有 AMP API。
+      variations:
+      - 前向激活已为 Inf，放大 loss 能否修复？为什么？
+      - 换成 BF16 后仍有 NaN，如何检查归约范围、除零和数据，而不是直接归因于 loss scale？
+      stop_when:
+      - 已区分范围与精度、前向与反向故障并给出排查顺序，转优化或分布式，不只问 dtype 定义。
     kind: eight_stock
     title: 混合精度：算子dtype、主权重与损失缩放
     domain: numerical_training
@@ -9181,6 +9380,19 @@ cards:
     provenance:
     - 用户题目集编号：T006、T016
   - id: EGT-QB-007
+    interview_guidance:
+      entry_signals:
+      - 候选人提到多卡训练、显存瓶颈、ZeRO/FSDP 或吞吐下降；先确认真正使用的并行方式。
+      deepen:
+      - 让其画一次前向、反向、更新中参数、梯度、优化器状态的归属及通信时刻。
+      - 常驻显存账本正确后，改变层大小与网络带宽，追问峰值、预取和计算通信重叠的测量方案。
+      weak_answer:
+      - 从两张卡、一个参数向量开始，问每卡保存什么和更新哪部分，再扩展到一层参数聚合。
+      variations:
+      - 同样模型从 ZeRO-2 换到 ZeRO-3，常驻下降但峰值和 step 时间未改善，哪些曲线能区分原因？
+      - 梯度累积和激活重算分别会改变哪些通信时刻？不要把具体实现的缓存策略当必然结论。
+      stop_when:
+      - 能对齐分片对象、通信和峰值证据，转 checkpoint 或输入流水线，避免重复枚举 stage 名字。
     kind: eight_stock
     title: ZeRO 1/2/3：分片对象与通信时刻
     domain: distributed_training
@@ -9420,6 +9632,19 @@ cards:
     provenance:
     - 用户题目集编号：T010、T081
   - id: EGT-QB-011
+    interview_guidance:
+      entry_signals:
+      - 回答中涉及长上下文、推理吞吐、GQA、前缀复用或 rollout 显存；选实际形状来问。
+      deepen:
+      - 先解释为何只缓存历史 K/V，再用所述模型的层数、KV 头数、长度和 dtype 推导容量。
+      - 账本成立后追问位置偏移、beam 重排或 adapter 变化中的一个一致性问题，再设计整段与增量输出对照。
+      weak_answer:
+      - 从三个 token 的因果注意力画可见关系，问追加第四个 token 后哪些量改变。
+      variations:
+      - 双向编码器追加 token 能否复用所有旧层 K/V？指出成立前提。
+      - 分页减少碎片后仍 OOM，如何区分唯一 KV 的固有容量与块大小浪费？
+      stop_when:
+      - 已给出容量、失效条件与一致性检验，转 GQA、调度或训练，不只围绕显存公式打转。
     kind: eight_stock
     title: KV Cache：因果不变性与每token显存账本
     domain: kv_cache
@@ -9604,6 +9829,19 @@ cards:
     provenance:
     - 用户题目集编号：T013
   - id: EGT-QB-014
+    interview_guidance:
+      entry_signals:
+      - 简历提到 SFT、多轮对话、数据清洗、packing 或训练 loss 异常；从实际模板开始。
+      deepen:
+      - 让其标注一段 user/assistant token 的输入、错位目标和监督 mask，再解释一个真实截断策略。
+      - 标注正确后，改变回答长度与有效 token 数，追问 batch 归约和多卡累积是否等价。
+      weak_answer:
+      - 不记得框架标签值时，直接在六个 token 的玩具对话上画预测关系；先验证理解，再谈实现。
+      variations:
+      - 被 loss mask 忽略的 user token 能否仍作为上下文？与 causal mask 的作用有何区别？
+      - packed 样本的 loss 正常却出现跨样本信息泄漏，怎样检查 attention 边界与位置编号？
+      stop_when:
+      - 能解释错位、监督范围及有效分母并设计自测，转评测泄漏或 DPO，不反复问 response-only 定义。
     kind: eight_stock
     title: SFT监督范围：条件似然与多轮assistant mask
     domain: supervised_finetuning
@@ -9793,6 +10031,19 @@ cards:
     provenance:
     - 用户题目集编号：T017、T024
   - id: EGT-QB-019
+    interview_guidance:
+      entry_signals:
+      - 回答涉及断点续训、故障恢复、换卡数或异步保存；先问一次真实恢复是否演练过。
+      deepen:
+      - 限定在一次 optimizer step 边界，列出恢复下一步所需状态，并说明怎样判断这一版分片已全部提交。
+      - 答对后给出写入中断或保存期间参数继续更新的场景，让其设计不读半成品的加载顺序。
+      weak_answer:
+      - 先比较只加载模型权重与继续训练的区别，再用数据游标重复消费一个 batch 的例子追问。
+      variations:
+      - 改变数据并行度后，语义续训与逐位复现分别需要什么证据？
+      - 梯度累积中途保存，恢复时如何处理未完成累积和 scaler？
+      stop_when:
+      - 已证明快照一致性、完整性与恢复验证路径，转调度或数据，不要求列出未使用系统的全部 API。
     kind: eight_stock
     title: 训练checkpoint：完整状态、原子发布与恢复演练
     domain: training_recovery
@@ -9915,6 +10166,19 @@ cards:
     provenance:
     - 用户题目集编号：T020
   - id: EGT-QB-021
+    interview_guidance:
+      entry_signals:
+      - 候选人声称修复 loss 波动、收敛加速或数据质量问题；要求先还原变化点和对照组。
+      deepen:
+      - 请选一个异常 batch 说明先保留哪些证据、先检验哪个假设，回答后再追问如何排除另一解释。
+      - 定位思路可靠后，同时改变数据版本和训练精度，让其设计最少的回滚实验并说明判据。
+      weak_answer:
+      - 给出 loss 突降而准确率不变的具体例子，问先看逐 token loss、有效分母还是更多训练步，要求理由。
+      variations:
+      - 裁剪后梯度范数一直正常，为什么仍不足以证明更新正常？
+      - 单卡稳定、多卡异常，如何检查累积、归约和有效 token 分母，而不是先扩大 batch？
+      stop_when:
+      - 已形成有顺序、可证伪的诊断和复验方案，换到结果评测或恢复，不把罗列指标当深度。
     kind: eight_stock
     title: 训练异常诊断：loss突降也可能是坏消息
     domain: training_observability
@@ -10100,6 +10364,19 @@ cards:
     provenance:
     - 用户题目集编号：T023
   - id: EGT-QB-025
+    interview_guidance:
+      entry_signals:
+      - 回答中出现 PPO、actor/critic、KL early stop、优势或 rollout；先确认本人负责的更新部分。
+      deepen:
+      - 从一个已采样动作说明 new、old、reference 和 advantage 分别来自何时，再手算正负优势的裁剪分支。
+      - 正负号正确后，追问共享骨干的 value loss、陈旧样本和多 epoch 更新中的一个失稳路径及监控证据。
+      weak_answer:
+      - 先只给 A 为负、ratio 大于上界的一个标量例子；能解释方向后再回到整段公式。
+      variations:
+      - PPO clip 是否保证更新后的所有 ratio 都在区间内？给出共享参数或未裁剪方向的反例。
+      - reference KL 和相对 old policy 的近端控制能否互相替代？
+      stop_when:
+      - 裁剪方向、梯度边界和更新诊断均有证据后，转 GAE 或奖励质量，不继续考同一符号变体。
     kind: eight_stock
     title: PPO：分段clip、Actor/Critic与总损失
     domain: policy_optimization
@@ -10163,6 +10440,19 @@ cards:
     provenance:
     - 用户题目集编号：T025、T036
   - id: EGT-QB-026
+    interview_guidance:
+      entry_signals:
+      - 简历或回答包含偏好对、DPO、reference、长度偏差；先问本人处理过的数据或损失路径。
+      deepen:
+      - 从同一个 prompt 的 chosen/rejected 条件概率写出比较量，再追到 KL 正则最优策略与配分函数的消去。
+      - 推导成立后，选长度归约、reference 支持或偏好可分性中的一个条件，要求预测变化并设计验证。
+      weak_answer:
+      - 不熟悉完整推导时，先问 chosen 比 rejected 多两个 token 会影响哪一项；再用等长回答隔离直觉。
+      variations:
+      - 把序列 logprob 求和换成 token 均值还是原始 DPO 吗？怎样区分目标改变与实现 bug？
+      - beta 改动后 margin 变大但 held-out 变差，如何分辨偏好噪声、长度投机与过优化？
+      stop_when:
+      - 已说明同 prompt、归约、冻结 reference 及一项可证伪局限，转 GRPO 或数据质量，不要求重复推导。
     kind: eight_stock
     title: DPO推导：从KL正则最优策略到偏好分类
     domain: preference_optimization
@@ -10285,6 +10575,19 @@ cards:
     provenance:
     - 用户题目集编号：T027、T041
   - id: EGT-QB-028
+    interview_guidance:
+      entry_signals:
+      - 回答提到 GRPO、组采样、可验证奖励、CoT 或 rollout；从其实际 group size 和奖励定义切入。
+      deepen:
+      - 请拿一个实际或合成奖励组解释 baseline、标准差、优势和 token 更新范围，再谈全对/全错组。
+      - 优势解释清楚后，转到长度归约、old policy 新鲜度或 verifier 漏洞；困难场景再要求固定采样预算做消融。
+      weak_answer:
+      - 先给奖励全相等的一组，问是否还有区分信号；不熟悉公式时允许从同题多个答案排序的直觉开始。
+      variations:
+      - 组大小翻倍但总采样 token 固定，收益可能来自哪些变化？怎样分别测量？
+      - 训练 reward 上升、独立 pass rate 下降，是优势估计、长度偏置还是奖励投机？先检验哪个证据？
+      stop_when:
+      - 已跨优势、数据/奖励、更新或归约三个角度取证，转 KL、GAE 或手撕；不能整场只追 CoT 的措辞。
     kind: eight_stock
     title: GRPO：组内基线、退化组与R1使用边界
     domain: group_policy_optimization
@@ -10349,6 +10652,19 @@ cards:
     provenance:
     - 用户题目集编号：T028、T032
   - id: EGT-QB-029
+    interview_guidance:
+      entry_signals:
+      - 用户提到偏好标注、reward model、奖励上升或策略退化；先核实是否亲自设计过标签或评测。
+      deepen:
+      - 从同 prompt 成对比较的概率和损失出发，问绝对 reward 的平移为何不可识别。
+      - 再引入长度与来源分布变化，让候选人说明如何把 RM 泛化问题和策略优化 bug 分开验证。
+      weak_answer:
+      - 给两个输出分数相差一的答案，问能读出什么、不能读出什么；避免把标量奖励说成成功概率。
+      variations:
+      - 所有回答分数都加同一个 prompt 常数，偏好损失和下游奖励使用分别有什么变化？
+      - 同一 RM 的 held-out 成对准确率很好，为什么仍可能被更新后的策略利用？
+      stop_when:
+      - 已区分奖励/价值函数、数据偏差和过优化证据，转独立评测或 KL，避免用术语数量评分。
     kind: eight_stock
     title: Reward Model：Bradley–Terry、过优化与Critic区别
     domain: reward_modeling
@@ -10414,6 +10730,19 @@ cards:
     provenance:
     - 用户题目集编号：T029、T043
   - id: EGT-QB-030
+    interview_guidance:
+      entry_signals:
+      - 实际回答出现 KL penalty、beta、reference drift 或 GRPO/PPO 稳定性；先问实现采用哪个方向和归约。
+      deepen:
+      - 请写出采样分布、log-ratio 方向、reference 更新规则，并说明逐 token 与序列尺度。
+      - 解释准确后改变奖励尺度或响应长度，追问固定 beta 的效果与如何验证稳定性假设。
+      weak_answer:
+      - 给出一个负的采样 log-ratio，问它是否意味着期望 KL 为负；先明确样本值和期望的区别。
+      variations:
+      - 全词表 KL、当前策略采样估计与旧 rollout 的估计什么时候不能混用？
+      - k3 估计的比值方向如何从定义核对？beta 为零是否还需要求可能溢出的 reference 比值？
+      stop_when:
+      - 采样分布、方向、尺度及与 old policy 的区别已清楚，转奖励质量或 DPO，不再单点问 beta 大小。
     kind: eight_stock
     title: RLHF中的KL：锚定参考分布与惩罚尺度
     domain: kl_regularization
@@ -10723,6 +11052,19 @@ cards:
     provenance:
     - 用户题目集编号：T047、T054
   - id: EGT-QB-048
+    interview_guidance:
+      entry_signals:
+      - 用户介绍 Attention 实现、head 维度、训练不稳定或 QK norm；从实际 Q/K shape 与 logit 范围切入。
+      deepen:
+      - 让其明确独立、零均值和单位方差假设后推导点积方差，再联系 softmax Jacobian 解释饱和。
+      - 推导正确后去掉一个假设，问 Q/K 相关或归一化后的有效温度如何通过实验确定。
+      weak_answer:
+      - 比较两个类别的 logits 差从小变大的概率与导数，不先要求高维矩阵推导。
+      variations:
+      - 减去最大 logit 是否会改变概率饱和程度？数值稳定和梯度尺度有何区别？
+      - 除以 dk 与 sqrt(dk) 在维度增长时分别会怎样？
+      stop_when:
+      - 能连起方差假设、softmax 梯度和一个改变条件的反例，转 MHA/归一化或手写反向。
     kind: eight_stock
     title: Attention的√dk缩放：方差假设与softmax梯度
     domain: attention_scaling
@@ -11090,6 +11432,19 @@ cards:
     provenance:
     - 用户题目集编号：T057、T060
   - id: EGT-QB-058
+    interview_guidance:
+      entry_signals:
+      - 简历或回答提到 GQA/MQA、KV 显存、decode 带宽或模型结构转换；先问实际头数。
+      deepen:
+      - 给出 Hq=8、Hkv=2，让其画 Q 到 KV 的分组映射和缓存形状，再说明何处能广播、何处会物化。
+      - 形状准确后追问 MHA 权重转换、质量恢复或 TP 中 KV 头少于并行度的处理与成本。
+      weak_answer:
+      - 先从 MHA 与 MQA 两个端点比较哪些投影共享，再问共享 KV 是否意味着所有 Q 头输出相同。
+      variations:
+      - 若先 repeat 到 Hq 再持久化 cache，显存收益还剩多少？
+      - KV 存储减少四倍能否推出整次推理快四倍？给出 prefill/小 batch 的反例。
+      stop_when:
+      - 头映射、缓存容量与实际吞吐证据均清楚，转位置偏移或调度，不以答出缩写算覆盖充分。
     kind: eight_stock
     title: GQA：共享KV头而保留多组Query
     domain: grouped_query_attention
@@ -11331,6 +11686,19 @@ cards:
     provenance:
     - 用户题目集编号：T035
   - id: EGT-QB-037
+    interview_guidance:
+      entry_signals:
+      - 回答涉及 PPO critic、TD、稀疏终局奖励、截断或优势；先让其明确轨迹末端的真实语义。
+      deepen:
+      - 在三步轨迹上写 TD 残差和反向递推，分别标出 bootstrap 与跨步延续的边界。
+      - 手算成立后比较 lambda 为零与接近一的偏差/方差，再改变截断方式追问 value target 是否可迁移。
+      weak_answer:
+      - 先只问最后一步 reward、V(current)、V(next) 的关系，再向前递推一步，不一次要求全部公式。
+      variations:
+      - 真正 EOS 终止与采样达到长度上限是否总应有同一个 mask？如果任务将超长判失败，契约如何改变？
+      - 在 padding 或下一样本处不断开递推会产生什么可观测错误？
+      stop_when:
+      - 已区分 bootstrap/延续、advantage/return 和 detach，并能手算边界，转 PPO 更新或奖励分配。
     kind: eight_stock
     title: GAE：TD残差、λ权衡与终止边界
     domain: advantage_estimation
@@ -12146,6 +12514,19 @@ cards:
     provenance:
     - 用户题目集编号：T067
   - id: EGT-QB-068
+    interview_guidance:
+      entry_signals:
+      - 回答提到 LoRA/QLoRA、rank、目标层、adapter 合并；先核实其实际改过的参数和验证方式。
+      deepen:
+      - 让其写 A/B 形状、参数量和首步梯度，再解释为何采用零增量而不是两个矩阵同时为零。
+      - 基础正确后转到固定参数预算的目标层消融、rank 与 alpha 耦合、或量化合并误差中的一个实际问题。
+      weak_answer:
+      - 先把一个小 Linear 的输出增量画出来，问冻结的是哪些权重，再只计算一个矩阵的梯度形状。
+      variations:
+      - rank 翻倍且 alpha 不变，能否把性能差异都归因于表示能力？
+      - dropout 开启时比较 merge 前后输出为何不公平？量化基座合并再量化又引入什么误差？
+      stop_when:
+      - 已解释形状、梯度与一项公平验证，转 SFT 数据或评测，不反复问 LoRA 为什么省参数。
     kind: eight_stock
     title: LoRA：形状、零增量初始化、目标层与合并
     domain: low_rank_adaptation

@@ -40,12 +40,7 @@ def test_deepseek_wire_and_reasoning_content_is_not_an_answer(effort):
     asyncio.run(run())
     assert all(c.is_closed for c in clients)
     assert requests[0]["thinking"] == {"type": "disabled"}
-    if effort == "none":
-        assert requests[1]["response_format"] == {"type": "json_object"}
-    else:
-        # Keep thinking/high intact, but do not combine it with the vendor's
-        # JSON Output mode, which officially may return an empty body.
-        assert "response_format" not in requests[1]
+    assert requests[1]["response_format"] == {"type": "json_object"}
     assert requests[1]["thinking"]["type"] == ("disabled" if effort == "none" else "enabled")
     assert requests[1].get("reasoning_effort") == (effort if effort not in {None, "none"} else None)
 
@@ -63,8 +58,8 @@ def test_deepseek_incomplete_or_reasoning_only_is_not_success(finish):
     asyncio.run(run())
 
 
-def test_deepseek_high_keeps_reasoning_and_reads_final_delta_without_json_mode():
-    """Simulate the documented empty JSON Output failure, not a live API claim."""
+def test_deepseek_high_keeps_reasoning_and_requested_json_output():
+    """Wire contract only: explicit JSON must not silently become free text."""
     requests = []
 
     def handle(request):
@@ -72,7 +67,8 @@ def test_deepseek_high_keeps_reasoning_and_reads_final_delta_without_json_mode()
         requests.append(payload)
         assert payload["thinking"] == {"type": "enabled"}
         assert payload["reasoning_effort"] == "high"
-        final = "" if "response_format" in payload else '{"follow_up":"请说明如何验证收益？"}'
+        assert payload["response_format"] == {"type": "json_object"}
+        final = '{"follow_up":"请说明如何验证收益？"}'
         chunks = [
             {"choices": [{"delta": {"reasoning_content": "private internal reasoning", "content": None}}]},
             {"choices": [{"delta": {"content": final}, "finish_reason": "stop"}]},

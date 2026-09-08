@@ -22,18 +22,24 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 
 - 模型提供 `deepseek-v4-flash`、`deepseek-v4-pro` 与自定义模型 ID；2026-09-07 已通过官方模型列表和真实 `/models` 请求核验，服务端模型会随时间变化。
 - 推理选项：关闭思考（默认，更快回复）、低、高、最高、服务默认。关闭对应 `thinking.type=disabled`，其余使用 `enabled` 和 `reasoning_effort=low/high/max`；服务默认不指定强度。支持范围以 [DeepSeek 思考模式文档](https://api-docs.deepseek.com/guides/thinking_mode/) 为准。
-- 实现读取 SSE 的 `delta.content`，不把 `reasoning_content` 当作回答或评分。关闭思考时使用服务端 JSON Output；开启思考时只通过提示词和 Schema 要求 JSON，避免强制 JSON Output 偶发空正文的组合。本地字段、阶段、岗位技能与代码候选校验不放宽；模型和推理强度不自动降级，也不自动重发付费请求。
+- 实现读取 SSE 的 `delta.content`，不把 `reasoning_content` 当作回答或评分。面试明确要求结构化结果，因此无论是否思考都设置 `response_format: {type: json_object}`，并提供 JSON 字段说明；只有普通聊天请求不设置。V4 的 [Chat Completion 文档](https://api-docs.deepseek.com/api/create-chat-completion/) 支持该格式，但服务仍可能返回空正文。本地字段、阶段与代码候选校验不放宽，模型和推理强度不自动降级，也不自动重发付费请求。
 - “保存并测试”只做关闭思考的短连接检查，不承诺高强度推理的耗时。面试仍使用你保存的模型与强度。`402` 表示余额不足，`401` 表示凭证问题，`429` 表示限流。
 
 2026-09-07 Windows 源码真实验证使用 `deepseek-v4-flash`、关闭思考、合成简历/JD：连续 9 次提交均进入下一问（单轮约 5.45–7.53 秒），随后进入本地中文代码题。代码没有作答，报告如实为未完成；不把这项验证称为完整面试通过。布局和提示词收尾后又验证两轮，分别为 4.52 秒、6.81 秒。这些是该设备和连接的样本，不是服务耗时保证。
 
 本轮未重建 Windows/macOS 下载包，不能据此认为旧 Release 已包含 DeepSeek。DeepSeek 不作为当前语音转录服务。
 
-#### 高强度空正文与重试审查（2026-09-08）
+#### 当前真实传输边界（2026-09-08）
+
+统一难度迭代经用户授权，从系统密钥环读取已保存连接，只发送合成简历/JD与合成回答，不读取真实材料。`deepseek-v4-flash/low` 已完成算法岗逐问流程、手撕自测和 10 道已回答题的评分；评分失败项修复并单独重试，没有重评成功项。`high` 后训练场次进入第三问前仍反复出现仅思考无正文，**没有通过整场验收**。详见[执行计划与性能样本](../plans/active/unified-difficulty-interview-workbench.zh.md)。
+
+本轮曾尝试省略思考模式的 JSON Output，但真实模型返回了不能用于冻结下一问的普通文本，因此恢复显式 JSON 要求。不会把思考内容强行当作正文，也不会为了通过而自动换模型、关思考或接受无效题号。失败回答保持锁定，可原位重试；高推理的稳定性仍是剩余风险。
+
+#### 早期空正文审查（历史记录，基线 1075cef）
 
 用户截图对应的操作编号 `3b324c62` 在本地日志中为 `provider_response / INTERVIEW_REQUEST_FAILED`。日志仅记录阶段、类别和操作编号，没有保存原始响应，因此**不能从该日志确认服务那次具体返回了什么，也不能断言是抓错字段**。未读取用户 Profile、材料、录音或 Key。
 
-已通过官方页面核对：[思考模式](https://api-docs.deepseek.com/guides/thinking_mode/) 支持 V4 Flash 的 `thinking.type=enabled` 与 `reasoning_effort=high`，最终正文仍在 `content`；[JSON Output 文档](https://api-docs.deepseek.com/guides/json_mode) 明确提示偶尔会返回空正文。这是与本次现象相符的已知风险，不是对用户那次请求的完整根因证明。适配改动保留 high，停止在思考模式叠加强制 `response_format`；继续严格解析最终 JSON，绝不把思考片段当答案。
+当时通过官方页面核对：[思考模式](https://api-docs.deepseek.com/guides/thinking_mode/) 支持 V4 Flash 的 `thinking.type=enabled` 与 `reasoning_effort=high`，最终正文仍在 `content`；[JSON Output 文档](https://api-docs.deepseek.com/guides/json_mode) 提示偶尔会返回空正文。这与现象相符，但不是原请求的完整根因证明。当时省略思考模式 `response_format` 的尝试已被上方新实现取代；始终未将思考片段用作答案。
 
 本次审查修复的直接问题：
 
@@ -50,7 +56,7 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 - 同文件 `-k provider_deadline`：1 passed。模拟持续保活流，验证超时取消、连接操作释放、原回答和未评分状态保留。
 - 故障用例先在旧实现下失败，再修复并通过。新 QML 测试曾因合成证据不足 20 字、未等下一帧的编辑器清空而失败；修正测试数据和事件循环等待后通过，没有降低产品校验。
 
-已查看正式页的失败重试与第三问截图，位于 ignored `workspace/maintainer/agent-runs/deepseek-high-20260908/`。截图中的 AI 状态和问句是模拟服务结果，不证明真实账户成功。本轮未向真实 DeepSeek 发起付费请求；高强度线上效果仍需使用原连接复测，不能声称所有服务端空响应已消除。没有运行全量 pytest、CI、打包或发布。
+这批早期失败重试与第三问截图位于 ignored `workspace/maintainer/agent-runs/deepseek-high-20260908/`，状态和问句是模拟服务结果，不证明真实账户成功。当时未调用付费 API；后续经授权的真实结果见上方“当前真实传输边界”。两批验证都没有运行全量 pytest、CI、打包或发布，不能声称服务端空响应已消除。
 
 使用当前源码重启，继续原来的面试，点击「重试生成下一问」即可检验；无需重填 Key、关闭高强度或重建档案。已锁定回答会继续使用。
 
@@ -95,10 +101,10 @@ Python 3.11 是统一 Provider 可选依赖的推荐版本。
 - 用户主动选择的当前答案；
 - 最近一次公开测试摘要；
 - 当前岗位与 Skill；
-- 当前帮助等级；
-- AI 行为规则。
+- 本场难度与已发生的问答；
+- 面试行为规则与所选知识候选的追问路线。
 
-默认排除：整个 Workspace、其他学习档案、旧答案、Git 历史、雇主材料、Oracle、Private Tests、API Key 和未授权材料。
+默认排除：整个 Workspace、其他学习档案、其他场次答案、Git 历史、雇主材料、Oracle、Private Tests、API Key 和未授权材料。本场主动提交的历史问答用于连续追问；结束评分逐题发送，不重评成功项。
 
 预览会显示每个部分、是否敏感、选择状态、预计 token 和适用时的 SHA-256。取消对话框不会发送任何内容。降低 token 的推荐做法：只发送当前题、必要错误摘要和最小答案片段，不发送完整日志或无关材料。
 
@@ -150,7 +156,7 @@ Key 只写入操作系统密钥环：
 
 同一场面试、模型和材料/背景授权快照不变时，应用复用同一 App Server Thread，通过新的 `turn/start` 继续。换档、换场、换模型、取消材料或 SHA 变化时，使用新 Thread 隔离旧上下文；本地 Session 仍是学习记录的事实源。这与 [Codex App Server 的 Thread / Turn 协议](https://learn.chatgpt.com/docs/app-server) 对齐，不是每次启动一个 Codex CLI。
 
-“已连接”表示本地 App Server 可用，不保证上游模型网络畅通。`responseStreamDisconnected / request timed out / Reconnecting` 属于上游传输失败，不是用户需要再次手动连接。客户端、账户、模型、推理强度和上下文大小不同，不能用另一个 Codex 聊天窗口的响应速度保证本应用耗时。面试要等完整 JSON 校验后才展示下一问，也不会将思考片段直接显示成题目。
+“已连接”表示本地 App Server 可用，不保证上游模型网络畅通。`responseStreamDisconnected / request timed out / Reconnecting` 属于上游传输失败，不是用户需要再次手动连接。客户端、账户、模型、强度和上下文不同，不能用另一个聊天窗口保证本应用速度。新面试流式显示下一问正文，标注生成中；完整校验后才冻结并允许回答，不展示思考、JSON 或中途评分。实际冷启动遇到过约两分钟的上游重连，后续暖请求较快；样本见执行计划，不作秒级保证。
 
 ### macOS 查找 Codex
 

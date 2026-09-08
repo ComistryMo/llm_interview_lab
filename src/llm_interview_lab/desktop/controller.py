@@ -10,6 +10,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 from pathlib import Path
 from queue import Queue, Empty
 import threading
@@ -17,7 +18,7 @@ from typing import Any, Callable, Mapping
 from uuid import uuid4
 
 from PySide6.QtCore import QObject, Property, QRunnable, QSettings, QThreadPool, QTimer, QUrl, Signal, Slot
-from PySide6.QtGui import QDesktopServices, QGuiApplication
+from PySide6.QtGui import QDesktopServices, QGuiApplication, QTextDocument
 
 from ..ai.codex_backend import CodexAppServerBackend, CodexEvent, discover_codex_executable
 from ..ai.connections import (
@@ -47,7 +48,7 @@ from ..coach_sessions import (
 )
 from ..lifecycle import ReviewInput
 from ..interview_flow import dialogue_instruction, flow_coverage, question_stage, STAGE_LABELS, next_question_instruction, decode_next_question, streamed_question
-from ..role_interviews import set_role_ai_wait, configure_interview_grading, update_finished_grading
+from ..role_interviews import set_role_ai_wait, configure_interview_grading, update_finished_grading, requeue_finished_grading
 from ..roles import RoleCatalogError
 from ..workspace import (
     WorkspaceError,
@@ -175,7 +176,7 @@ def _grading_instruction(dimensions: set[str], fatal_issues: set[str]) -> str:
     return (
         "面试已结束，只评分指定的一题，不生成问题。返回JSON字段 scores, evidence, evidence_quote, confidence, fatal_issues, follow_up。"
         f"scores 为维度 {sorted(dimensions)} 的1–5整数，依据冻结Rubric，不依据难度或身份改变宽容度；"
-        "evidence 为20–4000字的中文判断依据；evidence_quote 为本题回答或代码中一段连续原文，不能改写或编造；"
+        "evidence 为20–4000字的中文判断依据；evidence_quote 只选本题回答或代码中的一小段连续原文（建议10–80字），照抄字符和标点；不要拼接句子、加省略号或改写公式。多处依据可以在evidence中解释，但引文只选一段；"
         f"confidence 为low/medium/high；fatal_issues 只能取 {sorted(fatal_issues)}；follow_up 必须为空字符串。"
         "未运行代码可以评价核心逻辑但不得宣称运行通过。没有证据就说明未评分，不能补造分数、工作经历或结论。"
     )
@@ -194,6 +195,7 @@ def _dynamic_response_schema(preview, dimensions: set[str], fatal_issues: set[st
         "next_stage": {"type": "string", "enum": contract["allowed_next_stages"]},
         "coding_problem_id": {"type": "string", "enum": ["", *(p["id"] for p in contract["coding_candidates"])]},
         "next_skill_ids": {"type": "array", "maxItems": 3,
+                           "minItems": 1 if not {"coding", "finish"}.intersection(contract["allowed_next_stages"]) else 0,
                            "items": {"type": "string", "enum": [s["id"] for s in contract["role_skills"]]}},
     }
     if not fatal_issues:
@@ -868,7 +870,23 @@ class AppController(QObject):
     def problemStatement(self, problem_id: str, original: str) -> str:
         """Chinese display of the frozen statement, without rewriting its source."""
         from .coding_statements_zh import chinese_statement
-        return chinese_statement(problem_id, original)
+        text = chinese_statement(problem_id, original)
+        review = self.service.knowledge_catalog().coding_review(problem_id, original)
+        if review:
+            text += "\n\n" + review["summary"] + "\n\n可以自己构造的样例\n" + "\n".join("• " + item for item in review["self_checks"])
+        return text
+
+    @Slot(str, int, str, result=str)
+    def renderMarkdown(self, markdown: str, section_size: int, code_font: str) -> str:
+        """Keep code-block whitespace while wrapping long signatures in QML."""
+        document = QTextDocument()
+        document.setMarkdown(markdown)
+        rendered = re.sub(r"<body[^>]*>", "<body>", document.toHtml())
+        # Let the Text item's theme/font scale own the body and code size.
+        rendered = re.sub(r"font-size:\s*\d+(?:\.\d+)?pt;", "", rendered)
+        rendered = re.sub(r"font-size:(?:xx-large|x-large|large|medium|small|x-small);", f"font-size:{section_size}px;", rendered)
+        rendered = rendered.replace("font-family:'monospace';", f"font-family:'{code_font}';")
+        return rendered.replace('<pre style="', '<pre style="white-space:pre-wrap;')
 
     @Slot(str, str, str, result="QVariantMap")
     def interviewConfiguration(
@@ -3162,10 +3180,8 @@ class AppController(QObject):
             "ai_mode": session["ai_mode"],
             "material_refs": session["material_refs"],
             "total_questions": len(questions),
-            "dialogue": [{"question_id": q["question_id"], "question": q["prompt"],
-                          "answer": self.service.interview_answer_text(self._profile_id, interview_id, q["question_id"])}
-                         for q in questions if q["question_id"] in session["answers"]
-                         and q != current.get("question")],
+            "dialogue": [item for item in self.service.interview_dialogue(self._profile_id, session)
+                         if item["question_id"] != (current.get("question") or {}).get("question_id")],
             "completed_questions": len(completed),
             "unanswered_questions": len(questions) - len(answered),
             "unscored_questions": len(answered - assessed),
@@ -3462,6 +3478,11 @@ class AppController(QObject):
             if self._interview.get("interaction_version") == 2:
                 configure_interview_grading(self.repo_root, self._profile_id, self._interview["interview_id"],
                     connection_id=connection_id, include_materials=include_materials)
+                if question.get("kind") == "coding":
+                    # Coding is the final stage. No model request is needed to
+                    # decide that there is no next question; grade after finish.
+                    self.finishInterview()
+                    return True
                 set_role_ai_wait(self.repo_root, self._profile_id, self._interview["interview_id"], True)
                 preview = build_role_interview_context_preview(
                     self.repo_root, self._profile_id, self._interview["interview_id"],
@@ -4353,6 +4374,8 @@ class AppController(QObject):
             error = friendly_error(raw)
             if raw.startswith(("AI scorecard", "AI rubric", "AI interviewer")):
                 error = "AI 返回的评分字段、维度或证据不符合本题要求，未写入分数。请重试该题。"
+            elif raw.startswith("评分引用的原文不在本题回答中"):
+                error = raw
             elif error == text("error.generic"):
                 error = "本题评分未完成，回答已保留。请重试该题；已评分题目不会重复请求。"
         update_finished_grading(self.repo_root, self._profile_id, self._interview["interview_id"],
@@ -4425,6 +4448,8 @@ class AppController(QObject):
                 self.stateChanged.emit()
                 return
             answer = self.service.interview_answer_text(self._profile_id, session["interview_id"], question["question_id"])
+            if retry_failed:
+                requeue_finished_grading(self.repo_root, self._profile_id, session["interview_id"], question_id=question_id)
             if session["ai_mode"] == "codex":
                 if not self._codex_backend or not self._codex_thread_id:
                     self._interview["grading_message"] = "问答已保存；连接 Codex 后可继续未完成评分，已评分题目不会重评。"
@@ -8031,6 +8056,10 @@ class AppController(QObject):
             self._background_operations.discard("interview-connect")
             self._set_busy(bool(self._background_operations))
             self._interview_request_failed("Codex 请求已停止，回答已保留；连接完成后可重试。", "cancel")
+            return
+        if self._codex_interview_identity is not None and str(self._codex_interview_turn_id).startswith("pending:"):
+            self._cancel_coach_stream_for_reload()
+            self._interview_request_failed("Codex 请求已停止，回答已保留；可以重试。", "cancel")
             return
         turn_id = self._codex_coach_turn_id or self._codex_interview_turn_id or self._codex_turn_id
         if not turn_id or str(turn_id).startswith("pending:"):

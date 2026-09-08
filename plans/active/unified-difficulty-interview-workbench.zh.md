@@ -6,7 +6,7 @@
 
 岗位决定考察方向，授权材料与回答决定切入点，简单/标准/困难决定深度和广度。新动态面试不要求或暗用 seniority；历史数据不改写。下一问优先，结束后有证据地评分；等待 AI 不计入候选时间。不改 Practice/Mastery/授权语义，不新增大型依赖、不全量回归、不打包、不发布。仅推送 main，提交使用 [skip ci]。
 
-## 当前事实
+## 起点事实（改动前）
 
 - QML 设置、动态题池、知识检索和蓝图存在 seniority 依赖；手撕按 intern/easy、new_grad/medium、mid/hard 分档。
 - 当前逐题请求同时等待详细评分和下一问；阶段依赖固定最低题数。
@@ -39,12 +39,14 @@
 - DEC-002：本轮只维护此 ExecPlan；具体证据与完成情况持续写在此处。
 - [x] 切片一实现与正式 QML 验收
 - [x] 切片二实现与动态协议验收
-- [ ] 切片三实现、内容审查、报告闭环
-- [ ] 集成目标验证、真实传输证据、提交推送 main
+- [x] 切片三实现、16 卡 / 12 题独立审查、报告闭环
+- [x] 集成目标验证、真实传输记录（包括失败）
+- [ ] 四场真实传输全部通过：DeepSeek high 仍未通过，不勾选
+- [x] 切片三成果准备完毕；提交 / 推送结果以终局 Git 核对为准
 
 ## 最终复盘
 
-实施中；尚未宣称任何新功能或验收完成。
+三个切片的源码已实现，目标自动化和正式 Windows QML 验收通过；Codex 两场与 DeepSeek low 完成问答、手撕提交及结束评分。DeepSeek high 仍失败，不能称全部验收通过。没有新安装包、RC、Tag 或 Release。下面区分实现、自动化、真实传输与尚未验证项。
 
 ## 切片一证据
 
@@ -65,4 +67,87 @@
 - 后加评分重启/单题重试、范围变化确认：2 passed（12.09s）；新中文档案无隐藏 seniority、默认标准/60 分钟及重启配置：1 passed（7.55s）。
 - 旧动态协议与静态会话兼容检查首批 21 passed；发现一个早已绑定旧题目 ID 的静态计划断言，改为验证真实候选及预览/创建一致。相关静态计划、旧指纹、计时与档案隔离 3 passed（12.46s）。未称整个旧测试集已通过。
 
-实现中还修复：新档案无 seniority 时旧 Practice 上下文 KeyError；暂停结束后评分刷新不能把暂停事实抹掉。Codex 登录状态已验证，但尚未用真实模型完成整场，DeepSeek 测试凭证仍待明确授权。按 [官方 App Server 文档](https://learn.chatgpt.com/docs/app-server) 核对复用 thread/turn 与结构化输出，未改动用户所选模型或推理强度。
+实现中还修复：新档案无 seniority 时旧 Practice 上下文 KeyError；暂停结束后评分刷新不能把暂停事实抹掉。切片二结束时尚未完成真实模型验证；后续授权及结果见下节。按 [官方 App Server 文档](https://learn.chatgpt.com/docs/app-server) 核对复用 thread/turn 与结构化输出，未改动用户所选模型或推理强度。
+
+## 切片三：内容、复盘与实际故障修复
+
+16 张 EGT-QB 卡新增 `interview_guidance`：切入信号、答对深入、薄弱替代问法、推导/反例/条件变化、停止条件。全部经过未参与编写的 `independent_content_review` Agent 审查，不用作者自批替代。它指出 ATT-019 的 bias 假设与本地四个无偏置投影契约冲突（P1），以及 PT-003 的 ignore-label 自测可能改变有效样本（P2）；已分别修正为按题面约定、只扰动仍被忽略位置的 logits。
+
+| 知识卡 | 主题 |
+|---|---|
+| EGT-QB-001 / 002 / 007 / 011 | Adam/AdamW、混合精度、ZeRO、KV Cache |
+| EGT-QB-014 / 019 / 021 / 025 | SFT Mask、Checkpoint、训练诊断、PPO |
+| EGT-QB-026 / 028 / 029 / 030 | DPO、GRPO、Reward Model、KL |
+| EGT-QB-037 / 048 / 058 / 068 | GAE、Attention 缩放、GQA、LoRA |
+
+12 道指定题的中文说明、自测维度、核心逻辑、常见错误与深入追问进入现有知识目录的 `coding_reviews`，用冻结 `task.md` SHA 绑定。没有改写固定题的四个资产，也没有降低公开测试要求，避免破坏历史 Session 指纹。12 题全部处于两个重点岗位/三难度的实际可运行候选并集，仍受各自难度、环境及验证门槛限制；Practice 另保留原前置解锁要求。
+
+原理候选中的指导会实际发送给 Codex/API，不只显示在知识库。正式作答不泄漏标准答案；代码评价点只用于结束后评分。报告先看有证据的表现、覆盖缺口和下一步，再看分数；知识链接打开真实卡片，代码入口显示未验证、缺依赖或未解锁的具体原因。后续练习不改写旧面试。
+
+真实测试促成的最小修复：
+
+- 模型用反引号包裹原术语时，覆盖引文可映射回锁定原文；改变数字、拼接省略号仍不算有效引文。覆盖引用无效不阻塞合法下一问，只不计该项覆盖，评分引用仍严格校验。
+- 手撕评分原来把多行代码与 JSON 转义字符串比较，误拒绝真实引文；改为对照锁定代码字段。结束评分不再携带旧的 `next_stage` 指令。
+- 提交手撕直接结束问答并排队评分，删除额外等待一次“没有下一问”的请求。
+- “继续未完成评分”原来只重试第一道失败题；现在一次明确操作将失败项重新排队，成功项不重评。单题重试仍只重置指定失败项。
+- Codex 在 `turn/start` 回执前取消时，迟到的 turn ID 也会被中断，保留回答、释放等待计时。
+- 旧 Profile 的 `role_preferences.seniority` 与 `career_intent.employment_stage` 均从新面试上下文排除，原文件不迁移不删除；材料正文中的实习经历仍保留。
+- 长代码签名可换行，报告长知识链接改为纵向排列；不通过缩小字号掩盖裁切。
+- 报告中已展示但未作答的问题也保留回看位置，明确标注“本题未作答”，不再出现无响应的回看入口。进行中的旧静态面试不因此展示未来题目。
+
+## 正式页面与目标自动化
+
+没有运行完整 pytest。以下记录针对性验证，不把重跑次数累加成“新增测试数”：
+
+| 范围 | 实际结果 |
+|---|---|
+| 内容入口、核心逻辑引用、手撕直接结束、DeepSeek wire/高推理/错误流 | 21 passed，8 deselected，49.60s |
+| 正式 Windows QML 四尺寸 × 两主题 × 100%/125%，中文 IME/提示 | 4 passed，93 deselected，68.71s |
+| 后续代码布局及报告链接复查 | 2 passed，1 deselected，40.04s；最终截图采集同两项通过 |
+| 结束评分：多失败项、单题与批量重试、成功跳过、授权变化 | 3 passed，6 deselected，52.57s |
+| 三个真实磁盘合成旧 Profile 的提示、候选、Rubric 一致，原标签保留 | 1 passed，7 deselected，12.74s |
+| 覆盖引文：精确、反引号、改数值/拼接不计数 | 4 passed，14.78s |
+| 未作答问题回看：真实 QML 点击定位、进行中历史范围、已评分题不重复请求；README 中文与链接 | 3 passed，23.87s |
+| 改动文档与截图清单 | 5 份文档的 92 个本地链接有效；10 张图 SHA-256 / 尺寸一致；git diff --check 通过 |
+
+上述测试复用 `tests/infrastructure/test_unified_interview*.py`、`test_question_first_*.py`、`test_interview_content_upgrade.py`、`test_deepseek.py` 及 `test_interview_input_runtime.py` 的具体节点。12 条合成轨迹覆盖算法/后训练 × 三难度 × 充分/薄弱回答；它们验证协议，不冒充真实模型或人工面试。
+
+如需复验本轮变更，仅选择对应模块/节点，不重复全量。采图时设置 `QT_QPA_PLATFORM=windows` 与 `LLM_LAB_UI_EVIDENCE_DIR`；不设置采图目录的测试不会生成 PNG。早期离屏字体呈方框的图片已排除，发布的证据改由原生 Windows 窗口采集。
+
+| 正式页面 | Before | After |
+|---|---|---|
+| 首页 | [原布局](../../docs/images/unified-interview-20260908/before-home-light.png) | [浅色](../../docs/images/unified-interview-20260908/home-light.png) / [深色](../../docs/images/unified-interview-20260908/home-dark.png) |
+| 手撕 | [原编辑器](../../docs/images/unified-interview-20260908/before-coding-light.png) | [浅色](../../docs/images/unified-interview-20260908/coding-light.png) / [深色](../../docs/images/unified-interview-20260908/coding-dark.png) |
+| 准备面试 | — | [浅色](../../docs/images/unified-interview-20260908/setup-light.png) / [深色](../../docs/images/unified-interview-20260908/setup-dark.png) |
+| 复盘与缺口 | — | [浅色](../../docs/images/unified-interview-20260908/report-light.png) / [深色](../../docs/images/unified-interview-20260908/report-dark.png) |
+
+截图是正式 Controller/QML、隔离合成 Profile；不是 Phase 0 原型，也不证明真实 AI 连接。逻辑尺寸均为 1280×800；Before 的系统 DPR 1.5、After 1.25，PNG 物理尺寸因此不同，并非手工缩放。逐图 SHA、时间与工作树来源见[清单](../../docs/images/unified-interview-20260908/manifest.json)。图中的合成部分代码不是答案或测试通过证据。
+
+## 经授权的真实传输与性能
+
+用户明确允许使用已保存在系统密钥环的 DeepSeek 连接。只按现有设置的最后使用指针读取这一份连接配置/凭证，不枚举其他真实档案、不读真实材料，Key 仅在进程内使用。所有测试另建隔离临时目录，简历、JD、回答与部分代码均为合成数据；面试官是真实 Codex/DeepSeek。候选人的后续回答由单独模型生成，这是软件集成测试，不是人工 Field Run 或回答质量基准。
+
+| 服务 / 推理 | 岗位；难度 | 实际终点 | 首问题正文 / 完成 | 暖请求完成范围 | 首轮结束评分队列 |
+|---|---|---|---|---|---|
+| Codex `gpt-5.6-sol` / low | 算法；标准 | 11 问；全部已回答题评分完成 | 121.985 / 126.156s | 12.125–20.719s，9 次 | 401.937s，随后只重试失败项 |
+| Codex `gpt-5.6-sol` / high | 后训练；标准 | 13 问；全部已回答题评分完成 | 127.172 / 132.266s | 15.954–32.016s，11 次 | 502.609s，代码引文修复后仅重试该题 130.171s |
+| DeepSeek `deepseek-v4-flash` / low | 算法；标准 | 10 问；全部已回答题评分完成，但覆盖不足 | 19.735 / 21.110s | 8.360–61.859s，8 次 | 提交代码触发第一项后观测剩余队列 125.984s；后续失败项重试 18.453s + 20.813s |
+| DeepSeek `deepseek-v4-flash` / high | 后训练；标准 | q-003 后生成失败；未到手撕/评分 | 21.610 / 23.156s | 第二次 16.907s | 未执行，不填假耗时 |
+
+“首问题”指提交本地自我介绍后 AI 生成的下一问；本地开场不等待模型。暖请求排除首问、手撕提交和失败尝试。Codex 冷启动/评分重试遇到过上游 `Reconnecting...2/5–5/5`，约两分钟，不是每轮用户手动重连；单个样本不能保证任何秒级 SLA。low 的最终代码评分重试为 133.015s，包含重连；不同修复版本的先前失败耗时保留在本机原始记录，未算入暖请求成功范围。
+
+DeepSeek low 初次路径有 2 个失败尝试（覆盖引文、代码结束），经直接修复后复用锁定回答继续。最终报告仍是 `incomplete`：有证据支持的经历角度 1/3、原理主题 2/3，不因所有题都已有分数就补成完整。两个 Codex 流程覆盖状态完成，但三场手撕都只提交了故意不完整的自造样例，公开测试事实均为 `not_run`，绝不称算法正确或面试通过。
+
+DeepSeek high 在同一锁定 q-003 上累计 9 个失败尝试：6 次只有思考无正文、2 次旧覆盖引文拒绝、1 次非 JSON。后两类已有代码修正；最新显式 JSON 请求仍无正文，因此停止重复付费重试。按 [DeepSeek JSON 文档](https://api-docs.deepseek.com/guides/json_mode/) 保留输出格式并如实处理空响应，不把 `reasoning_content` 当回答，不自动降低 high。**这一场真实传输验收未通过，不能写“四场全绿”。**
+
+本机原始 `evidence.json` 留在四个本轮隔离临时目录 `unified-live-{codex,deepseek}-{low,high}-*`；研究/探针位于 ignored `workspace/maintainer/unified-20260908/`，不进入公共源码。上表只摘录配置、计数、耗时和结果，不提交凭证、完整对话或推理内容。
+
+## 最终范围与后续
+
+- 已实现：三个切片；旧 CLI、Profile、静态/旧动态 Session 与固定题指纹兼容，新会话采用统一规则。
+- 已验证：目标单元/集成、12 合成轨迹、16 卡独立审查、12 题候选与资产、Windows 正式页面尺寸/输入、3 场真实问答及评分路径。
+- 未通过：DeepSeek high 的整场真实传输；该服务仍可能返回空正文，模型覆盖策略也不是确定性质量保证。
+- 未执行：全量 pytest、CI/RC、Windows/macOS 打包、Tag/Release、macOS 实机与本轮真实麦克风回归。已有流式语音未更换模型；定向 UI 保留其入口，不宣称本轮重新验证声学质量。
+- 下一步只需针对 high 的流响应稳定性和不同候选回答的语义覆盖继续验证；不借此扩展岗位、重写 Provider 架构或降低证据门槛。
+
+Git：在 main 按切片提交；已推送 `7b72bbf`、`2dfacc2`，切片三由包含本报告的提交记录，推送完成 SHA 以终局报告与远端 main 核对为准。所有提交含 `[skip ci]`，不推送其他分支、不重写历史。已有未跟踪 UAT、反馈、题目文档与原始图标保留，不纳入源码提交。

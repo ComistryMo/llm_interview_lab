@@ -11,6 +11,7 @@ Item {
     required property var colors
     property var theme: null
     signal codexSettingsRequested()
+    signal knowledgeRequested(string cardId)
     readonly property bool dynamicInterview: app.interview.delivery_mode === "dynamic_ai"
     readonly property bool conversationalAnswer: root.dynamicInterview && !!activeQuestion && !root.codingQuestion
     property bool showVoiceOptions: false
@@ -47,6 +48,16 @@ Item {
     property string nextPreview: app.interview.next_question_preview || ""
     onNextPreviewChanged: if (root.followLatest && nextPreview) Qt.callLater(root.scrollToLatest)
     property bool showCodingHistory: false
+    function reviewQuestion(questionId) {
+        root.followLatest = false
+        for (var i = 0; i < dialogueRows.count; ++i) {
+            var row = dialogueRows.itemAt(i)
+            if (row && row.modelData.question_id === questionId) {
+                questionScroll.contentItem.contentY = Math.max(0, row.y)
+                return
+            }
+        }
+    }
     property bool syncingQuestionEditors: false
     // The context confirmation is a single, synchronous hand-off to the
     // controller.  Keep a local gate as well as ``app.busy`` so keyboard
@@ -1395,14 +1406,16 @@ Item {
                         onClicked: { root.showCodingHistory = !root.showCodingHistory; questionScroll.contentItem.contentY = 0 }
                     }
                     Repeater {
+                        id: dialogueRows
                         model: root.dynamicInterview && (!root.codingQuestion || root.showCodingHistory) ? (app.interview.dialogue || []) : []
                         ColumnLayout {
                             required property var modelData
+                            objectName: "interviewDialogue-" + modelData.question_id
                             width: questionContent.width; spacing: 8
                             LabText { theme: root.theme; text: "面试官 · " + modelData.question_id; variant: "caption"; tone: "muted" }
                             LabText { theme: root.theme; Layout.fillWidth: true; text: modelData.question; wrapMode: Text.Wrap; font.pixelSize: root.theme.fontBodyLarge }
                             LabText { theme: root.theme; text: "你的回答"; variant: "caption"; tone: "muted"; Layout.topMargin: 8 }
-                            LabText { theme: root.theme; Layout.fillWidth: true; text: modelData.answer; wrapMode: Text.Wrap }
+                            LabText { theme: root.theme; Layout.fillWidth: true; text: modelData.answer || "本题未作答"; wrapMode: Text.Wrap }
                             LabDivider { theme: root.theme; Layout.fillWidth: true; Layout.topMargin: 12; Layout.bottomMargin: 12 }
                         }
                     }
@@ -1460,16 +1473,17 @@ Item {
                         // Markdown's default implicit height does not include
                         // the complete custom paragraph leading on Qt/Windows.
                         height: contentHeight
-                        text: activeQuestion ? (root.codingQuestion && !root.showEnglishQuestion
+                        property string markdown: activeQuestion ? (root.codingQuestion && !root.showEnglishQuestion
                                                ? app.problemStatement(activeQuestion.source.id, activeQuestion.prompt)
                                                : root.codingQuestion ? activeQuestion.prompt.replace(/^#[^\n]+\n+/, "") : activeQuestion.prompt)
                               : root.interviewFinished ? "下面汇总已记录的回答与评估依据。缺少的环节不会作为已完成计入。"
                               : "点击「结束并查看复盘」保存本场结果；完成情况以实际回答和测试证据为准。"
+                        text: app.renderMarkdown(markdown, root.theme.fontSection, root.theme.monospaceFontFamily)
                         color: root.colors.text
                         font.family: root.theme ? root.theme.uiFontFamily : ""
                         font.pixelSize: root.theme ? root.theme.fontBodyLarge : 15
                         wrapMode: Text.Wrap
-                        textFormat: Text.MarkdownText
+                        textFormat: Text.RichText
                         lineHeight: 1.4
                     }
                     LabButton {
@@ -1893,6 +1907,53 @@ Item {
                         borderColor: "transparent"
                         padding: 0
                         Column {
+                            width: parent.width; spacing: 12
+                            visible: app.interview.interaction_version === 2
+                            LabText { theme: root.theme; text: "本场复盘 · 先看证据，再安排练习"; variant: "section"; strong: true; width: parent.width; wrapMode: Text.Wrap }
+                            LabText { theme: root.theme; text: "有证据支持的表现"; strong: true }
+                            LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; tone: "muted"; visible: !(root.interviewResult.strengths || []).length; text: "当前尚无足够评分证据支持优势结论；不会用未完成项目补分。" }
+                            Repeater {
+                                model: root.interviewResult.strengths || []
+                                Column {
+                                    required property var modelData
+                                    width: parent.width; spacing: 4
+                                    LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; text: parent.modelData.title; strong: true }
+                                    LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; text: parent.modelData.evidence }
+                                    LabButton { theme: root.theme; variant: "ghost"; text: "查看原始问答"; onClicked: root.reviewQuestion(parent.modelData.question_id) }
+                                }
+                            }
+                            LabText { theme: root.theme; text: "优先补齐的三个缺口"; strong: true; visible: (root.interviewResult.learning_gaps || []).length > 0 }
+                            Repeater {
+                                model: root.interviewResult.learning_gaps || []
+                                Column {
+                                    required property var modelData
+                                    width: parent.width; spacing: 8
+                                    LabDivider { theme: root.theme; width: parent.width }
+                                    LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; text: parent.modelData.title; strong: true }
+                                    LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; text: parent.modelData.reason; tone: "muted" }
+                                    LabButton { objectName: "reportReview-" + parent.modelData.question_id; theme: root.theme; variant: "ghost"; text: "回看对应问答"; visible: !!parent.modelData.question_id; onClicked: root.reviewQuestion(parent.modelData.question_id) }
+                                    Column {
+                                        width: parent.width; spacing: 8
+                                        Repeater {
+                                            model: parent.parent.modelData.knowledge
+                                            LabButton { required property var modelData; objectName: "reportKnowledge-" + modelData.id; theme: root.theme; text: "练习原理 · " + modelData.title; variant: "ghost"; width: Math.min(implicitWidth, parent.width); onClicked: root.knowledgeRequested(modelData.id) }
+                                        }
+                                    }
+                                    Repeater {
+                                        model: parent.modelData.practice
+                                        Column {
+                                            required property var modelData
+                                            width: parent.width; spacing: 4
+                                            LabButton { theme: root.theme; variant: "secondary"; width: Math.min(implicitWidth, parent.width); text: "代码练习 · " + app.problemTitle(parent.modelData.id, parent.modelData.title); enabled: parent.modelData.available && !app.busy; onClicked: app.openProblem(parent.modelData.id) }
+                                            LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; text: parent.modelData.reason; visible: !!text; tone: "muted"; variant: "caption" }
+                                        }
+                                    }
+                                }
+                            }
+                            LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; variant: "caption"; tone: "muted"; text: "练习和复测另行记录，不会改写这场面试的回答与原始评分。" }
+                            LabDivider { theme: root.theme; width: parent.width }
+                        }
+                        Column {
                             width: parent.width; spacing: 8
                             visible: app.interview.interaction_version === 2
                             LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; text: "问答已保存。详细评分在后台逐题完成；没有证据的项目保持未评分。" }
@@ -1935,7 +1996,7 @@ Item {
                                     theme: root.theme
                                     text: root.resultScoreText(root.interviewResult)
                                     strong: true
-                                    font.pixelSize: root.theme.scaledPx(36)
+                                    font.pixelSize: root.interviewResult.completion_status === "complete" ? root.theme.fontTitle : root.theme.fontSection
                                 }
                                 Text {
                                     Layout.fillWidth: true

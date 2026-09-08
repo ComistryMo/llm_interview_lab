@@ -340,6 +340,7 @@ class ApplicationService:
             if source is not None:
                 records.append(source.as_dict())
         payload["source_records"] = records
+        payload["related_problems"] = catalog.related_coding_problems(card.id)
         return payload
 
     def knowledge_cards(
@@ -2024,7 +2025,6 @@ class ApplicationService:
             "interview_id": interview_id,
             "status": session["status"],
             "role_id": session["role_id"],
-            "seniority": session.get("seniority"),
             "difficulty": session["difficulty"],
             "completion_status": result["completion_status"],
             "overall_score": result["overall_score"],
@@ -2038,10 +2038,84 @@ class ApplicationService:
             "summary": result["summary"],
             "finished_at": result["finished_at"],
         }
+        if "seniority" in session:
+            view["seniority"] = session["seniority"]
+        if session.get("interaction_version") == 2:
+            view.update(self._interview_learning_actions(profile_id, session, assessment_evidence))
         if session.get("delivery_mode") == "non_coding_fallback":
             view["delivery_mode"] = "non_coding_fallback"
             view["blueprint_coverage"] = dict(session["blueprint_coverage"])
         return view
+
+    def interview_dialogue(self, profile_id: str, session: Mapping[str, Any]) -> list[dict[str, Any]]:
+        dialogue = []
+        for question in session["questions"]:
+            qid = question["question_id"]
+            if qid not in session["answers"] and session["status"] not in {"completed", "incomplete"}:
+                continue
+            answer = self.interview_answer_text(profile_id, session["interview_id"], qid) if qid in session["answers"] else ""
+            if answer and question["kind"] == "coding":
+                snapshot = json.loads(answer)
+                answer = snapshot["code"]
+            dialogue.append({"question_id": qid, "question": question["prompt"], "answer": answer,
+                             "kind": question["kind"], "title": question["title"]})
+        return dialogue
+
+    def _interview_learning_actions(self, profile_id, session, evidence):
+        """Presentation only: link frozen evidence to current, gated Practice assets."""
+        from .interview_flow import flow_coverage, question_stage
+        coverage = flow_coverage(session)
+        questions = {q["question_id"]: q for q in session["questions"]}
+        knowledge = self.knowledge_catalog()
+        _, _, state = self._state(profile_id)
+        practice = {p["problem_id"]: p for p in self.problem_cards(profile_id)}
+        strengths = [item for item in evidence if item["score"] is not None and item["score"] >= 75][:3]
+        gaps = []
+        for stage, label in zip(coverage["missing_stages"], coverage["missing_labels"]):
+            qs = [q for q in questions.values() if question_stage(q) == stage]
+            gaps.append({"question_id": qs[-1]["question_id"] if qs else "", "title": label + " · 证据覆盖不足",
+                         "reason": "本场未覆盖或未取得足够证据，不等于能力不合格。"})
+        for qid in session["result"]["unanswered"] + session["result"]["unscored"]:
+            gaps.append({"question_id": qid, "title": questions[qid]["title"], "reason": "回答或评分证据未完成，请先查看原始问答。"})
+        for item in sorted(evidence, key=lambda item: item["score"] if item["score"] is not None else 100):
+            if item["score"] is not None and item["score"] < 75:
+                gaps.append({"question_id": item["question_id"], "title": item["title"], "reason": item["evidence"]})
+        selected, seen = [], set()
+        role = self.roles.roles[session["role_id"]]
+        for gap in gaps:
+            identity = gap["question_id"] or gap["title"]
+            if identity in seen:
+                continue
+            seen.add(identity)
+            question = questions.get(gap["question_id"], {})
+            if question:
+                cards = knowledge.interview_candidates(skills=set(question["skills"]),
+                    tracks=set(role.required_tracks), seniority=None, context=question["prompt"], limit=2)
+            else:
+                cards = sorted((c for c in knowledge.cards.values() if c.kind == "eight_stock"
+                    and set(c.skills).intersection(role.skill_weights) and set(c.tracks).intersection(role.required_tracks)),
+                    key=lambda c: (-bool(c.raw.get("interview_guidance")),
+                                   -sum(role.skill_weights[s].weight for s in c.skills if s in role.skill_weights), c.id))[:2]
+            gap["knowledge"] = [{"id": c.id, "title": c.title} for c in cards]
+            problem_ids = ([question["source"]["id"]] if question.get("kind") == "coding" else [])
+            problem_ids += [p for card in cards for p in knowledge.related_coding_problems(card.id)]
+            gap["practice"] = []
+            for pid in list(dict.fromkeys(problem_ids))[:2]:
+                problem = self.catalog.get(pid)
+                info = practice.get(pid)
+                missing = sorted(set(problem.prerequisites) - state.mastered)
+                reason = ("题目尚未开放" if not problem.ready else
+                          "该题尚未达到正式验证级别" if not problem.recommendable else
+                          "请先在刷题页切换到该题所属训练方向" if info is None else
+                          info["environment"] if not info["environment_available"] else
+                          "前置未完成：" + "、".join(missing) if missing else
+                          "该题已掌握，请在刷题页查看复测安排" if info["status"] == "mastered" else
+                          info["start_blocked_reason"])
+                gap["practice"].append({"id": pid, "title": problem.title, "available": not reason, "reason": reason})
+            selected.append(gap)
+            if len(selected) == 3:
+                break
+        return {"strengths": strengths, "learning_gaps": selected, "coverage": coverage}
 
     def recent_interview_result(self, profile_id: str) -> dict[str, Any] | None:
         """Return the newest completed/incomplete result after active recovery."""

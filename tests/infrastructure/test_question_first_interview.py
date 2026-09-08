@@ -130,3 +130,35 @@ def test_streaming_extracts_only_display_text():
     assert streamed_question('{"follow_up":"你刚才说\\n独立') == "你刚才说\n独立"
     assert streamed_question('{"scores":{"a":3},"reasoning":"内部文本"') == ""
     assert streamed_question('{"follow_up":"你好","next_stage":"theory"}') == "你好"
+
+
+def test_coverage_quote_omitting_markdown_ticks_keeps_the_exact_answer_span(unified):
+    service, profile = unified
+    session = create(service, profile)
+    iid = session["interview_id"]
+    service.start_interview(profile, iid)
+    answer = "我使用基线 `b_c`，系数为 0.3，不是修改奖励。"
+    service.answer_interview(profile, iid, "q-001", answer)
+    payload = decision(service, session, "experience")
+    payload["coverage"]["evidence"] = "基线 b_c，系数为 0.3"
+    saved = service.advance_dynamic_interview(profile, iid, "q-001", payload, context_sha256="a" * 64)
+    assert saved["turn_decisions"]["q-001"]["coverage"]["evidence"] == "基线 `b_c`，系数为 0.3"
+
+
+@pytest.mark.parametrize("quote", ["基线 b_c，系数为 0.8", "基线 b_c…不是修改奖励", ""])
+def test_unverified_coverage_does_not_block_a_valid_question_or_count_as_evidence(unified, quote):
+    service, profile = unified
+    session = create(service, profile)
+    iid = session["interview_id"]
+    service.start_interview(profile, iid)
+    advance(service, profile, iid, "experience")
+    service.answer_interview(profile, iid, "q-002", "我使用基线 `b_c`，系数为 0.3，不是修改奖励。")
+    payload = decision(service, session, "experience", angle="基线实现", sufficient=True)
+    payload["coverage"]["evidence"] = quote
+    saved = service.advance_dynamic_interview(profile, iid, "q-002", payload, context_sha256="a" * 64)
+    assert saved["questions"][-1]["question_id"] == "q-003"
+    assert saved["turn_decisions"]["q-002"]["coverage"]["evidence"] == ""
+    assert saved["turn_decisions"]["q-002"]["coverage"]["sufficient"] is False
+    assert saved["turn_decisions"]["q-002"]["coverage_evidence_verified"] is False
+    assert not flow_coverage(saved)["experience_angles"]
+    assert not saved["assessments"]

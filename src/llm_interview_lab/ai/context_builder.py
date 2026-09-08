@@ -10,7 +10,7 @@ from typing import Any, Mapping
 
 from .base import ContextPart, ContextPreview
 from ..catalog import Catalog, load_catalog
-from ..interview_flow import CODING_REVIEW_DIRECTIVE, DIFFICULTY_DIRECTIVES, ROLE_PROBE_FOCUS, STAGES, TIME_BUDGETS, coverage_targets, dialogue_instruction, next_question_instruction, next_stages, question_stage, stage_minimums
+from ..interview_flow import CODING_EVIDENCE_DIRECTIVE, CODING_REVIEW_DIRECTIVE, DIFFICULTY_DIRECTIVES, ROLE_PROBE_FOCUS, STAGES, TIME_BUDGETS, coverage_targets, dialogue_instruction, next_question_instruction, next_stages, question_stage, stage_minimums
 from ..events import read_events, reduce_events
 from ..knowledge import KnowledgeCatalog, load_knowledge
 from ..materials import MaterialError, get_material, resolve_material_text_path
@@ -260,7 +260,8 @@ def build_dynamic_role_interview_context_preview(
     ]
     profile_context = {
         "display_name": profile.get("display_name", profile_id),
-        "career_intent": profile.get("career_intent"),
+        "career_intent": {key: value for key, value in (profile.get("career_intent") or {}).items()
+                          if key != "employment_stage"},
         "role_preferences": {key: value for key, value in (profile.get("role_preferences") or {}).items()
                              if key != "seniority"},
     }
@@ -558,13 +559,14 @@ def build_role_interview_context_preview(
             json.dumps({
                 "instruction": "这些是本轮按岗位、已授权背景与回答匹配的公开原理题，不是预先冻结的未来题单。"
                 "进入 theory 阶段时优先从尚未考察的相关主题选一个，结合候选人的实际经历自然提问；"
-                "需要深挖时用 follow_ups 改写一个追问。不要照抄整张卡或一次问完多个主题，"
+                "需要深挖时按 interview_guidance 的切入信号、深入/薄弱分支、反例和停止条件选一个追问。不要照抄整张卡或一次问完多个主题，"
                 "更不能把相关主题当成候选人确实做过的经历。难度按本场策略体现在推导和条件变化上。"
                 "本轮仍只输出一个 follow_up 和实际考察的 next_skill_ids。",
                 "cards": [{"id": card.id, "title": card.title, "prompt": card.prompt,
                            "skills": [skill for skill in card.skills if skill in role.skill_weights],
                            "follow_ups": list(card.follow_ups),
-                           "related_problems": list(card.related_problems)} for card in pool],
+                           "interview_guidance": card.raw.get("interview_guidance", {}),
+                           "related_problems": knowledge.related_coding_problems(card.id)} for card in pool],
             }, ensure_ascii=False),
         ))
     if assessment_question_id:
@@ -576,5 +578,10 @@ def build_role_interview_context_preview(
         parts.append(next(p for p in background.parts if p.id == "profile_context"))
         parts = [part for part in parts if part.id != "candidate_answer"]
         parts.append(_part("candidate_answer", "本题已锁定回答", answer, sensitive=True))
-        parts[0] = _part("policy", "结束后逐题评分", "本场已经结束，只评分当前指定题目的真实证据，不生成下一问。相同证据使用相同锚点，不根据难度、学历、身份或年限改变评分。evidence必须引用回答或代码；没有证据标记未评分。不能编造运行通过、公司事实、Offer概率或Mastery。" + (CODING_REVIEW_DIRECTIVE if question["kind"] == "coding" else ""))
+        if question["kind"] == "coding":
+            knowledge = knowledge or load_knowledge(repo_root, curriculum=catalog)
+            review = knowledge.coding_review(question["source"]["id"], question["prompt"])
+            if review:
+                parts.append(_part("coding_review", "本题核心逻辑评价点与边界（只用于结束后评分）", json.dumps(review, ensure_ascii=False)))
+        parts[0] = _part("policy", "结束后逐题评分", "本场已经结束，只评分当前指定题目的真实证据，不生成下一问。相同证据使用相同锚点，不根据难度、学历、身份或年限改变评分。evidence必须引用回答或代码；没有证据标记未评分。不能编造运行通过、公司事实、Offer概率或Mastery。" + (CODING_EVIDENCE_DIRECTIVE if question["kind"] == "coding" else ""))
     return ContextPreview("interviewer", profile_id, tuple(parts))

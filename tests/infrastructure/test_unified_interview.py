@@ -66,6 +66,28 @@ def test_start_prompt_is_independent_of_legacy_argument(unified):
     assert '"target_level"' not in prompts[0]
 
 
+def test_three_legacy_profiles_share_prompts_candidates_and_scoring(unified):
+    from llm_interview_lab.workspace import load_profile, profile_paths, update_career_intent, update_role_preferences
+    service, _ = unified
+    outcomes = []
+    for seniority, employment in (("intern", "internship"), ("new_grad", "new_grad"), ("mid", "experienced")):
+        profile = "legacy-" + uuid4().hex[:8]
+        init_profile(service.repo_root, profile, display_name="合成候选人")
+        saved = load_profile(profile_paths(service.repo_root, profile), service.repo_root)
+        update_role_preferences(service.repo_root, profile, {
+            "primary_role": "post_training_engineer", "seniority": seniority,
+            "skill_self_assessment": {}, "ai_mode": "provider"})
+        update_career_intent(service.repo_root, profile, {**saved["career_intent"], "employment_stage": employment})
+        prompt = service.dynamic_interview_context(profile, role_id="post_training_engineer", difficulty="hard").selected_text
+        session = create(service, profile)
+        outcomes.append((prompt, [p.id for p, _ in dynamic_coding_candidates(service.catalog, service.roles, session)], session["questions"][0]["rubric"]))
+        saved = load_profile(profile_paths(service.repo_root, profile), service.repo_root)
+        assert saved["role_preferences"]["seniority"] == seniority
+        assert saved["career_intent"]["employment_stage"] == employment
+        assert '"seniority"' not in prompt and '"employment_stage"' not in prompt
+    assert outcomes[0] == outcomes[1] == outcomes[2]
+
+
 def test_local_script_accepts_input_and_does_not_claim_test_pass(tmp_path):
     from llm_interview_lab.script_runner import run_local_python
     script = tmp_path / "submission.py"

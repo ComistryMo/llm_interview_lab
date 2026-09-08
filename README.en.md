@@ -18,9 +18,9 @@ A local-first, role-aware, AI-assisted interview workbench. It combines role ski
 
 **Role-aware paths · Tested exercises · AI interviews · Evidence review · Retention**
 
-Current source no longer has a standalone AI Coach page or a practice-side AI panel. AI is used for interviews: experience discussion, answer-based follow-ups and assessment. Invalid coding suggestions are resolved to runnable local exercises, not invented tasks. Older release screenshots are historical; this does not update the downloaded binaries.
+Current source has an interview-first home and no standalone AI Coach or permanent Exercise navigation item. New dynamic interviews use role, authorized background and difficulty, not intern/new-grad/experience tiers. Answers are saved before streaming the next question; grading happens after the interview. Invalid coding IDs are rejected, not silently replaced. The shared native editor separates running a script from public tests. See the [implementation and live-test limits](plans/active/unified-difficulty-interview-workbench.zh.md) and [current screenshots](docs/images/unified-interview-20260908/manifest.json). Older release screenshots remain historical; downloaded binaries were not updated.
 
-This is not a random question list, a one-pass mastery badge, or a way for AI to silently write a learner's answer. No AI connection is required.
+This is not a random question list, a one-pass mastery badge, or a way for AI to silently write a learner's answer. Local practice requires no AI connection; personalized interviews do.
 
 ## What it includes
 
@@ -33,7 +33,7 @@ This is not a random question list, a one-pass mastery badge, or a way for AI to
 
 ## Download
 
-Current `main` and the published desktop release are **v0.4.0-alpha.3**. Windows and Apple Silicon macOS artifacts passed build, launch, and privacy checks; download them from the [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3).
+This iteration updates **`main` source only**, retaining package version `0.4.0a3`. The existing [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) does not include the new unified-difficulty workbench. Use source installation to try these changes; no desktop build or release was made in this iteration.
 
 | User | Artifact |
 |---|---|
@@ -80,7 +80,7 @@ The public starter is expected to fail until you implement it. PyTorch exercises
 
 ```mermaid
 flowchart LR
-    A[Select role or track] --> B[Solve or interview]
+    A[Select role or track] --> B[Practice a fixed exercise]
     B --> C[Public evidence]
     C --> D[Review]
     D --> E[D+2]
@@ -119,7 +119,7 @@ reports provide scoped question-pattern signals only. See the
 
 Choose one of three modes:
 
-- **No AI:** local curriculum, grader, retention, and manual interviews still work.
+- **No AI:** local curriculum, grader and retention remain available; the desktop personalized interview page requires an AI connection.
 - **Chat provider:** OpenAI, OpenAI-compatible endpoints, and Ollama are the packaged Alpha path. The source package also includes native Anthropic and Gemini adapters.
 - **Codex:** official App Server integration for repository context, test execution, streamed events, diffs, and explicit approvals. It does not scrape terminal ANSI output.
 
@@ -135,7 +135,7 @@ Only fields selected in Context Preview are sent. API keys are stored in Windows
 
 ## Status
 
-The current source Catalog contains **49 Ready**, **180 Planned**, **37 Oracle-validated**, **24 Retention-ready**, **0 Field-tested runs**, **70 skills**, **8 roles**, **24 interview blueprints**, and **26 fixed non-coding interview items**. The version is still `v0.4.0-alpha.3`; the existing desktop downloads have not been rebuilt with these source additions.
+See the canonical [Chinese README](README.md#项目状态) for current Catalog counts. The version marker remains `v0.4.0-alpha.3`; the existing desktop downloads have not been rebuilt with these source changes. This iteration deepens 16 knowledge cards and 12 existing coding exercises, without presenting automated validation as human field testing.
 
 New original exercises cover Nesterov SGD, label-smoothed cross entropy, causal/padding masks, and GSPO sequence ratios. They require PyTorch and have Chinese task descriptions, public tests, and independent numerical validation. Their own D+2/D+7 variants are not available yet, so passing these exercises cannot grant mastery. See the [Chinese source README](README.md#ai-手撕题当前源码) for details.
 

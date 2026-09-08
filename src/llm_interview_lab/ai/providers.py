@@ -256,12 +256,10 @@ class OpenAICompatibleChatProvider:
                 "stream": True,
             }
             payload.update(self._reasoning_options())
-            deepseek_thinking = (self.config.provider_id == "deepseek"
-                                 and payload["thinking"]["type"] == "enabled")
-            # DeepSeek documents occasional empty content in JSON Output mode.
-            # Keep the user's model/effort; thinking requests use the caller's
-            # JSON instructions and local schema validation, not response_format.
-            if json_mode and not deepseek_thinking:
+            # Keep explicit output requirements even in thinking mode. V4
+            # supports JSON Output; prose alone cannot drive a validated turn.
+            # An empty/truncated service response still remains a retryable error.
+            if json_mode:
                 payload["response_format"] = {"type": "json_object"}
             received_text = False
             received_reasoning = False

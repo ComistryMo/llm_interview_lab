@@ -2,6 +2,8 @@
 import asyncio
 import json
 import time
+import re
+import pytest
 from types import SimpleNamespace
 
 from PySide6.QtCore import QCoreApplication
@@ -63,9 +65,19 @@ def test_one_submit_streams_next_and_finish_grades_once(scene, monkeypatch):
     assert controller.interview["question"]["question_id"] == "q-002", controller.interview.get("ai_error")
     session = controller.service.interview_session(controller.profileId, iid)
     assert not session["assessments"] and session["ai_wait_seconds"] > 0
+    assert [row["question_id"] for row in controller.service.interview_dialogue(controller.profileId, session)] == ["q-001"]
     assert len(requests) == 1 and configs[0].reasoning_effort == "high"
     controller.finishInterview()
-    assert len(controller.interview["dialogue"]) == 1
+    assert len(controller.interview["dialogue"]) == 2
+    assert controller.interview["dialogue"][1]["question_id"] == "q-002"
+    assert controller.interview["dialogue"][1]["answer"] == ""
+    QTest.qWait(60)
+    from PySide6.QtCore import QMetaObject, Qt
+    unanswered_link = _find(window, "reportReview-q-002")
+    QMetaObject.invokeMethod(unanswered_link, "clicked", Qt.DirectConnection)
+    row = _find(window, "interviewDialogue-q-002")
+    scroll = _find(window, "interviewQuestionScroll")
+    assert abs(scroll.property("contentItem").property("contentY") - row.y()) < 2
     wait_until(lambda: controller.interview.get("result", {}).get("question_scores", {}).get("q-001") is not None)
     wait_until(lambda: not controller.busy)
     assert len(requests) == 2
@@ -91,6 +103,21 @@ def test_provider_cancel_preserves_answer_and_releases_clock(controller, monkeyp
     assert "q-001" in session["answers"] and not session["assessments"]
     assert "ai_wait_started_at" not in session
     assert controller.interview["ai_error"]
+
+
+def test_coding_submit_finishes_locally_and_only_requests_end_grading(controller, monkeypatch):
+    from tests.infrastructure.test_interview_input_runtime import _enter_coding_round
+    iid = provider_scene(controller)
+    _enter_coding_round(controller)
+    requests = []
+    monkeypatch.setattr(controller, "assessInterviewWithProvider", lambda *a, **kw: requests.append(kw))
+    assert controller.submitInterviewCode("# partial\nprint([1, 2])", "selected", False)
+    assert controller.interview["status"] == "incomplete"
+    assert controller.interview["result"] and controller.interview["dialogue"][-1]["answer"] == "# partial\nprint([1, 2])"
+    QTest.qWait(40)
+    assert requests and all(request.get("_grading_question") for request in requests)
+    session = controller.service.interview_session(controller.profileId, iid)
+    assert not session["coding_evidence"] and not session["assessments"]
 
 
 def test_codex_reuses_transport_for_question_then_end_grading(controller):
@@ -130,7 +157,35 @@ def test_codex_reuses_transport_for_question_then_end_grading(controller):
     assert not controller.busy
 
 
-def test_end_grading_restart_skips_success_and_retries_only_failure(controller, tmp_path, monkeypatch):
+def test_codex_stop_before_start_ack_preserves_answer_and_interrupts_late_id(controller):
+    interrupts = []
+    async def start_thread(**kwargs):
+        return {"thread": {"id": "delayed-thread"}}
+    async def start_turn(*args, **kwargs):
+        await asyncio.sleep(.35)
+        return {"turn": {"id": "delayed-turn"}}
+    async def interrupt(thread, turn):
+        interrupts.append((thread, turn))
+        return {}
+    controller._codex_backend = SimpleNamespace(start_thread=start_thread, start_turn=start_turn, interrupt=interrupt)
+    controller._codex_thread_id = "connected"
+    controller._codex_thread_mode = "interviewer"
+    controller._codex_pump_started = True
+    controller._ensure_codex_loop()
+    assert controller.submitInterviewAnswer("我使用独立评测集验证合成实验。", "codex", False)
+    assert str(controller._codex_interview_turn_id).startswith("pending:")
+    controller.stopInterviewGeneration()
+    assert not controller.busy
+    assert controller.interview["answer_locked"]
+    session = controller.service.interview_session(controller.profileId, controller.interview["interview_id"])
+    assert "ai_wait_started_at" not in session and not session["assessments"]
+    wait_until(lambda: bool(interrupts))
+    assert interrupts == [("delayed-thread", "delayed-turn")]
+    assert controller.interview["question"]["question_id"] == "q-001"
+
+
+@pytest.mark.parametrize("single_first", [True, False])
+def test_end_grading_restart_skips_success_and_retries_only_failure(controller, tmp_path, monkeypatch, single_first):
     from llm_interview_lab.desktop.controller import AppController
     from llm_interview_lab.role_interviews import configure_interview_grading
     iid = provider_scene(controller)
@@ -138,14 +193,16 @@ def test_end_grading_restart_skips_success_and_retries_only_failure(controller, 
     service.answer_interview(profile, iid, "q-001", "我使用独立评测集验证方法。")
     service.advance_dynamic_interview(profile, iid, "q-001", decision(service, service.interview_session(profile, iid), "experience"), context_sha256="a" * 64)
     service.answer_interview(profile, iid, "q-002", "我使用独立评测集检查重复数据。")
+    service.advance_dynamic_interview(profile, iid, "q-002", decision(service, service.interview_session(profile, iid), "experience"), context_sha256="a" * 64)
+    service.answer_interview(profile, iid, "q-003", "我使用独立评测集验证不同条件。")
     configure_interview_grading(controller.repo_root, profile, iid, connection_id="selected", include_materials=False)
     controller._load_interview(iid)
     calls = []
     class Provider:
         async def stream_chat(self, messages, **kwargs):
-            qid = "q-002" if "question_id=q-002" in messages[0]["content"] else "q-001"
+            qid = re.search(r"question_id=(q-\d+)", messages[0]["content"])[1]
             calls.append(qid)
-            if calls == ["q-001"]:
+            if qid in {"q-001", "q-003"} and calls.count(qid) == 1:
                 raise RuntimeError("synthetic timeout; 请重试该题评分")
             q = next(q for q in service.interview_session(profile, iid)["questions"] if q["question_id"] == qid)
             result = {"scores": {d: 3 for d in q["rubric"]["dimensions"]}, "evidence": "回答说明了独立评测和隔离验证，但尚缺具体划分以及排查数据泄漏的实现细节。",
@@ -153,7 +210,7 @@ def test_end_grading_restart_skips_success_and_retries_only_failure(controller, 
             yield ChatEvent("delta", text=json.dumps(result, ensure_ascii=False))
     monkeypatch.setattr("llm_interview_lab.desktop.controller.create_chat_provider", lambda *a, **kw: Provider())
     controller.finishInterview()
-    wait_until(lambda: not controller.busy and len(calls) == 2)
+    wait_until(lambda: not controller.busy and len(calls) == 3)
     session = service.interview_session(profile, iid)
     assert session["grading"]["questions"]["q-001"]["status"] == "failed"
     assert "q-002" in session["assessments"], (calls, session["grading"])
@@ -162,11 +219,15 @@ def test_end_grading_restart_skips_success_and_retries_only_failure(controller, 
     try:
         restored._load_interview(iid)
         QTest.qWait(100)
-        assert calls == ["q-001", "q-002"]
-        restored.retryInterviewQuestionGrading("q-001")
-        wait_until(lambda: not restored.busy and len(calls) == 3)
-        assert calls == ["q-001", "q-002", "q-001"]
-        assert len(service.interview_session(profile, iid)["assessments"]) == 2
+        assert calls == ["q-001", "q-002", "q-003"]
+        if single_first:
+            restored.retryInterviewQuestionGrading("q-001")
+            wait_until(lambda: not restored.busy and len(calls) == 4)
+            assert service.interview_session(profile, iid)["grading"]["questions"]["q-003"]["status"] == "failed"
+        restored.retryInterviewGrading()
+        wait_until(lambda: not restored.busy and len(calls) == 5)
+        assert calls == ["q-001", "q-002", "q-003", "q-001", "q-003"]
+        assert len(service.interview_session(profile, iid)["assessments"]) == 3
     finally:
         restored.shutdown()
 

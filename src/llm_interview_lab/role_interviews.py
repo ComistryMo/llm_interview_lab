@@ -1107,6 +1107,19 @@ def dynamic_coding_candidates(
                  and problem.public_tests is not None and problem.public_tests.is_file())
 
 
+def _quoted_answer_span(answer: str, quote: str) -> str:
+    """Recover an exact source span when a model omits Markdown code ticks."""
+    if not quote or quote in answer:
+        return quote
+    positions = [i for i, ch in enumerate(answer) if ch != "`"]
+    plain = "".join(answer[i] for i in positions)
+    selected = quote.replace("`", "")
+    start = plain.find(selected) if selected else -1
+    if start < 0:
+        return ""
+    return answer[positions[start]:positions[start + len(selected) - 1] + 1]
+
+
 def advance_dynamic_role_interview(
     repo_root: Path, profile_id: str, interview_id: str,
     catalog: Catalog, role_catalog: RoleCatalog, question_id: str,
@@ -1191,10 +1204,13 @@ def advance_dynamic_role_interview(
             raise RoleInterviewError("只能继续当前已提交的回答，不能重复生成或串题。")
         answer = role_interview_answer_text(repo_root, profile_id, interview_id, question_id)
         quote = decision["coverage"]["evidence"]
-        if quote and quote not in answer:
-            raise RoleInterviewError("AI 覆盖记录引用的内容不在本次回答中；请重试。")
-        if decision["coverage"]["sufficient"] and not quote:
-            raise RoleInterviewError("AI 覆盖判断缺少回答证据；请重试。")
+        exact_quote = _quoted_answer_span(answer, quote)
+        decision["coverage"]["evidence"] = exact_quote
+        # Coverage is ancillary evidence, not the next question. A paraphrase
+        # must never count as verified coverage, but must not discard an
+        # otherwise valid question and force another paid request either.
+        decision["coverage_evidence_verified"] = bool(exact_quote)
+        decision["coverage"]["sufficient"] &= bool(exact_quote)
         session.setdefault("turn_decisions", {})[question_id] = decision
         _end_ai_wait(session, now)
     else:
@@ -2286,8 +2302,13 @@ def update_finished_grading(repo_root: Path, profile_id: str, interview_id: str,
         raise RoleInterviewError("没有已保存回答，不能评分。")
     if result is not None:
         answer = role_interview_answer_text(repo_root, profile_id, interview_id, question_id)
-        quote = result.get("evidence_quote", "")
-        if not quote or quote not in answer:
+        question = next(q for q in session["questions"] if q["question_id"] == question_id)
+        if question["kind"] == "coding":
+            # The saved snapshot is JSON, but the model quotes the actual code,
+            # not its escaped serialization (notably multiline code and quotes).
+            answer = json.loads(answer)["code"]
+        quote = _quoted_answer_span(answer, result.get("evidence_quote", ""))
+        if not quote:
             raise RoleInterviewError("评分引用的原文不在本题回答中；该题保持未评分，可单独重试。")
         session = record_role_assessment(repo_root, profile_id, interview_id, question_id, result["scores"],
             evidence=f"回答引文：{quote}\n{result['evidence']}", source="ai", confidence=result["confidence"],
@@ -2298,6 +2319,18 @@ def update_finished_grading(repo_root: Path, profile_id: str, interview_id: str,
     _save(repo_root, profile_id, session)
     return finish_role_interview(repo_root, profile_id, interview_id,
         summary=(session.get("result") or {}).get("summary", ""), confirm_incomplete=True, _refresh=True)
+
+
+def requeue_finished_grading(repo_root: Path, profile_id: str, interview_id: str,
+                             *, question_id: str = "") -> None:
+    """One explicit retry queues failed answers once, never successful scores."""
+    session = load_role_interview(repo_root, profile_id, interview_id)
+    if session.get("interaction_version") != 2 or session["status"] not in {"completed", "incomplete"}:
+        raise RoleInterviewError("只能重试已结束面试的评分。")
+    for qid, state in session.get("grading", {}).get("questions", {}).items():
+        if (not question_id or qid == question_id) and qid not in session["assessments"] and state["status"] == "failed":
+            state.update(status="pending", error="")
+    _save(repo_root, profile_id, session)
 
 
 def configure_interview_grading(repo_root: Path, profile_id: str, interview_id: str,

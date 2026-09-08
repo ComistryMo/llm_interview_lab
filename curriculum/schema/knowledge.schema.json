@@ -9,6 +9,10 @@
     "schema_version": {"const": 1},
     "reviewed_at": {"$ref": "#/$defs/date_or_datetime"},
     "content_policy": {"$ref": "#/$defs/content_policy"},
+    "coding_reviews": {
+      "type": "object", "additionalProperties": {"$ref": "#/$defs/coding_review"},
+      "propertyNames": {"pattern": "^[A-Z]+-[0-9]{3}$"}
+    },
     "sources": {
       "type": "array",
       "minItems": 1,
@@ -21,6 +25,19 @@
     }
   },
   "$defs": {
+    "coding_review": {
+      "type": "object", "additionalProperties": false,
+      "required": ["task_sha256", "summary", "logic_points", "self_checks", "common_bugs", "follow_ups", "knowledge_ids"],
+      "properties": {
+        "task_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "summary": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "logic_points": {"$ref": "#/$defs/text_or_list"},
+        "self_checks": {"$ref": "#/$defs/text_or_list"},
+        "common_bugs": {"$ref": "#/$defs/text_or_list"},
+        "follow_ups": {"$ref": "#/$defs/text_or_list"},
+        "knowledge_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/card_id"}}
+      }
+    },
     "date_or_datetime": {
       "anyOf": [
         {
@@ -222,6 +239,17 @@
       "properties": {
         "id": {"$ref": "#/$defs/card_id"},
         "kind": {"enum": ["eight_stock", "experience_pattern", "coding_prompt"]},
+        "interview_guidance": {
+          "type": "object", "additionalProperties": false,
+          "required": ["entry_signals", "deepen", "weak_answer", "variations", "stop_when"],
+          "properties": {
+            "entry_signals": {"$ref": "#/$defs/text_or_list"},
+            "deepen": {"$ref": "#/$defs/text_or_list"},
+            "weak_answer": {"$ref": "#/$defs/text_or_list"},
+            "variations": {"$ref": "#/$defs/text_or_list"},
+            "stop_when": {"$ref": "#/$defs/text_or_list"}
+          }
+        },
         "title": {"type": "string", "minLength": 1, "maxLength": 300},
         "domain": {"$ref": "#/$defs/slug"},
         "tracks": {

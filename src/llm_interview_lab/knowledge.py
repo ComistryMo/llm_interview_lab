@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime
 import copy
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -230,6 +231,18 @@ class KnowledgeCatalog:
             return self.cards[card_id]
         except KeyError as error:
             raise KnowledgeError(f"unknown knowledge card ID: {card_id}") from error
+
+    def coding_review(self, problem_id: str, statement: str) -> dict[str, Any]:
+        """Only attach reviewed guidance to the exact task version it describes."""
+        review = self.raw.get("coding_reviews", {}).get(problem_id, {})
+        digest = hashlib.sha256(statement.replace("\r\n", "\n").encode("utf-8")).hexdigest()
+        return copy.deepcopy(review) if review.get("task_sha256") == digest else {}
+
+    def related_coding_problems(self, card_id: str) -> list[str]:
+        return list(dict.fromkeys([*self.get(card_id).related_problems, *(
+            problem_id for problem_id, review in self.raw.get("coding_reviews", {}).items()
+            if card_id in review["knowledge_ids"]
+        )]))
 
     def source(self, source_id: str) -> SourceRecord:
         try:
@@ -674,8 +687,15 @@ def _validate_references(
                     f"{card['priority']} knowledge card {card_id} needs at least two pitfalls"
                 )
 
+    for problem_id, review in value.get("coding_reviews", {}).items():
+        unknown = set(review["knowledge_ids"]) - raw_cards.keys()
+        if unknown:
+            raise KnowledgeError(f"unknown coding review knowledge on {problem_id}: {', '.join(sorted(unknown))}")
     if curriculum is not None:
         known_problems = _problem_ids(curriculum)
+        unknown = value.get("coding_reviews", {}).keys() - known_problems
+        if unknown:
+            raise KnowledgeError(f"unknown coding review problem: {', '.join(sorted(unknown))}")
         for card_id, card in raw_cards.items():
             unknown = set(card["related_problems"]) - known_problems
             if unknown:

@@ -188,7 +188,7 @@ Item {
                     Text { width: parent.width; text: root.displayTitle(); color: root.colors.text; font.pixelSize: 21; font.bold: true; wrapMode: Text.Wrap }
                     StatusPill { text: root.hasTask ? (app.currentTask.validation || "尚未开始") : "未选择"; tone: root.hasTask ? root.colors.success : root.colors.muted }
                     Rectangle { width: parent.width; height: 1; color: root.colors.border }
-                    Text { width: parent.width; text: root.displayTask(); color: root.colors.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; lineHeight: 1.25 }
+                    Text { objectName: "practiceQuestionPrompt"; width: parent.width; text: app.renderMarkdown(root.displayTask(), root.theme.fontSection, root.theme.monospaceFontFamily); color: root.colors.text; font.pixelSize: root.theme.fontBodyLarge; wrapMode: Text.Wrap; textFormat: Text.RichText; lineHeight: 1.25 }
                     Button {
                         visible: app.language !== "en" && root.hasTask && !!app.currentTask.task && !root.sourceTaskChinese
                         text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
@@ -200,10 +200,10 @@ Item {
                     Text {
                         visible: root.showOriginalContract
                         width: parent.width
-                        text: app.currentTask.task || ""
+                        text: app.renderMarkdown(app.currentTask.task || "", root.theme.fontSection, root.theme.monospaceFontFamily)
                         color: root.colors.muted
                         wrapMode: Text.Wrap
-                        textFormat: Text.MarkdownText
+                        textFormat: Text.RichText
                         lineHeight: 1.2
                     }
                     Rectangle { width: parent.width; height: 1; color: root.colors.border }
@@ -515,7 +515,7 @@ Item {
                 width: parent.width - 40
                 spacing: 12
                 Text { text: root.displayTitle(); color: root.colors.text; font.pixelSize: 20; font.bold: true; wrapMode: Text.Wrap; width: parent.width }
-                Text { text: root.displayTask(); color: root.colors.text; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
+                Text { text: app.renderMarkdown(root.displayTask(), root.theme.fontSection, root.theme.monospaceFontFamily); color: root.colors.text; font.pixelSize: root.theme.fontBodyLarge; wrapMode: Text.Wrap; textFormat: Text.RichText; width: parent.width }
                 Button {
                     visible: app.language !== "en" && root.hasTask && !!app.currentTask.task && !root.sourceTaskChinese
                     text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
@@ -523,7 +523,7 @@ Item {
                     palette.buttonText: root.colors.text
                     onClicked: root.showOriginalContract = !root.showOriginalContract
                 }
-                Text { visible: root.showOriginalContract; text: app.currentTask.task || ""; color: root.colors.muted; wrapMode: Text.Wrap; textFormat: Text.MarkdownText; width: parent.width }
+                Text { visible: root.showOriginalContract; text: app.renderMarkdown(app.currentTask.task || "", root.theme.fontSection, root.theme.monospaceFontFamily); color: root.colors.muted; wrapMode: Text.Wrap; textFormat: Text.RichText; width: parent.width }
             }
         }
     }

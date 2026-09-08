@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "date": "2026-09-08",
+  "timezone": "Asia/Hong_Kong",
+  "package_version": "0.4.0a3",
+  "platform": "Windows / Qt windows native platform",
+  "source_note": "Before 是起始基线；After 来自 source_base_commit 上的本轮开发工作树，随切片三提交，不冒充干净 HEAD 或已发布安装包。截图分批生成，时间逐项记录。",
+  "data": "仅隔离合成 Profile、公开题面和合成未提交代码/问答；正式 Controller 与 QML，无 Phase 0 prototype 或 demo controller。截图不证明真实 AI 连接、评分或人工 Field Run。",
+  "verification": "test_unified_interview_ui.py 覆盖 900×620、1080×680、1280×800、1440×900 × light/dark × 1.0/1.25。中文 IME 另有定向交互测试；截图只选 1280×800、100% 字体。",
+  "captures": [
+    {
+      "path": "before-coding-light.png",
+      "sha256": "9856ceac33e777dba4ea478ce885ebc2c6b8cb732cf9c93e1e8bfc60ebf5ed1e",
+      "width": 1920,
+      "height": 1200,
+      "captured_local": "2026-09-08T16:43:31",
+      "page": "coding",
+      "theme": "light",
+      "logical_size": [
+        1280,
+        800
+      ],
+      "font_scale": 1,
+      "device_pixel_ratio": 1.5,
+      "source_base_commit": "0e49ce61fc14cfb4011542bc527c91a84436871a",
+      "working_tree": false
+    },
+    {
+      "path": "before-home-light.png",
+      "sha256": "220724823715b7cf7ff12f8ebeae6db8c72ecdc6554c0306681cadf19e5b9b4d",
+      "width": 1920,
+      "height": 1200,
+      "captured_local": "2026-09-08T16:43:08",
+      "page": "home",
+      "theme": "light",
+      "logical_size": [
+        1280,
+        800
+      ],
+      "font_scale": 1,
+      "device_pixel_ratio": 1.5,
+      "source_base_commit": "0e49ce61fc14cfb4011542bc527c91a84436871a",
+      "working_tree": false
+    },
+    {
+      "path": "coding-dark.png",
+      "sha256": "451e2ca9e0d11a9cdf21466454b235b3ca71f17bd2a86bf14a17ef37f509be71",
+      "width": 1600,
+      "height": 1000,
+      "captured_local": "2026-09-08T19:58:24",
+      "page": "coding",
+      "theme": "dark",
+      "logical_size": [
+        1280,
+        800
+      ],
+      "font_scale": 1,
+      "device_pixel_ratio": 1.25,
+      "source_base_commit": "2dfacc2107509e7a1ec940aa75d80b84592ccf82",
+      "working_tree": true
+    },
+    {
+      "path": "coding-light.png",
+      "sha256": "45ced0046a5011d095f1fac75cbdead40c0c43552fcb186ff55c2415003b91ac",
+      "width": 1600,
+      "height": 1000,
+      "captured_local": "2026-09-08T19:58:23",
+      "page": "coding",
+      "theme": "light",
+      "logical_size": [
+        1280,
+        800
+      ],
+      "font_scale": 1,
+      "device_pixel_ratio": 1.25,
+      "source_base_commit": "2dfacc2107509e7a1ec940aa75d80b84592ccf82",
+      "working_tree": true
+    },
+    {
+      "path": "home-dark.png",
+      "sha256": "b991c962e366e284d1e3a5b7f50b63c3fe016207a56ec48b6f6f662f34ae73e1",
+      "width": 1600,
+      "height": 1000,
+      "captured_local": "2026-09-08T19:42:59",
+      "page": "home",
+      "theme": "dark",
+      "logical_size": [
+        1280,
+        800
+      ],
+      "font_scale": 1,
+      "device_pixel_ratio": 1.25,
+      "source_base_commit": "2dfacc2107509e7a1ec940aa75d80b84592ccf82",
+      "working_tree": true
+    },
+    {
+      "path": "home-light.png",
+      "sha256": "a663d2f087730b0db94afad948a1c4870132de3c88f19d38f6f7013907c0ea7d",
+      "width": 1600,
+      "height": 1000,
+      "captured_local": "2026-09-08T19:42:58",
+      "page": "home",
+      "theme": "light",
+      "logical_size": [
+        1280,
+        800
+      ],
+      "font_scale": 1,
+      "device_pixel_ratio": 1.25,
+      "source_base_commit": "2dfacc2107509e7a1ec940aa75d80b84592ccf82",
+      "working_tree": true
+    },
+    {
+      "path": "report-dark.png",
+      "sha256": "dfeb58ec544857f5614c37f657eca7677577241164eee56a0f0985f64d353f85",
+      "width": 1600,
+      "height": 1000,
+      "captured_local": "2026-09-08T19:58:37",
+      "page": "report",
+      "theme": "dark",
+      "logical_size": [
+        1280,
+        800
+      ],
+      "font_scale": 1,
+      "device_pixel_ratio": 1.25,
+      "source_base_commit": "2dfacc2107509e7a1ec940aa75d80b84592ccf82",
+      "working_tree": true
+    },
+    {
+      "path": "report-light.png",
+      "sha256": "51dc40811fcf2c1228faa2419bc9fcb5a6801fff80e2785b651cb282abdc734a",
+      "width": 1600,
+      "height": 1000,
+      "captured_local": "2026-09-08T19:58:36",
+      "page": "report",
+      "theme": "light",
+      "logical_size": [
+        1280,
+        800
+      ],
+      "font_scale": 1,
+      "device_pixel_ratio": 1.25,
+      "source_base_commit": "2dfacc2107509e7a1ec940aa75d80b84592ccf82",
+      "working_tree": true
+    },
+    {
+      "path": "setup-dark.png",
+      "sha256": "535cd04755ca3ff556b6c6054e83bccd78fa97a7287cc405a0a86434fdd90adf",
+      "width": 1600,
+      "height": 1000,
+      "captured_local": "2026-09-08T19:42:59",
+      "page": "setup",
+      "theme": "dark",
+      "logical_size": [
+        1280,
+        800
+      ],
+      "font_scale": 1,
+      "device_pixel_ratio": 1.25,
+      "source_base_commit": "2dfacc2107509e7a1ec940aa75d80b84592ccf82",
+      "working_tree": true
+    },
+    {
+      "path": "setup-light.png",
+      "sha256": "72489bda202dfac16538e2114b0d9d8ba83b98edccd2cb758bfa62a122c42d45",
+      "width": 1600,
+      "height": 1000,
+      "captured_local": "2026-09-08T19:42:58",
+      "page": "setup",
+      "theme": "light",
+      "logical_size": [
+        1280,
+        800
+      ],
+      "font_scale": 1,
+      "device_pixel_ratio": 1.25,
+      "source_base_commit": "2dfacc2107509e7a1ec940aa75d80b84592ccf82",
+      "working_tree": true
+    }
+  ]
+}

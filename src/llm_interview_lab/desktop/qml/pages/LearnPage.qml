@@ -851,6 +851,15 @@ Item {
                                         wrapMode: Text.Wrap
                                     }
                                     Repeater {
+                                        model: knowledgeDetailContent.answersVisible && knowledgeDetailContent.detail.interview_guidance ? ["entry_signals", "deepen", "weak_answer", "variations", "stop_when"] : []
+                                        LabText {
+                                            required property string modelData
+                                            theme: root.theme; Layout.fillWidth: true; wrapMode: Text.Wrap
+                                            text: ({entry_signals: "从经历切入", deepen: "继续深挖", weak_answer: "换个角度练习", variations: "反例与条件变化", stop_when: "何时结束本主题"})[modelData]
+                                                + "\n• " + root.listText(knowledgeDetailContent.detail.interview_guidance[modelData])
+                                        }
+                                    }
+                                    Repeater {
                                         model: knowledgeDetailContent.answersVisible ? ["L1", "L2", "L3", "L4"] : []
                                         LabText {
                                             required property string modelData

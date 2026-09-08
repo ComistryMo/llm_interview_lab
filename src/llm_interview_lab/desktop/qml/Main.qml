@@ -552,6 +552,7 @@ ApplicationWindow {
                 }
                 CareerPage { app: backend; colors: window.colors; theme: appTheme }
                 LearnPage {
+                    id: learnPage
                     app: backend
                     colors: window.colors
                     theme: appTheme
@@ -560,6 +561,11 @@ ApplicationWindow {
                 ExercisePage { app: backend; colors: window.colors; theme: appTheme }
                 InterviewPage {
                     app: backend; colors: window.colors; theme: appTheme
+                    onKnowledgeRequested: function(cardId) {
+                        learnPage.selectSection("knowledge")
+                        learnPage.chooseKnowledge(cardId)
+                        backend.navigate("learn")
+                    }
                     onCodexSettingsRequested: {
                         backend.navigate("settings")
                         Qt.callLater(settingsPage.showCodexSettings)
