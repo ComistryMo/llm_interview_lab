@@ -841,6 +841,651 @@ sources:
     reliability: high
     notes: Benchmark source for dynamic, contamination-resistant evaluation and task refresh discipline.
 
+  - id: ai40-user-collection-20260908
+    kind: internal_original
+    title: 用户整理：AI 算法手撕专项，40 题与 17 篇面经索引（2026-09-08）
+    retrieved_at: '2026-09-08'
+    license_or_usage: 用户授权在项目中内化。参考答案仅用于 ignored 维护者验证，公开交付为题面、测试和知识提纲。
+    reliability: user_curated
+    notes: 原始文档 SHA-256：857c09069017b409421bdec92f85fad655054a59144155b10804082979d50415。17 篇不等于 17 名独立候选人；资料作者仅运行部分参考代码，本轮验证另记。
+  - id: ai40-tech-002
+    kind: official_docs
+    title: AI01 · 稳定交叉熵与有效 token 归约 技术定义
+    url: https://docs.pytorch.org/docs/stable/generated/torch.logsumexp.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-003
+    kind: paper
+    title: AI03 · GQA 与 KV cache：增量解码一致性 技术定义
+    url: https://arxiv.org/html/2305.13245v3#S2.SS2
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-004
+    kind: paper
+    title: AI04 · RoPE：旋转布局与位置偏移 技术定义
+    url: https://arxiv.org/html/2104.09864v5
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-005
+    kind: official_docs
+    title: AI05 · LayerNorm 与 RMSNorm 技术定义
+    url: https://docs.pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-006
+    kind: paper
+    title: AI05 · LayerNorm 与 RMSNorm 技术定义
+    url: https://arxiv.org/abs/1910.07467
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-007
+    kind: official_source
+    title: AI06 · LoRA 线性层与合并一致性 技术定义
+    url: https://github.com/microsoft/LoRA
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-008
+    kind: official_source
+    title: AI06 · LoRA 线性层与合并一致性 技术定义
+    url: https://github.com/microsoft/LoRA/blob/main/loralib/layers.py
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-009
+    kind: official_docs
+    title: AI07 · temperature、top-k、top-p 的顺序与边界 技术定义
+    url: https://huggingface.co/docs/transformers/en/internal/generation_utils
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-010
+    kind: paper
+    title: AI08 · DPO loss：先对齐回答 token，再比较相对偏好 技术定义
+    url: https://arxiv.org/html/2305.18290v3
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-011
+    kind: paper
+    title: AI09 · GRPO：组内优势、ratio 与 clipping 技术定义
+    url: https://arxiv.org/html/2402.03300v3#S4.SS1
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-012
+    kind: official_docs
+    title: AI10 · 带 mask 的 token KL 蒸馏 技术定义
+    url: https://docs.pytorch.org/docs/stable/generated/torch.nn.KLDivLoss.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-013
+    kind: paper
+    title: AI10 · 带 mask 的 token KL 蒸馏 技术定义
+    url: https://arxiv.org/abs/1503.02531
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-014
+    kind: paper
+    title: AI11 · InfoNCE 与图文双向对比学习 技术定义
+    url: https://arxiv.org/pdf/1807.03748
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-015
+    kind: official_docs
+    title: AI12 · Packing：attention 隔离与监督隔离是两件事 技术定义
+    url: https://huggingface.co/docs/transformers/en/padding_free
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-016
+    kind: official_docs
+    title: AI13 · K-means：确定初始化与空簇策略 技术定义
+    url: https://scikit-learn.org/stable/modules/clustering.html#k-means
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-017
+    kind: official_docs
+    title: AI14 · ROC-AUC：同分不能按输入顺序算输赢 技术定义
+    url: https://sklearn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-018
+    kind: official_docs
+    title: AI15 · 可变长度序列的梯度累积 技术定义
+    url: https://huggingface.co/blog/gradient_accumulation
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-019
+    kind: official_docs
+    title: AI15 · 可变长度序列的梯度累积 技术定义
+    url: https://huggingface.co/docs/accelerate/en/usage_guides/gradient_accumulation
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-020
+    kind: paper
+    title: AI16 · 流式精确 attention：保存统计量，不保存完整分数矩阵 技术定义
+    url: https://arxiv.org/pdf/2205.14135
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-021
+    kind: paper
+    title: AI17 · MoE Top-2：dispatch、combine 与梯度路径 技术定义
+    url: https://arxiv.org/pdf/2101.03961
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-022
+    kind: paper
+    title: AI18 · SwiGLU FFN：形状、门控与等参数预算 技术定义
+    url: https://arxiv.org/abs/2002.05202
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-023
+    kind: official_docs
+    title: AI19 · 带确定性 tie-break 的最小 BPE 技术定义
+    url: https://huggingface.co/learn/llm-course/en/chapter6/5
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-024
+    kind: official_source
+    title: AI20 · AdamW 单步更新与恢复状态 技术定义
+    url: https://github.com/pytorch/pytorch/blob/main/torch/optim/adamw.py
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-025
+    kind: official_docs
+    title: AI21 · Softmax 前向与反向：不构造 Jacobian 技术定义
+    url: https://cs231n.github.io/linear-classify/
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-026
+    kind: official_docs
+    title: AI22 · NumPy 手写两层 MLP 的完整反向传播 技术定义
+    url: https://cs231n.github.io/optimization-2/
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-027
+    kind: official_docs
+    title: AI23 · 逻辑回归：稳定 BCE 与一个完整训练 step 技术定义
+    url: https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-028
+    kind: official_docs
+    title: AI24 · BatchNorm：训练与推理两套统计量 技术定义
+    url: https://docs.pytorch.org/docs/2.8/generated/torch.nn.BatchNorm2d.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-029
+    kind: official_docs
+    title: AI25 · 二维卷积：先写对，再考虑 im2col 技术定义
+    url: https://docs.pytorch.org/docs/2.8/generated/torch.nn.Conv2d.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-030
+    kind: official_docs
+    title: AI26 · IoU 与 NMS：坐标、同分和阈值都要写清 技术定义
+    url: https://docs.pytorch.org/vision/stable/generated/torchvision.ops.nms.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-031
+    kind: official_docs
+    title: AI27 · PCA：训练集拟合与测试集变换 技术定义
+    url: https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-032
+    kind: official_docs
+    title: AI28 · KNN 分类与余弦近邻检索 技术定义
+    url: https://scikit-learn.org/stable/modules/neighbors.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-033
+    kind: official_docs
+    title: AI29 · Beam Search：候选分数、EOS 与缓存重排 技术定义
+    url: https://huggingface.co/docs/transformers/en/generation_strategies
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-034
+    kind: official_docs
+    title: AI30 · PPO loss：策略、价值、熵分别实现 技术定义
+    url: https://spinningup.openai.com/en/latest/algorithms/ppo.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-035
+    kind: official_docs
+    title: AI31 · GAE：终止、截断与序列边界 技术定义
+    url: https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-036
+    kind: official_docs
+    title: AI32 · Dropout 的前向、反向与训练模式 技术定义
+    url: https://docs.pytorch.org/docs/2.8/generated/torch.nn.Dropout.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-037
+    kind: official_docs
+    title: AI33 · 按通道 INT8 量化与反量化 技术定义
+    url: https://docs.pytorch.org/docs/2.8/generated/torch.quantize_per_channel.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-038
+    kind: paper
+    title: AI34 · GAUC：先分组，再说明权重口径 技术定义
+    url: https://arxiv.org/pdf/1706.06978
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-039
+    kind: official_docs
+    title: AI35 · NDCG@K：排序指标的 gain 与 tie 策略 技术定义
+    url: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.ndcg_score.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-040
+    kind: official_source
+    title: AI36 · 完整 Decoder Block：把组件真正接起来 技术定义
+    url: https://github.com/meta-llama/llama3/blob/main/llama/model.py
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-041
+    kind: official_docs
+    title: AI37 · K-means++ 初始化 技术定义
+    url: https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-042
+    kind: paper
+    title: AI38 · DIN 局部激活与兴趣聚合 技术定义
+    url: https://arxiv.org/abs/1706.06978
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-043
+    kind: official_docs
+    title: AI39 · ViT Patch Embedding 与卷积等价性 技术定义
+    url: https://docs.pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-tech-044
+    kind: official_source
+    title: AI40 · 最小标量自动微分引擎 技术定义
+    url: https://github.com/karpathy/micrograd
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 技术链接来自用户 2026-09-08 整理资料；本仓库按固定练习契约与执行结果验证，不宣称逐行审计上游实现。
+  - id: ai40-mj01
+    kind: field_report
+    title: 字节 大模型算法 一二三面 面经
+    url: https://www.nowcoder.com/feed/main/detail/ef14567a048e4e3fa30cbe28eb5c59e3
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面 2024-08-20 23:14，已编辑；正文称秋招，具体面试日期未写；大模型算法，部门主动保密。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮公开正文复核可读，仍未获公司独立确认。
+  - id: ai40-mj02
+    kind: field_report
+    title: 字节懂车帝大模型日常实习面经（已oc版
+    url: https://www.nowcoder.com/feed/main/detail/c9a565e394314f1bba946858778989db
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面 2025-11-13 06:10；面试日期未写；字节懂车帝大模型日常实习。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj03
+    kind: field_report
+    title: 腾讯光子算法实习面经
+    url: https://www.nowcoder.com/feed/main/detail/18754f2561a94169b26fc7db686af587
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面 2025-04-18 18:17，已编辑；面试日期未写；腾讯光子算法实习。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj04
+    kind: field_report
+    title: 校招腾讯多模态大模型算法凉经一面 1h
+    url: https://www.nowcoder.com/feed/main/detail/617077dfaec547a590566ea2b2aca1fa
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面只显示 02-09 23:55，年份未知；面试日期未写；腾讯多模态大模型算法校招。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj05
+    kind: field_report
+    title: 网易有道面经（一面）
+    url: https://www.nowcoder.com/feed/main/detail/00ebaa52b210430f9b83bbd7b662174a
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面 2025-02-21 19:57；面试日期未写；网易有道大模型算法岗实习。 样本分组：单篇作者自述，不是公司官方标准；MJ05-MJ14 同作者。本轮公开正文复核可读，仍未获公司独立确认。
+  - id: ai40-mj06
+    kind: field_report
+    title: 网易有道 CV/多模态大模型 一面面经
+    url: https://www.nowcoder.com/feed/main/detail/16f3bcdd931f49abb894f817ff78ad4d
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面 2024-10-24 15:30，已编辑；正文写一面 10.23，未在该日期旁重复年份；岗位 CV/多模态大模型，实习/校招类别未明确。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj07
+    kind: field_report
+    title: 网易互娱多模态大模型算法工程师暑期实习面经
+    url: https://www.nowcoder.com/feed/main/detail/8b182379727f453d848ec605906fbff1
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面 2025-06-10 12:22；面试日期未写；网易互娱多模态大模型算法暑期实习。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj08
+    kind: field_report
+    title: 美团大模型算法实习面经
+    url: https://www.nowcoder.com/feed/main/detail/b96fb8db338a4456a9f0f8de0f3ac3b1
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面 2025-10-09 18:47；实际面试日未写；美团大模型算法实习。搜索结果曾取到评论日期 10-15，不以搜索摘要代替原页日期。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj09
+    kind: field_report
+    title: 斑马智行 大模型 暑期实习 面经
+    url: https://www.nowcoder.com/feed/main/detail/d1afbdded8b543d28513364ba085dafd
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面 2025-04-10 22:04；面试日未写；斑马智行大模型暑期实习，一轮约 40 分钟。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj10
+    kind: field_report
+    title: 蚂蚁大模型llm算法日常实习面经
+    url: https://www.nowcoder.com/feed/main/detail/c6aadaf60f9c431bbe0738e0c802dfd7
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面只显示 03-31 14:00，年份未知；实际面试日未写；蚂蚁 LLM 算法日常实习。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj11
+    kind: field_report
+    title: 蚂蚁 2025届暑期实习 多模态LLM 面经
+    url: https://blog.csdn.net/Cyril_KI/article/details/138201756
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：首发 2024-04-25 22:50:11；修改 2025-04-25；正文明确一面 2024-04-07、二面 2024-04-23、HR 面 2024-04-25；蚂蚁多模态
+      LLM 暑期实习。2025 届指毕业届别，不是面试年份。 样本分组：单篇作者自述，不是公司官方标准；MJ11-MJ12-MJ13 可能同作者，保守合组。本轮未完成原页全文独立复核，保留为 anecdotal
+      / unverified，不补造缺失年份。
+  - id: ai40-mj12
+    kind: field_report
+    title: 腾讯视频 暑期实习 自然语言处理/LLM（已offer）
+    url: https://www.nowcoder.com/discuss/611663837359611904
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面 2024-05-13 11:15，已编辑；正文明确技术面为 2024-03-28、2024-04-09，HR 面为 2024-04-17；腾讯视频 NLP/LLM
+      暑期实习。 样本分组：单篇作者自述，不是公司官方标准；MJ11-MJ12-MJ13 可能同作者，保守合组。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj13
+    kind: field_report
+    title: 滴滴 2025届秋招提前批 大模型算法工程师
+    url: https://blog.csdn.net/Cyril_KI/article/details/143753217
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：首发 2024-11-13 22:12:52；2024-12-11 修改；各轮面试日期未披露；2025 届提前批大模型算法岗。 样本分组：单篇作者自述，不是公司官方标准；MJ11-MJ12-MJ13
+      可能同作者，保守合组。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj14
+    kind: field_report
+    title: 熊厂二面
+    url: https://www.nowcoder.com/feed/main/detail/b90c0a4ea5124f9d8279f278775d74c9
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：页面 2025-03-04 13:21；面试日未写；原文仅称“熊厂”和大模型 Web 端应用算法实习，公司名称未明确披露。 样本分组：单篇作者自述，不是公司官方标准；MJ05-MJ14
+      同作者。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj15
+    kind: field_report
+    title: Momenta：大模型算法工程师，秋招提前批一面
+    url: https://www.nowcoder.com/feed/main/detail/f7518c865e07491cb1518d288698813c
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：正文明确面试日 2026-07-31；约 42 分钟。页面发布栏仅显示 `08-25 21:31`，不另行推断发布日期年份。 样本分组：单篇作者自述，不是公司官方标准；MJ15-MJ16-MJ17
+      同作者；后两篇同岗位续轮。本轮可打开索引，但未可靠取得完整正文；摘要来自用户资料，保持 anecdotal / unverified。
+  - id: ai40-mj16
+    kind: field_report
+    title: 百度：端到端决策规划控制算法工程师，一面
+    url: https://www.nowcoder.com/discuss/925108144831725568
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：正文明确面试日 2026-08-11；约 50 分钟。页面显示 `09-04 15:59 已编辑`，不作为明确完整发布日期。 样本分组：单篇作者自述，不是公司官方标准；MJ15-MJ16-MJ17
+      同作者；后两篇同岗位续轮。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。
+  - id: ai40-mj17
+    kind: field_report
+    title: 百度：同岗位技术二面
+    url: https://www.nowcoder.com/feed/main/detail/af692c37e31d437292d4881b58b24e56
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: anecdotal_unverified
+    notes: 用户整理资料中的日期口径：正文明确面试日 2026-08-14；约 70 分钟。页面显示 `09-04 13:56 已编辑`，完整发布日期未核验。 样本分组：单篇作者自述，不是公司官方标准；MJ15-MJ16-MJ17
+      同作者；后两篇同岗位续轮。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。
+  - id: ai40-tech-062
+    kind: secondary_curated
+    title: NLP 大模型春招记录
+    url: https://www.nowcoder.com/discuss/601149086300971008
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 题型发现线索，非单场面经；不继承公司标签/考频，不复制代码。推广类链接不进入正式面经卡。
+  - id: ai40-tech-063
+    kind: secondary_curated
+    title: 搜广推面经
+    url: https://www.nowcoder.com/discuss/667864275997687808
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 题型发现线索，非单场面经；不继承公司标签/考频，不复制代码。推广类链接不进入正式面经卡。
+  - id: ai40-tech-064
+    kind: secondary_curated
+    title: AIR-hl / llm-interview-code
+    url: https://github.com/AIR-hl/llm-interview-code
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 题型发现线索，非单场面经；不继承公司标签/考频，不复制代码。推广类链接不进入正式面经卡。
+  - id: ai40-tech-065
+    kind: secondary_curated
+    title: lss-1138 / llm-scratch-code
+    url: https://github.com/lss-1138/llm-scratch-code
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 题型发现线索，非单场面经；不继承公司标签/考频，不复制代码。推广类链接不进入正式面经卡。
+  - id: ai40-tech-066
+    kind: secondary_curated
+    title: 牛客：算法岗手撕整理
+    url: https://www.nowcoder.com/feed/main/detail/347eadbc31e942b6b84ccce81d68754b
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 题型发现线索，非单场面经；不继承公司标签/考频，不复制代码。推广类链接不进入正式面经卡。
+  - id: ai40-tech-067
+    kind: secondary_curated
+    title: AgentGuide 的 AI coding 题库
+    url: https://github.com/adongwanai/AgentGuide/blob/main/docs/04-interview/22-algorithm-ai-coding-question-bank.md
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 题型发现线索，非单场面经；不继承公司标签/考频，不复制代码。推广类链接不进入正式面经卡。
+  - id: ai40-tech-068
+    kind: secondary_curated
+    title: Softmax/MSE/Attention 代码题单
+    url: https://www.nowcoder.com/discuss/651759346887503872
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 题型发现线索，非单场面经；不继承公司标签/考频，不复制代码。推广类链接不进入正式面经卡。
+  - id: ai40-tech-069
+    kind: secondary_curated
+    title: 大模型手撕分类总结
+    url: https://www.nowcoder.com/feed/main/detail/5a43a5d03e5746e5b743bb488a5c00f9
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 题型发现线索，非单场面经；不继承公司标签/考频，不复制代码。推广类链接不进入正式面经卡。
+  - id: ai40-tech-070
+    kind: secondary_curated
+    title: 字节广告算法补充帖
+    url: https://www.nowcoder.com/feed/main/detail/b3e6073768e34f9c92d91e3150adba03
+    retrieved_at: '2026-09-08'
+    license_or_usage: 只保留链接与原创摘要，不复制上游代码或完整题面。
+    license_risk: link_and_paraphrase_only
+    reliability: primary_reference
+    notes: 题型发现线索，非单场面经；不继承公司标签/考频，不复制代码。推广类链接不进入正式面经卡。
+
 cards:
   - id: EGT-TRN-001
     kind: eight_stock
@@ -2898,3 +3543,4128 @@ cards:
     related_problems: [INF-003, INF-002, ATT-009]
     provenance: synthesized_clean_room
     reviewed_at: *reviewed_at
+  - id: COD-AI-001
+    kind: coding_prompt
+    title: AI01 · 稳定交叉熵与有效 token 归约
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: logits[B,T,V] 与 int64 labels[B,T] 已完成预测位置对齐，V≥1。返回按非 ignore_index token 平均的标量 CE；全忽略时返回与 logits
+      相连的零。禁止 softmax 后 log、cross_entropy/log_softmax 代算。半精度升 float32；float64 保留。例 logits=[[[1e20,1e20]]]、label=[[0]]
+      → log(2)，不能因巨大公共偏置丢失结果。改变忽略位置不影响损失或梯度。O(BTV)；异常标签、形状不匹配抛 ValueError。
+    one_liner: 独立实现 token_cross_entropy，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 先每行减去最大 logit，再计算 `logsumexp(centered_logits)-centered_target_logit`，忽略位置置零后求和，分母为有效标签数量。这样还避免 `logsumexp`
+      加回巨大公共偏置后再相减造成的消减误差。FP16/BF16 转 FP32 做指数和归约；FP64 测试保留 FP64。检查标签不能先把 `-100` 直接交给 `gather`。
+    derivation_or_example:
+    - '`[1000,1000]` 与 FP32 `[1e20,1e20]` 对任意合法标签的损失都应约等于 `log(2)`；在输入差异仍可表示的前提下，对所有类别同时加常数，损失不变；任意改变被忽略位置的有限
+      logits 不改变损失；全忽略返回零且反传梯度为零。随机小张量应与官方交叉熵的非空有效子集对齐。输入极端到 FP32 减法本身溢出时，升级 FP64 或拒绝，减最大值并不能解决所有有限精度问题。'
+    answer_outline:
+    - 先每行减去最大 logit，再计算 `logsumexp(centered_logits)-centered_target_logit`，忽略位置置零后求和，分母为有效标签数量。这样还避免 `logsumexp`
+      加回巨大公共偏置后再相减造成的消减误差。FP16/BF16 转 FP32 做指数和归约；FP64 测试保留 FP64。检查标签不能先把 `-100` 直接交给 `gather`。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 为什么加一个很大的公共 logit 偏置后，两个相同类别仍应得到 log(2)？
+    - 全忽略 batch 应如何保留零梯度而不产生 NaN？
+    - 加类别权重后分母的定义怎样变化？
+    - label smoothing 怎样排除 ignore token？
+    pitfalls:
+    - 忽略本题约定：为什么加一个很大的公共 logit 偏置后，两个相同类别仍应得到 log(2)？
+    - 只背结论而无法解释反例：全忽略 batch 应如何保留零梯度而不产生 NaN？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: logits[B,T,V] 与 int64 labels[B,T] 已完成预测位置对齐，V≥1。返回按非 ignore_index token 平均的标量 CE；全忽略时返回与 logits
+        相连的零。禁止 softmax 后 log、cross_entropy/log_softmax 代算。半精度升 float32；float64 保留。例 logits=[[[1e20,1e20]]]、label=[[0]]
+        → log(2)，不能因巨大公共偏置丢失结果。改变忽略位置不影响损失或梯度。O(BTV)；异常标签、形状不匹配抛 ValueError。
+      output: 以 PT-003 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: token_cross_entropy
+      framework: pytorch
+    test_focus:
+    - '`[1000,1000]` 与 FP32 `[1e20,1e20]` 对任意合法标签的损失都应约等于 `log(2)`；在输入差异仍可表示的前提下，对所有类别同时加常数，损失不变；任意改变被忽略位置的有限
+      logits 不改变损失；全忽略返回零且反传梯度为零。随机小张量应与官方交叉熵的非空有效子集对齐。输入极端到 FP32 减法本身溢出时，升级 FP64 或拒绝，减最大值并不能解决所有有限精度问题。'
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - '`[1000,1000]` 与 FP32 `[1e20,1e20]` 对任意合法标签的损失都应约等于 `log(2)`；在输入差异仍可表示的前提下，对所有类别同时加常数，损失不变；任意改变被忽略位置的有限
+      logits 不改变损失；全忽略返回零且反传梯度为零。随机小张量应与官方交叉熵的非空有效子集对齐。输入极端到 FP32 减法本身溢出时，升级 FP64 或拒绝，减最大值并不能解决所有有限精度问题。'
+    solution_direction:
+    - 先每行减去最大 logit，再计算 `logsumexp(centered_logits)-centered_target_logit`，忽略位置置零后求和，分母为有效标签数量。这样还避免 `logsumexp`
+      加回巨大公共偏置后再相减造成的消减误差。FP16/BF16 转 FP32 做指数和归约；FP64 测试保留 FP64。检查标签不能先把 `-100` 直接交给 `gather`。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI01 在本项目映射为 PT-003；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: pytorch-cross-entropy
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    - source_id: ai40-tech-002
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - PT-003
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-002
+    kind: coding_prompt
+    title: AI02 · 多头注意力与复合 mask
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - vlm_algorithm
+    skills:
+    - skill.llm_vlm.attention
+    - skill.llm_vlm.transformer
+    priority: P1
+    difficulty:
+      concept: 4
+      implementation: 4
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: query_input[B,L,E]、context[B,S,E]；四个无 bias 权重 [E,E] 按 [out,in] 存储，E 能被 num_heads 整除。自行完成 Q/K/V
+      投影、分头、按 sqrt(E/H) 缩放的 attention、合头、输出投影；返回 [B,L,E]。allowed 是可广播到 [B,H,L,S] 的 bool，True=可访问；完全屏蔽的 query
+      输出 0，包含输出投影后仍为 0。causal 与 padding 由调用方组合为 allowed。禁止 MHA/SDPA。此题比 ATT-004 增加真实投影，并支持 L≠S 的 cross-attention；O(BHLSd+BE²(L+S))。
+    one_liner: 独立实现 projected_mha，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 计算 `QKᵀ/√D`，在 softmax 之前屏蔽非法位置，再加权求和。若同时要求因果关系与 padding，允许矩阵是两者的交集；如果 padding query 也必须为零，应把 query
+      有效性纳入矩阵。投影后的 `view/transpose` 要逐步写 shape。
+    derivation_or_example:
+    - query_input[B,L,E]、context[B,S,E]；四个无 bias 权重 [E,E] 按 [out,in] 存储，E 能被 num_heads 整除。自行完成 Q/K/V 投影、分头、按
+      sqrt(E/H) 缩放的 attention、合头、输出投影；返回 [B,L,E]。allowed 是可广播到 [B,H,L,S] 的 bool，True=可访问；完全屏蔽的 query 输出
+      0，包含输出投影后仍为 0。causal 与 padding 由调用方组合为 allowed。禁止 MHA/SDPA。此题比 ATT-004 增加真实投影，并支持 L≠S 的 cross-attention；O(BHLSd+BE²(L+S))。
+    answer_outline:
+    - 计算 `QKᵀ/√D`，在 softmax 之前屏蔽非法位置，再加权求和。若同时要求因果关系与 padding，允许矩阵是两者的交集；如果 padding query 也必须为零，应把 query
+      有效性纳入矩阵。投影后的 `view/transpose` 要逐步写 shape。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - cross-attention 的 Q 与 KV 不同长时，每一步 shape 是什么？
+    - 完全屏蔽的 query 如何避免 NaN 和输出投影后的残留？
+    - SDPA 与 key_padding_mask 的 bool 语义有什么不同？
+    - causal 和 padding 组合后，如何设计一个信息隔离的反例？
+    pitfalls:
+    - 忽略本题约定：cross-attention 的 Q 与 KV 不同长时，每一步 shape 是什么？
+    - 只背结论而无法解释反例：完全屏蔽的 query 如何避免 NaN 和输出投影后的残留？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: query_input[B,L,E]、context[B,S,E]；四个无 bias 权重 [E,E] 按 [out,in] 存储，E 能被 num_heads 整除。自行完成 Q/K/V
+        投影、分头、按 sqrt(E/H) 缩放的 attention、合头、输出投影；返回 [B,L,E]。allowed 是可广播到 [B,H,L,S] 的 bool，True=可访问；完全屏蔽的
+        query 输出 0，包含输出投影后仍为 0。causal 与 padding 由调用方组合为 allowed。禁止 MHA/SDPA。此题比 ATT-004 增加真实投影，并支持 L≠S 的
+        cross-attention；O(BHLSd+BE²(L+S))。
+      output: 以 ATT-019 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: projected_mha
+      framework: pytorch
+    test_focus:
+    - query_input[B,L,E]、context[B,S,E]；四个无 bias 权重 [E,E] 按 [out,in] 存储，E 能被 num_heads 整除。自行完成 Q/K/V 投影、分头、按
+      sqrt(E/H) 缩放的 attention、合头、输出投影；返回 [B,L,E]。allowed 是可广播到 [B,H,L,S] 的 bool，True=可访问；完全屏蔽的 query 输出
+      0，包含输出投影后仍为 0。causal 与 padding 由调用方组合为 allowed。禁止 MHA/SDPA。此题比 ATT-004 增加真实投影，并支持 L≠S 的 cross-attention；O(BHLSd+BE²(L+S))。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - query_input[B,L,E]、context[B,S,E]；四个无 bias 权重 [E,E] 按 [out,in] 存储，E 能被 num_heads 整除。自行完成 Q/K/V 投影、分头、按
+      sqrt(E/H) 缩放的 attention、合头、输出投影；返回 [B,L,E]。allowed 是可广播到 [B,H,L,S] 的 bool，True=可访问；完全屏蔽的 query 输出
+      0，包含输出投影后仍为 0。causal 与 padding 由调用方组合为 allowed。禁止 MHA/SDPA。此题比 ATT-004 增加真实投影，并支持 L≠S 的 cross-attention；O(BHLSd+BE²(L+S))。
+    solution_direction:
+    - 计算 `QKᵀ/√D`，在 softmax 之前屏蔽非法位置，再加权求和。若同时要求因果关系与 padding，允许矩阵是两者的交集；如果 padding query 也必须为零，应把 query
+      有效性纳入矩阵。投影后的 `view/transpose` 要逐步写 shape。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI02 在本项目映射为 ATT-019；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: pytorch-sdpa
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - ATT-019
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-003
+    kind: coding_prompt
+    title: AI03 · GQA 与 KV cache：增量解码一致性
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    skills:
+    - skill.llm_vlm.attention
+    - skill.llm_vlm.transformer
+    - skill.inference_systems.kv_cache
+    priority: P1
+    difficulty:
+      concept: 4
+      implementation: 4
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 已投影 query[B,Hq,L,D]、新 key/value[B,Hkv,L,D]，Hq%Hkv=0；cache=None 或 (past_k,past_v)，历史 [B,Hkv,P,D]。等长无
+      padding 基础版，返回 (output[B,Hq,L,D], (new_k,new_v))，新缓存长 P+L 且只存 Hkv 个头。连续 Hq/Hkv 个 Q 头共享同一 KV 头；当前 query
+      绝对位置 P+i，允许 key≤P+i。缓存中的 K 视作已完成一次位置旋转，不要再旋转。允许教学版拼接，但不修改旧缓存；禁止 MHA/SDPA。全量、单 token、[3,1,3] 分块结果须一致；复杂度
+      O(BHqL(P+L)D)。
+    one_liner: 独立实现 cached_gqa，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 沿序列维拼接新 KV；当前 query 的绝对位置是 `P+arange(L)`，key 的位置为 `arange(P+L)`；允许条件为 `key_position <= query_position`，再叠加样本有效长度约束。调用
+      AI02 的语义参考即可得到教学版。若 K 使用 RoPE，缓存保存已按其真实位置旋转一次的 K，不能每步重复旋转历史 K。
+    derivation_or_example:
+    - 已投影 query[B,Hq,L,D]、新 key/value[B,Hkv,L,D]，Hq%Hkv=0；cache=None 或 (past_k,past_v)，历史 [B,Hkv,P,D]。等长无
+      padding 基础版，返回 (output[B,Hq,L,D], (new_k,new_v))，新缓存长 P+L 且只存 Hkv 个头。连续 Hq/Hkv 个 Q 头共享同一 KV 头；当前 query
+      绝对位置 P+i，允许 key≤P+i。缓存中的 K 视作已完成一次位置旋转，不要再旋转。允许教学版拼接，但不修改旧缓存；禁止 MHA/SDPA。全量、单 token、[3,1,3] 分块结果须一致；复杂度
+      O(BHqL(P+L)D)。
+    answer_outline:
+    - 沿序列维拼接新 KV；当前 query 的绝对位置是 `P+arange(L)`，key 的位置为 `arange(P+L)`；允许条件为 `key_position <= query_position`，再叠加样本有效长度约束。调用
+      AI02 的语义参考即可得到教学版。若 K 使用 RoPE，缓存保存已按其真实位置旋转一次的 K，不能每步重复旋转历史 K。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 单 token 解码为什么不能直接用左上对齐的 tril？
+    - GQA 减少 KV 存储，为什么不等于总计算降低相同倍数？
+    - RoPE 后的历史 K 为什么不能再次旋转？
+    - batch 内位置不同或 beam 重排时需要保存什么状态？
+    pitfalls:
+    - 忽略本题约定：单 token 解码为什么不能直接用左上对齐的 tril？
+    - 只背结论而无法解释反例：GQA 减少 KV 存储，为什么不等于总计算降低相同倍数？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 已投影 query[B,Hq,L,D]、新 key/value[B,Hkv,L,D]，Hq%Hkv=0；cache=None 或 (past_k,past_v)，历史 [B,Hkv,P,D]。等长无
+        padding 基础版，返回 (output[B,Hq,L,D], (new_k,new_v))，新缓存长 P+L 且只存 Hkv 个头。连续 Hq/Hkv 个 Q 头共享同一 KV 头；当前
+        query 绝对位置 P+i，允许 key≤P+i。缓存中的 K 视作已完成一次位置旋转，不要再旋转。允许教学版拼接，但不修改旧缓存；禁止 MHA/SDPA。全量、单 token、[3,1,3]
+        分块结果须一致；复杂度 O(BHqL(P+L)D)。
+      output: 以 ATT-020 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: cached_gqa
+      framework: pytorch
+    test_focus:
+    - 已投影 query[B,Hq,L,D]、新 key/value[B,Hkv,L,D]，Hq%Hkv=0；cache=None 或 (past_k,past_v)，历史 [B,Hkv,P,D]。等长无
+      padding 基础版，返回 (output[B,Hq,L,D], (new_k,new_v))，新缓存长 P+L 且只存 Hkv 个头。连续 Hq/Hkv 个 Q 头共享同一 KV 头；当前 query
+      绝对位置 P+i，允许 key≤P+i。缓存中的 K 视作已完成一次位置旋转，不要再旋转。允许教学版拼接，但不修改旧缓存；禁止 MHA/SDPA。全量、单 token、[3,1,3] 分块结果须一致；复杂度
+      O(BHqL(P+L)D)。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 已投影 query[B,Hq,L,D]、新 key/value[B,Hkv,L,D]，Hq%Hkv=0；cache=None 或 (past_k,past_v)，历史 [B,Hkv,P,D]。等长无
+      padding 基础版，返回 (output[B,Hq,L,D], (new_k,new_v))，新缓存长 P+L 且只存 Hkv 个头。连续 Hq/Hkv 个 Q 头共享同一 KV 头；当前 query
+      绝对位置 P+i，允许 key≤P+i。缓存中的 K 视作已完成一次位置旋转，不要再旋转。允许教学版拼接，但不修改旧缓存；禁止 MHA/SDPA。全量、单 token、[3,1,3] 分块结果须一致；复杂度
+      O(BHqL(P+L)D)。
+    solution_direction:
+    - 沿序列维拼接新 KV；当前 query 的绝对位置是 `P+arange(L)`，key 的位置为 `arange(P+L)`；允许条件为 `key_position <= query_position`，再叠加样本有效长度约束。调用
+      AI02 的语义参考即可得到教学版。若 K 使用 RoPE，缓存保存已按其真实位置旋转一次的 K，不能每步重复旋转历史 K。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI03 在本项目映射为 ATT-020；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-003
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - ATT-020
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-004
+    kind: coding_prompt
+    title: AI04 · RoPE：旋转布局与位置偏移
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    skills:
+    - skill.llm_vlm.attention
+    - skill.llm_vlm.transformer
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[B,H,T,D]，D 正偶数；int64 position_ids[B,T] 可按样本不同，base>1。相邻偶/奇坐标成对旋转，频率 base**(-2i/D)，角度为真实位置乘频率，返回同
+      shape/dtype/device。半精度三角计算升 float32，float64 保留；不旋转 V，不混用 half-split 布局。position=0 恒等，向量范数和共同位置平移后的
+      QK 内积不变；O(BHTD)。奇数 D 或错误位置 shape 抛 ValueError。
+    one_liner: 独立实现 rope_positions，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 频率 `ω_i=base^(-2i/D)`；每对坐标变换为 `(a cosθ-b sinθ, a sinθ+b cosθ)`，其中 `θ=position*ω_i`。`position_ids`
+      先构造成 `[B,1,T,D/2]` 可广播角度；三角函数与乘加在 FP32 或 FP64 中计算，再转回输入 dtype。位置不能用 FP16 长期累加。
+    derivation_or_example:
+    - position 为 0 时恒等；每个向量旋转前后范数保持；`<R_m q,R_n k>` 与同时平移 m、n 后的结果一致；对长度 6 全量处理与偏移量为 4 的最后两 token 处理一致。比较时应用浮点容差；频率缩放/长上下文扩展必须另给契约，不能自行改变
+      base。
+    answer_outline:
+    - 频率 `ω_i=base^(-2i/D)`；每对坐标变换为 `(a cosθ-b sinθ, a sinθ+b cosθ)`，其中 `θ=position*ω_i`。`position_ids`
+      先构造成 `[B,1,T,D/2]` 可广播角度；三角函数与乘加在 FP32 或 FP64 中计算，再转回输入 dtype。位置不能用 FP16 长期累加。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 相邻配对与 half-split 布局能否直接共用权重？
+    - 两侧位置共同加常数后点积为什么保持？
+    - 从位置 4 开始的分块怎样与全量前向对齐？
+    - 为什么不能使用 FP16 累加长序列位置？
+    pitfalls:
+    - 忽略本题约定：相邻配对与 half-split 布局能否直接共用权重？
+    - 只背结论而无法解释反例：两侧位置共同加常数后点积为什么保持？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[B,H,T,D]，D 正偶数；int64 position_ids[B,T] 可按样本不同，base>1。相邻偶/奇坐标成对旋转，频率 base**(-2i/D)，角度为真实位置乘频率，返回同
+        shape/dtype/device。半精度三角计算升 float32，float64 保留；不旋转 V，不混用 half-split 布局。position=0 恒等，向量范数和共同位置平移后的
+        QK 内积不变；O(BHTD)。奇数 D 或错误位置 shape 抛 ValueError。
+      output: 以 ATT-021 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: rope_positions
+      framework: pytorch
+    test_focus:
+    - position 为 0 时恒等；每个向量旋转前后范数保持；`<R_m q,R_n k>` 与同时平移 m、n 后的结果一致；对长度 6 全量处理与偏移量为 4 的最后两 token 处理一致。比较时应用浮点容差；频率缩放/长上下文扩展必须另给契约，不能自行改变
+      base。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - position 为 0 时恒等；每个向量旋转前后范数保持；`<R_m q,R_n k>` 与同时平移 m、n 后的结果一致；对长度 6 全量处理与偏移量为 4 的最后两 token 处理一致。比较时应用浮点容差；频率缩放/长上下文扩展必须另给契约，不能自行改变
+      base。
+    solution_direction:
+    - 频率 `ω_i=base^(-2i/D)`；每对坐标变换为 `(a cosθ-b sinθ, a sinθ+b cosθ)`，其中 `θ=position*ω_i`。`position_ids`
+      先构造成 `[B,1,T,D/2]` 可广播角度；三角函数与乘加在 FP32 或 FP64 中计算，再转回输入 dtype。位置不能用 FP16 长期累加。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI04 在本项目映射为 ATT-021；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-004
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - ATT-021
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-005
+    kind: coding_prompt
+    title: AI05 · LayerNorm 与 RMSNorm
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - vlm_algorithm
+    skills:
+    - skill.deep_learning.neural_layers
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[B,T,D]，gamma/beta[D]，eps>0。沿 D 做 LayerNorm，方差分母是 D 而不是 D−1；输出与输入 shape/dtype/device 一致，保持
+      X、gamma、beta 梯度。半精度统计升 float32，float64 保留。禁止 LayerNorm/RMSNorm 库调用。D=1 和常量行输出 beta。O(BTD)。RMSNorm
+      的独立实现入口为已存在 NNL-008；复盘比较两者是否减均值及 Pre/Post-Norm 的残差位置。
+    one_liner: 独立实现 layer_norm，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - LayerNorm 计算 `μ=mean(x)`、`var=mean((x-μ)^2)`，输出 `gamma*(x-μ)/sqrt(var+eps)+beta`；RMSNorm 使用 `gamma*x/sqrt(mean(x²)+eps)`，本题无
+      beta。方差必须按 D 而不是 D−1 作分母；FP16/BF16 的平方与归约先升精度。
+    derivation_or_example:
+    - 全零、常量向量、D=1 都不应 NaN；LayerNorm 的常量输入输出 beta，而 RMSNorm 对非零常量一般不为零。随机输入逐项对齐官方实现，同时比较反向梯度；对比时统一 eps、参数
+      dtype 和计算精度，不能拿不同默认值作结论。
+    answer_outline:
+    - LayerNorm 计算 `μ=mean(x)`、`var=mean((x-μ)^2)`，输出 `gamma*(x-μ)/sqrt(var+eps)+beta`；RMSNorm 使用 `gamma*x/sqrt(mean(x²)+eps)`，本题无
+      beta。方差必须按 D 而不是 D−1 作分母；FP16/BF16 的平方与归约先升精度。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 常量输入在 LayerNorm 与 RMSNorm 中为何不同？
+    - 为什么 D=1 仍需要有定义的行为？
+    - 方差分母与 eps 不同时还可以直接比较框架结果吗？
+    - Pre-Norm 与 Post-Norm 改变了哪条残差路径？
+    pitfalls:
+    - 忽略本题约定：常量输入在 LayerNorm 与 RMSNorm 中为何不同？
+    - 只背结论而无法解释反例：为什么 D=1 仍需要有定义的行为？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[B,T,D]，gamma/beta[D]，eps>0。沿 D 做 LayerNorm，方差分母是 D 而不是 D−1；输出与输入 shape/dtype/device 一致，保持
+        X、gamma、beta 梯度。半精度统计升 float32，float64 保留。禁止 LayerNorm/RMSNorm 库调用。D=1 和常量行输出 beta。O(BTD)。RMSNorm
+        的独立实现入口为已存在 NNL-008；复盘比较两者是否减均值及 Pre/Post-Norm 的残差位置。
+      output: 以 NNL-006 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: layer_norm
+      framework: pytorch
+    test_focus:
+    - 全零、常量向量、D=1 都不应 NaN；LayerNorm 的常量输入输出 beta，而 RMSNorm 对非零常量一般不为零。随机输入逐项对齐官方实现，同时比较反向梯度；对比时统一 eps、参数
+      dtype 和计算精度，不能拿不同默认值作结论。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 全零、常量向量、D=1 都不应 NaN；LayerNorm 的常量输入输出 beta，而 RMSNorm 对非零常量一般不为零。随机输入逐项对齐官方实现，同时比较反向梯度；对比时统一 eps、参数
+      dtype 和计算精度，不能拿不同默认值作结论。
+    solution_direction:
+    - LayerNorm 计算 `μ=mean(x)`、`var=mean((x-μ)^2)`，输出 `gamma*(x-μ)/sqrt(var+eps)+beta`；RMSNorm 使用 `gamma*x/sqrt(mean(x²)+eps)`，本题无
+      beta。方差必须按 D 而不是 D−1 作分母；FP16/BF16 的平方与归约先升精度。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI05 在本项目映射为 NNL-006；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-005
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    - source_id: ai40-tech-006
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - NNL-006
+    - NNL-008
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-006
+    kind: coding_prompt
+    title: AI06 · LoRA 线性层与合并一致性
+    domain: deep_learning
+    tracks:
+    - llm_algorithm
+    - vlm_algorithm
+    - post_training
+    skills:
+    - skill.deep_learning.neural_layers
+    - skill.post_training_rl.sft
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: weight[out,in] 和可选 bias[out] 冻结，A[r,in]、B[out,r] 可训练；X[...,in]。输出 XWᵀ+bias+(alpha/r)*(XAᵀ)Bᵀ，r>0。实现
+      merge_lora(weight,a,b,alpha=1) 返回独立合并权重，绝不原地修改 W 或累计合并；无 dropout/量化。即使 W/bias requires_grad=True，也必须停止其梯度。初始化
+      B=0 时与基础层一致，A 初始梯度可为 0。O(in*out+r(in+out)) 每 token。
+    one_liner: 独立实现 lora_forward，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 输出 `XWᵀ+b+(α/r)(XAᵀ)Bᵀ`。A 随机初始化、B 零初始化；合并得到 `W_merge=W+(α/r)BA`。显式管理 merged 状态，重复 merge 不得累计相同更新；若为可逆原位
+      merge，进入训练前必须正确 unmerge。更容易验收的方案是生成独立合并副本。
+    derivation_or_example:
+    - 初始化时与基础层完全等价；初次反传通常 B 有梯度、A 的梯度为零，不能据此误判 A 断图；训练一步后保存/加载 adapter 输出一致；合并前后固定输入输出近似相等，W 不参与梯度。FP16
+      就地加减不保证逐 bit 可逆。
+    answer_outline:
+    - 输出 `XWᵀ+b+(α/r)(XAᵀ)Bᵀ`。A 随机初始化、B 零初始化；合并得到 `W_merge=W+(α/r)BA`。显式管理 merged 状态，重复 merge 不得累计相同更新；若为可逆原位
+      merge，进入训练前必须正确 unmerge。更容易验收的方案是生成独立合并副本。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - B 零初始化时 A 的梯度为零，是否证明计算图断开？
+    - 为什么 A、B 同时为零不利于学习？
+    - 重复 merge 怎样避免累积同一更新？
+    - 量化或 dropout 存在时合并等价性需要什么条件？
+    pitfalls:
+    - 忽略本题约定：B 零初始化时 A 的梯度为零，是否证明计算图断开？
+    - 只背结论而无法解释反例：为什么 A、B 同时为零不利于学习？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: weight[out,in] 和可选 bias[out] 冻结，A[r,in]、B[out,r] 可训练；X[...,in]。输出 XWᵀ+bias+(alpha/r)*(XAᵀ)Bᵀ，r>0。实现
+        merge_lora(weight,a,b,alpha=1) 返回独立合并权重，绝不原地修改 W 或累计合并；无 dropout/量化。即使 W/bias requires_grad=True，也必须停止其梯度。初始化
+        B=0 时与基础层一致，A 初始梯度可为 0。O(in*out+r(in+out)) 每 token。
+      output: 以 INF-013 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: lora_forward
+      framework: pytorch
+    test_focus:
+    - 初始化时与基础层完全等价；初次反传通常 B 有梯度、A 的梯度为零，不能据此误判 A 断图；训练一步后保存/加载 adapter 输出一致；合并前后固定输入输出近似相等，W 不参与梯度。FP16
+      就地加减不保证逐 bit 可逆。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 初始化时与基础层完全等价；初次反传通常 B 有梯度、A 的梯度为零，不能据此误判 A 断图；训练一步后保存/加载 adapter 输出一致；合并前后固定输入输出近似相等，W 不参与梯度。FP16
+      就地加减不保证逐 bit 可逆。
+    solution_direction:
+    - 输出 `XWᵀ+b+(α/r)(XAᵀ)Bᵀ`。A 随机初始化、B 零初始化；合并得到 `W_merge=W+(α/r)BA`。显式管理 merged 状态，重复 merge 不得累计相同更新；若为可逆原位
+      merge，进入训练前必须正确 unmerge。更容易验收的方案是生成独立合并副本。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI06 在本项目映射为 INF-013；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-007
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    - source_id: ai40-tech-008
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - INF-013
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-007
+    kind: coding_prompt
+    title: AI07 · temperature、top-k、top-p 的顺序与边界
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    skills:
+    - skill.llm_vlm.generation
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: logits[B,V] 可含 -inf 禁用 token，每行至少一个有限项，无 NaN/+inf。返回 (token[B], probabilities[B,V])。依次 temperature→top-k→剩余分布
+      top-p→重归一化采样；temperature>0，0≤k≤V，k=0 不限；0<p≤1。同分按 token ID 小者优先，最多保留 k 个有限项。top-p 保留达到阈值的最小前缀（含跨阈值项），p=1
+      保留全部剩余项。generator 传给采样；不得使用 Transformers warper。例概率 [.5,.3,.2]，p=.6 → [.625,.375,0]。完整排序 O(BV log
+      V)。
+    one_liner: 独立实现 sample_filtered，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 排序并屏蔽 k 以外的位置，重新 softmax；top-p 保留累计概率第一次达到阈值的最小前缀，包含跨过阈值的那一项。`p=1` 明确保留全部剩余有限项，避免累计和舍入导致意外截断。采样使用传入
+      generator，以便复现实验。
+    derivation_or_example:
+    - 概率 `[0.5,0.3,0.2]`、p=0.6 应保留前两项并归一化成 `[0.625,0.375,0]`；k=1 退化为确定选择；只有一个合法 token 必须选中；全禁用必须报错。稳定排序定义了本题
+      tie 策略，官方某些 top-k 实现按阈值保留，可能把并列项一起保留，不能机械要求完全一致。
+    answer_outline:
+    - 排序并屏蔽 k 以外的位置，重新 softmax；top-p 保留累计概率第一次达到阈值的最小前缀，包含跨过阈值的那一项。`p=1` 明确保留全部剩余有限项，避免累计和舍入导致意外截断。采样使用传入
+      generator，以便复现实验。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 先 top-p 再温度缩放与相反顺序等价吗？
+    - top-p 的跨阈值 token 应留下还是删除？
+    - p=1 与并列 top-k 的行为如何定义？
+    - 采样 RNG 怎样保存才能重现后续结果？
+    pitfalls:
+    - 忽略本题约定：先 top-p 再温度缩放与相反顺序等价吗？
+    - 只背结论而无法解释反例：top-p 的跨阈值 token 应留下还是删除？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: logits[B,V] 可含 -inf 禁用 token，每行至少一个有限项，无 NaN/+inf。返回 (token[B], probabilities[B,V])。依次 temperature→top-k→剩余分布
+        top-p→重归一化采样；temperature>0，0≤k≤V，k=0 不限；0<p≤1。同分按 token ID 小者优先，最多保留 k 个有限项。top-p 保留达到阈值的最小前缀（含跨阈值项），p=1
+        保留全部剩余项。generator 传给采样；不得使用 Transformers warper。例概率 [.5,.3,.2]，p=.6 → [.625,.375,0]。完整排序 O(BV log
+        V)。
+      output: 以 ATT-011 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: sample_filtered
+      framework: pytorch
+    test_focus:
+    - 概率 `[0.5,0.3,0.2]`、p=0.6 应保留前两项并归一化成 `[0.625,0.375,0]`；k=1 退化为确定选择；只有一个合法 token 必须选中；全禁用必须报错。稳定排序定义了本题
+      tie 策略，官方某些 top-k 实现按阈值保留，可能把并列项一起保留，不能机械要求完全一致。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 概率 `[0.5,0.3,0.2]`、p=0.6 应保留前两项并归一化成 `[0.625,0.375,0]`；k=1 退化为确定选择；只有一个合法 token 必须选中；全禁用必须报错。稳定排序定义了本题
+      tie 策略，官方某些 top-k 实现按阈值保留，可能把并列项一起保留，不能机械要求完全一致。
+    solution_direction:
+    - 排序并屏蔽 k 以外的位置，重新 softmax；top-p 保留累计概率第一次达到阈值的最小前缀，包含跨过阈值的那一项。`p=1` 明确保留全部剩余有限项，避免累计和舍入导致意外截断。采样使用传入
+      generator，以便复现实验。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI07 在本项目映射为 ATT-011；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-009
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - ATT-011
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-008
+    kind: coding_prompt
+    title: AI08 · DPO loss：先对齐回答 token，再比较相对偏好
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    - skill.post_training_rl.preference_data
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: logits[B,T,V] 第 t 位置预测 tokens[:,t+1]；tokens/int64 与 completion_mask/bool 都为 [B,T]。mask 标记目标
+      token 属于回答（包含真实 EOS，不包含 prompt/padding）；T≥2，每条回答至少一个有效 shifted token。返回序列 log-prob[B]，按回答 token 求和，不作长度均值；忽略位置允许
+      -100，先屏蔽再 gather。另实现 paired_dpo(policy[B,2], reference[B,2], beta=.1)→mean softplus(-beta*((πc-πr)-(refc-refr)))，列为
+      chosen,rejected，reference detach，beta>0。这是 PT-002/006 的对齐整合变式，不修改旧接口。
+    one_liner: 独立实现 completion_logp，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 对齐 `logits[:,:-1]` 与 `tokens[:,1:]`，mask 同样右移；只在回答 token 上求和。令 `margin=(logπ_c-logπ_r)-(logref_c-logref_r)`，loss=`softplus(-β*margin)`。参考
+      log-prob 停止梯度。标准序列 DPO 不擅自把求和换成长度平均；那会改变优化对象。
+    derivation_or_example:
+    - 策略等于参考时 loss=`log(2)`；增大 chosen 相对优势应降低 loss；同时给 chosen/rejected 的策略 log-prob 加同一个常数不改变 loss。completion
+      不包含 prompt/padding，是否包含 EOS 要由数据契约固定；本题包含真实回答终止 EOS，排除 padding。空回答监督报错。
+    answer_outline:
+    - 对齐 `logits[:,:-1]` 与 `tokens[:,1:]`，mask 同样右移；只在回答 token 上求和。令 `margin=(logπ_c-logπ_r)-(logref_c-logref_r)`，loss=`softplus(-β*margin)`。参考
+      log-prob 停止梯度。标准序列 DPO 不擅自把求和换成长度平均；那会改变优化对象。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - logits、labels 和 completion mask 需要怎样一起 shift？
+    - 回答含 EOS 但不含 padding 时，监督从哪里开始？
+    - 序列 sum 改成 mean 会不会改变 DPO 的目标？
+    - 冻结 reference 与采样 old policy 是不是同一角色？
+    pitfalls:
+    - 忽略本题约定：logits、labels 和 completion mask 需要怎样一起 shift？
+    - 只背结论而无法解释反例：回答含 EOS 但不含 padding 时，监督从哪里开始？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: logits[B,T,V] 第 t 位置预测 tokens[:,t+1]；tokens/int64 与 completion_mask/bool 都为 [B,T]。mask 标记目标
+        token 属于回答（包含真实 EOS，不包含 prompt/padding）；T≥2，每条回答至少一个有效 shifted token。返回序列 log-prob[B]，按回答 token
+        求和，不作长度均值；忽略位置允许 -100，先屏蔽再 gather。另实现 paired_dpo(policy[B,2], reference[B,2], beta=.1)→mean softplus(-beta*((πc-πr)-(refc-refr)))，列为
+        chosen,rejected，reference detach，beta>0。这是 PT-002/006 的对齐整合变式，不修改旧接口。
+      output: 以 PT-022 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: completion_logp
+      framework: pytorch
+    test_focus:
+    - 策略等于参考时 loss=`log(2)`；增大 chosen 相对优势应降低 loss；同时给 chosen/rejected 的策略 log-prob 加同一个常数不改变 loss。completion
+      不包含 prompt/padding，是否包含 EOS 要由数据契约固定；本题包含真实回答终止 EOS，排除 padding。空回答监督报错。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 策略等于参考时 loss=`log(2)`；增大 chosen 相对优势应降低 loss；同时给 chosen/rejected 的策略 log-prob 加同一个常数不改变 loss。completion
+      不包含 prompt/padding，是否包含 EOS 要由数据契约固定；本题包含真实回答终止 EOS，排除 padding。空回答监督报错。
+    solution_direction:
+    - 对齐 `logits[:,:-1]` 与 `tokens[:,1:]`，mask 同样右移；只在回答 token 上求和。令 `margin=(logπ_c-logπ_r)-(logref_c-logref_r)`，loss=`softplus(-β*margin)`。参考
+      log-prob 停止梯度。标准序列 DPO 不擅自把求和换成长度平均；那会改变优化对象。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI08 在本项目映射为 PT-022；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-010
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - PT-022
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-009
+    kind: coding_prompt
+    title: AI09 · GRPO：组内优势、ratio 与 clipping
+    domain: post_training_rl
+    tracks:
+    - post_training
+    - llm_algorithm
+    skills:
+    - skill.post_training_rl.policy_optimization
+    - skill.post_training_rl.grpo
+    priority: P1
+    difficulty:
+      concept: 4
+      implementation: 4
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: rewards[B,G]，G≥2；三组 logp 与 bool mask[B,G,T]。优势为组内 (r-mean)/(总体 std+eps)，detach；old 和 reference
+      也 detach。ratio=exp(new-old)，策略取 min(ratio*A,clamp(ratio,1−clip_eps,1+clip_eps)*A)；k3=exp(ref-new)−(ref-new)−1。返回逐回答有效
+      token 均值，再对 B,G 平均的 -surrogate+beta*k3，所有回答都须非空。0<clip_eps<1、beta≥0、eps>0；拒绝溢出 ratio，不偷偷截断。与 PT-015
+      全 token 平均是不同目标。O(BGT)，不是完整训练器。
+    one_liner: 独立实现 grpo_outcome_loss，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 先沿 G 计算并 detach `A=(r-mean)/ (std+eps)`，广播到 token；`ratio=exp(new-old)`，策略项为 `min(ratio*A, clamp(ratio,1-ε,1+ε)*A)`。可选参考项使用
+      `δ=ref-new`，`k3=exp(δ)-δ-1`。每条回答先按其有效 token 数平均，再对 G、B 平均，最终取负策略项并加 `β*k3`。本题固定此归约；若采用全 token 平均，应说明它会改变长短回答权重。
+    derivation_or_example:
+    - '`[1,1,1]` 的组优势全零；`[0,1]` 的组优势近似 `[-1,1]`；new=old 时 ratio=1；new=ref 时 k3=0。优势为负时也必须取 `min`，不能先按直觉裁掉“过大正向更新”。零有效
+      token 的回答拒绝；溢出应监测策略漂移，不能偷偷截断 log-ratio 后仍宣称原目标。'
+    answer_outline:
+    - 先沿 G 计算并 detach `A=(r-mean)/ (std+eps)`，广播到 token；`ratio=exp(new-old)`，策略项为 `min(ratio*A, clamp(ratio,1-ε,1+ε)*A)`。可选参考项使用
+      `δ=ref-new`，`k3=exp(δ)-δ-1`。每条回答先按其有效 token 数平均，再对 G、B 平均，最终取负策略项并加 `β*k3`。本题固定此归约；若采用全 token 平均，应说明它会改变长短回答权重。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 负优势时 ratio 变大，为什么仍取两个 surrogate 的 min？
+    - 逐回答平均和全 token 平均对长回答的权重有什么影响？
+    - 全组奖励相同时，有参考惩罚是否仍可能产生梯度？
+    - 旧策略 rollout 重复更新时，k3 能否无条件称为当前策略 KL 的无偏估计？
+    pitfalls:
+    - 忽略本题约定：负优势时 ratio 变大，为什么仍取两个 surrogate 的 min？
+    - 只背结论而无法解释反例：逐回答平均和全 token 平均对长回答的权重有什么影响？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: rewards[B,G]，G≥2；三组 logp 与 bool mask[B,G,T]。优势为组内 (r-mean)/(总体 std+eps)，detach；old 和 reference
+        也 detach。ratio=exp(new-old)，策略取 min(ratio*A,clamp(ratio,1−clip_eps,1+clip_eps)*A)；k3=exp(ref-new)−(ref-new)−1。返回逐回答有效
+        token 均值，再对 B,G 平均的 -surrogate+beta*k3，所有回答都须非空。0<clip_eps<1、beta≥0、eps>0；拒绝溢出 ratio，不偷偷截断。与 PT-015
+        全 token 平均是不同目标。O(BGT)，不是完整训练器。
+      output: 以 PT-023 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: grpo_outcome_loss
+      framework: pytorch
+    test_focus:
+    - '`[1,1,1]` 的组优势全零；`[0,1]` 的组优势近似 `[-1,1]`；new=old 时 ratio=1；new=ref 时 k3=0。优势为负时也必须取 `min`，不能先按直觉裁掉“过大正向更新”。零有效
+      token 的回答拒绝；溢出应监测策略漂移，不能偷偷截断 log-ratio 后仍宣称原目标。'
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - '`[1,1,1]` 的组优势全零；`[0,1]` 的组优势近似 `[-1,1]`；new=old 时 ratio=1；new=ref 时 k3=0。优势为负时也必须取 `min`，不能先按直觉裁掉“过大正向更新”。零有效
+      token 的回答拒绝；溢出应监测策略漂移，不能偷偷截断 log-ratio 后仍宣称原目标。'
+    solution_direction:
+    - 先沿 G 计算并 detach `A=(r-mean)/ (std+eps)`，广播到 token；`ratio=exp(new-old)`，策略项为 `min(ratio*A, clamp(ratio,1-ε,1+ε)*A)`。可选参考项使用
+      `δ=ref-new`，`k3=exp(δ)-δ-1`。每条回答先按其有效 token 数平均，再对 G、B 平均，最终取负策略项并加 `β*k3`。本题固定此归约；若采用全 token 平均，应说明它会改变长短回答权重。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI09 在本项目映射为 PT-023；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-011
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - PT-023
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-010
+    kind: coding_prompt
+    title: AI10 · 带 mask 的 token KL 蒸馏
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: teacher/student logits[B,T,V] 词表和 token 已对齐，bool mask[B,T]。返回 temperature² * 有效 token 平均 KL(teacher||student)；teacher
+      停梯度，student 保持梯度。全 mask 为空时返回与 student 连图的零；temperature>0。禁止直接用 KLDivLoss 替代归约，允许 log_softmax。float64
+      保留，其余至少 float32 归约。O(BTV)。不把 batchmean 或反向 KL 当本题目标。
+    one_liner: 独立实现 masked_distillation_kl，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - FP32 中计算 `log_p=log_softmax(teacher.detach()/τ)`、`log_q=log_softmax(student/τ)`，逐 token 先沿词表求 `sum(exp(log_p)*(log_p-log_q))`，再应用
+      mask，最后除以 mask 的总和。τ² 是本题采用的蒸馏缩放约定，不是 KL 的数学定义本身。
+    derivation_or_example:
+    - 两组 logits 相同，KL≈0；交换 teacher/student 一般改变数值；增加 padding 不改变结果；teacher 梯度为空，student 梯度有限。若 `[B,T,V]`
+      直接调用 `batchmean`，只按 B 除，通常不等于有效 token 平均。top-k 截断后重归一化定义了另一种目标，不能称为全词表 KL 的无损替代。
+    answer_outline:
+    - FP32 中计算 `log_p=log_softmax(teacher.detach()/τ)`、`log_q=log_softmax(student/τ)`，逐 token 先沿词表求 `sum(exp(log_p)*(log_p-log_q))`，再应用
+      mask，最后除以 mask 的总和。τ² 是本题采用的蒸馏缩放约定，不是 KL 的数学定义本身。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - forward KL 与 reverse KL 对哪个分布取期望？
+    - KLDivLoss 的 batchmean 为什么未必等于有效 token 均值？
+    - 温度平方是数学 KL 必需的吗？
+    - 不同 tokenizer 的 teacher 能否直接做 token KL？
+    pitfalls:
+    - 忽略本题约定：forward KL 与 reverse KL 对哪个分布取期望？
+    - 只背结论而无法解释反例：KLDivLoss 的 batchmean 为什么未必等于有效 token 均值？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: teacher/student logits[B,T,V] 词表和 token 已对齐，bool mask[B,T]。返回 temperature² * 有效 token 平均 KL(teacher||student)；teacher
+        停梯度，student 保持梯度。全 mask 为空时返回与 student 连图的零；temperature>0。禁止直接用 KLDivLoss 替代归约，允许 log_softmax。float64
+        保留，其余至少 float32 归约。O(BTV)。不把 batchmean 或反向 KL 当本题目标。
+      output: 以 LOSS-004 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: masked_distillation_kl
+      framework: pytorch
+    test_focus:
+    - 两组 logits 相同，KL≈0；交换 teacher/student 一般改变数值；增加 padding 不改变结果；teacher 梯度为空，student 梯度有限。若 `[B,T,V]`
+      直接调用 `batchmean`，只按 B 除，通常不等于有效 token 平均。top-k 截断后重归一化定义了另一种目标，不能称为全词表 KL 的无损替代。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 两组 logits 相同，KL≈0；交换 teacher/student 一般改变数值；增加 padding 不改变结果；teacher 梯度为空，student 梯度有限。若 `[B,T,V]`
+      直接调用 `batchmean`，只按 B 除，通常不等于有效 token 平均。top-k 截断后重归一化定义了另一种目标，不能称为全词表 KL 的无损替代。
+    solution_direction:
+    - FP32 中计算 `log_p=log_softmax(teacher.detach()/τ)`、`log_q=log_softmax(student/τ)`，逐 token 先沿词表求 `sum(exp(log_p)*(log_p-log_q))`，再应用
+      mask，最后除以 mask 的总和。τ² 是本题采用的蒸馏缩放约定，不是 KL 的数学定义本身。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI10 在本项目映射为 LOSS-004；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-012
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    - source_id: ai40-tech-013
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - LOSS-004
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-011
+    kind: coding_prompt
+    title: AI11 · InfoNCE 与图文双向对比学习
+    domain: deep_learning
+    tracks:
+    - vlm_algorithm
+    - llm_algorithm
+    - recommendation
+    skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    - skill.llm_vlm.vlm_architecture
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: A/B[N,D]，N≥2，同一行是唯一正例；非零向量，temperature>0。L2 归一化后计算所有配对相似度除温度；返回 A→B 和 B→A 两方向 CE 的均值。不得屏蔽对角线，不调用现成对比损失；允许交叉熵基础运算。零向量抛
+      ValueError。O(N²D) 时间，O(N²) 相似度矩阵。多正例、多卡 target offset 是口述变式，不改变本题标签。
+    one_liner: 独立实现 paired_infonce，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 沿 D 做 L2 归一化；相似度 `S=A_norm @ B_norm.T /τ`；目标标签为 `arange(B)`，分别对 S 与 Sᵀ 做交叉熵。不能屏蔽对角线——它恰好是本题正样本。若存在重复图文对或多正例，应改正样本契约与分子，而非继续把它们当负例。
+    derivation_or_example:
+    - 两组特征都为单位阵时，对角分数最大且 loss 可解析；所有相似度相同，loss=`log(B)`；同时按同一排列打乱两组，loss 不变；只打乱一组则必须更新目标索引。拒绝零向量能使题意清楚；若使用
+      eps 归一化，要解释其实际相似度。
+    answer_outline:
+    - 沿 D 做 L2 归一化；相似度 `S=A_norm @ B_norm.T /τ`；目标标签为 `arange(B)`，分别对 S 与 Sᵀ 做交叉熵。不能屏蔽对角线——它恰好是本题正样本。若存在重复图文对或多正例，应改正样本契约与分子，而非继续把它们当负例。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 为什么这里的对角线不能像某些自监督目标一样屏蔽？
+    - 重复图文正对被当作负样本会带来什么偏差？
+    - 多卡 all-gather 后正样本标签怎样加 rank 偏移？
+    - 远端 embedding detach 会改变哪些梯度？
+    pitfalls:
+    - 忽略本题约定：为什么这里的对角线不能像某些自监督目标一样屏蔽？
+    - 只背结论而无法解释反例：重复图文正对被当作负样本会带来什么偏差？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: A/B[N,D]，N≥2，同一行是唯一正例；非零向量，temperature>0。L2 归一化后计算所有配对相似度除温度；返回 A→B 和 B→A 两方向 CE 的均值。不得屏蔽对角线，不调用现成对比损失；允许交叉熵基础运算。零向量抛
+        ValueError。O(N²D) 时间，O(N²) 相似度矩阵。多正例、多卡 target offset 是口述变式，不改变本题标签。
+      output: 以 LOSS-006 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: paired_infonce
+      framework: pytorch
+    test_focus:
+    - 两组特征都为单位阵时，对角分数最大且 loss 可解析；所有相似度相同，loss=`log(B)`；同时按同一排列打乱两组，loss 不变；只打乱一组则必须更新目标索引。拒绝零向量能使题意清楚；若使用
+      eps 归一化，要解释其实际相似度。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 两组特征都为单位阵时，对角分数最大且 loss 可解析；所有相似度相同，loss=`log(B)`；同时按同一排列打乱两组，loss 不变；只打乱一组则必须更新目标索引。拒绝零向量能使题意清楚；若使用
+      eps 归一化，要解释其实际相似度。
+    solution_direction:
+    - 沿 D 做 L2 归一化；相似度 `S=A_norm @ B_norm.T /τ`；目标标签为 `arange(B)`，分别对 S 与 Sᵀ 做交叉熵。不能屏蔽对角线——它恰好是本题正样本。若存在重复图文对或多正例，应改正样本契约与分子，而非继续把它们当负例。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI11 在本项目映射为 LOSS-006；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-014
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    - source_id: clip-paper
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - LOSS-006
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-012
+    kind: coding_prompt
+    title: AI12 · Packing：attention 隔离与监督隔离是两件事
+    domain: post_training_rl
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.post_training_rl.sft
+    - skill.llm_vlm.context_management
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 一维 int64 segment_ids[T]、position_ids[T]，bool supervised[T]。非负 segment ID 标识独立样本，-1 为 padding；同段
+      position 从零递增。返回 (allowed[T,T], loss_mask[T])，均 bool。attention 只允许同段有效 token 且 key_position≤query_position；loss_mask[i]
+      仅在 i/i+1 有效且同段、supervised[i+1] 为真时有效，最后一位永远 False。空输入返回空矩阵/向量。O(T²)。只重置位置或设置 labels=-100 不能替代双重隔离。
+    one_liner: 独立实现 packing_masks，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - '`allowed[i,j]=(segment_i==segment_j) and (position_j<=position_i)`，叠加有效 token 约束。损失位置 i 仅在 i 与 i+1
+      同段、且目标 token i+1 应被监督时有效；因此边界需同时影响 attention 与 label。段内 position 从零开始，并不自动令任意模型实现注意力隔离。'
+    derivation_or_example:
+    - A 长 2、B 长 3 时，允许矩阵应包含互不连通的 2×2、3×3 下三角块。任意改变 A 的内容，不应改变 B 的输出或有效 token loss；分别训练与 packing 训练应按同一 token
+      权重近似一致。仅插入 EOS 不是硬隔离。
+    answer_outline:
+    - '`allowed[i,j]=(segment_i==segment_j) and (position_j<=position_i)`，叠加有效 token 约束。损失位置 i 仅在 i 与 i+1
+      同段、且目标 token i+1 应被监督时有效；因此边界需同时影响 attention 与 label。段内 position 从零开始，并不自动令任意模型实现注意力隔离。'
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 仅 labels=-100 能阻止跨样本 attention 吗？
+    - 为什么段尾 token 不能监督下一段开头？
+    - 重置 position_ids 是否对所有序列模型都实现隔离？
+    - packing 与分开训练的 loss 怎样保持同一权重口径？
+    pitfalls:
+    - 忽略本题约定：仅 labels=-100 能阻止跨样本 attention 吗？
+    - 只背结论而无法解释反例：为什么段尾 token 不能监督下一段开头？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 一维 int64 segment_ids[T]、position_ids[T]，bool supervised[T]。非负 segment ID 标识独立样本，-1 为 padding；同段
+        position 从零递增。返回 (allowed[T,T], loss_mask[T])，均 bool。attention 只允许同段有效 token 且 key_position≤query_position；loss_mask[i]
+        仅在 i/i+1 有效且同段、supervised[i+1] 为真时有效，最后一位永远 False。空输入返回空矩阵/向量。O(T²)。只重置位置或设置 labels=-100 不能替代双重隔离。
+      output: 以 PT-024 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: packing_masks
+      framework: pytorch
+    test_focus:
+    - A 长 2、B 长 3 时，允许矩阵应包含互不连通的 2×2、3×3 下三角块。任意改变 A 的内容，不应改变 B 的输出或有效 token loss；分别训练与 packing 训练应按同一 token
+      权重近似一致。仅插入 EOS 不是硬隔离。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - A 长 2、B 长 3 时，允许矩阵应包含互不连通的 2×2、3×3 下三角块。任意改变 A 的内容，不应改变 B 的输出或有效 token loss；分别训练与 packing 训练应按同一 token
+      权重近似一致。仅插入 EOS 不是硬隔离。
+    solution_direction:
+    - '`allowed[i,j]=(segment_i==segment_j) and (position_j<=position_i)`，叠加有效 token 约束。损失位置 i 仅在 i 与 i+1
+      同段、且目标 token i+1 应被监督时有效；因此边界需同时影响 attention 与 label。段内 position 从零开始，并不自动令任意模型实现注意力隔离。'
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI12 在本项目映射为 PT-024；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-015
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - PT-024
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-013
+    kind: coding_prompt
+    title: AI13 · K-means：确定初始化与空簇策略
+    domain: machine_learning_math
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    skills:
+    - skill.machine_learning_math.linear_algebra
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[N,D]、给定 centers[K,D]，1≤K≤N，max_iter≥1，tol≥0。返回 (labels[N], centers[K,D], inertia)。距离采用平方欧氏距离，同分取较小簇
+      ID；空簇保留旧中心。每轮分配后更新非空簇均值；最大中心位移≤tol 或达到上限时停止。必须用最终中心重算标签和 inertia。允许基本 NumPy，禁止 sklearn。时间 O(I N K
+      D)，距离矩阵空间 O(NK)。例：[0,2,10,12]、初始中心 [0,10] → [1,11]，inertia=4。
+    one_liner: 独立实现 kmeans，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 分配每个点到最近中心；按簇累计坐标和与计数；非空簇更新均值，空簇保留；中心最大位移小于 tol 或标签不变时停止。结束后用最终中心再分配一次 labels，并重算 inertia，避免返回“旧标签、新中心”的不一致结果。
+    derivation_or_example:
+    - 一维 `[0,2,10,12]`、初始 `[0,10]` 得中心 `[1,11]`、inertia=4；全部点相同仍应有限；构造 K 个初始中心中有永远无人分配的中心，检查零计数不除零。比较不同实现时先固定初始中心与终止规则，不能只给相同随机
+      seed 就假设流程一致。
+    answer_outline:
+    - 分配每个点到最近中心；按簇累计坐标和与计数；非空簇更新均值，空簇保留；中心最大位移小于 tol 或标签不变时停止。结束后用最终中心再分配一次 labels，并重算 inertia，避免返回“旧标签、新中心”的不一致结果。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 空簇保留旧中心与重定位是同一算法吗？
+    - 为什么返回前要用最终中心重分配标签？
+    - 距离展开公式何时可能出现微小负数？
+    - 相同 seed 是否足以保证不同库得到同样聚类？
+    pitfalls:
+    - 忽略本题约定：空簇保留旧中心与重定位是同一算法吗？
+    - 只背结论而无法解释反例：为什么返回前要用最终中心重分配标签？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[N,D]、给定 centers[K,D]，1≤K≤N，max_iter≥1，tol≥0。返回 (labels[N], centers[K,D], inertia)。距离采用平方欧氏距离，同分取较小簇
+        ID；空簇保留旧中心。每轮分配后更新非空簇均值；最大中心位移≤tol 或达到上限时停止。必须用最终中心重算标签和 inertia。允许基本 NumPy，禁止 sklearn。时间 O(I N
+        K D)，距离矩阵空间 O(NK)。例：[0,2,10,12]、初始中心 [0,10] → [1,11]，inertia=4。
+      output: 以 TML-004 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: kmeans
+      framework: numpy
+    test_focus:
+    - 一维 `[0,2,10,12]`、初始 `[0,10]` 得中心 `[1,11]`、inertia=4；全部点相同仍应有限；构造 K 个初始中心中有永远无人分配的中心，检查零计数不除零。比较不同实现时先固定初始中心与终止规则，不能只给相同随机
+      seed 就假设流程一致。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 一维 `[0,2,10,12]`、初始 `[0,10]` 得中心 `[1,11]`、inertia=4；全部点相同仍应有限；构造 K 个初始中心中有永远无人分配的中心，检查零计数不除零。比较不同实现时先固定初始中心与终止规则，不能只给相同随机
+      seed 就假设流程一致。
+    solution_direction:
+    - 分配每个点到最近中心；按簇累计坐标和与计数；非空簇更新均值，空簇保留；中心最大位移小于 tol 或标签不变时停止。结束后用最终中心再分配一次 labels，并重算 inertia，避免返回“旧标签、新中心”的不一致结果。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI13 在本项目映射为 TML-004；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-016
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - TML-004
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-014
+    kind: coding_prompt
+    title: AI14 · ROC-AUC：同分不能按输入顺序算输赢
+    domain: machine_learning_math
+    tracks:
+    - ai_foundation
+    - traditional_ml
+    - recommendation
+    skills:
+    - skill.machine_learning_math.statistics
+    - skill.evaluation_safety.benchmarks
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 输入一维等长二值 labels、有限 scores，高分代表正类。返回标量 AUC：正例分数高于负例记 1，同分记 0.5。只有一个类别或空输入抛 ValueError；时间 O(N
+      log N)，不能在实现中构造 N×N 配对矩阵。例 labels=[0,1]、scores=[0.5,0.5] → 0.5。
+    one_liner: 独立实现 binary_auc，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 按 score 从小到大排序，按同分值成组处理。假设本组正例 p、负例 n，已有更低分负例数 `neg_before`，本组贡献为 `p*neg_before + 0.5*p*n`；累加后除以 `N_pos*N_neg`。这是正例比分更高为赢、同分半赢的配对定义的高效实现。
+    derivation_or_example:
+    - 完美排序=1、完全反序=0、全同分=0.5；`labels=[0,1],scores=[0.5,0.5]` 必须为0.5；改变同分样本原始顺序不改变结果；小 N 时用全配对 `O(N²)` 参考校验。不要拿阈值后的
+      0/1 预测代替连续分数。
+    answer_outline:
+    - 按 score 从小到大排序，按同分值成组处理。假设本组正例 p、负例 n，已有更低分负例数 `neg_before`，本组贡献为 `p*neg_before + 0.5*p*n`；累加后除以 `N_pos*N_neg`。这是正例比分更高为赢、同分半赢的配对定义的高效实现。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 同分为何应算半赢而非按输入顺序判胜负？
+    - 仅一类标签为何不能自动补成 AUC=0.5？
+    - batch AUC 平均为什么通常不等于全局 AUC？
+    - 类别不均衡时还需要查看哪些 PR 指标？
+    pitfalls:
+    - 忽略本题约定：同分为何应算半赢而非按输入顺序判胜负？
+    - 只背结论而无法解释反例：仅一类标签为何不能自动补成 AUC=0.5？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 输入一维等长二值 labels、有限 scores，高分代表正类。返回标量 AUC：正例分数高于负例记 1，同分记 0.5。只有一个类别或空输入抛 ValueError；时间 O(N
+        log N)，不能在实现中构造 N×N 配对矩阵。例 labels=[0,1]、scores=[0.5,0.5] → 0.5。
+      output: 以 LOSS-010 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: binary_auc
+      framework: numpy
+    test_focus:
+    - 完美排序=1、完全反序=0、全同分=0.5；`labels=[0,1],scores=[0.5,0.5]` 必须为0.5；改变同分样本原始顺序不改变结果；小 N 时用全配对 `O(N²)` 参考校验。不要拿阈值后的
+      0/1 预测代替连续分数。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 完美排序=1、完全反序=0、全同分=0.5；`labels=[0,1],scores=[0.5,0.5]` 必须为0.5；改变同分样本原始顺序不改变结果；小 N 时用全配对 `O(N²)` 参考校验。不要拿阈值后的
+      0/1 预测代替连续分数。
+    solution_direction:
+    - 按 score 从小到大排序，按同分值成组处理。假设本组正例 p、负例 n，已有更低分负例数 `neg_before`，本组贡献为 `p*neg_before + 0.5*p*n`；累加后除以 `N_pos*N_neg`。这是正例比分更高为赢、同分半赢的配对定义的高效实现。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI14 在本项目映射为 LOSS-010；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-017
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - LOSS-010
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-015
+    kind: coding_prompt
+    title: AI15 · 可变长度序列的梯度累积
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - post_training
+    - systems
+    skills:
+    - skill.deep_learning.autograd
+    - skill.training_infra.distributed
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: loss_factories 是按顺序调用的零参数函数列表，每个返回当前 microbatch 的可反传 token loss 总和 S_i；token_counts 为对应非负有效数
+      n_i。在每个回调后立即 backward，再处理下个，返回本 rank 的归一化 loss 浮点数，不调用优化器、调度器或清零旧梯度。单进程目标 ΣS_i/Σn_i。global_token_count
+      若给出则为所有 rank 窗口的有效总数 N，DDP 梯度默认平均时，各 rank 反传 world_size*S_i/N；返回值仍为 ΣS_i/N。N=0 不调用回调、不反传、不更新任何状态，返回
+      0。仅 n_i=0 的回调跳过。计数和回调长度不匹配或负计数抛 ValueError。调用方在窗口前清零，窗口后 unscale/裁剪/step。额外保留一份 microbatch 图，不保留所有激活。
+    one_liner: 独立实现 accumulate_token_gradients，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 先获得整个更新窗口的总有效 token 数 N；每个 microbatch 反传 `Sᵢ/N`，窗口结束只 step 一次。也可先累计未归一化的梯度，再统一除 N，之后裁剪梯度。DDP 默认对梯度跨
+      rank 平均时，若 N 为全局 token 总数，每个 rank 本地反传的缩放需包含 R，才能抵消该平均；若框架已自动缩放，不得再乘一次。
+    derivation_or_example:
+    - n=[1,3]、各 microbatch token 平均 loss 为 [1,3]，正确总 loss=2.5，直接平均 microbatch loss 得2。相同线性模型和同一批 token，完整
+      batch 与不等长拆分后梯度近似一致。末尾不足 M 个 microbatch 的窗口也按实际 token 数归约；N=0 时跳过更新，不能触发 weight decay 或调度器步进。
+    answer_outline:
+    - 先获得整个更新窗口的总有效 token 数 N；每个 microbatch 反传 `Sᵢ/N`，窗口结束只 step 一次。也可先累计未归一化的梯度，再统一除 N，之后裁剪梯度。DDP 默认对梯度跨
+      rank 平均时，若 N 为全局 token 总数，每个 rank 本地反传的缩放需包含 R，才能抵消该平均；若框架已自动缩放，不得再乘一次。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 不等长 microbatch 的 loss 均值能直接平均吗？
+    - DDP 默认平均梯度时，全局 token 分母如何补偿？
+    - 为什么裁剪应在累计与 unscale 后进行？
+    - 空窗口为什么也不能触发 weight decay 或 scheduler？
+    pitfalls:
+    - 忽略本题约定：不等长 microbatch 的 loss 均值能直接平均吗？
+    - 只背结论而无法解释反例：DDP 默认平均梯度时，全局 token 分母如何补偿？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: loss_factories 是按顺序调用的零参数函数列表，每个返回当前 microbatch 的可反传 token loss 总和 S_i；token_counts 为对应非负有效数
+        n_i。在每个回调后立即 backward，再处理下个，返回本 rank 的归一化 loss 浮点数，不调用优化器、调度器或清零旧梯度。单进程目标 ΣS_i/Σn_i。global_token_count
+        若给出则为所有 rank 窗口的有效总数 N，DDP 梯度默认平均时，各 rank 反传 world_size*S_i/N；返回值仍为 ΣS_i/N。N=0 不调用回调、不反传、不更新任何状态，返回
+        0。仅 n_i=0 的回调跳过。计数和回调长度不匹配或负计数抛 ValueError。调用方在窗口前清零，窗口后 unscale/裁剪/step。额外保留一份 microbatch 图，不保留所有激活。
+      output: 以 TNS-014 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: accumulate_token_gradients
+      framework: pytorch
+    test_focus:
+    - n=[1,3]、各 microbatch token 平均 loss 为 [1,3]，正确总 loss=2.5，直接平均 microbatch loss 得2。相同线性模型和同一批 token，完整
+      batch 与不等长拆分后梯度近似一致。末尾不足 M 个 microbatch 的窗口也按实际 token 数归约；N=0 时跳过更新，不能触发 weight decay 或调度器步进。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - n=[1,3]、各 microbatch token 平均 loss 为 [1,3]，正确总 loss=2.5，直接平均 microbatch loss 得2。相同线性模型和同一批 token，完整
+      batch 与不等长拆分后梯度近似一致。末尾不足 M 个 microbatch 的窗口也按实际 token 数归约；N=0 时跳过更新，不能触发 weight decay 或调度器步进。
+    solution_direction:
+    - 先获得整个更新窗口的总有效 token 数 N；每个 microbatch 反传 `Sᵢ/N`，窗口结束只 step 一次。也可先累计未归一化的梯度，再统一除 N，之后裁剪梯度。DDP 默认对梯度跨
+      rank 平均时，若 N 为全局 token 总数，每个 rank 本地反传的缩放需包含 R，才能抵消该平均；若框架已自动缩放，不得再乘一次。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI15 在本项目映射为 TNS-014；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-018
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    - source_id: ai40-tech-019
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - TNS-014
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-016
+    kind: coding_prompt
+    title: AI16 · 流式精确 attention：保存统计量，不保存完整分数矩阵
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    skills:
+    - skill.llm_vlm.attention
+    - skill.inference_systems.kernels
+    priority: P1
+    difficulty:
+      concept: 4
+      implementation: 4
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 单头 Q[L,D]、K[S,D]、V[S,Dv]，float32/float64，S>0；block_size≥1。返回 [L,Dv]，与 softmax(QKᵀ/sqrt(D))V
+      一致。每次最多计算 L×block_size 分数，不创建完整 L×S 矩阵；禁止 SDPA、MHA。只要求无 mask 推理 forward，返回不携带 autograd 图；不得将其宣称为 FlashAttention
+      GPU kernel。维护在线最大值、分母和加权和，额外 O(LC+LDv)，算术 O(LS(D+Dv))。C=1、C>S、尾块不整除都须一致。
+    one_liner: 独立实现 streaming_attention，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 每个 query 行维护最大值 m、分母 l、未归一化输出向量 a。新块分数为 s，令 `m'=max(m,max(s))`、`α=exp(m-m')`、`p=exp(s-m')`；更新 `l'=α*l+sum(p)`、`a'=α*a+pV_block`。结束输出
+      a/l。关键是同时重缩放旧的分母和分子，不能把各块 softmax 输出简单平均。
+    derivation_or_example:
+    - C=1、C>S、S%C≠0 都应对齐完整 attention；把所有 key 行按相同排列重排 K/V 后输出不变；大幅放大但未导致点积溢出的 Q/K 仍不 NaN。空块不进入更新；若扩展 mask，须额外处理一个
+      query 在前几个块都无合法 key 时的 `-inf-(-inf)`。
+    answer_outline:
+    - 每个 query 行维护最大值 m、分母 l、未归一化输出向量 a。新块分数为 s，令 `m'=max(m,max(s))`、`α=exp(m-m')`、`p=exp(s-m')`；更新 `l'=α*l+sum(p)`、`a'=α*a+pV_block`。结束输出
+      a/l。关键是同时重缩放旧的分母和分子，不能把各块 softmax 输出简单平均。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 不同块的 softmax 输出为什么不能直接平均？
+    - 合并两个分片需要哪些最大值、分母和分子统计？
+    - 线性额外存储是否代表线性计算复杂度？
+    - 普通 autograd 逐块保留图为何不等于 FlashAttention 的显存保证？
+    pitfalls:
+    - 忽略本题约定：不同块的 softmax 输出为什么不能直接平均？
+    - 只背结论而无法解释反例：合并两个分片需要哪些最大值、分母和分子统计？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 单头 Q[L,D]、K[S,D]、V[S,Dv]，float32/float64，S>0；block_size≥1。返回 [L,Dv]，与 softmax(QKᵀ/sqrt(D))V
+        一致。每次最多计算 L×block_size 分数，不创建完整 L×S 矩阵；禁止 SDPA、MHA。只要求无 mask 推理 forward，返回不携带 autograd 图；不得将其宣称为
+        FlashAttention GPU kernel。维护在线最大值、分母和加权和，额外 O(LC+LDv)，算术 O(LS(D+Dv))。C=1、C>S、尾块不整除都须一致。
+      output: 以 ATT-015 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: streaming_attention
+      framework: pytorch
+    test_focus:
+    - C=1、C>S、S%C≠0 都应对齐完整 attention；把所有 key 行按相同排列重排 K/V 后输出不变；大幅放大但未导致点积溢出的 Q/K 仍不 NaN。空块不进入更新；若扩展 mask，须额外处理一个
+      query 在前几个块都无合法 key 时的 `-inf-(-inf)`。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - C=1、C>S、S%C≠0 都应对齐完整 attention；把所有 key 行按相同排列重排 K/V 后输出不变；大幅放大但未导致点积溢出的 Q/K 仍不 NaN。空块不进入更新；若扩展 mask，须额外处理一个
+      query 在前几个块都无合法 key 时的 `-inf-(-inf)`。
+    solution_direction:
+    - 每个 query 行维护最大值 m、分母 l、未归一化输出向量 a。新块分数为 s，令 `m'=max(m,max(s))`、`α=exp(m-m')`、`p=exp(s-m')`；更新 `l'=α*l+sum(p)`、`a'=α*a+pV_block`。结束输出
+      a/l。关键是同时重缩放旧的分母和分子，不能把各块 softmax 输出简单平均。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI16 在本项目映射为 ATT-015；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-020
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - ATT-015
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-017
+    kind: coding_prompt
+    title: AI17 · MoE Top-2：dispatch、combine 与梯度路径
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    skills:
+    - skill.llm_vlm.transformer
+    - skill.deep_learning.autograd
+    priority: P1
+    difficulty:
+      concept: 4
+      implementation: 4
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[N,D]、router_logits[N,E]，E≥2，experts 是 E 个可调用 f_e，输入 [n_e,D] 返回同形。选择两个不同专家，同分取较小 ID；仅在两个选中
+      logits 上 softmax。返回 (output[N,D], indices[N,2], gates[N,2])；每 token 两项输出需累加而非覆盖。无 capacity、不丢 token，不是
+      Switch Top-1。空专家不调用；被选 router logits、输入和专家参数须有正确梯度。排序 O(NE log E)，另含专家开销。
+    one_liner: 独立实现 top2_moe，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 找出 `[N,2]` 专家索引和权重，展平为 2N 条路由，按专家 gather 输入；运行专家，将 `gate*expert_output` 按原 token id 用 `index_add/scatter_add`
+      累加。切忌普通赋值覆盖同一 token 的另一专家贡献。离散 Top-k 索引不可导，但被选中 logits 的 gate 与专家参数仍能反传；不要 detach 权重。
+    derivation_or_example:
+    - 所有专家都是恒等映射时，Y=X；两个专家分别返回 x 和 2x 时，可手算 gate 加权结果；某专家没有 token 时不报错；路由 batch 打乱再恢复顺序后结果不变。对每个 token 的
+      gate 求和应为1，不因专家分组漏加。
+    answer_outline:
+    - 找出 `[N,2]` 专家索引和权重，展平为 2N 条路由，按专家 gather 输入；运行专家，将 `gate*expert_output` 按原 token id 用 `index_add/scatter_add`
+      累加。切忌普通赋值覆盖同一 token 的另一专家贡献。离散 Top-k 索引不可导，但被选中 logits 的 gate 与专家参数仍能反传；不要 detach 权重。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 为什么 index_add 比直接赋值更符合 combine 语义？
+    - top-k 索引不可导，哪些 router 参数仍会得到梯度？
+    - 没有分配 token 的专家应该如何处理？
+    - 加入 capacity 后丢弃策略与负载均衡分母如何变化？
+    pitfalls:
+    - 忽略本题约定：为什么 index_add 比直接赋值更符合 combine 语义？
+    - 只背结论而无法解释反例：top-k 索引不可导，哪些 router 参数仍会得到梯度？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[N,D]、router_logits[N,E]，E≥2，experts 是 E 个可调用 f_e，输入 [n_e,D] 返回同形。选择两个不同专家，同分取较小 ID；仅在两个选中
+        logits 上 softmax。返回 (output[N,D], indices[N,2], gates[N,2])；每 token 两项输出需累加而非覆盖。无 capacity、不丢 token，不是
+        Switch Top-1。空专家不调用；被选 router logits、输入和专家参数须有正确梯度。排序 O(NE log E)，另含专家开销。
+      output: 以 NNL-014 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: top2_moe
+      framework: pytorch
+    test_focus:
+    - 所有专家都是恒等映射时，Y=X；两个专家分别返回 x 和 2x 时，可手算 gate 加权结果；某专家没有 token 时不报错；路由 batch 打乱再恢复顺序后结果不变。对每个 token 的
+      gate 求和应为1，不因专家分组漏加。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 所有专家都是恒等映射时，Y=X；两个专家分别返回 x 和 2x 时，可手算 gate 加权结果；某专家没有 token 时不报错；路由 batch 打乱再恢复顺序后结果不变。对每个 token 的
+      gate 求和应为1，不因专家分组漏加。
+    solution_direction:
+    - 找出 `[N,2]` 专家索引和权重，展平为 2N 条路由，按专家 gather 输入；运行专家，将 `gate*expert_output` 按原 token id 用 `index_add/scatter_add`
+      累加。切忌普通赋值覆盖同一 token 的另一专家贡献。离散 Top-k 索引不可导，但被选中 logits 的 gate 与专家参数仍能反传；不要 detach 权重。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI17 在本项目映射为 NNL-014；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-021
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - NNL-014
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-018
+    kind: coding_prompt
+    title: AI18 · SwiGLU FFN：形状、门控与等参数预算
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - vlm_algorithm
+    skills:
+    - skill.deep_learning.neural_layers
+    - skill.llm_vlm.transformer
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[B,T,D]，w_gate/w_up[H,D]，w_down[D,H]，无 bias。输出 SiLU(X w_gateᵀ) ⊙ (X w_upᵀ) 再乘 w_downᵀ；SiLU(z)=z*sigmoid(z)。返回
+      FFN 增量 [B,T,D]，不自行加 residual。禁止调用现成 FFN；允许基础 sigmoid。保持三个权重与 X 梯度。参数 3DH，O(BTDH)。H≈8D/3 仅是与隐藏 4D 的
+      GELU FFN 等参数比较，不是固定模型规则。
+    one_liner: 独立实现 swiglu，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 两个独立输入投影得到 `[B,T,H]`，对 gate 分支激活后逐元素相乘，最后投影回 D。它在每个 token 上应用同一组权重，不能把 T 维混成注意力，也不能误写成每个位置有一套独立参数。
+    derivation_or_example:
+    - 任一输入投影矩阵全零时输出全零；只改变第 t 个 token 的输入，在本层内不会改变其他 token 的输出；批处理应与逐 token 循环一致。参数量为3DH；两层 GELU FFN 的隐藏维度4D时参数约8D²，等预算
+      SwiGLU 的 H≈8D/3，实际可因硬件对齐取整，不是所有模型都必须使用此数值。
+    answer_outline:
+    - 两个独立输入投影得到 `[B,T,H]`，对 gate 分支激活后逐元素相乘，最后投影回 D。它在每个 token 上应用同一组权重，不能把 T 维混成注意力，也不能误写成每个位置有一套独立参数。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - SiLU 与 sigmoid 有什么区别？
+    - 为什么等预算隐藏维度约是 8D/3，而不是固定 4D？
+    - 融合 gate/up 投影节省哪些开销？
+    - FFN 为什么不在同层混合不同 token 的信息？
+    pitfalls:
+    - 忽略本题约定：SiLU 与 sigmoid 有什么区别？
+    - 只背结论而无法解释反例：为什么等预算隐藏维度约是 8D/3，而不是固定 4D？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[B,T,D]，w_gate/w_up[H,D]，w_down[D,H]，无 bias。输出 SiLU(X w_gateᵀ) ⊙ (X w_upᵀ) 再乘 w_downᵀ；SiLU(z)=z*sigmoid(z)。返回
+        FFN 增量 [B,T,D]，不自行加 residual。禁止调用现成 FFN；允许基础 sigmoid。保持三个权重与 X 梯度。参数 3DH，O(BTDH)。H≈8D/3 仅是与隐藏 4D
+        的 GELU FFN 等参数比较，不是固定模型规则。
+      output: 以 NNL-005 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: swiglu
+      framework: pytorch
+    test_focus:
+    - 任一输入投影矩阵全零时输出全零；只改变第 t 个 token 的输入，在本层内不会改变其他 token 的输出；批处理应与逐 token 循环一致。参数量为3DH；两层 GELU FFN 的隐藏维度4D时参数约8D²，等预算
+      SwiGLU 的 H≈8D/3，实际可因硬件对齐取整，不是所有模型都必须使用此数值。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 任一输入投影矩阵全零时输出全零；只改变第 t 个 token 的输入，在本层内不会改变其他 token 的输出；批处理应与逐 token 循环一致。参数量为3DH；两层 GELU FFN 的隐藏维度4D时参数约8D²，等预算
+      SwiGLU 的 H≈8D/3，实际可因硬件对齐取整，不是所有模型都必须使用此数值。
+    solution_direction:
+    - 两个独立输入投影得到 `[B,T,H]`，对 gate 分支激活后逐元素相乘，最后投影回 D。它在每个 token 上应用同一组权重，不能把 T 维混成注意力，也不能误写成每个位置有一套独立参数。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI18 在本项目映射为 NNL-005；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-022
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - NNL-005
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-019
+    kind: coding_prompt
+    title: AI19 · 带确定性 tie-break 的最小 BPE
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - ai_foundation
+    skills:
+    - skill.llm_vlm.tokenization
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 'vocab 是 {tuple[str,...]: 正整数词频}，允许空 tuple；num_merges≥0。返回 (merges, encoded_vocab)：merges 是依次合并的字符串
+      pair 列表，encoded_vocab 为合并后的词频字典（碰撞需累加）。每轮统计相邻 pair 的加权次数，同分按 pair 字典序；从左向右非重叠合并，没 pair 时终止。同时实现 encode_bpe(tokens,
+      merges)→tuple，推理按训练得到的 merge 次序，不重新统计。例 aaaa 一轮变 (aa,aa)，不是 aaa+a。全扫描约 O(MN)，不要求 byte-level 或工业 tokenizer。'
+    one_liner: 独立实现 train_bpe，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 频次应乘词频；`aaaa` 中统计相邻 `aa` 有 3 次，但这一轮只能执行 2 次不重叠合并。以初始不同词条的 token 总数为 `N`、迭代次数为 `M`，全扫描教学版在 token 哈希/拼接视为常数时上界
+      `O(MN)` 时间、`O(N+M)` 空间；真实字符串操作还要计算字符长度。无 pair 时提前终止。
+    derivation_or_example:
+    - 词条 `("a","a","a","a")`、频次 1，一轮结果为 `("aa","aa")`；空词条不报错；打乱输入词条顺序不改变 tie-break 结果；merges 保存再加载后分词一致。
+    answer_outline:
+    - 频次应乘词频；`aaaa` 中统计相邻 `aa` 有 3 次，但这一轮只能执行 2 次不重叠合并。以初始不同词条的 token 总数为 `N`、迭代次数为 `M`，全扫描教学版在 token 哈希/拼接视为常数时上界
+      `O(MN)` 时间、`O(N+M)` 空间；真实字符串操作还要计算字符长度。无 pair 时提前终止。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - aaaa 的 pair 出现次数与一次实际合并次数为何不同？
+    - 推理时为什么不能重新用测试输入词频训练 merges？
+    - word frequency 与 tie-break 如何保证可重复？
+    - byte-level 编码能覆盖未见 Unicode 字符的什么部分？
+    pitfalls:
+    - 忽略本题约定：aaaa 的 pair 出现次数与一次实际合并次数为何不同？
+    - 只背结论而无法解释反例：推理时为什么不能重新用测试输入词频训练 merges？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 'vocab 是 {tuple[str,...]: 正整数词频}，允许空 tuple；num_merges≥0。返回 (merges, encoded_vocab)：merges 是依次合并的字符串
+        pair 列表，encoded_vocab 为合并后的词频字典（碰撞需累加）。每轮统计相邻 pair 的加权次数，同分按 pair 字典序；从左向右非重叠合并，没 pair 时终止。同时实现
+        encode_bpe(tokens, merges)→tuple，推理按训练得到的 merge 次序，不重新统计。例 aaaa 一轮变 (aa,aa)，不是 aaa+a。全扫描约 O(MN)，不要求
+        byte-level 或工业 tokenizer。'
+      output: 以 TOK-001 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: train_bpe
+      framework: stdlib
+    test_focus:
+    - 词条 `("a","a","a","a")`、频次 1，一轮结果为 `("aa","aa")`；空词条不报错；打乱输入词条顺序不改变 tie-break 结果；merges 保存再加载后分词一致。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 词条 `("a","a","a","a")`、频次 1，一轮结果为 `("aa","aa")`；空词条不报错；打乱输入词条顺序不改变 tie-break 结果；merges 保存再加载后分词一致。
+    solution_direction:
+    - 频次应乘词频；`aaaa` 中统计相邻 `aa` 有 3 次，但这一轮只能执行 2 次不重叠合并。以初始不同词条的 token 总数为 `N`、迭代次数为 `M`，全扫描教学版在 token 哈希/拼接视为常数时上界
+      `O(MN)` 时间、`O(N+M)` 空间；真实字符串操作还要计算字符长度。无 pair 时提前终止。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI19 在本项目映射为 TOK-001；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-023
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - TOK-001
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-020
+    kind: coding_prompt
+    title: AI20 · AdamW 单步更新与恢复状态
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.deep_learning.optimizers
+    - skill.training_infra.checkpointing
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 沿用 OPT-005 的参数列表和逐参数 states 接口。独立权重衰减、不修改输入状态；缺失 grad 不更新参数或 step。复测保存并重载 m、v、step，验证下一步等价。
+    one_liner: 独立实现 adamw_step，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 先更新 `m=beta1*m+(1-beta1)*g`、`v=beta2*v+(1-beta2)*g*g`；用 `1-beta1t`、`1-beta2t` 做偏差修正，再执行 `theta_new=(1-lr*wd)*theta-lr*m_hat/(sqrt(v_hat)+eps)`。权重衰减独立于矩估计，不要把
+      `wd*theta` 加进梯度再宣称这是同一算法。PyTorch AdamW 官方源码
+    derivation_or_example:
+    - '`beta1=beta2=0, eps=0, theta=2, g=3, lr=0.1, wd=0.2` 时新参数为 `1.86`；`g=0,m=v=0,eps>0` 时只产生衰减；保存参数与
+      `m,v,t` 后恢复，后续更新应与不中断的参考一致。'
+    answer_outline:
+    - 先更新 `m=beta1*m+(1-beta1)*g`、`v=beta2*v+(1-beta2)*g*g`；用 `1-beta1t`、`1-beta2t` 做偏差修正，再执行 `theta_new=(1-lr*wd)*theta-lr*m_hat/(sqrt(v_hat)+eps)`。权重衰减独立于矩估计，不要把
+      `wd*theta` 加进梯度再宣称这是同一算法。PyTorch AdamW 官方源码
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 为什么 weight decay 不应进入 Adam 的矩估计？
+    - grad=None 与显式零梯度是否等价？
+    - 仅恢复模型权重为什么不能复现下一步？
+    - FP16 中原地 merge/unmerge 或优化器更新能否逐 bit 可逆？
+    pitfalls:
+    - 忽略本题约定：为什么 weight decay 不应进入 Adam 的矩估计？
+    - 只背结论而无法解释反例：grad=None 与显式零梯度是否等价？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 沿用 OPT-005 的参数列表和逐参数 states 接口。独立权重衰减、不修改输入状态；缺失 grad 不更新参数或 step。复测保存并重载 m、v、step，验证下一步等价。
+      output: 以 OPT-005 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: adamw_step
+      framework: pytorch
+    test_focus:
+    - '`beta1=beta2=0, eps=0, theta=2, g=3, lr=0.1, wd=0.2` 时新参数为 `1.86`；`g=0,m=v=0,eps>0` 时只产生衰减；保存参数与
+      `m,v,t` 后恢复，后续更新应与不中断的参考一致。'
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - '`beta1=beta2=0, eps=0, theta=2, g=3, lr=0.1, wd=0.2` 时新参数为 `1.86`；`g=0,m=v=0,eps>0` 时只产生衰减；保存参数与
+      `m,v,t` 后恢复，后续更新应与不中断的参考一致。'
+    solution_direction:
+    - 先更新 `m=beta1*m+(1-beta1)*g`、`v=beta2*v+(1-beta2)*g*g`；用 `1-beta1t`、`1-beta2t` 做偏差修正，再执行 `theta_new=(1-lr*wd)*theta-lr*m_hat/(sqrt(v_hat)+eps)`。权重衰减独立于矩估计，不要把
+      `wd*theta` 加进梯度再宣称这是同一算法。PyTorch AdamW 官方源码
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI20 在本项目映射为 OPT-005；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-024
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - OPT-005
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-021
+    kind: coding_prompt
+    title: AI21 · Softmax 前向与反向：不构造 Jacobian
+    domain: deep_learning
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[B,D]、upstream[B,D] 为非空 float64，沿最后一维计算 softmax 和向量—Jacobian 乘积。返回 (probabilities, dx)，都与 X
+      同 shape。不构造 [B,D,D] Jacobian，不调用 autograd。前后向 O(BD)。例 X=[[1000,1000]], upstream=[[1,0]] → P=[[0.5,0.5]],
+      dX=[[0.25,-0.25]]。
+    one_liner: 独立实现 softmax_backward，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 每行减最大值后指数归一化得到 `P`。由链式法则得到 `dX=P*(G-sum(G*P,axis=-1,keepdims=True))`。这是向量—Jacobian 乘积，无需显式创建 `[B,D,D]`
+      矩阵。前向减最大值改善指数稳定性；已经由输入 dtype 丢失的小差异无法恢复。Stanford CS231n：Softmax 分类器
+    derivation_or_example:
+    - 每行概率和为 1、每行 `dX` 之和约为 0；`G` 全一时 `dX≈0`；`X=[1000,1000]` 输出 `[0.5,0.5]`；用 FP64 中心差分验证标量函数 `sum(softmax(X)*G)`
+      的梯度。
+    answer_outline:
+    - 每行减最大值后指数归一化得到 `P`。由链式法则得到 `dX=P*(G-sum(G*P,axis=-1,keepdims=True))`。这是向量—Jacobian 乘积，无需显式创建 `[B,D,D]`
+      矩阵。前向减最大值改善指数稳定性；已经由输入 dtype 丢失的小差异无法恢复。Stanford CS231n：Softmax 分类器
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 怎样用向量—Jacobian 乘积避免构造三维 Jacobian？
+    - 为什么梯度每行之和接近零？
+    - P-onehot 适用于任意上游损失吗？
+    - 加均值 CE 后 batch 分母应出现几次？
+    pitfalls:
+    - 忽略本题约定：怎样用向量—Jacobian 乘积避免构造三维 Jacobian？
+    - 只背结论而无法解释反例：为什么梯度每行之和接近零？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[B,D]、upstream[B,D] 为非空 float64，沿最后一维计算 softmax 和向量—Jacobian 乘积。返回 (probabilities, dx)，都与
+        X 同 shape。不构造 [B,D,D] Jacobian，不调用 autograd。前后向 O(BD)。例 X=[[1000,1000]], upstream=[[1,0]] → P=[[0.5,0.5]],
+        dX=[[0.25,-0.25]]。
+      output: 以 LOSS-016 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: softmax_backward
+      framework: numpy
+    test_focus:
+    - 每行概率和为 1、每行 `dX` 之和约为 0；`G` 全一时 `dX≈0`；`X=[1000,1000]` 输出 `[0.5,0.5]`；用 FP64 中心差分验证标量函数 `sum(softmax(X)*G)`
+      的梯度。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 每行概率和为 1、每行 `dX` 之和约为 0；`G` 全一时 `dX≈0`；`X=[1000,1000]` 输出 `[0.5,0.5]`；用 FP64 中心差分验证标量函数 `sum(softmax(X)*G)`
+      的梯度。
+    solution_direction:
+    - 每行减最大值后指数归一化得到 `P`。由链式法则得到 `dX=P*(G-sum(G*P,axis=-1,keepdims=True))`。这是向量—Jacobian 乘积，无需显式创建 `[B,D,D]`
+      矩阵。前向减最大值改善指数稳定性；已经由输入 dtype 丢失的小差异无法恢复。Stanford CS231n：Softmax 分类器
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI21 在本项目映射为 LOSS-016；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-025
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - LOSS-016
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-022
+    kind: coding_prompt
+    title: AI22 · NumPy 手写两层 MLP 的完整反向传播
+    domain: deep_learning
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    priority: P1
+    difficulty:
+      concept: 4
+      implementation: 4
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: parameters=(W1[D,H], b1[H], W2[H,C], b2[C])；X[N,D]，labels[N] 为合法整数。网络为线性→ReLU→线性，返回 (平均交叉熵 loss,
+      (dW1,db1,dW2,db2))，ReLU 在 0 导数取 0。禁止 autograd；梯度必须基于更新前参数；不原地更新。时间 O(NDH+NHC)，缓存 O(NH+NC)。所有 logits
+      都为 0 时 loss=log(C)。
+    one_liner: 独立实现 mlp_loss_grads，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 权重分别为 `[D,H]`、`[H,C]`。先缓存第一层预激活 `Z1` 与输出 `A1`；`dZ2=(P-Y)/N`，`dW2=A1.T@dZ2`，`db2=sum(dZ2,axis=0)`；`dZ1=(dZ2@W2.T)*(Z1>0)`，再求第一层梯度。所有梯度都用更新前的权重计算，最后统一更新。Stanford
+      CS231n：计算图与反向传播
+    derivation_or_example:
+    - 每个梯度与参数 shape 相同；用 FP64 中心差分检查所有参数，避开 ReLU 的零点；固定的小分类样本训练后 loss 下降。ReLU 在零点的导数本题取 0。不要在每层都额外除 N，平均
+      loss 的缩放只应传播一次。
+    answer_outline:
+    - 权重分别为 `[D,H]`、`[H,C]`。先缓存第一层预激活 `Z1` 与输出 `A1`；`dZ2=(P-Y)/N`，`dW2=A1.T@dZ2`，`db2=sum(dZ2,axis=0)`；`dZ1=(dZ2@W2.T)*(Z1>0)`，再求第一层梯度。所有梯度都用更新前的权重计算，最后统一更新。Stanford
+      CS231n：计算图与反向传播
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 为什么所有层梯度应使用更新前权重？
+    - ReLU 在零点做有限差分有什么风险？
+    - 复制整个 batch 后均值 loss 梯度应如何变化？
+    - 共享权重在两条路径上使用时梯度如何组合？
+    pitfalls:
+    - 忽略本题约定：为什么所有层梯度应使用更新前权重？
+    - 只背结论而无法解释反例：ReLU 在零点做有限差分有什么风险？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: parameters=(W1[D,H], b1[H], W2[H,C], b2[C])；X[N,D]，labels[N] 为合法整数。网络为线性→ReLU→线性，返回 (平均交叉熵
+        loss, (dW1,db1,dW2,db2))，ReLU 在 0 导数取 0。禁止 autograd；梯度必须基于更新前参数；不原地更新。时间 O(NDH+NHC)，缓存 O(NH+NC)。所有
+        logits 都为 0 时 loss=log(C)。
+      output: 以 TML-006 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: mlp_loss_grads
+      framework: numpy
+    test_focus:
+    - 每个梯度与参数 shape 相同；用 FP64 中心差分检查所有参数，避开 ReLU 的零点；固定的小分类样本训练后 loss 下降。ReLU 在零点的导数本题取 0。不要在每层都额外除 N，平均
+      loss 的缩放只应传播一次。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 每个梯度与参数 shape 相同；用 FP64 中心差分检查所有参数，避开 ReLU 的零点；固定的小分类样本训练后 loss 下降。ReLU 在零点的导数本题取 0。不要在每层都额外除 N，平均
+      loss 的缩放只应传播一次。
+    solution_direction:
+    - 权重分别为 `[D,H]`、`[H,C]`。先缓存第一层预激活 `Z1` 与输出 `A1`；`dZ2=(P-Y)/N`，`dW2=A1.T@dZ2`，`db2=sum(dZ2,axis=0)`；`dZ1=(dZ2@W2.T)*(Z1>0)`，再求第一层梯度。所有梯度都用更新前的权重计算，最后统一更新。Stanford
+      CS231n：计算图与反向传播
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI22 在本项目映射为 TML-006；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-026
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - TML-006
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-023
+    kind: coding_prompt
+    title: AI23 · 逻辑回归：稳定 BCE 与一个完整训练 step
+    domain: deep_learning
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[N,D]、labels[N] 为 0/1、weight[D]、bias 标量。输出 (loss,dw,db,new_weight,new_bias)。loss 为平均 BCE 加
+      l2*||weight||²/2，bias 不正则化；lr,l2≥0。稳定处理 ±1000 logits，不调用 sklearn；梯度基于旧参数。只执行一步，不要求线性可分无正则问题收敛到有限权重。O(ND)。
+    one_liner: 独立实现 logistic_step，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - '`z=X@w+b`；每样本损失用 `max(z,0)-y*z+log1p(exp(-abs(z)))`，避免先算概率再取 log。`dw=X.T@(sigmoid(z)-y)/N+lambda*w`，`db=mean(sigmoid(z)-y)`。sigmoid
+      用按正负分支的稳定实现。scikit-learn：逻辑回归目标'
+    derivation_or_example:
+    - '`z=0` 时数据损失 `log(2)`；`z=1000,y=1` 时损失趋近 0，`z=1000,y=0` 时约为 1000；有限差分与解析梯度相符。做实现对照时固定正则系数、损失归约和 bias
+      规则，不能仅比较参数名称。'
+    answer_outline:
+    - '`z=X@w+b`；每样本损失用 `max(z,0)-y*z+log1p(exp(-abs(z)))`，避免先算概率再取 log。`dw=X.T@(sigmoid(z)-y)/N+lambda*w`，`db=mean(sigmoid(z)-y)`。sigmoid
+      用按正负分支的稳定实现。scikit-learn：逻辑回归目标'
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 为什么 sigmoid 后取 log 在极端 logit 下不稳定？
+    - 正则项为何不包含 bias？
+    - 无正则的线性可分数据是否一定有有限最优权重？
+    - 加入样本权重后损失分母如何定义？
+    pitfalls:
+    - 忽略本题约定：为什么 sigmoid 后取 log 在极端 logit 下不稳定？
+    - 只背结论而无法解释反例：正则项为何不包含 bias？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[N,D]、labels[N] 为 0/1、weight[D]、bias 标量。输出 (loss,dw,db,new_weight,new_bias)。loss 为平均 BCE 加
+        l2*||weight||²/2，bias 不正则化；lr,l2≥0。稳定处理 ±1000 logits，不调用 sklearn；梯度基于旧参数。只执行一步，不要求线性可分无正则问题收敛到有限权重。O(ND)。
+      output: 以 TML-001 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: logistic_step
+      framework: numpy
+    test_focus:
+    - '`z=0` 时数据损失 `log(2)`；`z=1000,y=1` 时损失趋近 0，`z=1000,y=0` 时约为 1000；有限差分与解析梯度相符。做实现对照时固定正则系数、损失归约和 bias
+      规则，不能仅比较参数名称。'
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - '`z=0` 时数据损失 `log(2)`；`z=1000,y=1` 时损失趋近 0，`z=1000,y=0` 时约为 1000；有限差分与解析梯度相符。做实现对照时固定正则系数、损失归约和 bias
+      规则，不能仅比较参数名称。'
+    solution_direction:
+    - '`z=X@w+b`；每样本损失用 `max(z,0)-y*z+log1p(exp(-abs(z)))`，避免先算概率再取 log。`dw=X.T@(sigmoid(z)-y)/N+lambda*w`，`db=mean(sigmoid(z)-y)`。sigmoid
+      用按正负分支的稳定实现。scikit-learn：逻辑回归目标'
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI23 在本项目映射为 TML-001；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-027
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - TML-001
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-024
+    kind: coding_prompt
+    title: AI24 · BatchNorm：训练与推理两套统计量
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - computer_vision
+    - vlm_algorithm
+    skills:
+    - skill.deep_learning.neural_layers
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[N,C,H,W] 或 X[N,C]，参数和 running stats[C]。返回 (output, new_mean, new_var)，不原地改输入 running stats。训练前向用每通道总体方差，running
+      variance 更新使用无偏方差 M/(M−1)，M=N*H*W（2D 时 M=N），训练 M>1。更新 (1-m)*old+m*batch_stat，新统计 detach。eval 使用输入
+      running stats、不更新、不依赖同批其他样本。0<m≤1，eps>0；保持参数/输入梯度。O(NCHW)，状态 O(C)。禁止 BatchNorm 库层。
+    one_liner: 独立实现 batch_norm，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 每通道在 `N,H,W` 上统计。若对齐 PyTorch 的这一接口，训练前向用总体方差；更新 running variance 使用无偏估计。令每通道样本数 `M=NHW`，无偏方差为总体方差乘
+      `M/(M-1)`，基础题训练时要求 M>1。运行统计按 `(1-m)*old+m*current` 更新；eval 使用保存的统计，不再更新。PyTorch BatchNorm2d
+    derivation_or_example:
+    - 手算一个通道的两个元素，分别检查本批归一化输出和 running variance；eval 中把同一个样本放入不同 batch，输出不应因同批其他样本变化；检查 gamma/beta 的广播轴。
+    answer_outline:
+    - 每通道在 `N,H,W` 上统计。若对齐 PyTorch 的这一接口，训练前向用总体方差；更新 running variance 使用无偏估计。令每通道样本数 `M=NHW`，无偏方差为总体方差乘
+      `M/(M-1)`，基础题训练时要求 M>1。运行统计按 `(1-m)*old+m*current` 更新；eval 使用保存的统计，不再更新。PyTorch BatchNorm2d
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 训练归一化和 running variance 为什么使用不同方差估计？
+    - eval 输出应否依赖同批其他样本？
+    - 梯度累积会增加 BN 的统计 batch 吗？
+    - SyncBN 为什么不能只平均各卡的方差？
+    pitfalls:
+    - 忽略本题约定：训练归一化和 running variance 为什么使用不同方差估计？
+    - 只背结论而无法解释反例：eval 输出应否依赖同批其他样本？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[N,C,H,W] 或 X[N,C]，参数和 running stats[C]。返回 (output, new_mean, new_var)，不原地改输入 running stats。训练前向用每通道总体方差，running
+        variance 更新使用无偏方差 M/(M−1)，M=N*H*W（2D 时 M=N），训练 M>1。更新 (1-m)*old+m*batch_stat，新统计 detach。eval 使用输入
+        running stats、不更新、不依赖同批其他样本。0<m≤1，eps>0；保持参数/输入梯度。O(NCHW)，状态 O(C)。禁止 BatchNorm 库层。
+      output: 以 NNL-016 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: batch_norm
+      framework: pytorch
+    test_focus:
+    - 手算一个通道的两个元素，分别检查本批归一化输出和 running variance；eval 中把同一个样本放入不同 batch，输出不应因同批其他样本变化；检查 gamma/beta 的广播轴。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 手算一个通道的两个元素，分别检查本批归一化输出和 running variance；eval 中把同一个样本放入不同 batch，输出不应因同批其他样本变化；检查 gamma/beta 的广播轴。
+    solution_direction:
+    - 每通道在 `N,H,W` 上统计。若对齐 PyTorch 的这一接口，训练前向用总体方差；更新 running variance 使用无偏估计。令每通道样本数 `M=NHW`，无偏方差为总体方差乘
+      `M/(M-1)`，基础题训练时要求 M>1。运行统计按 `(1-m)*old+m*current` 更新；eval 使用保存的统计，不再更新。PyTorch BatchNorm2d
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI24 在本项目映射为 NNL-016；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-028
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - NNL-016
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-025
+    kind: coding_prompt
+    title: AI25 · 二维卷积：先写对，再考虑 im2col
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - computer_vision
+    - vlm_algorithm
+    skills:
+    - skill.deep_learning.neural_layers
+    - skill.llm_vlm.vlm_architecture
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[N,Cin,H,W]、weight[Cout,Cin,Kh,Kw]，可选 bias[Cout]；整数 stride≥1、padding≥0，dilation=groups=1。深度学习互相关，不翻转核。输出高
+      floor((H+2p-Kh)/s)+1，宽同理；无合法输出时 ValueError。保持输入与核梯度，不调用 torch conv/Conv2d。可循环/切片；时间 O(N Cout Hout
+      Wout Cin Kh Kw)。[[1,2,3],[4,5,6],[7,8,9]] 与全一 2×2 核 → [[12,16],[24,28]]。
+    one_liner: 独立实现 conv2d，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - '`Hout=floor((H+2p-Kh)/s)+1`，宽度同理；补零后逐窗口、逐输出通道与核乘加。深度学习接口通常执行互相关，不翻转卷积核。PyTorch Conv2d'
+    derivation_or_example:
+    - 单通道 `[[1,2,3],[4,5,6],[7,8,9]]` 与全一 `2×2` 核、stride=1、padding=0，输出 `[[12,16],[24,28]]`；检查多输入通道求和、边界
+      padding 和 stride>1。核无法覆盖任何合法输出时应明确报错。
+    answer_outline:
+    - '`Hout=floor((H+2p-Kh)/s)+1`，宽度同理；补零后逐窗口、逐输出通道与核乘加。深度学习接口通常执行互相关，不翻转卷积核。PyTorch Conv2d'
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 框架卷积为何通常不翻转卷积核？
+    - stride/padding 改变输出尺寸的边界是什么？
+    - 重叠窗口反传时输入梯度应累加还是覆盖？
+    - im2col 用哪些额外空间换取 GEMM？
+    pitfalls:
+    - 忽略本题约定：框架卷积为何通常不翻转卷积核？
+    - 只背结论而无法解释反例：stride/padding 改变输出尺寸的边界是什么？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[N,Cin,H,W]、weight[Cout,Cin,Kh,Kw]，可选 bias[Cout]；整数 stride≥1、padding≥0，dilation=groups=1。深度学习互相关，不翻转核。输出高
+        floor((H+2p-Kh)/s)+1，宽同理；无合法输出时 ValueError。保持输入与核梯度，不调用 torch conv/Conv2d。可循环/切片；时间 O(N Cout Hout
+        Wout Cin Kh Kw)。[[1,2,3],[4,5,6],[7,8,9]] 与全一 2×2 核 → [[12,16],[24,28]]。
+      output: 以 NNL-009 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: conv2d
+      framework: pytorch
+    test_focus:
+    - 单通道 `[[1,2,3],[4,5,6],[7,8,9]]` 与全一 `2×2` 核、stride=1、padding=0，输出 `[[12,16],[24,28]]`；检查多输入通道求和、边界
+      padding 和 stride>1。核无法覆盖任何合法输出时应明确报错。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 单通道 `[[1,2,3],[4,5,6],[7,8,9]]` 与全一 `2×2` 核、stride=1、padding=0，输出 `[[12,16],[24,28]]`；检查多输入通道求和、边界
+      padding 和 stride>1。核无法覆盖任何合法输出时应明确报错。
+    solution_direction:
+    - '`Hout=floor((H+2p-Kh)/s)+1`，宽度同理；补零后逐窗口、逐输出通道与核乘加。深度学习接口通常执行互相关，不翻转卷积核。PyTorch Conv2d'
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI25 在本项目映射为 NNL-009；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-029
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - NNL-009
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-026
+    kind: coding_prompt
+    title: AI26 · IoU 与 NMS：坐标、同分和阈值都要写清
+    domain: machine_learning_math
+    tracks:
+    - computer_vision
+    - vlm_algorithm
+    skills:
+    - skill.machine_learning_math.linear_algebra
+    - skill.llm_vlm.vlm_architecture
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: boxes[N,4] 是连续 xyxy 坐标，x2≥x1,y2≥y1；scores[N]。返回保留原下标的 int64 数组，按选择顺序排列。单类别 hard NMS，IoU 严格大于
+      threshold 才抑制，0≤threshold≤1；分数同分优先较小原下标；退化框 IoU=0；空 (0,4) 输入返回空。面积不加 1。最坏 O(N²) 时间、O(N) 辅助空间。
+    one_liner: 独立实现 nms，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 交集边长取 `max(0,min(right)-max(left))`；面积没有 `+1`；按分数排序，保留最高项并过滤其余高重叠框，直到候选耗尽。本题固定 tie 策略，官方实现不保证 CPU/GPU
+      同分时选择相同框。Torchvision NMS
+    derivation_or_example:
+    - 完全重叠且不同分只保留高分框；不相交都保留；空输入返回空；相同分数稳定；IoU 恰好等于阈值不抑制。多类别版本应逐类处理，不能让不同类别互相压掉。
+    answer_outline:
+    - 交集边长取 `max(0,min(right)-max(left))`；面积没有 `+1`；按分数排序，保留最高项并过滤其余高重叠框，直到候选耗尽。本题固定 tie 策略，官方实现不保证 CPU/GPU
+      同分时选择相同框。Torchvision NMS
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 连续坐标面积是否要加 1？
+    - IoU 等于阈值时保留还是抑制？
+    - 不同类别可否直接互相执行 NMS？
+    - Soft-NMS 改分后为什么可能要重新确定顺序？
+    pitfalls:
+    - 忽略本题约定：连续坐标面积是否要加 1？
+    - 只背结论而无法解释反例：IoU 等于阈值时保留还是抑制？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: boxes[N,4] 是连续 xyxy 坐标，x2≥x1,y2≥y1；scores[N]。返回保留原下标的 int64 数组，按选择顺序排列。单类别 hard NMS，IoU 严格大于
+        threshold 才抑制，0≤threshold≤1；分数同分优先较小原下标；退化框 IoU=0；空 (0,4) 输入返回空。面积不加 1。最坏 O(N²) 时间、O(N) 辅助空间。
+      output: 以 CV-002 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: nms
+      framework: numpy
+    test_focus:
+    - 完全重叠且不同分只保留高分框；不相交都保留；空输入返回空；相同分数稳定；IoU 恰好等于阈值不抑制。多类别版本应逐类处理，不能让不同类别互相压掉。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 完全重叠且不同分只保留高分框；不相交都保留；空输入返回空；相同分数稳定；IoU 恰好等于阈值不抑制。多类别版本应逐类处理，不能让不同类别互相压掉。
+    solution_direction:
+    - 交集边长取 `max(0,min(right)-max(left))`；面积没有 `+1`；按分数排序，保留最高项并过滤其余高重叠框，直到候选耗尽。本题固定 tie 策略，官方实现不保证 CPU/GPU
+      同分时选择相同框。Torchvision NMS
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI26 在本项目映射为 CV-002；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-030
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - CV-002
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-027
+    kind: coding_prompt
+    title: AI27 · PCA：训练集拟合与测试集变换
+    domain: machine_learning_math
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    skills:
+    - skill.machine_learning_math.linear_algebra
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[N,D]，N≥2，1≤k≤min(N,D)。允许 np.linalg.svd，禁止现成 PCA。返回 (train_mean[D], components[k,D], variance[k],
+      ratio[k])；方差用 N−1 分母，ratio 相对所有奇异值的总方差，常量训练集 ratio 全 0。不白化、不标准化。另实现 transform_pca(x_new,fitted) 与
+      inverse_transform_pca(z,fitted)，始终复用训练均值。SVD 方向符号可不同，按重建/子空间验收。时间 O(ND min(N,D))。
+    one_liner: 独立实现 fit_pca，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 只在训练集上中心化得到 `Xc`；经济型 SVD `Xc=U S Vt`，取 `Vt[:k]` 为行向量主方向；变换为 `(Xnew-train_mean)@components.T`。解释方差为
+      `S[:k]²/(N-1)`。PCA 的中心化不等于自动标准化每列方差。scikit-learn PCA
+    derivation_or_example:
+    - 共线二维点保留一个主成分可以重建；测试集不能重新拟合均值；全常量训练集总方差为零时，方差比例本题设为全零。特征向量存在符号不唯一，重根子空间还可旋转，比较投影矩阵或重建误差，不要求方向逐元素相同。
+    answer_outline:
+    - 只在训练集上中心化得到 `Xc`；经济型 SVD `Xc=U S Vt`，取 `Vt[:k]` 为行向量主方向；变换为 `(Xnew-train_mean)@components.T`。解释方差为
+      `S[:k]²/(N-1)`。PCA 的中心化不等于自动标准化每列方差。scikit-learn PCA
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 测试样本为何必须使用训练均值？
+    - 主方向符号不同是否意味着结果错误？
+    - 中心化与特征标准化是什么关系？
+    - 重根子空间如何比较、白化额外做什么？
+    pitfalls:
+    - 忽略本题约定：测试样本为何必须使用训练均值？
+    - 只背结论而无法解释反例：主方向符号不同是否意味着结果错误？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[N,D]，N≥2，1≤k≤min(N,D)。允许 np.linalg.svd，禁止现成 PCA。返回 (train_mean[D], components[k,D], variance[k],
+        ratio[k])；方差用 N−1 分母，ratio 相对所有奇异值的总方差，常量训练集 ratio 全 0。不白化、不标准化。另实现 transform_pca(x_new,fitted)
+        与 inverse_transform_pca(z,fitted)，始终复用训练均值。SVD 方向符号可不同，按重建/子空间验收。时间 O(ND min(N,D))。
+      output: 以 TML-007 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: fit_pca
+      framework: numpy
+    test_focus:
+    - 共线二维点保留一个主成分可以重建；测试集不能重新拟合均值；全常量训练集总方差为零时，方差比例本题设为全零。特征向量存在符号不唯一，重根子空间还可旋转，比较投影矩阵或重建误差，不要求方向逐元素相同。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 共线二维点保留一个主成分可以重建；测试集不能重新拟合均值；全常量训练集总方差为零时，方差比例本题设为全零。特征向量存在符号不唯一，重根子空间还可旋转，比较投影矩阵或重建误差，不要求方向逐元素相同。
+    solution_direction:
+    - 只在训练集上中心化得到 `Xc`；经济型 SVD `Xc=U S Vt`，取 `Vt[:k]` 为行向量主方向；变换为 `(Xnew-train_mean)@components.T`。解释方差为
+      `S[:k]²/(N-1)`。PCA 的中心化不等于自动标准化每列方差。scikit-learn PCA
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI27 在本项目映射为 TML-007；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-031
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - TML-007
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-028
+    kind: coding_prompt
+    title: AI28 · KNN 分类与余弦近邻检索
+    domain: machine_learning_math
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    skills:
+    - skill.machine_learning_math.linear_algebra
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[N,D]、整数 labels[N]、queries[M,D]，1≤k≤N。输出预测标签[M]。metric 可为 euclidean（平方欧氏）或 cosine；余弦模式拒绝任意零向量。邻居等距按训练原下标；票数同分选较小类标。允许查询空
+      batch，禁止现成 KNN。O(MND+MN log N)，可逐查询避免保存全矩阵。
+    one_liner: 独立实现 knn_predict，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 分批计算查询与训练特征的距离，选近邻再投票。若改成余弦检索，先定义零向量行为，本题选择拒绝；其余向量归一化后用内积排序。不要把相似度越大越近写成距离越小越近的同一排序方向。scikit-learn
+      Nearest Neighbors
+    derivation_or_example:
+    - 查询仅与一个训练样本完全相同时，k=1 返回其类标；若零距离样本有多个，按约定的原下标选择；重复样本、票数并列必须可复现；批量与逐查询结果相同。评估训练集本身时，是否允许自身作为邻居应另定。
+    answer_outline:
+    - 分批计算查询与训练特征的距离，选近邻再投票。若改成余弦检索，先定义零向量行为，本题选择拒绝；其余向量归一化后用内积排序。不要把相似度越大越近写成距离越小越近的同一排序方向。scikit-learn
+      Nearest Neighbors
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 等距邻居与票数同分各用什么规则？
+    - 零向量的余弦相似度应如何处理？
+    - 分块距离计算降低的是时间还是峰值存储？
+    - 近似索引的召回率如何验证？
+    pitfalls:
+    - 忽略本题约定：等距邻居与票数同分各用什么规则？
+    - 只背结论而无法解释反例：零向量的余弦相似度应如何处理？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[N,D]、整数 labels[N]、queries[M,D]，1≤k≤N。输出预测标签[M]。metric 可为 euclidean（平方欧氏）或 cosine；余弦模式拒绝任意零向量。邻居等距按训练原下标；票数同分选较小类标。允许查询空
+        batch，禁止现成 KNN。O(MND+MN log N)，可逐查询避免保存全矩阵。
+      output: 以 TML-008 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: knn_predict
+      framework: numpy
+    test_focus:
+    - 查询仅与一个训练样本完全相同时，k=1 返回其类标；若零距离样本有多个，按约定的原下标选择；重复样本、票数并列必须可复现；批量与逐查询结果相同。评估训练集本身时，是否允许自身作为邻居应另定。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 查询仅与一个训练样本完全相同时，k=1 返回其类标；若零距离样本有多个，按约定的原下标选择；重复样本、票数并列必须可复现；批量与逐查询结果相同。评估训练集本身时，是否允许自身作为邻居应另定。
+    solution_direction:
+    - 分批计算查询与训练特征的距离，选近邻再投票。若改成余弦检索，先定义零向量行为，本题选择拒绝；其余向量归一化后用内积排序。不要把相似度越大越近写成距离越小越近的同一排序方向。scikit-learn
+      Nearest Neighbors
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI28 在本项目映射为 TML-008；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-032
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - TML-008
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-029
+    kind: coding_prompt
+    title: AI29 · Beam Search：候选分数、EOS 与缓存重排
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    skills:
+    - skill.llm_vlm.generation
+    priority: P1
+    difficulty:
+      concept: 4
+      implementation: 4
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 'step(prefix_tuple) 返回词表顺序的 log-prob 序列，允许 -inf 禁用候选。前缀初始为 ()，beam_width≥1、max_new_tokens≥1。返回列表，每项
+      {tokens: tuple, score: float, finished: bool}。完成项占 beam 名额，EOS 后不得再调用 step；每轮按累计 log-prob 取最多 K 个，分数同分按
+      token tuple 字典序；所有保留项结束或达到上限才停止。无长度惩罚，未遇 EOS 的路径 finished=False。禁止现成生成框架。O(TKV log(KV))，不含 step。'
+    one_liner: 独立实现 beam_search，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 对活跃路径扩展词表，累计父路径 log-prob；将新候选与已经完成的保留路径合并，按总分选择最多 K 项，分数相同时按 token ID 序列的字典序决定；已结束项不再扩展。初始只有一条空回答路径，不能复制
+      K 份相同路径。运行到所有保留路径结束或长度上限。这是明确的教学 beam 规则；维护独立 finished 队列的其他实现需要另定候选入队与早停规则。若加长度惩罚，评分和早停上界都要重写。Transformers
+      Generation Strategies
+    derivation_or_example:
+    - 手工构造小词表概率树，比较累计概率而非逐步概率之和；检查 EOS 完成项只保存一次。对无长度惩罚基础版，K=1 应符合明确 EOS 规则下的 greedy。接 KV cache 时按选择结果同步重排父
+      beam 的缓存。
+    answer_outline:
+    - 对活跃路径扩展词表，累计父路径 log-prob；将新候选与已经完成的保留路径合并，按总分选择最多 K 项，分数相同时按 token ID 序列的字典序决定；已结束项不再扩展。初始只有一条空回答路径，不能复制
+      K 份相同路径。运行到所有保留路径结束或长度上限。这是明确的教学 beam 规则；维护独立 finished 队列的其他实现需要另定候选入队与早停规则。若加长度惩罚，评分和早停上界都要重写。Transformers
+      Generation Strategies
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 为什么累计 log-prob 不能换成每步概率求和？
+    - 完成路径是否继续占 beam 名额？
+    - 父 beam 重排后 KV cache 应如何重排？
+    - 增加长度惩罚后原来的早停规则还成立吗？
+    pitfalls:
+    - 忽略本题约定：为什么累计 log-prob 不能换成每步概率求和？
+    - 只背结论而无法解释反例：完成路径是否继续占 beam 名额？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 'step(prefix_tuple) 返回词表顺序的 log-prob 序列，允许 -inf 禁用候选。前缀初始为 ()，beam_width≥1、max_new_tokens≥1。返回列表，每项
+        {tokens: tuple, score: float, finished: bool}。完成项占 beam 名额，EOS 后不得再调用 step；每轮按累计 log-prob 取最多 K
+        个，分数同分按 token tuple 字典序；所有保留项结束或达到上限才停止。无长度惩罚，未遇 EOS 的路径 finished=False。禁止现成生成框架。O(TKV log(KV))，不含
+        step。'
+      output: 以 ATT-022 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: beam_search
+      framework: stdlib
+    test_focus:
+    - 手工构造小词表概率树，比较累计概率而非逐步概率之和；检查 EOS 完成项只保存一次。对无长度惩罚基础版，K=1 应符合明确 EOS 规则下的 greedy。接 KV cache 时按选择结果同步重排父
+      beam 的缓存。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 手工构造小词表概率树，比较累计概率而非逐步概率之和；检查 EOS 完成项只保存一次。对无长度惩罚基础版，K=1 应符合明确 EOS 规则下的 greedy。接 KV cache 时按选择结果同步重排父
+      beam 的缓存。
+    solution_direction:
+    - 对活跃路径扩展词表，累计父路径 log-prob；将新候选与已经完成的保留路径合并，按总分选择最多 K 项，分数相同时按 token ID 序列的字典序决定；已结束项不再扩展。初始只有一条空回答路径，不能复制
+      K 份相同路径。运行到所有保留路径结束或长度上限。这是明确的教学 beam 规则；维护独立 finished 队列的其他实现需要另定候选入队与早停规则。若加长度惩罚，评分和早停上界都要重写。Transformers
+      Generation Strategies
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI29 在本项目映射为 ATT-022；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-033
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - ATT-022
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-030
+    kind: coding_prompt
+    title: AI30 · PPO loss：策略、价值、熵分别实现
+    domain: post_training_rl
+    tracks:
+    - post_training
+    - traditional_rl
+    - llm_algorithm
+    skills:
+    - skill.post_training_rl.policy_optimization
+    - skill.deep_learning.losses
+    priority: P1
+    difficulty:
+      concept: 4
+      implementation: 4
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 五个标量 token 张量 [B,T]、分类 logits[B,T,V]、bool mask[B,T]。返回 {loss, policy, value, entropy}，均标量 tensor：policy=-有效均值
+      min(r*A,clamp(r,1-e,1+e)*A)；value=有效均值 (V-R)²/2（不裁剪）；entropy=有效均值 -Σp log p；loss=policy+value_coef*value−entropy_coef*entropy。old_logp、advantage、target_return
+      停梯度，其余保留。mask 全空抛 ValueError，0<clip_eps<1，系数非负。允许基础 log_softmax，禁止整个 PPO helper。负优势 A=-1,r=1.5,e=.2
+      时 policy=1.5。O(BTV)。
+    one_liner: 独立实现 ppo_loss，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 旧 log-prob、优势与回报目标全部 detach；`r=exp(new-old)`，`policy=-mean(min(r*A,clip(r,1-e,1+e)*A))`；`value_loss=mean((V-R)²)/2`；`entropy=-sum(p*logp)`；总损失
+      `policy+cv*value_loss-ce*entropy`。本题的 value loss 不裁剪，不能与带 value clipping 的实现不加说明地对比。OpenAI Spinning
+      Up：PPO
+    derivation_or_example:
+    - '`r=1` 时策略项为 `-mean(A)`；`A=-1,r=1.5,e=0.2`，该位置损失是 1.5，不能误取 1.2；均匀 C 类分布熵为 `log(C)`。padding 不进入任何分量的分母。'
+    answer_outline:
+    - 旧 log-prob、优势与回报目标全部 detach；`r=exp(new-old)`，`policy=-mean(min(r*A,clip(r,1-e,1+e)*A))`；`value_loss=mean((V-R)²)/2`；`entropy=-sum(p*logp)`；总损失
+      `policy+cv*value_loss-ce*entropy`。本题的 value loss 不裁剪，不能与带 value clipping 的实现不加说明地对比。OpenAI Spinning
+      Up：PPO
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 负优势和大 ratio 的裁剪方向如何手算？
+    - value MSE 与 value clipping 为何不能混称一种实现？
+    - 熵奖励与 reference KL 惩罚有什么不同？
+    - old policy、优势、return 分别为何 detach？
+    pitfalls:
+    - 忽略本题约定：负优势和大 ratio 的裁剪方向如何手算？
+    - 只背结论而无法解释反例：value MSE 与 value clipping 为何不能混称一种实现？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 五个标量 token 张量 [B,T]、分类 logits[B,T,V]、bool mask[B,T]。返回 {loss, policy, value, entropy}，均标量 tensor：policy=-有效均值
+        min(r*A,clamp(r,1-e,1+e)*A)；value=有效均值 (V-R)²/2（不裁剪）；entropy=有效均值 -Σp log p；loss=policy+value_coef*value−entropy_coef*entropy。old_logp、advantage、target_return
+        停梯度，其余保留。mask 全空抛 ValueError，0<clip_eps<1，系数非负。允许基础 log_softmax，禁止整个 PPO helper。负优势 A=-1,r=1.5,e=.2
+        时 policy=1.5。O(BTV)。
+      output: 以 PT-009 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: ppo_loss
+      framework: pytorch
+    test_focus:
+    - '`r=1` 时策略项为 `-mean(A)`；`A=-1,r=1.5,e=0.2`，该位置损失是 1.5，不能误取 1.2；均匀 C 类分布熵为 `log(C)`。padding 不进入任何分量的分母。'
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - '`r=1` 时策略项为 `-mean(A)`；`A=-1,r=1.5,e=0.2`，该位置损失是 1.5，不能误取 1.2；均匀 C 类分布熵为 `log(C)`。padding 不进入任何分量的分母。'
+    solution_direction:
+    - 旧 log-prob、优势与回报目标全部 detach；`r=exp(new-old)`，`policy=-mean(min(r*A,clip(r,1-e,1+e)*A))`；`value_loss=mean((V-R)²)/2`；`entropy=-sum(p*logp)`；总损失
+      `policy+cv*value_loss-ce*entropy`。本题的 value loss 不裁剪，不能与带 value clipping 的实现不加说明地对比。OpenAI Spinning
+      Up：PPO
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI30 在本项目映射为 PT-009；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-034
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - PT-009
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-031
+    kind: coding_prompt
+    title: AI31 · GAE：终止、截断与序列边界
+    domain: post_training_rl
+    tracks:
+    - post_training
+    - traditional_rl
+    - llm_algorithm
+    skills:
+    - skill.post_training_rl.policy_optimization
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: reward/value/next_value[T]，terminated/boundary[T] 为 bool。terminated 必须同时是 boundary；非空序列最后一步必须
+      boundary=True。时间截断也是 boundary，但不一定 terminated。返回 (advantage, advantage+value)。TD residual 使用 gamma*(1-terminated)*next_value；优势递推用
+      gamma*lam*(1-boundary) 阻断跨段传播。gamma,lam∈[0,1]；空序列返回两个空数组。next_value 来自截断前最终 observation，不是 reset 后新状态。O(T)。
+    one_liner: 独立实现 gae，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - '`delta_t=r_t+gamma*(1-terminated_t)*V_next_t-V_t`；反向递推 `A_t=delta_t+gamma*lambda*(1-boundary_t)*A_next`；返回
+      `A` 与 `A+V`。边界截断优势递推，而不一定取消 bootstrap。截断时 next_value 必须来自截断前最终 observation，不能来自自动 reset 后的新 episode。GAE
+      原论文、Gymnasium：时间限制与 bootstrap'
+    derivation_or_example:
+    - lambda=0 时 A 等于 TD residual；真正终止时未来 value 不影响该步 delta；时间截断可保留 bootstrap，但不能把下一 episode 的 reward 带回来。两步
+      reward 都为 1、value=0，gamma=0.9、lambda=0.95、第二步终止，结果 `[1.855,1]`。
+    answer_outline:
+    - '`delta_t=r_t+gamma*(1-terminated_t)*V_next_t-V_t`；反向递推 `A_t=delta_t+gamma*lambda*(1-boundary_t)*A_next`；返回
+      `A` 与 `A+V`。边界截断优势递推，而不一定取消 bootstrap。截断时 next_value 必须来自截断前最终 observation，不能来自自动 reset 后的新 episode。GAE
+      原论文、Gymnasium：时间限制与 bootstrap'
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - termination 与时间 truncation 对 bootstrap 的影响有何区别？
+    - 为什么 boundary 应中断优势递推但不一定取消 next value？
+    - 自动 reset 后的新 observation 能代替 final observation 吗？
+    - lambda=0 时应该退化成哪个量？
+    pitfalls:
+    - 忽略本题约定：termination 与时间 truncation 对 bootstrap 的影响有何区别？
+    - 只背结论而无法解释反例：为什么 boundary 应中断优势递推但不一定取消 next value？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: reward/value/next_value[T]，terminated/boundary[T] 为 bool。terminated 必须同时是 boundary；非空序列最后一步必须
+        boundary=True。时间截断也是 boundary，但不一定 terminated。返回 (advantage, advantage+value)。TD residual 使用 gamma*(1-terminated)*next_value；优势递推用
+        gamma*lam*(1-boundary) 阻断跨段传播。gamma,lam∈[0,1]；空序列返回两个空数组。next_value 来自截断前最终 observation，不是 reset
+        后新状态。O(T)。
+      output: 以 PT-010 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: gae
+      framework: numpy
+    test_focus:
+    - lambda=0 时 A 等于 TD residual；真正终止时未来 value 不影响该步 delta；时间截断可保留 bootstrap，但不能把下一 episode 的 reward 带回来。两步
+      reward 都为 1、value=0，gamma=0.9、lambda=0.95、第二步终止，结果 `[1.855,1]`。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - lambda=0 时 A 等于 TD residual；真正终止时未来 value 不影响该步 delta；时间截断可保留 bootstrap，但不能把下一 episode 的 reward 带回来。两步
+      reward 都为 1、value=0，gamma=0.9、lambda=0.95、第二步终止，结果 `[1.855,1]`。
+    solution_direction:
+    - '`delta_t=r_t+gamma*(1-terminated_t)*V_next_t-V_t`；反向递推 `A_t=delta_t+gamma*lambda*(1-boundary_t)*A_next`；返回
+      `A` 与 `A+V`。边界截断优势递推，而不一定取消 bootstrap。截断时 next_value 必须来自截断前最终 observation，不能来自自动 reset 后的新 episode。GAE
+      原论文、Gymnasium：时间限制与 bootstrap'
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI31 在本项目映射为 PT-010；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: gae-paper
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    - source_id: ai40-tech-035
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - PT-010
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-032
+    kind: coding_prompt
+    title: AI32 · Dropout 的前向、反向与训练模式
+    domain: deep_learning
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 0≤p<1；rng 为 np.random.Generator。返回 (output, multiplier)，multiplier 与 X 同 shape，训练时是 keep/(1-p)，推理为全
+      1。实现 dropout_backward(upstream,multiplier)，只能复用前向 multiplier，不得重采样。p=0 与 eval 恒等；eval 不消耗随机数。O(N)
+      时间及保存状态空间。不调用现成 dropout。
+    one_liner: 独立实现 dropout_forward，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - train 时保存 Bernoulli keep mask，`Y=X*mask/(1-p)`；反向用同一 mask 乘上游梯度。eval 原样返回 X，不能再乘 `1-p`。后向重新采样 mask
+      会得到错误梯度。PyTorch Dropout
+    derivation_or_example:
+    - p=0 和 eval 都恒等；固定随机种子/状态时结果可复现；大量重复抽样下输出均值接近输入，而单次结果不必等于输入；梯度在丢弃位置严格为零。
+    answer_outline:
+    - train 时保存 Bernoulli keep mask，`Y=X*mask/(1-p)`；反向用同一 mask 乘上游梯度。eval 原样返回 X，不能再乘 `1-p`。后向重新采样 mask
+      会得到错误梯度。PyTorch Dropout
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 反向为什么不能重新采样 dropout mask？
+    - inverted dropout 在 eval 阶段还要缩放吗？
+    - 做梯度检查为何要固定 RNG 状态？
+    - activation checkpointing 重算应保存哪些随机状态？
+    pitfalls:
+    - 忽略本题约定：反向为什么不能重新采样 dropout mask？
+    - 只背结论而无法解释反例：inverted dropout 在 eval 阶段还要缩放吗？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 0≤p<1；rng 为 np.random.Generator。返回 (output, multiplier)，multiplier 与 X 同 shape，训练时是 keep/(1-p)，推理为全
+        1。实现 dropout_backward(upstream,multiplier)，只能复用前向 multiplier，不得重采样。p=0 与 eval 恒等；eval 不消耗随机数。O(N)
+        时间及保存状态空间。不调用现成 dropout。
+      output: 以 NNL-017 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: dropout_forward
+      framework: numpy
+    test_focus:
+    - p=0 和 eval 都恒等；固定随机种子/状态时结果可复现；大量重复抽样下输出均值接近输入，而单次结果不必等于输入；梯度在丢弃位置严格为零。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - p=0 和 eval 都恒等；固定随机种子/状态时结果可复现；大量重复抽样下输出均值接近输入，而单次结果不必等于输入；梯度在丢弃位置严格为零。
+    solution_direction:
+    - train 时保存 Bernoulli keep mask，`Y=X*mask/(1-p)`；反向用同一 mask 乘上游梯度。eval 原样返回 X，不能再乘 `1-p`。后向重新采样 mask
+      会得到错误梯度。PyTorch Dropout
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI32 在本项目映射为 NNL-017；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-036
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - NNL-017
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-033
+    kind: coding_prompt
+    title: AI33 · 按通道 INT8 量化与反量化
+    domain: inference_systems
+    tracks:
+    - systems
+    - llm_algorithm
+    skills:
+    - skill.inference_systems.quantization
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: weight[out,in] 为非空 float64，逐输出通道对称量化。返回 (q[int8,out,in], scale[out,1], reconstructed[out,in])。整数范围
+      [-127,127]，zero point=0；scale=absmax/127，全零行 scale=1；ties-to-even 舍入，先 clip 再转 int8。禁止现成量化 API；O(out*in)。这不是
+      AWQ/GPTQ，也不承诺加速。
+    one_liner: 独立实现 quantize_per_channel，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - '`scale=max(abs(W),axis=1)/127`；全零通道 scale 本题置 1。`q=clip(round(W/scale),-127,127)` 后转 int8；反量化 `q*scale`。规定舍入使用
+      ties-to-even，广播 scale 到 `[out,1]`。这是明确的教学量化器，不是 AWQ/GPTQ。PyTorch per-channel 量化接口'
+    derivation_or_example:
+    - 全零行返回全零；每行最大绝对值可映射到端点；正常有限精度下单个元素误差不超过约 scale/2；要先 clip 再转整数，不能依赖越界转换结果。
+    answer_outline:
+    - '`scale=max(abs(W),axis=1)/127`；全零通道 scale 本题置 1。`q=clip(round(W/scale),-127,127)` 后转 int8；反量化 `q*scale`。规定舍入使用
+      ties-to-even，广播 scale 到 `[out,1]`。这是明确的教学量化器，不是 AWQ/GPTQ。PyTorch per-channel 量化接口'
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 逐输出通道量化与整张量量化的误差分布有何区别？
+    - 全零通道为什么需要显式 scale 规则？
+    - ties-to-even 与输入浮点误差怎样影响临界值？
+    - 权重更小是否保证端到端推理更快？
+    pitfalls:
+    - 忽略本题约定：逐输出通道量化与整张量量化的误差分布有何区别？
+    - 只背结论而无法解释反例：全零通道为什么需要显式 scale 规则？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: weight[out,in] 为非空 float64，逐输出通道对称量化。返回 (q[int8,out,in], scale[out,1], reconstructed[out,in])。整数范围
+        [-127,127]，zero point=0；scale=absmax/127，全零行 scale=1；ties-to-even 舍入，先 clip 再转 int8。禁止现成量化 API；O(out*in)。这不是
+        AWQ/GPTQ，也不承诺加速。
+      output: 以 INF-008 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: quantize_per_channel
+      framework: numpy
+    test_focus:
+    - 全零行返回全零；每行最大绝对值可映射到端点；正常有限精度下单个元素误差不超过约 scale/2；要先 clip 再转整数，不能依赖越界转换结果。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 全零行返回全零；每行最大绝对值可映射到端点；正常有限精度下单个元素误差不超过约 scale/2；要先 clip 再转整数，不能依赖越界转换结果。
+    solution_direction:
+    - '`scale=max(abs(W),axis=1)/127`；全零通道 scale 本题置 1。`q=clip(round(W/scale),-127,127)` 后转 int8；反量化 `q*scale`。规定舍入使用
+      ties-to-even，广播 scale 到 `[out,1]`。这是明确的教学量化器，不是 AWQ/GPTQ。PyTorch per-channel 量化接口'
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI33 在本项目映射为 INF-008；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-037
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - INF-008
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-034
+    kind: coding_prompt
+    title: AI34 · GAUC：先分组，再说明权重口径
+    domain: machine_learning_math
+    tracks:
+    - recommendation
+    - traditional_ml
+    - ai_foundation
+    skills:
+    - skill.machine_learning_math.statistics
+    - skill.evaluation_safety.benchmarks
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 'groups、labels、scores 是等长一维序列。group ID 可哈希；labels 为 0/1。仅纳入有正负两类的组；每组按同分半赢的 AUC，按组样本数加权。返回 {gauc:
+      float, valid_groups: int, excluded_samples: int}；全组无效抛 ValueError，不能返回 0.5。O(Σ n_g log n_g)，禁止 sklearn。'
+    one_liner: 独立实现 grouped_auc，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 按 group 聚合；有效组计算同分半赢的 AUC；结果为 `sum(n_g*AUC_g)/sum(n_g)`，分母仅含有效组。本题明确了加权与过滤语义；用户、请求等不同 group 定义会改变指标，不能把名称相同当口径一致。DIN
+      原论文：用户分组加权 AUC
+    derivation_or_example:
+    - 两个有效组的 AUC 为 1 与 0、样本数为 2 与 4，GAUC 为 1/3；单类组被排除且不进入分母；所有组均无效时显式报错。改变组间分数偏移可能不改各组 AUC，却改变全局 AUC。
+    answer_outline:
+    - 按 group 聚合；有效组计算同分半赢的 AUC；结果为 `sum(n_g*AUC_g)/sum(n_g)`，分母仅含有效组。本题明确了加权与过滤语义；用户、请求等不同 group 定义会改变指标，不能把名称相同当口径一致。DIN
+      原论文：用户分组加权 AUC
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 用户等权、曝光数和样本对数加权分别代表什么？
+    - 过滤单类组时分母如何变化？
+    - 为什么组间分数整体平移不改 GAUC 却可改变 AUC？
+    - 分 batch 计算再平均会丢失什么？
+    pitfalls:
+    - 忽略本题约定：用户等权、曝光数和样本对数加权分别代表什么？
+    - 只背结论而无法解释反例：过滤单类组时分母如何变化？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 'groups、labels、scores 是等长一维序列。group ID 可哈希；labels 为 0/1。仅纳入有正负两类的组；每组按同分半赢的 AUC，按组样本数加权。返回
+        {gauc: float, valid_groups: int, excluded_samples: int}；全组无效抛 ValueError，不能返回 0.5。O(Σ n_g log n_g)，禁止
+        sklearn。'
+      output: 以 REC-007 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: grouped_auc
+      framework: numpy
+    test_focus:
+    - 两个有效组的 AUC 为 1 与 0、样本数为 2 与 4，GAUC 为 1/3；单类组被排除且不进入分母；所有组均无效时显式报错。改变组间分数偏移可能不改各组 AUC，却改变全局 AUC。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 两个有效组的 AUC 为 1 与 0、样本数为 2 与 4，GAUC 为 1/3；单类组被排除且不进入分母；所有组均无效时显式报错。改变组间分数偏移可能不改各组 AUC，却改变全局 AUC。
+    solution_direction:
+    - 按 group 聚合；有效组计算同分半赢的 AUC；结果为 `sum(n_g*AUC_g)/sum(n_g)`，分母仅含有效组。本题明确了加权与过滤语义；用户、请求等不同 group 定义会改变指标，不能把名称相同当口径一致。DIN
+      原论文：用户分组加权 AUC
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI34 在本项目映射为 REC-007；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-038
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - REC-007
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-035
+    kind: coding_prompt
+    title: AI35 · NDCG@K：排序指标的 gain 与 tie 策略
+    domain: machine_learning_math
+    tracks:
+    - recommendation
+    - traditional_ml
+    - ai_foundation
+    skills:
+    - skill.machine_learning_math.statistics
+    - skill.evaluation_safety.benchmarks
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 单 query 等长 relevance[n]、scores[n]，1≤k≤n；relevance∈[0,30]。按预测分数降序，同分按原下标；gain=2**rel−1，位置折扣 log2(rank+1)，rank
+      从 1 起。返回 DCG/IDCG；IDCG=0 返回 0，不作 NaN。O(n log n)。禁止现成指标；不要与默认线性 gain/并列期望的指标混比。
+    one_liner: 独立实现 ndcg_at_k，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 按预测分数排序，对前 k 项算 `sum((2rel_i-1)/log2(i+2))`（i 从 0 起）；按真实 rel 降序同样计算 IDCG；IDCG=0 时本题返回0，否则两者相除。基础题限制
+      rel 不超过30，避免指数溢出。某些库直接使用 rel 作 gain，对照时须先将指数 gain 传给参考指标，而非直接比较默认输出。scikit-learn ndcg_score
+    derivation_or_example:
+    - IDCG>0 且预测排序与真实顺序一致时为1；全零 rel 为0；把最高相关项移到后面得分下降。相同预测分数的处理可能是固定顺序或对并列排列取期望，本题用前者。
+    answer_outline:
+    - 按预测分数排序，对前 k 项算 `sum((2rel_i-1)/log2(i+2))`（i 从 0 起）；按真实 rel 降序同样计算 IDCG；IDCG=0 时本题返回0，否则两者相除。基础题限制
+      rel 不超过30，避免指数溢出。某些库直接使用 rel 作 gain，对照时须先将指数 gain 传给参考指标，而非直接比较默认输出。scikit-learn ndcg_score
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 指数 gain 与线性 gain 的 NDCG 能直接比较吗？
+    - 相同预测分数的固定顺序与并列期望有何区别？
+    - 全零相关性时为何需要显式约定？
+    - 不同 query 的相关性标注口径怎样影响宏平均？
+    pitfalls:
+    - 忽略本题约定：指数 gain 与线性 gain 的 NDCG 能直接比较吗？
+    - 只背结论而无法解释反例：相同预测分数的固定顺序与并列期望有何区别？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 单 query 等长 relevance[n]、scores[n]，1≤k≤n；relevance∈[0,30]。按预测分数降序，同分按原下标；gain=2**rel−1，位置折扣
+        log2(rank+1)，rank 从 1 起。返回 DCG/IDCG；IDCG=0 返回 0，不作 NaN。O(n log n)。禁止现成指标；不要与默认线性 gain/并列期望的指标混比。
+      output: 以 REC-008 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: ndcg_at_k
+      framework: numpy
+    test_focus:
+    - IDCG>0 且预测排序与真实顺序一致时为1；全零 rel 为0；把最高相关项移到后面得分下降。相同预测分数的处理可能是固定顺序或对并列排列取期望，本题用前者。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - IDCG>0 且预测排序与真实顺序一致时为1；全零 rel 为0；把最高相关项移到后面得分下降。相同预测分数的处理可能是固定顺序或对并列排列取期望，本题用前者。
+    solution_direction:
+    - 按预测分数排序，对前 k 项算 `sum((2rel_i-1)/log2(i+2))`（i 从 0 起）；按真实 rel 降序同样计算 IDCG；IDCG=0 时本题返回0，否则两者相除。基础题限制
+      rel 不超过30，避免指数溢出。某些库直接使用 rel 作 gain，对照时须先将指数 gain 传给参考指标，而非直接比较默认输出。scikit-learn ndcg_score
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI35 在本项目映射为 REC-008；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-039
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - REC-008
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-036
+    kind: coding_prompt
+    title: AI36 · 完整 Decoder Block：把组件真正接起来
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - vlm_algorithm
+    skills:
+    - skill.llm_vlm.transformer
+    - skill.inference_systems.kv_cache
+    priority: P1
+    difficulty:
+      concept: 5
+      implementation: 5
+      debugging: 5
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[B,T,E]，E/num_heads 为正偶数。weights 字典：norm1/norm2[E]，wq/wk/wv/wo[E,E]（out,in），w_gate/w_up[Hff,E]、w_down[E,Hff]，无
+      bias。执行两条 Pre-RMSNorm 残差：H=X+MHA(RMSNorm1(X))，Y=H+SwiGLU(RMSNorm2(H))。Q/K 用相邻配对 RoPE，position_ids[B,T]
+      是本块真实绝对位置；causal mask；无 dropout。返回 (Y, (cached_rotated_K,cached_V))，cache 可为 None 或 [B,H,P,D] 历史；历史
+      K 不能二次旋转。允许重用自己已完成的原始算子代码，禁止 Transformer/MHA/SDPA 库层，不依赖其他 learner submission。零 wo、w_down 时整体恒等。O(BTE²+BHT²D+BTEHff)；缓存推理按
+      P+T 计。LayerNorm/GELU 与非因果 encoder 是口述迁移，不能暗中切换本题公式。
+    one_liner: 独立实现 decoder_block，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - '`H=X+Attention(Norm1(X))`，`Y=H+FFN(Norm2(H))`。在 attention 内执行 Q/K/V 投影、Q/K 位置旋转、因果 mask、合头和输出投影；两次
+      norm 参数独立。首版不接 cache，第二版接入 AI03 并验证增量等价。该任务是教学组合，不承诺逐行复刻具体模型。Meta Llama 3 作者实现'
+    derivation_or_example:
+    - Attention 输出投影和 FFN down projection 都置零，整个 block 为恒等映射；修改未来位置不影响过去位置输出；同一输入完整前向与正确 cache 前向逐位置一致。检查最后一维与所有残差支路
+      shape。
+    answer_outline:
+    - '`H=X+Attention(Norm1(X))`，`Y=H+FFN(Norm2(H))`。在 attention 内执行 Q/K/V 投影、Q/K 位置旋转、因果 mask、合头和输出投影；两次
+      norm 参数独立。首版不接 cache，第二版接入 AI03 并验证增量等价。该任务是教学组合，不承诺逐行复刻具体模型。Meta Llama 3 作者实现'
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 两次 norm 参数为何必须独立？
+    - 输出投影为零时残差 block 应退化成什么？
+    - 缓存中的 RoPE K 二次旋转如何破坏增量一致性？
+    - 换成 LayerNorm/GELU 或 encoder 时需要明确哪些契约变化？
+    pitfalls:
+    - 忽略本题约定：两次 norm 参数为何必须独立？
+    - 只背结论而无法解释反例：输出投影为零时残差 block 应退化成什么？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[B,T,E]，E/num_heads 为正偶数。weights 字典：norm1/norm2[E]，wq/wk/wv/wo[E,E]（out,in），w_gate/w_up[Hff,E]、w_down[E,Hff]，无
+        bias。执行两条 Pre-RMSNorm 残差：H=X+MHA(RMSNorm1(X))，Y=H+SwiGLU(RMSNorm2(H))。Q/K 用相邻配对 RoPE，position_ids[B,T]
+        是本块真实绝对位置；causal mask；无 dropout。返回 (Y, (cached_rotated_K,cached_V))，cache 可为 None 或 [B,H,P,D] 历史；历史
+        K 不能二次旋转。允许重用自己已完成的原始算子代码，禁止 Transformer/MHA/SDPA 库层，不依赖其他 learner submission。零 wo、w_down 时整体恒等。O(BTE²+BHT²D+BTEHff)；缓存推理按
+        P+T 计。LayerNorm/GELU 与非因果 encoder 是口述迁移，不能暗中切换本题公式。
+      output: 以 ATT-008 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: decoder_block
+      framework: pytorch
+    test_focus:
+    - Attention 输出投影和 FFN down projection 都置零，整个 block 为恒等映射；修改未来位置不影响过去位置输出；同一输入完整前向与正确 cache 前向逐位置一致。检查最后一维与所有残差支路
+      shape。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - Attention 输出投影和 FFN down projection 都置零，整个 block 为恒等映射；修改未来位置不影响过去位置输出；同一输入完整前向与正确 cache 前向逐位置一致。检查最后一维与所有残差支路
+      shape。
+    solution_direction:
+    - '`H=X+Attention(Norm1(X))`，`Y=H+FFN(Norm2(H))`。在 attention 内执行 Q/K/V 投影、Q/K 位置旋转、因果 mask、合头和输出投影；两次
+      norm 参数独立。首版不接 cache，第二版接入 AI03 并验证增量等价。该任务是教学组合，不承诺逐行复刻具体模型。Meta Llama 3 作者实现'
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI36 在本项目映射为 ATT-008；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-040
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - ATT-008
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-037
+    kind: coding_prompt
+    title: AI37 · K-means++ 初始化
+    domain: machine_learning_math
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    skills:
+    - skill.machine_learning_math.linear_algebra
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: X[N,D]，1≤k≤N。返回中心原下标 int64[k]，互不重复；用 np.random.default_rng(seed)。第一点 rng.integers(N) 均匀选择，之后按到最近已选中心的平方距离归一化，用
+      rng.choice 抽样。距离总和为 0 时取最小未选原下标。允许不同样本有相同坐标；不实现 greedy 多候选变体。O(NKD)，辅助空间 O(N)。
+    one_liner: 独立实现 kmeans_plus_plus，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - X[N,D]，1≤k≤N。返回中心原下标 int64[k]，互不重复；用 np.random.default_rng(seed)。第一点 rng.integers(N) 均匀选择，之后按到最近已选中心的平方距离归一化，用
+      rng.choice 抽样。距离总和为 0 时取最小未选原下标。允许不同样本有相同坐标；不实现 greedy 多候选变体。O(NKD)，辅助空间 O(N)。
+    derivation_or_example:
+    - 同种子复现；索引不重复；所有坐标相同仍能终止。几何中心可重复，因为不同样本的坐标可相同。
+    answer_outline:
+    - X[N,D]，1≤k≤N。返回中心原下标 int64[k]，互不重复；用 np.random.default_rng(seed)。第一点 rng.integers(N) 均匀选择，之后按到最近已选中心的平方距离归一化，用
+      rng.choice 抽样。距离总和为 0 时取最小未选原下标。允许不同样本有相同坐标；不实现 greedy 多候选变体。O(NKD)，辅助空间 O(N)。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 按距离和平方距离抽样有什么差异？
+    - 所有样本坐标相同如何终止且不重复选索引？
+    - 标准与 greedy k-means++ 是否是同一随机过程？
+    - 更好的初始化为什么不保证全局最优？
+    pitfalls:
+    - 忽略本题约定：按距离和平方距离抽样有什么差异？
+    - 只背结论而无法解释反例：所有样本坐标相同如何终止且不重复选索引？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: X[N,D]，1≤k≤N。返回中心原下标 int64[k]，互不重复；用 np.random.default_rng(seed)。第一点 rng.integers(N) 均匀选择，之后按到最近已选中心的平方距离归一化，用
+        rng.choice 抽样。距离总和为 0 时取最小未选原下标。允许不同样本有相同坐标；不实现 greedy 多候选变体。O(NKD)，辅助空间 O(N)。
+      output: 以 TML-009 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: kmeans_plus_plus
+      framework: numpy
+    test_focus:
+    - 同种子复现；索引不重复；所有坐标相同仍能终止。几何中心可重复，因为不同样本的坐标可相同。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 同种子复现；索引不重复；所有坐标相同仍能终止。几何中心可重复，因为不同样本的坐标可相同。
+    solution_direction:
+    - X[N,D]，1≤k≤N。返回中心原下标 int64[k]，互不重复；用 np.random.default_rng(seed)。第一点 rng.integers(N) 均匀选择，之后按到最近已选中心的平方距离归一化，用
+      rng.choice 抽样。距离总和为 0 时取最小未选原下标。允许不同样本有相同坐标；不实现 greedy 多候选变体。O(NKD)，辅助空间 O(N)。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI37 在本项目映射为 TML-009；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-041
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - TML-009
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-038
+    kind: coding_prompt
+    title: AI38 · DIN 局部激活与兴趣聚合
+    domain: deep_learning
+    tracks:
+    - recommendation
+    - ai_foundation
+    skills:
+    - skill.deep_learning.neural_layers
+    - skill.llm_vlm.attention
+    priority: P1
+    difficulty:
+      concept: 4
+      implementation: 4
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: query[B,D]、history[B,L,D]、bool valid[B,L]；构造 [q,h,q-h,q*h] 顺序的特征 [B,L,4D]，打分 MLP 固定 Linear(4D,U)→ReLU→Linear(U,1)，w1[U,4D],b1[U],w2[1,U],b2[1]。无
+      softmax，权重允许为负。返回 (interest[B,D], masked_weights[B,L])，interest 为有效历史加权和；全 padding 为零。输入、打分网络保留梯度。O(BLDU)，禁止现成
+      DIN。
+    one_liner: 独立实现 din_interest，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - query[B,D]、history[B,L,D]、bool valid[B,L]；构造 [q,h,q-h,q*h] 顺序的特征 [B,L,4D]，打分 MLP 固定 Linear(4D,U)→ReLU→Linear(U,1)，w1[U,4D],b1[U],w2[1,U],b2[1]。无
+      softmax，权重允许为负。返回 (interest[B,D], masked_weights[B,L])，interest 为有效历史加权和；全 padding 为零。输入、打分网络保留梯度。O(BLDU)，禁止现成
+      DIN。
+    derivation_or_example:
+    - 全 padding 输出零；打分恒为 1 时等于有效历史求和；置换历史及 mask 后输出不变。用这个例子区分求和与 softmax 加权均值。
+    answer_outline:
+    - query[B,D]、history[B,L,D]、bool valid[B,L]；构造 [q,h,q-h,q*h] 顺序的特征 [B,L,4D]，打分 MLP 固定 Linear(4D,U)→ReLU→Linear(U,1)，w1[U,4D],b1[U],w2[1,U],b2[1]。无
+      softmax，权重允许为负。返回 (interest[B,D], masked_weights[B,L])，interest 为有效历史加权和；全 padding 为零。输入、打分网络保留梯度。O(BLDU)，禁止现成
+      DIN。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 为什么 DIN 用户表示会随候选发生变化？
+    - 不作 softmax 的权重能保留什么兴趣强度信息？
+    - 所有有效权重为 1 时应是求和还是均值？
+    - padding 与历史顺序置换如何验证？
+    pitfalls:
+    - 忽略本题约定：为什么 DIN 用户表示会随候选发生变化？
+    - 只背结论而无法解释反例：不作 softmax 的权重能保留什么兴趣强度信息？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: query[B,D]、history[B,L,D]、bool valid[B,L]；构造 [q,h,q-h,q*h] 顺序的特征 [B,L,4D]，打分 MLP 固定 Linear(4D,U)→ReLU→Linear(U,1)，w1[U,4D],b1[U],w2[1,U],b2[1]。无
+        softmax，权重允许为负。返回 (interest[B,D], masked_weights[B,L])，interest 为有效历史加权和；全 padding 为零。输入、打分网络保留梯度。O(BLDU)，禁止现成
+        DIN。
+      output: 以 REC-009 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: din_interest
+      framework: pytorch
+    test_focus:
+    - 全 padding 输出零；打分恒为 1 时等于有效历史求和；置换历史及 mask 后输出不变。用这个例子区分求和与 softmax 加权均值。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 全 padding 输出零；打分恒为 1 时等于有效历史求和；置换历史及 mask 后输出不变。用这个例子区分求和与 softmax 加权均值。
+    solution_direction:
+    - query[B,D]、history[B,L,D]、bool valid[B,L]；构造 [q,h,q-h,q*h] 顺序的特征 [B,L,4D]，打分 MLP 固定 Linear(4D,U)→ReLU→Linear(U,1)，w1[U,4D],b1[U],w2[1,U],b2[1]。无
+      softmax，权重允许为负。返回 (interest[B,D], masked_weights[B,L])，interest 为有效历史加权和；全 padding 为零。输入、打分网络保留梯度。O(BLDU)，禁止现成
+      DIN。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI38 在本项目映射为 REC-009；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-042
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - REC-009
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-039
+    kind: coding_prompt
+    title: AI39 · ViT Patch Embedding 与卷积等价性
+    domain: llm_vlm
+    tracks:
+    - computer_vision
+    - vlm_algorithm
+    skills:
+    - skill.llm_vlm.vlm_architecture
+    - skill.deep_learning.tensor_ops
+    priority: P1
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 3
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: images[B,C,H,W]，H/W 都能被正整数 P=patch_size 整除；weight[E,C*P*P]，bias[E]。按 patch 行→patch 列的顺序输出 [B,(H/P)*(W/P),E]；每个
+      patch 内按通道→像素行→像素列展开，做共享线性投影。不要将 reshape 当作任意 permute 的替代。禁止 conv2d/现成 patch 层；等价 Conv2d(kernel=P,stride=P,weight.reshape(E,C,P,P))
+      后空间展平转置。O(BHWC E)，保持梯度。
+    one_liner: 独立实现 patch_embedding，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - images[B,C,H,W]，H/W 都能被正整数 P=patch_size 整除；weight[E,C*P*P]，bias[E]。按 patch 行→patch 列的顺序输出 [B,(H/P)*(W/P),E]；每个
+      patch 内按通道→像素行→像素列展开，做共享线性投影。不要将 reshape 当作任意 permute 的替代。禁止 conv2d/现成 patch 层；等价 Conv2d(kernel=P,stride=P,weight.reshape(E,C,P,P))
+      后空间展平转置。O(BHWC E)，保持梯度。
+    derivation_or_example:
+    - 小输入用明确循环验算；单通道单位脉冲检查核方向；patch 线性投影与同权重卷积再展平输出近似一致。
+    answer_outline:
+    - images[B,C,H,W]，H/W 都能被正整数 P=patch_size 整除；weight[E,C*P*P]，bias[E]。按 patch 行→patch 列的顺序输出 [B,(H/P)*(W/P),E]；每个
+      patch 内按通道→像素行→像素列展开，做共享线性投影。不要将 reshape 当作任意 permute 的替代。禁止 conv2d/现成 patch 层；等价 Conv2d(kernel=P,stride=P,weight.reshape(E,C,P,P))
+      后空间展平转置。O(BHWC E)，保持梯度。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - patch 内通道和像素顺序如何对应卷积核？
+    - reshape 为什么不能随意替代 permute？
+    - 单位脉冲如何检查核方向和 patch 顺序？
+    - 图像尺寸不能整除 patch size 时应先明确什么策略？
+    pitfalls:
+    - 忽略本题约定：patch 内通道和像素顺序如何对应卷积核？
+    - 只背结论而无法解释反例：reshape 为什么不能随意替代 permute？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: images[B,C,H,W]，H/W 都能被正整数 P=patch_size 整除；weight[E,C*P*P]，bias[E]。按 patch 行→patch 列的顺序输出 [B,(H/P)*(W/P),E]；每个
+        patch 内按通道→像素行→像素列展开，做共享线性投影。不要将 reshape 当作任意 permute 的替代。禁止 conv2d/现成 patch 层；等价 Conv2d(kernel=P,stride=P,weight.reshape(E,C,P,P))
+        后空间展平转置。O(BHWC E)，保持梯度。
+      output: 以 VLM-001 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: patch_embedding
+      framework: pytorch
+    test_focus:
+    - 小输入用明确循环验算；单通道单位脉冲检查核方向；patch 线性投影与同权重卷积再展平输出近似一致。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - 小输入用明确循环验算；单通道单位脉冲检查核方向；patch 线性投影与同权重卷积再展平输出近似一致。
+    solution_direction:
+    - images[B,C,H,W]，H/W 都能被正整数 P=patch_size 整除；weight[E,C*P*P]，bias[E]。按 patch 行→patch 列的顺序输出 [B,(H/P)*(W/P),E]；每个
+      patch 内按通道→像素行→像素列展开，做共享线性投影。不要将 reshape 当作任意 permute 的替代。禁止 conv2d/现成 patch 层；等价 Conv2d(kernel=P,stride=P,weight.reshape(E,C,P,P))
+      后空间展平转置。O(BHWC E)，保持梯度。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI39 在本项目映射为 VLM-001；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-043
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - VLM-001
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: COD-AI-040
+    kind: coding_prompt
+    title: AI40 · 最小标量自动微分引擎
+    domain: deep_learning
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    priority: P1
+    difficulty:
+      concept: 4
+      implementation: 4
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 实现 Value(data)，字段 data 与 grad 为标量。支持 Value/数值的 +、*（含反向运算）、tanh() 与 backward()。局部反传必须累加共享节点贡献；每次
+      backward 前清零本输出可达的所有节点，再把本输出梯度设 1。禁止 autograd/数值差分实现主体。输出依赖图不是树，拓扑节点去重但边的贡献不能去重。例 x=3，y=x*x+x，y.backward()
+      后 x.grad=7；重复 backward 仍是 7。O(V+E)。
+    one_liner: 独立实现 Value，用明确的小例子、定义边界和不变量解释正确性。
+    core_answer:
+    - 实现 Value(data)，字段 data 与 grad 为标量。支持 Value/数值的 +、*（含反向运算）、tanh() 与 backward()。局部反传必须累加共享节点贡献；每次 backward
+      前清零本输出可达的所有节点，再把本输出梯度设 1。禁止 autograd/数值差分实现主体。输出依赖图不是树，拓扑节点去重但边的贡献不能去重。例 x=3，y=x*x+x，y.backward()
+      后 x.grad=7；重复 backward 仍是 7。O(V+E)。
+    derivation_or_example:
+    - y=x*x+x，在 x=3 时 dy/dx=7；y=a+a 的 da=2；菱形依赖不丢梯度。同一输出重复 backward 按本题清零语义得到相同结果。
+    answer_outline:
+    - 实现 Value(data)，字段 data 与 grad 为标量。支持 Value/数值的 +、*（含反向运算）、tanh() 与 backward()。局部反传必须累加共享节点贡献；每次 backward
+      前清零本输出可达的所有节点，再把本输出梯度设 1。禁止 autograd/数值差分实现主体。输出依赖图不是树，拓扑节点去重但边的贡献不能去重。例 x=3，y=x*x+x，y.backward()
+      后 x.grad=7；重复 backward 仍是 7。O(V+E)。
+    - 先说明本题与相似库接口的差异，再用公开小例子或梯度/状态不变量核验，不凭运行成功推断正确。
+    follow_ups:
+    - 为什么共享子图不能按树递归重复反传？
+    - 同一父节点出现两次，拓扑去重会不会丢失两条边的贡献？
+    - 重复 backward 的清零语义与累加语义有什么区别？
+    - 扩展到张量时广播梯度需要哪些额外归约？
+    pitfalls:
+    - 忽略本题约定：为什么共享子图不能按树递归重复反传？
+    - 只背结论而无法解释反例：同一父节点出现两次，拓扑去重会不会丢失两条边的贡献？
+    signals:
+    - 能写清输入输出、公式与复杂度，并解释一项真实边界。
+    - 能对照实际代码定位差异；不完整实现与客观执行结果分别评价。
+    coding_contract:
+      input: 实现 Value(data)，字段 data 与 grad 为标量。支持 Value/数值的 +、*（含反向运算）、tanh() 与 backward()。局部反传必须累加共享节点贡献；每次
+        backward 前清零本输出可达的所有节点，再把本输出梯度设 1。禁止 autograd/数值差分实现主体。输出依赖图不是树，拓扑节点去重但边的贡献不能去重。例 x=3，y=x*x+x，y.backward()
+        后 x.grad=7；重复 backward 仍是 7。O(V+E)。
+      output: 以 TNS-017 的返回结构为准；数值/状态通过公开测试和本轮私有验证核验。
+      constraints: 禁止直接调用所要求手写的完整算法；不改输入；训练接口和题面异常约定优先。
+      symbol: Value
+      framework: stdlib
+    test_focus:
+    - y=x*x+x，在 x=3 时 dy/dx=7；y=a+a 的 da=2；菱形依赖不丢梯度。同一输出重复 backward 按本题清零语义得到相同结果。
+    - 公开测试独立注入 submission，检查参考一致性、边界与输入保持。
+    edge_cases:
+    - y=x*x+x，在 x=3 时 dy/dx=7；y=a+a 的 da=2；菱形依赖不丢梯度。同一输出重复 backward 按本题清零语义得到相同结果。
+    solution_direction:
+    - 实现 Value(data)，字段 data 与 grad 为标量。支持 Value/数值的 +、*（含反向运算）、tanh() 与 backward()。局部反传必须累加共享节点贡献；每次 backward
+      前清零本输出可达的所有节点，再把本输出梯度设 1。禁止 autograd/数值差分实现主体。输出依赖图不是树，拓扑节点去重但边的贡献不能去重。例 x=3，y=x*x+x，y.backward()
+      后 x.grad=7；重复 backward 仍是 7。O(V+E)。
+    source_claims:
+    - source_id: ai40-user-collection-20260908
+      claim: AI40 在本项目映射为 TNS-017；本卡区分题目定义与扩展追问，不继承公司考频说法。
+      confidence: curated
+    - source_id: ai40-tech-044
+      claim: 数学/算法背景参考；可执行接口、特殊边界和变式范围以本项目中文 task.md 为准。
+      confidence: primary_definition
+    related_problems:
+    - TNS-017
+    reviewed_at: '2026-09-08'
+    acceptance:
+      L1:
+      - 能解释接口与一个基础例子。
+      L2:
+      - 能实现基础行为，明确未覆盖部分。
+      L3:
+      - 能独立验证定义、边界和数值/状态一致性。
+      L4:
+      - 能解释反例、迁移与性能取舍；不以术语数量评判。
+  - id: EXP-AI-001
+    kind: experience_pattern
+    title: MJ01 · 模型结构与训练链路之间切换核实
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    skills:
+    - skill.llm_vlm.transformer
+    - skill.data_mlops.experiments
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 为什么在这段结构中选择这种归一化？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 为什么在这段结构中选择这种归一化？
+    - 如果换一种语料配比，你用什么独立证据判断它改善了模型？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj01
+      claim: ①归一化与 FFN 的结构差异；②语料质量筛选、配比与困惑度；③模型效果评估；④工具调用与解码；⑤ZeRO 分片及代价；⑥训练时间、利用率与监控。
+      confidence: anecdotal_unverified
+    related_problems:
+    - NNL-006
+    - NNL-005
+    - ATT-019
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①归一化与 FFN 的结构差异；②语料质量筛选、配比与困惑度；③模型效果评估；④工具调用与解码；⑤ZeRO 分片及代价；⑥训练时间、利用率与监控。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 为什么在这段结构中选择这种归一化？
+    - 如果换一种语料配比，你用什么独立证据判断它改善了模型？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面 2024-08-20 23:14，已编辑；正文称秋招，具体面试日期未写；大模型算法，部门主动保密。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮公开正文复核可读，仍未获公司独立确认。
+  - id: EXP-AI-002
+    kind: experience_pattern
+    title: MJ02 · Agent 项目的选型理由与结构化输出边界
+    domain: project_deep_dive
+    tracks:
+    - agent
+    - llm_algorithm
+    skills:
+    - skill.agent_application.agent_loop
+    - skill.agent_application.reliability
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 你这里为什么需要 Agent，而不是固定 workflow？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 你这里为什么需要 Agent，而不是固定 workflow？
+    - 遇到结构化输出不合法时，哪层负责拒绝或重试？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj02
+      claim: ①用户画像项目如何实现；②Agent 的设计理由；③工具与 workflow 的关系；④稳定输出 JSON；⑤广告场景中大模型与传统方案的取舍；⑥Agent 的能力边界。
+      confidence: anecdotal_unverified
+    related_problems:
+    - AGT-001
+    - AGT-006
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①用户画像项目如何实现；②Agent 的设计理由；③工具与 workflow 的关系；④稳定输出 JSON；⑤广告场景中大模型与传统方案的取舍；⑥Agent 的能力边界。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 你这里为什么需要 Agent，而不是固定 workflow？
+    - 遇到结构化输出不合法时，哪层负责拒绝或重试？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面 2025-11-13 06:10；面试日期未写；字节懂车帝大模型日常实习。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-003
+    kind: experience_pattern
+    title: MJ03 · 论文中的 RL 机制要能落到优势与梯度
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.post_training_rl.policy_optimization
+    - skill.project_deep_dive.experiments
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 你论文里这项优势估计实际来自什么量？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 你论文里这项优势估计实际来自什么量？
+    - 如果只改奖励而不改采样策略，哪段结论仍成立？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj03
+      claim: ①论文里的 Multi-Agent 设计；②PPO/GRPO 的实现；③PPO 各模型职责；④优势函数；⑤大模型强化学习的收益与限制；⑥开放讨论 Agent 产品可能的实现。
+      confidence: anecdotal_unverified
+    related_problems:
+    - PT-009
+    - PT-010
+    - PT-023
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①论文里的 Multi-Agent 设计；②PPO/GRPO 的实现；③PPO 各模型职责；④优势函数；⑤大模型强化学习的收益与限制；⑥开放讨论 Agent 产品可能的实现。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 你论文里这项优势估计实际来自什么量？
+    - 如果只改奖励而不改采样策略，哪段结论仍成立？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面 2025-04-18 18:17，已编辑；面试日期未写；腾讯光子算法实习。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-004
+    kind: experience_pattern
+    title: MJ04 · 多模态目标、分阶段训练与有限资源核验
+    domain: project_deep_dive
+    tracks:
+    - vlm_algorithm
+    - llm_algorithm
+    skills:
+    - skill.llm_vlm.vlm_architecture
+    - skill.data_mlops.experiments
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 你在这个阶段更新视觉端还是只更新连接层？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 你在这个阶段更新视觉端还是只更新连接层？
+    - 拒绝采样量变大时怎样保留可核验的质量证据？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj04
+      claim: ①CLIP 目标；②视觉编码器分阶段训练；③SFT 的组织方式；④在有限算力上组织大规模拒绝采样；⑤分割结果如何人工核验；⑥理解与生成统一及连接器选择。
+      confidence: anecdotal_unverified
+    related_problems:
+    - LOSS-006
+    - VLM-001
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①CLIP 目标；②视觉编码器分阶段训练；③SFT 的组织方式；④在有限算力上组织大规模拒绝采样；⑤分割结果如何人工核验；⑥理解与生成统一及连接器选择。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 你在这个阶段更新视觉端还是只更新连接层？
+    - 拒绝采样量变大时怎样保留可核验的质量证据？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面只显示 02-09 23:55，年份未知；面试日期未写；腾讯多模态大模型算法校招。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-005
+    kind: experience_pattern
+    title: MJ05 · 从 SFT 数据制作追到对照评估与采样
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.post_training_rl.sft
+    - skill.data_mlops.experiments
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 你刚才说微调有效，未微调基线在同一测试集上怎样？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 你刚才说微调有效，未微调基线在同一测试集上怎样？
+    - 如果仅改变温度，这个差异还可以归因于训练吗？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj05
+      claim: ①清洗与数据不均衡；②基座规模的比较；③LoRA 和全量微调的对照；④SFT 格式与系统提示；⑤微调前后的效果比较；⑥采样参数、RLHF 与项目中的 RAG。
+      confidence: anecdotal_unverified
+    related_problems:
+    - PT-003
+    - INF-013
+    - ATT-011
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①清洗与数据不均衡；②基座规模的比较；③LoRA 和全量微调的对照；④SFT 格式与系统提示；⑤微调前后的效果比较；⑥采样参数、RLHF 与项目中的 RAG。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 你刚才说微调有效，未微调基线在同一测试集上怎样？
+    - 如果仅改变温度，这个差异还可以归因于训练吗？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；MJ05-MJ14 同作者
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面 2025-02-21 19:57；面试日期未写；网易有道大模型算法岗实习。 样本分组：单篇作者自述，不是公司官方标准；MJ05-MJ14 同作者。本轮公开正文复核可读，仍未获公司独立确认。
+  - id: EXP-AI-006
+    kind: experience_pattern
+    title: MJ06 · CV/VLM 项目需要分清本人方法与业务效果
+    domain: project_deep_dive
+    tracks:
+    - vlm_algorithm
+    - llm_algorithm
+    skills:
+    - skill.project_deep_dive.ownership
+    - skill.llm_vlm.vlm_architecture
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 你亲自实现的模块输出是什么？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 你亲自实现的模块输出是什么？
+    - 离线指标和实习业务指标不一致时，你先核实哪个环节？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj06
+      claim: ①研究方向的基础；②简历中方法的掌握程度；③实习的业务指标变化；④训练/评估数据规模；⑤实施困难及解决过程。
+      confidence: anecdotal_unverified
+    related_problems:
+    - NNL-009
+    - VLM-001
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①研究方向的基础；②简历中方法的掌握程度；③实习的业务指标变化；④训练/评估数据规模；⑤实施困难及解决过程。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 你亲自实现的模块输出是什么？
+    - 离线指标和实习业务指标不一致时，你先核实哪个环节？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面 2024-10-24 15:30，已编辑；正文写一面 10.23，未在该日期旁重复年份；岗位 CV/多模态大模型，实习/校招类别未明确。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-007
+    kind: experience_pattern
+    title: MJ07 · 多模态项目从对齐机制走到部署结果
+    domain: project_deep_dive
+    tracks:
+    - vlm_algorithm
+    - llm_algorithm
+    skills:
+    - skill.llm_vlm.vlm_architecture
+    - skill.system_design.tradeoffs
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 两种模态在你的实现中在哪一层发生交互？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 两种模态在你的实现中在哪一层发生交互？
+    - 上线输入与实验数据的差异如何影响指标？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj07
+      claim: ①项目如何落地；②实际指标表现；③对多模态模型的理解；④不同模态如何对齐。另谈游戏兴趣及地点意向。
+      confidence: anecdotal_unverified
+    related_problems:
+    - LOSS-006
+    - VLM-001
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①项目如何落地；②实际指标表现；③对多模态模型的理解；④不同模态如何对齐。另谈游戏兴趣及地点意向。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 两种模态在你的实现中在哪一层发生交互？
+    - 上线输入与实验数据的差异如何影响指标？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面 2025-06-10 12:22；面试日期未写；网易互娱多模态大模型算法暑期实习。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-008
+    kind: experience_pattern
+    title: MJ08 · 基础结构概念承接项目而非脱离背景背诵
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    skills:
+    - skill.deep_learning.neural_layers
+    - skill.llm_vlm.transformer
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 你的这个模块为什么不用另一种归一化？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 你的这个模块为什么不用另一种归一化？
+    - batch 改小后哪个统计量会变化？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj08
+      claim: Transformer；LN 与 BN 的选择；项目细节追问。
+      confidence: anecdotal_unverified
+    related_problems:
+    - NNL-006
+    - NNL-016
+    - ATT-019
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - Transformer；LN 与 BN 的选择；项目细节追问。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 你的这个模块为什么不用另一种归一化？
+    - batch 改小后哪个统计量会变化？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面 2025-10-09 18:47；实际面试日未写；美团大模型算法实习。搜索结果曾取到评论日期 10-15，不以搜索摘要代替原页日期。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-009
+    kind: experience_pattern
+    title: MJ09 · 后训练方法选择同时核实数据与系统条件
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.post_training_rl.preference_data
+    - skill.training_infra.distributed
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 偏好对中的差异来自标注还是模型采样？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 偏好对中的差异来自标注还是模型采样？
+    - 长上下文下的退化，如何区分位置、数据与优化问题？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj09
+      claim: ①预训练语料流程；②数据处理和合成；③DPO 的原理及偏好数据构造；④PPO/GRPO；⑤DeepSpeed 各阶段及选择理由；⑥位置编码和长上下文扩展。
+      confidence: anecdotal_unverified
+    related_problems:
+    - PT-022
+    - PT-023
+    - ATT-021
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①预训练语料流程；②数据处理和合成；③DPO 的原理及偏好数据构造；④PPO/GRPO；⑤DeepSpeed 各阶段及选择理由；⑥位置编码和长上下文扩展。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 偏好对中的差异来自标注还是模型采样？
+    - 长上下文下的退化，如何区分位置、数据与优化问题？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面 2025-04-10 22:04；面试日未写；斑马智行大模型暑期实习，一轮约 40 分钟。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-010
+    kind: experience_pattern
+    title: MJ10 · 基座选择与长文本不收敛的竞争解释
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.data_mlops.experiments
+    - skill.post_training_rl.sft
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 这个基座是怎样在相同算力预算下比较的？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 这个基座是怎样在相同算力预算下比较的？
+    - 怎样设计一个小实验区分语料问题和 loss 归约问题？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj10
+      claim: ①选用 Qwen 的依据；②DPO 与任务、算力的关系；③控制语料来源与规模，定位长文本训练不收敛；④SFT 与 RL 的分工；⑤近期阅读与自己的突出工作。
+      confidence: anecdotal_unverified
+    related_problems:
+    - PT-003
+    - PT-022
+    - TNS-014
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①选用 Qwen 的依据；②DPO 与任务、算力的关系；③控制语料来源与规模，定位长文本训练不收敛；④SFT 与 RL 的分工；⑤近期阅读与自己的突出工作。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 这个基座是怎样在相同算力预算下比较的？
+    - 怎样设计一个小实验区分语料问题和 loss 归约问题？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面只显示 03-31 14:00，年份未知；实际面试日未写；蚂蚁 LLM 算法日常实习。 样本分组：单篇作者自述，不是公司官方标准；仅该篇记录，不能推断与未署名记录相互独立。本轮未完成原页全文独立复核，保留为
+      anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-011
+    kind: experience_pattern
+    title: MJ11 · 论文动机必须连到本人消融和旧方案增益
+    domain: project_deep_dive
+    tracks:
+    - vlm_algorithm
+    - llm_algorithm
+    skills:
+    - skill.project_deep_dive.experiments
+    - skill.project_deep_dive.ownership
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 相对旧方案，你的改动解决了哪个可验证的失败？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 相对旧方案，你的改动解决了哪个可验证的失败？
+    - 去掉你提出的那部分后，哪些结果应当改变？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj11
+      claim: ①论文动机；②图方法与 LLM 的结合；③代码生成/理解场景；④LoRA 插入位置；⑤实习方案为什么有效；⑥相对旧方案的增益和改进空间。
+      confidence: anecdotal_unverified
+    related_problems:
+    - INF-013
+    - ATT-019
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①论文动机；②图方法与 LLM 的结合；③代码生成/理解场景；④LoRA 插入位置；⑤实习方案为什么有效；⑥相对旧方案的增益和改进空间。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 相对旧方案，你的改动解决了哪个可验证的失败？
+    - 去掉你提出的那部分后，哪些结果应当改变？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；MJ11-MJ12-MJ13 可能同作者，保守合组
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：首发 2024-04-25 22:50:11；修改 2025-04-25；正文明确一面 2024-04-07、二面 2024-04-23、HR 面 2024-04-25；蚂蚁多模态
+      LLM 暑期实习。2025 届指毕业届别，不是面试年份。 样本分组：单篇作者自述，不是公司官方标准；MJ11-MJ12-MJ13 可能同作者，保守合组。本轮未完成原页全文独立复核，保留为 anecdotal
+      / unverified，不补造缺失年份。
+  - id: EXP-AI-012
+    kind: experience_pattern
+    title: MJ12 · 理论、下游实验与资源受限训练交叉核验
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    skills:
+    - skill.llm_vlm.transformer
+    - skill.training_infra.distributed
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 这个理论改动怎样反映到下游任务？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 这个理论改动怎样反映到下游任务？
+    - 显存不足时，你会先测哪一类占用再选并行策略？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj12
+      claim: ①论文的动机、实验与下游任务；②Transformer 训推流程；③BERT/GPT 的目标与结构；④LoRA；⑤大模型装不进显存时的并行方案；⑥归一化和图模型结合。
+      confidence: anecdotal_unverified
+    related_problems:
+    - INF-013
+    - TNS-014
+    - ATT-008
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①论文的动机、实验与下游任务；②Transformer 训推流程；③BERT/GPT 的目标与结构；④LoRA；⑤大模型装不进显存时的并行方案；⑥归一化和图模型结合。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 这个理论改动怎样反映到下游任务？
+    - 显存不足时，你会先测哪一类占用再选并行策略？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；MJ11-MJ12-MJ13 可能同作者，保守合组
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面 2024-05-13 11:15，已编辑；正文明确技术面为 2024-03-28、2024-04-09，HR 面为 2024-04-17；腾讯视频
+      NLP/LLM 暑期实习。 样本分组：单篇作者自述，不是公司官方标准；MJ11-MJ12-MJ13 可能同作者，保守合组。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-013
+    kind: experience_pattern
+    title: MJ13 · 长文本系统必须同时解释离线和线上失败
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    skills:
+    - skill.inference_systems.capacity
+    - skill.data_mlops.experiments
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 你提到的线上异常在离线评估中为何没有暴露？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 你提到的线上异常在离线评估中为何没有暴露？
+    - 如果预算不变，长文本方案首先牺牲哪个指标？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj13
+      claim: ①长文本方案和效果评估；②显存构成、OOM 与分布式；③LoRA/全量 SFT 选择；④数据构建；⑤上线后异常案例；⑥智能客服、RAG 与长文本方案设计。
+      confidence: anecdotal_unverified
+    related_problems:
+    - ATT-020
+    - INF-008
+    - PT-024
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①长文本方案和效果评估；②显存构成、OOM 与分布式；③LoRA/全量 SFT 选择；④数据构建；⑤上线后异常案例；⑥智能客服、RAG 与长文本方案设计。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 你提到的线上异常在离线评估中为何没有暴露？
+    - 如果预算不变，长文本方案首先牺牲哪个指标？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；MJ11-MJ12-MJ13 可能同作者，保守合组
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：首发 2024-11-13 22:12:52；2024-12-11 修改；各轮面试日期未披露；2025 届提前批大模型算法岗。 样本分组：单篇作者自述，不是公司官方标准；MJ11-MJ12-MJ13
+      可能同作者，保守合组。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-014
+    kind: experience_pattern
+    title: MJ14 · 应用岗位也会从项目转向推理结构边界
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    skills:
+    - skill.inference_systems.serving
+    - skill.training_infra.distributed
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 在你的请求负载上，MoE 的哪部分开销是真正瓶颈？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 在你的请求负载上，MoE 的哪部分开销是真正瓶颈？
+    - 换一种并行策略时你需要重新测什么？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj14
+      claim: ①项目细节；②多模态模型；③TF-IDF；④DeepSeek V3/R1 的区别；⑤投机解码与 MoE 的局限；⑥数据、流水线、张量并行。
+      confidence: anecdotal_unverified
+    related_problems:
+    - NNL-014
+    - ATT-020
+    - AGT-006
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ①项目细节；②多模态模型；③TF-IDF；④DeepSeek V3/R1 的区别；⑤投机解码与 MoE 的局限；⑥数据、流水线、张量并行。
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 在你的请求负载上，MoE 的哪部分开销是真正瓶颈？
+    - 换一种并行策略时你需要重新测什么？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；MJ05-MJ14 同作者
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：页面 2025-03-04 13:21；面试日未写；原文仅称“熊厂”和大模型 Web 端应用算法实习，公司名称未明确披露。 样本分组：单篇作者自述，不是公司官方标准；MJ05-MJ14
+      同作者。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-015
+    kind: experience_pattern
+    title: MJ15 · RL 奖励必须对应具体失败类型
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.post_training_rl.reward_modeling
+    - skill.data_mlops.experiments
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 你这个奖励项希望纠正哪一种失败？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 你这个奖励项希望纠正哪一种失败？
+    - 新模型离线更好但旧模型仍在线上，可能缺哪种证据？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj15
+      claim: ① GRPO 奖励与实际失败案例怎样对应？② 新模型更优，旧模型为何还在线上使用？③ 如何改善长尾样本？④ 这里的 RL 与模仿学习究竟有什么区别？⑤ 预测如何表达多种可能结果？
+      confidence: anecdotal_unverified
+    related_problems:
+    - PT-023
+    - PT-009
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ① GRPO 奖励与实际失败案例怎样对应？② 新模型更优，旧模型为何还在线上使用？③ 如何改善长尾样本？④ 这里的 RL 与模仿学习究竟有什么区别？⑤ 预测如何表达多种可能结果？
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 你这个奖励项希望纠正哪一种失败？
+    - 新模型离线更好但旧模型仍在线上，可能缺哪种证据？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；MJ15-MJ16-MJ17 同作者；后两篇同岗位续轮
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：正文明确面试日 2026-07-31；约 42 分钟。页面发布栏仅显示 `08-25 21:31`，不另行推断发布日期年份。 样本分组：单篇作者自述，不是公司官方标准；MJ15-MJ16-MJ17
+      同作者；后两篇同岗位续轮。本轮可打开索引，但未可靠取得完整正文；摘要来自用户资料，保持 anecdotal / unverified。
+  - id: EXP-AI-016
+    kind: experience_pattern
+    title: MJ16 · 算法选择需要可分离的 SFT 与 RL 增益证据
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.post_training_rl.policy_optimization
+    - skill.project_deep_dive.experiments
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 为什么这个任务用 GRPO 而非 DPO？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 为什么这个任务用 GRPO 而非 DPO？
+    - 只换 SFT 数据不做 RL 时，哪部分收益还存在？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj16
+      claim: ① 为何选 GRPO 而非 DPO？② SFT 和 RL 的增益如何区分？③ LoRA 究竟改哪些模块？④ 奖励项权重为何这样设置？⑤ Cross-Attention 中 Q、K、V
+        各来自哪里？
+      confidence: anecdotal_unverified
+    related_problems:
+    - PT-009
+    - PT-023
+    - INF-013
+    - ATT-019
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ① 为何选 GRPO 而非 DPO？② SFT 和 RL 的增益如何区分？③ LoRA 究竟改哪些模块？④ 奖励项权重为何这样设置？⑤ Cross-Attention 中 Q、K、V 各来自哪里？
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 为什么这个任务用 GRPO 而非 DPO？
+    - 只换 SFT 数据不做 RL 时，哪部分收益还存在？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；MJ15-MJ16-MJ17 同作者；后两篇同岗位续轮
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：正文明确面试日 2026-08-11；约 50 分钟。页面显示 `09-04 15:59 已编辑`，不作为明确完整发布日期。 样本分组：单篇作者自述，不是公司官方标准；MJ15-MJ16-MJ17
+      同作者；后两篇同岗位续轮。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。
+  - id: EXP-AI-017
+    kind: experience_pattern
+    title: MJ17 · 续轮围绕奖励副作用与分布外鲁棒性加深
+    domain: project_deep_dive
+    tracks:
+    - llm_algorithm
+    - post_training
+    skills:
+    - skill.post_training_rl.verification
+    - skill.evaluation_safety.benchmarks
+    priority: P2
+    difficulty:
+      concept: 3
+      implementation: 3
+      debugging: 4
+    seniority:
+    - intern
+    - new_grad
+    - mid
+    prompt: 风险惩罚是否会让策略放弃必要动作？
+    answer_outline:
+    - 先让候选人描述本人负责的具体任务，再核实一个机制和对应证据。
+    - 根据回答选择反例或另一相关角度；没有经历依据的内容要明确作为假设，不推定个人事实。
+    follow_ups:
+    - 风险惩罚是否会让策略放弃必要动作？
+    - 不同风格数据上，你怎样区分平均收益与尾部退化？
+    pitfalls:
+    - 把作者自述当成该公司的统一要求。
+    - 候选人没有量化证据时，诱导其编造数字。
+    signals:
+    - 实际回答中有个人交付、可复现实验或已说明的限制。
+    source_claims:
+    - source_id: ai40-mj17
+      claim: ① 训练集与评估集如何形成？② 奖励设计怎样对应错误类型？③ 不同项目选择不同 RL 算法的依据是什么？④ 风险奖励会不会压制必要动作？⑤ 如何测量策略对不同风格的适应与鲁棒性？
+      confidence: anecdotal_unverified
+    related_problems:
+    - PT-023
+    - PT-010
+    reviewed_at: '2026-09-08'
+    observed_pattern:
+    - ① 训练集与评估集如何形成？② 奖励设计怎样对应错误类型？③ 不同项目选择不同 RL 算法的依据是什么？④ 风险奖励会不会压制必要动作？⑤ 如何测量策略对不同风格的适应与鲁棒性？
+    candidate_playbook:
+    - 先说明本人做过什么，涉及多少数据和哪些评估条件只回答获准披露的事实。
+    - 说清对照与不确定性；不要为了回答原帖中的问题虚构实习、论文或部署经历。
+    drill_prompt:
+    - 风险惩罚是否会让策略放弃必要动作？
+    - 不同风格数据上，你怎样区分平均收益与尾部退化？
+    sample_size_or_scope: 单篇作者自述，不是公司官方标准；MJ15-MJ16-MJ17 同作者；后两篇同岗位续轮
+    caveat: 日期以来源备注为准，缺失年份保持未知；自动驾驶/规划样本不能代表全部大模型岗位。追问是原创练习，不复刻未公开题面。
+    provenance: 用户整理资料中的日期口径：正文明确面试日 2026-08-14；约 70 分钟。页面显示 `09-04 13:56 已编辑`，完整发布日期未核验。 样本分组：单篇作者自述，不是公司官方标准；MJ15-MJ16-MJ17
+      同作者；后两篇同岗位续轮。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。

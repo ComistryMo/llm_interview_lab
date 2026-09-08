@@ -226,16 +226,6 @@ problems:
     prerequisites: ["LOSS-007","FND-011"]
     problem_type: implementation
     description: "Implement target/draft acceptance and corrected resampling probabilities."
-  - id: INF-008
-    title: "Symmetric INT8 Quantization"
-    status: planned
-    domain: inference
-    tracks: ["systems"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["TNS-015"]
-    problem_type: implementation
-    description: "Quantize and dequantize tensors with per-tensor and per-channel scales."
   - id: INF-009
     title: "INT4 and NF4 Packing"
     status: planned
@@ -276,16 +266,6 @@ problems:
     prerequisites: ["INF-008"]
     problem_type: implementation
     description: "Move activation outliers into weights with per-channel scaling."
-  - id: INF-013
-    title: "LoRA Merge and Unmerge"
-    status: planned
-    domain: inference
-    tracks: ["llm_algorithm","systems"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["NNL-001"]
-    problem_type: implementation
-    description: "Merge low-rank adapters into base weights and restore them exactly."
   - id: INF-014
     title: "Serving Request Scheduler"
     status: planned

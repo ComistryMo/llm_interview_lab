@@ -42,7 +42,7 @@
             "canonical_skills": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^skill\\.[a-z0-9_]+(?:\\.[a-z0-9_]+)+$"}},
             "validation": {"type": "object", "additionalProperties": false, "required": ["level", "field_runs"], "properties": {"level": {"enum": ["contract", "oracle", "field", "stable"]}, "field_runs": {"type": "integer", "minimum": 0}, "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
             "assets": {"type": "object", "additionalProperties": false, "required": ["problem_dir"], "properties": {"problem_dir": {"type": "string", "pattern": "^curriculum/problems/(?:[A-Z]+|CAP-[A-Z]+)-[0-9]{3}-[a-z0-9-]+$"}}},
-            "interface": {"type": "object", "additionalProperties": false, "required": ["language", "framework", "symbol"], "properties": {"language": {"const": "python"}, "framework": {"enum": ["stdlib", "pytorch"]}, "symbol": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"}}},
+            "interface": {"type": "object", "additionalProperties": false, "required": ["language", "framework", "symbol"], "properties": {"language": {"const": "python"}, "framework": {"enum": ["stdlib", "pytorch", "numpy"]}, "symbol": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"}}},
             "constraints": {"type": "object", "additionalProperties": false, "required": ["forbidden_apis", "time_limit_ms", "output_limit_kb"], "properties": {"forbidden_apis": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "time_limit_ms": {"type": "integer", "minimum": 100}, "output_limit_kb": {"type": "integer", "minimum": 1}, "memory_limit_mb": {"type": "integer", "minimum": 1}}},
             "assessment": {
               "type": "object", "additionalProperties": false, "required": ["runner", "oracle", "oral_questions"],
@@ -93,7 +93,7 @@
               "required": ["language", "framework", "symbol"],
               "properties": {
                 "language": {"const": "python"},
-                "framework": {"enum": ["stdlib", "pytorch"]},
+                "framework": {"enum": ["stdlib", "pytorch", "numpy"]},
                 "symbol": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"}
               }
             },

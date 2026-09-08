@@ -207,7 +207,9 @@ llm-lab graph --quest tensor_and_autograd
 
 ### AI 手撕题（当前源码）
 
-已有 [SGD](curriculum/problems/OPT-001-sgd/task.md)、[交叉熵](curriculum/problems/LOSS-014-cross-entropy/task.md)、[MHA](curriculum/problems/ATT-004-multi-head-attention/task.md)、[GRPO Clipped Loss](curriculum/problems/PT-015-grpo-loss/task.md)；本轮补充相邻能力，不重复建同名题：
+2026-09-08 的 [AI 算法手撕 40 项专项](docs/content/ai-handwriting-40.zh.md) 已接入当前源码：21 个规划节点补齐、18 个不同接口/进阶节点新增，AdamW 复用原题。包括完整 MHA/GQA Cache、RoPE、SFT/DPO/GRPO/PPO/GAE、LoRA、MoE、Decoder、手写反传、传统 ML、视觉与排序评测；配套 40 张技术卡、17 张注明证据范围的面经模式和五条推荐路线。新增节点通过公开及私有验证；尚无独立复测包的题不能标为 mastered。没有 PyTorch 时可选择符合当前环境的 NumPy/标准库题，不代表能运行全部专项。
+
+已有 [SGD](curriculum/problems/OPT-001-sgd/task.md)、[交叉熵](curriculum/problems/LOSS-014-cross-entropy/task.md)、[MHA](curriculum/problems/ATT-004-multi-head-attention/task.md)、[GRPO Clipped Loss](curriculum/problems/PT-015-grpo-loss/task.md)；前一轮补充的相邻能力仍保留原接口：
 
 | 新题 | 重点 |
 |---|---|

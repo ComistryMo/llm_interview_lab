@@ -1,31 +1,34 @@
 # OPT-005 — AdamW
 
-## Goal
+## 目标
 
-Implement one optimizer update explicitly so parameter mutation and persistent state are auditable.
+独立实现一次 AdamW 更新，能解释参数如何变化、哪些状态需要保存，以及中断恢复后如何重现连续训练。对应 AI 手撕专项 AI20，沿用本题既有接口，不创建重复题。
 
-## Interface
+## 接口
 
 ```python
 def adamw_step(parameters, states, lr, beta1, beta2, eps, weight_decay) -> list[dict[str, object]]:
 ```
 
-## Contract
+## 题目要求
 
-- Use the same moment state and bias correction contract as OPT-004.
-- For parameters with gradients, apply decoupled weight decay `parameter *= (1 - lr * weight_decay)` separately from the adaptive update.
-- Skip parameters with no gradient, including weight decay and step increment.
-- Require finite non-negative weight decay and valid Adam hyperparameters; never add L2 decay into the gradient.
+- 动量状态、逐参数 step 和偏差校正与 OPT-004 一致。
+- 对有梯度的参数，独立执行解耦衰减 `parameter *= (1 - lr * weight_decay)`，再执行自适应更新。
+- 没有梯度的参数不做衰减，也不增加 step。
+- weight_decay 必须有限、非负，其他 Adam 超参数须合法；不要把 L2 项混进梯度。
+- 返回新的状态；保存并恢复参数和 m/v/step 后，应与连续执行得到相同轨迹。
 
-## Constraints
+## 约束
 
-Do not use `torch.optim`. The function may mutate parameters only after full validation; gradients and caller-owned state remain unchanged.
+禁止 `torch.optim`。只有所有参数和状态完成校验后才可更新参数；调用方的梯度和旧状态保持不变。
 
-## Acceptance
+## 验收
 
-Run `llm-lab test OPT-005 --profile <id>`. Tests cover closed-form steps, missing gradients, state isolation, validation, and no-grad update semantics.
+在答题工作区构造输入运行，或执行公开测试。测试覆盖单步解析结果、无梯度、独立状态、错误输入、no-grad 更新和检查点恢复。测试通过不是掌握判定。
 
-## Oral defense
+## 口述与追问
 
-Write the update equations, identify every persistent state tensor, explain step timing and bias correction, and distinguish coupled L2 from decoupled weight decay.
-
+- 写出更新关系，为什么解耦衰减不能简单加到梯度里？
+- 同一组参数有的无梯度时，step 和衰减各如何处理？
+- 只保存权重、不保存 m/v/step，恢复后的哪一步首先不同？
+- 单元素 float64 检查和多步恢复对照，各能发现什么错误？

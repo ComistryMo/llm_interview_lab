@@ -1,15 +1,5 @@
 schema_version: 2
 problems:
-  - id: TML-001
-    title: "Logistic Regression from Scratch"
-    status: planned
-    domain: traditional_ml
-    tracks: ["traditional_ml"]
-    tier: elective
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["LOSS-013","OPT-001"]
-    problem_type: implementation
-    description: "Train binary logistic regression with explicit gradients and metrics."
   - id: TML-002
     title: "Decision Tree Split"
     status: planned
@@ -30,16 +20,6 @@ problems:
     prerequisites: ["TML-002"]
     problem_type: implementation
     description: "Fit one residual learner and update ensemble predictions."
-  - id: TML-004
-    title: "K-Means"
-    status: planned
-    domain: traditional_ml
-    tracks: ["traditional_ml"]
-    tier: elective
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["FND-011","TNS-003"]
-    problem_type: implementation
-    description: "Run seeded assignment and centroid updates with empty clusters."
   - id: TML-005
     title: "Feature Leakage Audit"
     status: planned
@@ -120,16 +100,6 @@ problems:
     prerequisites: ["NNL-009"]
     problem_type: implementation
     description: "Compute and validate convolution output size for padding and dilation."
-  - id: CV-002
-    title: "Non-Maximum Suppression"
-    status: planned
-    domain: computer_vision
-    tracks: ["computer_vision","vlm_algorithm"]
-    tier: elective
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["LOSS-011","ALG-007"]
-    problem_type: implementation
-    description: "Select boxes by score and suppress overlaps deterministically."
   - id: CV-003
     title: "Deterministic Image Augmentation"
     status: planned

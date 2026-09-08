@@ -229,6 +229,10 @@ def _coding_candidates(
             and problem.raw["difficulty"]["coding"] in band
             and matched_skills
             and (torch_available or not _requires_torch(problem))
+            and (
+                problem.raw.get("interface", {}).get("framework") != "numpy"
+                or importlib.util.find_spec("numpy") is not None
+            )
         ):
             candidates.append((problem, matched_skills))
     return tuple(

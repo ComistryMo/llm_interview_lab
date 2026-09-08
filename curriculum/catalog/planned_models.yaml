@@ -20,26 +20,6 @@ problems:
     prerequisites: ["NNL-001"]
     problem_type: implementation
     description: "Implement stable SiLU with reference-aligned derivatives."
-  - id: NNL-005
-    title: "SwiGLU"
-    status: planned
-    domain: neural_layer
-    tracks: ["llm_algorithm"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["NNL-001","NNL-004"]
-    problem_type: implementation
-    description: "Build a gated feed-forward projection with explicit split shapes."
-  - id: NNL-006
-    title: "LayerNorm"
-    status: planned
-    domain: neural_layer
-    tracks: ["llm_algorithm","computer_vision"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["NNL-008"]
-    problem_type: implementation
-    description: "Normalize last dimensions with affine parameters and stable variance."
   - id: NNL-007
     title: "Neural Initialization Suite"
     status: planned
@@ -50,16 +30,6 @@ problems:
     prerequisites: ["NNL-001"]
     problem_type: implementation
     description: "Implement Xavier and Kaiming initialization with fan calculations."
-  - id: NNL-009
-    title: "Two-Dimensional Convolution"
-    status: planned
-    domain: neural_layer
-    tracks: ["computer_vision","vlm_algorithm"]
-    tier: elective
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["NNL-001"]
-    problem_type: implementation
-    description: "Implement a small im2col convolution and verify output geometry."
   - id: NNL-010
     title: "Pooling Layers"
     status: planned
@@ -100,16 +70,6 @@ problems:
     prerequisites: ["NNL-011"]
     problem_type: implementation
     description: "Implement four gates and separate hidden and cell state."
-  - id: NNL-014
-    title: "Top-K MoE Router"
-    status: planned
-    domain: neural_layer
-    tracks: ["llm_algorithm","systems"]
-    tier: advanced
-    difficulty: {concept: 4, coding: 5, debugging: 5}
-    prerequisites: ["NNL-001","LOSS-007","ALG-007"]
-    problem_type: implementation
-    description: "Route tokens to top-k experts with capacity and deterministic ties."
   - id: NNL-015
     title: "MoE Load-Balancing Loss"
     status: planned
@@ -167,16 +127,6 @@ problems:
     sources:
       - {type: official_docs, title: "PyTorch scaled dot product attention", url: https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html}
       - {type: internal_original, title: "LLM Interview Lab 原创题面、接口与测试"}
-  - id: ATT-008
-    title: "Decoder Layer"
-    status: planned
-    domain: transformer
-    tracks: ["llm_algorithm","vlm_algorithm"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["ATT-004","NNL-005","NNL-008"]
-    problem_type: integration
-    description: "Assemble pre-norm attention and feed-forward residual blocks."
   - id: ATT-010
     title: "Temperature and Top-K Sampling"
     status: planned
@@ -187,16 +137,6 @@ problems:
     prerequisites: ["LOSS-007","FND-011"]
     problem_type: implementation
     description: "Sample reproducibly from filtered logits with stable edge cases."
-  - id: ATT-011
-    title: "Top-P Sampling"
-    status: planned
-    domain: transformer
-    tracks: ["llm_algorithm","agent"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["ATT-010"]
-    problem_type: implementation
-    description: "Apply nucleus filtering with sorted cumulative probability."
   - id: ATT-012
     title: "Tiny Decoder Language Model"
     status: planned
@@ -227,16 +167,6 @@ problems:
     prerequisites: ["ATT-003"]
     problem_type: implementation
     description: "Allow bidirectional prefix tokens and causal continuation tokens."
-  - id: ATT-015
-    title: "Online Softmax Blocks"
-    status: planned
-    domain: transformer
-    tracks: ["llm_algorithm","systems"]
-    tier: advanced
-    difficulty: {concept: 4, coding: 5, debugging: 5}
-    prerequisites: ["LOSS-007","ATT-002"]
-    problem_type: derivation
-    description: "Combine blockwise max and normalizer statistics exactly."
   - id: ATT-016
     title: "Ring Attention Data Flow"
     status: planned
@@ -267,16 +197,6 @@ problems:
     prerequisites: ["ATT-008","NNL-014","NNL-015"]
     problem_type: integration
     description: "Integrate routed experts and auxiliary loss into a decoder block."
-  - id: TOK-001
-    title: "Byte-Pair Encoding Trainer"
-    status: planned
-    domain: tokenizer
-    tracks: ["llm_algorithm"]
-    tier: advanced
-    difficulty: {concept: 4, coding: 5, debugging: 5}
-    prerequisites: ["FND-005","ALG-001"]
-    problem_type: implementation
-    description: "Train deterministic byte-pair merges with stable tie breaking."
   - id: TOK-002
     title: "BPE Encoder"
     status: planned
@@ -307,16 +227,6 @@ problems:
     prerequisites: ["TOK-003","FND-002"]
     problem_type: implementation
     description: "Render role messages and compute assistant-only label spans."
-  - id: VLM-001
-    title: "Image Patch Embedding"
-    status: planned
-    domain: vlm
-    tracks: ["vlm_algorithm","computer_vision"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["NNL-009","NNL-001"]
-    problem_type: implementation
-    description: "Convert images into ordered patch tokens with explicit geometry."
   - id: VLM-002
     title: "Vision Encoder Interface"
     status: planned
@@ -473,16 +383,6 @@ problems:
     prerequisites: ["FND-014","VLM-013"]
     problem_type: debugging
     description: "Detect duplicate images, near-duplicate text, and benchmark contamination."
-  - id: PT-003
-    title: "SFT Batch Loss"
-    status: planned
-    domain: post_training
-    tracks: ["llm_algorithm","vlm_algorithm","post_training"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["PT-001","LOSS-014"]
-    problem_type: implementation
-    description: "Compute token-normalized SFT loss and accuracy from masked labels."
   - id: PT-004
     title: "Minimal SFT Trainer"
     status: planned
@@ -513,26 +413,6 @@ problems:
     prerequisites: ["FND-002"]
     problem_type: implementation
     description: "Compose deterministic format and correctness verification signals."
-  - id: PT-009
-    title: "PPO Clipped Policy Loss"
-    status: planned
-    domain: post_training
-    tracks: ["post_training"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["PT-002","LOSS-004"]
-    problem_type: implementation
-    description: "Implement clipped policy ratios with masks and signed advantages."
-  - id: PT-010
-    title: "Generalized Advantage Estimation"
-    status: planned
-    domain: post_training
-    tracks: ["post_training"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["PT-009"]
-    problem_type: implementation
-    description: "Compute backward GAE recurrences with terminal and truncation masks."
   - id: PT-011
     title: "Adaptive KL Controller"
     status: planned

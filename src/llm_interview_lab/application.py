@@ -630,13 +630,17 @@ class ApplicationService:
     def _problem_environment_available(problem: Problem) -> bool:
         interface = problem.raw.get("interface", {})
         framework = interface.get("framework", "") if isinstance(interface, Mapping) else ""
-        return str(framework).lower() != "pytorch" or importlib.util.find_spec("torch") is not None
+        module = {"pytorch": "torch", "numpy": "numpy"}.get(str(framework).lower())
+        return module is None or importlib.util.find_spec(module) is not None
 
     def _problem_environment(self, problem: Problem) -> dict[str, Any]:
         available = self._problem_environment_available(problem)
         return {
             "environment_available": available,
-            "environment": "当前可运行" if available else "需要 PyTorch 练习环境",
+            "environment": "当前可运行" if available else (
+                "需要 NumPy 练习环境" if problem.raw["interface"]["framework"] == "numpy"
+                else "需要 PyTorch 练习环境"
+            ),
         }
 
     def practice_actions(

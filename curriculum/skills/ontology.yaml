@@ -74,10 +74,10 @@ skills:
   - id: skill.machine_learning_math.linear_algebra
     title: Linear Algebra for ML
     domain: machine_learning_math
-    description: Reason about vectors, matrices, projections and tensor shapes.
+    description: 解释向量、投影和张量形状；按背景选一个机制深入，如 PCA 中心化与 SVD 符号不唯一、K-means 空簇与初始化、KNN 距离和并列策略。用不变量核实，而不是只背库名。
     levels: *levels
     evidence: [coding, oral, design]
-    related_problems: [NNL-001, ATT-002]
+    related_problems: [NNL-001, ATT-002, TML-004, CV-002, TML-007, TML-008, TML-009]
   - id: skill.machine_learning_math.probability
     title: Probability and Information
     domain: machine_learning_math
@@ -91,14 +91,14 @@ skills:
     description: Explain gradients, update rules and convergence trade-offs.
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [OPT-001, OPT-004, OPT-005]
+    related_problems: [OPT-001, OPT-004, OPT-005, LOSS-016, TML-006, TML-001, NNL-017, TNS-017]
   - id: skill.machine_learning_math.statistics
     title: Experimental Statistics
     domain: machine_learning_math
-    description: Quantify uncertainty, compare samples and interpret metrics.
+    description: 比较样本、指标与不确定性；核实 AUC 同分、GAUC 无效组和加权分母、NDCG gain 与并列约定，能给出改变数据分组或排序后结论变化的反例。
     levels: *levels
     evidence: [case, oral, project]
-    related_problems: [LOSS-010, FND-014]
+    related_problems: [LOSS-010, FND-014, REC-007, REC-008]
 
   - id: skill.deep_learning.tensor_ops
     title: Tensor Shape and Indexing
@@ -106,32 +106,32 @@ skills:
     description: Manipulate shapes, broadcasts, gathers and masks correctly.
     levels: *levels
     evidence: [coding, debugging, oral]
-    related_problems: [TNS-002, TNS-003, TNS-006, TNS-010, TNS-011, CAP-LOSS-001, CAP-TRN-001]
+    related_problems: [TNS-002, TNS-003, TNS-006, TNS-010, TNS-011, CAP-LOSS-001, CAP-TRN-001, VLM-001]
   - id: skill.deep_learning.autograd
     title: Autograd and Gradient Flow
     domain: deep_learning
-    description: Trace computation graphs, detach boundaries and gradients.
+    description: 追踪计算图和梯度边界；能从 Softmax VJP、两层 MLP 手写反传或共享父节点的标量 DAG 中解释梯度累加、detach 和重复 backward，并用独立数值差分定位错误。
     levels: *levels
     evidence: [coding, debugging, oral]
-    related_problems: [TNS-007, TNS-008, TNS-013, CAP-LOSS-001, CAP-TRN-001]
+    related_problems: [TNS-007, TNS-008, TNS-013, CAP-LOSS-001, CAP-TRN-001, LOSS-016, TML-006, TML-001, NNL-017, TNS-017, PT-003, PT-022, LOSS-004, LOSS-006, TNS-014, NNL-014]
   - id: skill.deep_learning.neural_layers
     title: Neural Network Layers
     domain: deep_learning
-    description: Implement and verify trainable neural primitives.
+    description: 实现并验证基础层；辨别最后一维 LayerNorm、RMSNorm、BatchNorm 训练与推理统计、inverted Dropout、卷积互相关的差异。先核实形状和状态，再追问小 batch、边界或梯度，而非堆叠定义。
     levels: *levels
     evidence: [coding, debugging]
-    related_problems: [NNL-001, NNL-002, NNL-008, CAP-LOSS-001, CAP-TRN-001]
+    related_problems: [NNL-001, NNL-002, NNL-008, CAP-LOSS-001, CAP-TRN-001, NNL-006, INF-013, NNL-005, NNL-016, NNL-009, REC-009]
   - id: skill.deep_learning.losses
     title: Stable Loss Functions
     domain: deep_learning
-    description: Implement objectives with stable numerics and clear reductions.
+    description: 明确目标函数的数值稳定、mask 与归约分母；可从 token CE 对齐、前向 KL 的方向、温度缩放或双向 InfoNCE 正样本关系逐层追问。能用全 mask、单 token 或常数偏移区分错误实现。
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [LOSS-007, LOSS-008, LOSS-013, LOSS-014, LOSS-002, CAP-LOSS-001, CAP-TRN-001]
+    related_problems: [LOSS-007, LOSS-008, LOSS-013, LOSS-014, LOSS-002, CAP-LOSS-001, CAP-TRN-001, PT-003, PT-022, LOSS-004, LOSS-006, PT-009]
   - id: skill.deep_learning.optimizers
     title: Stateful Optimizers
     domain: deep_learning
-    description: Implement stateful parameter updates and resume semantics.
+    description: 解释带状态的参数更新和恢复；核实 AdamW 解耦衰减、无梯度时的行为、逐参数 step、偏差校正和 m/v 持久化。用中断恢复对照连续运行，不把损失下降当实现正确证明。
     levels: *levels
     evidence: [coding, debugging, oral]
     related_problems: [OPT-001, OPT-002, OPT-003, OPT-004, OPT-005, CAP-TRN-001]
@@ -139,25 +139,25 @@ skills:
   - id: skill.llm_vlm.tokenization
     title: Tokenization and Templates
     domain: llm_vlm
-    description: Explain tokenizer training, special tokens and chat templates.
+    description: 解释分词训练、特殊 token 与模板；BPE 要分清带词频的相邻 pair 统计、并列规则、非重叠替换和推理时 merge rank，不能把训练频次直接当编码顺序。
     levels: *levels
     evidence: [coding, oral, debugging]
     related_problems: [TOK-001, TOK-002, TOK-003, TOK-004]
   - id: skill.llm_vlm.attention
     title: Attention Mechanisms
     domain: llm_vlm
-    description: Implement and analyze attention, masks and head layouts.
+    description: 从实际实现核实 Q/K/V 投影、头布局、缩放和 mask 含义；逐层追问全屏蔽行、GQA 分组、增量 cache 的位置偏移、RoPE 配对约定或在线 Softmax。给定变化的形状后能推导，而非只背 MHA/MQA/GQA 定义。
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [ATT-002, ATT-003, ATT-004, ATT-005, ATT-006]
+    related_problems: [ATT-002, ATT-003, ATT-004, ATT-005, ATT-006, ATT-019, ATT-020, ATT-021, ATT-015, REC-009]
     aliases: [Attention]
   - id: skill.llm_vlm.transformer
     title: Transformer Architecture
     domain: llm_vlm
-    description: Connect embeddings, normalization, MLP and attention blocks.
+    description: 串起 embedding、归一化、Attention 与 FFN；核实 Pre-Norm 残差、SwiGLU 双分支、完整 Decoder 与增量 cache 一致性。MoE 先区分路由、权重归一化和专家容量；不把无容量丢弃的教学实现称作完整生产 MoE。
     levels: *levels
     evidence: [coding, oral, design]
-    related_problems: [ATT-007, ATT-008, ATT-012]
+    related_problems: [ATT-007, ATT-008, ATT-012, ATT-019, ATT-020, ATT-021, NNL-014, NNL-005]
   - id: skill.llm_vlm.multimodal_data
     title: Multimodal Data Flow
     domain: llm_vlm
@@ -168,39 +168,39 @@ skills:
   - id: skill.llm_vlm.vlm_architecture
     title: Vision-Language Architecture
     domain: llm_vlm
-    description: Explain vision encoders, projectors and language-model fusion.
+    description: 解释视觉编码器、连接层和语言融合；从本人经历选择 Patch 展平与线性投影、双向对比目标、视觉端冻结策略或跨模态对齐深入，明确像素、token 和配对关系，不强加候选人未做过的模块。
     levels: *levels
     evidence: [oral, coding, design]
-    related_problems: [VLM-001, VLM-002, VLM-003]
+    related_problems: [VLM-001, VLM-002, VLM-003, CV-002, LOSS-006, NNL-009]
   - id: skill.llm_vlm.generation
     title: Generation and Sampling
     domain: llm_vlm
-    description: Reason about decoding, sampling and generation failure modes.
+    description: 解释解码和采样失败；核实 temperature→top-k→top-p 的执行顺序与重归一化、随机种子、EOS 完成假设、beam 活跃/已完成集合与长度惩罚。追问改变一项顺序或停止条件会产生什么可测差异。
     levels: *levels
     evidence: [coding, debugging, oral]
-    related_problems: [ATT-010, ATT-011, INF-001]
+    related_problems: [ATT-010, ATT-011, INF-001, ATT-022]
   - id: skill.llm_vlm.context_management
     title: Context and Token Budgeting
     domain: llm_vlm
     description: Budget context, masks and multimodal tokens under constraints.
     levels: *levels
     evidence: [design, debugging, oral]
-    related_problems: [ALG-003, VLM-010, ATT-014]
+    related_problems: [ALG-003, VLM-010, ATT-014, PT-024]
 
   - id: skill.post_training_rl.sft
     title: Supervised Fine-Tuning
     domain: post_training_rl
-    description: Build masked SFT data and loss flows.
+    description: 构造可核验的 SFT 数据与 loss；分清 causal shift、prompt/completion/EOS/padding，packing 的样本隔离，以及微批次与多进程 token 加权。把数据、目标、评估对照分别核实，不混淆总 token mean 与逐回答 mean。
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [PT-001, PT-003, PT-004]
+    related_problems: [PT-001, PT-003, PT-004, INF-013, PT-024]
   - id: skill.post_training_rl.preference_data
     title: Preference Data
     domain: post_training_rl
     description: Validate preference pairs, provenance and sampling assumptions.
     levels: *levels
     evidence: [coding, case, debugging]
-    related_problems: [PT-005, PT-006]
+    related_problems: [PT-005, PT-006, PT-022]
   - id: skill.post_training_rl.reward_modeling
     title: Reward Modeling
     domain: post_training_rl
@@ -211,17 +211,17 @@ skills:
   - id: skill.post_training_rl.policy_optimization
     title: Policy Optimization
     domain: post_training_rl
-    description: Explain policy ratios, clipping, advantages and KL control.
+    description: 解释策略优化的概率比、clip、优势和 KL；区分 old policy 与 reference、负优势下裁剪方向、PPO policy/value/entropy、GAE 的 bootstrap 与跨 episode 递推。按实际回答追一个推导、反例或因果实验，不把未做过的 RL 工作当作候选人经历。
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [PT-009, PT-010, PT-011, PT-012, PT-019]
+    related_problems: [PT-009, PT-010, PT-011, PT-012, PT-019, PT-023]
   - id: skill.post_training_rl.grpo
     title: Grouped Policy Optimization
     domain: post_training_rl
-    description: Implement group advantages and sequence-level clipped updates.
+    description: 核实 GRPO 组内优势、零方差组、old-policy 比、逐回答 token mean 与组 mean、reference k3 惩罚和 detach；区分不同 loss 版本与长度偏差。逐层追问奖励、采样、优化和验证器各自改变了什么，不能全场只围绕一个 CoT 关键词。
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [PT-013, PT-014, PT-015, PT-019]
+    related_problems: [PT-013, PT-014, PT-015, PT-019, PT-023]
   - id: skill.post_training_rl.verification
     title: Verifiers and Reward Integrity
     domain: post_training_rl
@@ -322,7 +322,7 @@ skills:
     description: Build representative, repeatable and diagnostic evaluations.
     levels: *levels
     evidence: [case, design, project]
-    related_problems: [AGT-014, VLM-013]
+    related_problems: [AGT-014, VLM-013, LOSS-010, REC-007, REC-008]
   - id: skill.evaluation_safety.leakage
     title: Leakage and Contamination
     domain: evaluation_safety
@@ -377,10 +377,10 @@ skills:
   - id: skill.training_infra.distributed
     title: Distributed Training
     domain: training_infra
-    description: Reason about collectives, parallelism and sharding.
+    description: 推理通信、并行与分片的约定；结合实际训练核实不等长微批次的 token 权重、DDP 梯度平均与全局 token 分母、检查点一致性，以及通信/计算/I/O 的独立测量。教学计算器不是分布式系统性能证明。
     levels: *levels
     evidence: [design, oral, debugging]
-    related_problems: [DST-001, DST-002, DST-003, DST-004]
+    related_problems: [DST-001, DST-002, DST-003, DST-004, TNS-014]
   - id: skill.training_infra.checkpointing
     title: Checkpoint and Recovery
     domain: training_infra
@@ -406,10 +406,10 @@ skills:
   - id: skill.inference_systems.kv_cache
     title: KV Cache
     domain: inference_systems
-    description: Model cache shape, memory and incremental decode behavior.
+    description: 推导 KV cache 的形状、显存与增量行为；核实 GQA 的 kv-head 布局、追加轴、RoPE 绝对位置和 prefix 偏移下的因果可见性，用逐步解码对照整段计算定位串位。
     levels: *levels
     evidence: [coding, design, debugging]
-    related_problems: [ATT-009, INF-002]
+    related_problems: [ATT-009, INF-002, ATT-020, ATT-008]
   - id: skill.inference_systems.serving
     title: Model Serving
     domain: inference_systems
@@ -420,7 +420,7 @@ skills:
   - id: skill.inference_systems.quantization
     title: Quantization
     domain: inference_systems
-    description: Explain calibration, formats and quality-performance trade-offs.
+    description: 解释量化格式与质量性能取舍；核实 per-channel 的轴、对称 INT8 刻度、全零通道、ties-to-even 和反量化误差。区分浮点舍入不变量与真实速度，不能由 CPU 量化题断言 GPU 加速。
     levels: *levels
     evidence: [coding, design, oral]
     related_problems: [INF-008, INF-009, INF-010, INF-011]
@@ -430,7 +430,7 @@ skills:
     description: Analyze memory traffic, fusion and GPU kernel bottlenecks.
     levels: *levels
     evidence: [coding, debugging, design]
-    related_problems: [GPU-001, GPU-002, GPU-007, GPU-008]
+    related_problems: [GPU-001, GPU-002, GPU-007, GPU-008, ATT-015]
   - id: skill.inference_systems.capacity
     title: Latency, Throughput and Memory
     domain: inference_systems

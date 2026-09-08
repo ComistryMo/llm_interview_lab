@@ -330,16 +330,6 @@ problems:
     prerequisites: ["NNL-001","NNL-008"]
     problem_type: implementation
     description: "Register persistent and non-persistent module state and round-trip state_dict."
-  - id: TNS-014
-    title: "Micro-Batch Gradient Accumulation"
-    status: planned
-    domain: tensor_autograd
-    tracks: ["llm_algorithm","post_training"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["TNS-009","LOSS-014"]
-    problem_type: integration
-    description: "Match full-batch gradients using correctly scaled micro-batch losses."
   - id: TNS-015
     title: "Dtype and Device Transfer Audit"
     status: planned
@@ -417,16 +407,6 @@ problems:
     prerequisites: ["LOSS-013"]
     problem_type: implementation
     description: "Downweight easy binary examples with stable focal modulation."
-  - id: LOSS-004
-    title: "KL Divergence"
-    status: planned
-    domain: loss_metric
-    tracks: ["llm_algorithm","post_training"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["LOSS-008"]
-    problem_type: implementation
-    description: "Compute forward and reverse categorical KL from logits."
   - id: LOSS-005
     title: "Jensen-Shannon Divergence"
     status: planned
@@ -437,16 +417,6 @@ problems:
     prerequisites: ["LOSS-004"]
     problem_type: implementation
     description: "Implement symmetric bounded JS divergence with stable mixture logits."
-  - id: LOSS-006
-    title: "InfoNCE"
-    status: planned
-    domain: loss_metric
-    tracks: ["llm_algorithm","vlm_algorithm"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["LOSS-014"]
-    problem_type: implementation
-    description: "Build in-batch contrastive logits and symmetric InfoNCE loss."
   - id: LOSS-009
     title: "Perplexity from Masked NLL"
     status: planned
@@ -457,16 +427,6 @@ problems:
     prerequisites: ["LOSS-001"]
     problem_type: implementation
     description: "Aggregate token NLL with a correct mask denominator and safe exponentiation."
-  - id: LOSS-010
-    title: "Binary AUC with Ties"
-    status: planned
-    domain: loss_metric
-    tracks: ["ai_foundation","vlm_algorithm"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["ALG-002"]
-    problem_type: implementation
-    description: "Compute ROC AUC with deterministic tie ranks and class validation."
   - id: LOSS-011
     title: "Intersection over Union"
     status: planned

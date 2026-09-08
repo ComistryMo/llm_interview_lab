@@ -208,7 +208,7 @@
         "output": {"type": "string", "minLength": 1, "maxLength": 2000},
         "constraints": {"type": "string", "minLength": 1, "maxLength": 3000},
         "symbol": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
-        "framework": {"type": "string", "enum": ["stdlib", "pytorch", "agnostic"]}
+        "framework": {"type": "string", "enum": ["stdlib", "pytorch", "numpy", "agnostic"]}
       }
     },
     "card": {

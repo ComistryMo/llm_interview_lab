@@ -1,0 +1,2622 @@
+schema_version: 2
+problems:
+  - id: TML-004
+    title: K-means：确定初始化与空簇策略
+    status: ready
+    domain: machine_learning_math
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.machine_learning_math.linear_algebra
+    canonical_skills:
+    - skill.machine_learning_math.linear_algebra
+    validation: {level: oracle, field_runs: 0, fingerprint: 97cbf2bdfa5cd42e7aaf2c53064fe91a96f1982b287bee4497332c7a7481e560}
+    assets:
+      problem_dir: curriculum/problems/TML-004-lloyd-kmeans
+    interface:
+      language: python
+      framework: numpy
+      symbol: kmeans
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 空簇保留旧中心与重定位是同一算法吗？
+      - 为什么返回前要用最终中心重分配标签？
+      - 距离展开公式何时可能出现微小负数？
+      - 相同 seed 是否足以保证不同库得到同样聚类？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI13；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI13 技术定义 1
+      url: https://scikit-learn.org/stable/modules/clustering.html#k-means
+  - id: LOSS-010
+    title: ROC-AUC：同分不能按输入顺序算输赢
+    status: ready
+    domain: machine_learning_math
+    tracks:
+    - ai_foundation
+    - traditional_ml
+    - recommendation
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.machine_learning_math.statistics
+    - skill.evaluation_safety.benchmarks
+    canonical_skills:
+    - skill.machine_learning_math.statistics
+    - skill.evaluation_safety.benchmarks
+    validation: {level: oracle, field_runs: 0, fingerprint: 512dbd123644316f369c9414af880cdc37e50428b80f38d68006009dfda961a5}
+    assets:
+      problem_dir: curriculum/problems/LOSS-010-auc-with-ties
+    interface:
+      language: python
+      framework: numpy
+      symbol: binary_auc
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 同分为何应算半赢而非按输入顺序判胜负？
+      - 仅一类标签为何不能自动补成 AUC=0.5？
+      - batch AUC 平均为什么通常不等于全局 AUC？
+      - 类别不均衡时还需要查看哪些 PR 指标？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI14；题面与测试在本仓库适配
+    - type: official_source
+      title: AI14 技术定义 1
+      url: https://sklearn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html
+  - id: TOK-001
+    title: 带确定性 tie-break 的最小 BPE
+    status: ready
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - ai_foundation
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - FND-002
+    skills:
+    - skill.llm_vlm.tokenization
+    canonical_skills:
+    - skill.llm_vlm.tokenization
+    validation: {level: oracle, field_runs: 0, fingerprint: 14660dc60d9a5bfc58bd7570a707b6e4288a54e7dbf4bbad9611b4d8408d3c70}
+    assets:
+      problem_dir: curriculum/problems/TOK-001-deterministic-bpe
+    interface:
+      language: python
+      framework: stdlib
+      symbol: train_bpe
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - aaaa 的 pair 出现次数与一次实际合并次数为何不同？
+      - 推理时为什么不能重新用测试输入词频训练 merges？
+      - word frequency 与 tie-break 如何保证可重复？
+      - byte-level 编码能覆盖未见 Unicode 字符的什么部分？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI19；题面与测试在本仓库适配
+    - type: official_source
+      title: AI19 技术定义 1
+      url: https://huggingface.co/learn/llm-course/en/chapter6/5
+  - id: LOSS-016
+    title: Softmax 前向与反向：不构造 Jacobian
+    status: ready
+    domain: deep_learning
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    canonical_skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    validation: {level: oracle, field_runs: 0, fingerprint: 47353f8ebcd5560d8444ace294f5a1b8727955071cbc49e70d5c79a820f6e17b}
+    assets:
+      problem_dir: curriculum/problems/LOSS-016-softmax-manual-backward
+    interface:
+      language: python
+      framework: numpy
+      symbol: softmax_backward
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 怎样用向量—Jacobian 乘积避免构造三维 Jacobian？
+      - 为什么梯度每行之和接近零？
+      - P-onehot 适用于任意上游损失吗？
+      - 加均值 CE 后 batch 分母应出现几次？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI21；题面与测试在本仓库适配
+    - type: official_source
+      title: AI21 技术定义 1
+      url: https://cs231n.github.io/linear-classify/
+  - id: TML-006
+    title: NumPy 手写两层 MLP 的完整反向传播
+    status: ready
+    domain: deep_learning
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    tier: advanced
+    difficulty:
+      concept: 4
+      coding: 4
+      debugging: 4
+    prerequisites: []
+    skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    canonical_skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    validation: {level: oracle, field_runs: 0, fingerprint: 430d9bab3bbcc73e1a1f07c2a6b72a98e623823569a609bac5ea900715975bfb}
+    assets:
+      problem_dir: curriculum/problems/TML-006-numpy-mlp-backprop
+    interface:
+      language: python
+      framework: numpy
+      symbol: mlp_loss_grads
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 为什么所有层梯度应使用更新前权重？
+      - ReLU 在零点做有限差分有什么风险？
+      - 复制整个 batch 后均值 loss 梯度应如何变化？
+      - 共享权重在两条路径上使用时梯度如何组合？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI22；题面与测试在本仓库适配
+    - type: official_source
+      title: AI22 技术定义 1
+      url: https://cs231n.github.io/optimization-2/
+  - id: TML-001
+    title: 逻辑回归：稳定 BCE 与一个完整训练 step
+    status: ready
+    domain: deep_learning
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - LOSS-008
+    - OPT-001
+    skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    canonical_skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    validation: {level: oracle, field_runs: 0, fingerprint: c6539fc307c7ff28f32603212ce22cf33f210bd03124a2a0545cec32b8c066ea}
+    assets:
+      problem_dir: curriculum/problems/TML-001-logistic-regression-step
+    interface:
+      language: python
+      framework: numpy
+      symbol: logistic_step
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 为什么 sigmoid 后取 log 在极端 logit 下不稳定？
+      - 正则项为何不包含 bias？
+      - 无正则的线性可分数据是否一定有有限最优权重？
+      - 加入样本权重后损失分母如何定义？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI23；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI23 技术定义 1
+      url: https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+  - id: CV-002
+    title: IoU 与 NMS：坐标、同分和阈值都要写清
+    status: ready
+    domain: machine_learning_math
+    tracks:
+    - computer_vision
+    - vlm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.machine_learning_math.linear_algebra
+    - skill.llm_vlm.vlm_architecture
+    canonical_skills:
+    - skill.machine_learning_math.linear_algebra
+    - skill.llm_vlm.vlm_architecture
+    validation: {level: oracle, field_runs: 0, fingerprint: 6ddfa865ec364ba358735eb1c87a86aacf086d180ec89030f81356d084890fc2}
+    assets:
+      problem_dir: curriculum/problems/CV-002-deterministic-nms
+    interface:
+      language: python
+      framework: numpy
+      symbol: nms
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 连续坐标面积是否要加 1？
+      - IoU 等于阈值时保留还是抑制？
+      - 不同类别可否直接互相执行 NMS？
+      - Soft-NMS 改分后为什么可能要重新确定顺序？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI26；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI26 技术定义 1
+      url: https://docs.pytorch.org/vision/stable/generated/torchvision.ops.nms.html
+  - id: TML-007
+    title: PCA：训练集拟合与测试集变换
+    status: ready
+    domain: machine_learning_math
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.machine_learning_math.linear_algebra
+    canonical_skills:
+    - skill.machine_learning_math.linear_algebra
+    validation: {level: oracle, field_runs: 0, fingerprint: d8130f4065b2d1c6f3edc157df5081e83ea98c73511263033e84291c46cd9a9e}
+    assets:
+      problem_dir: curriculum/problems/TML-007-pca-fit-transform
+    interface:
+      language: python
+      framework: numpy
+      symbol: fit_pca
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 测试样本为何必须使用训练均值？
+      - 主方向符号不同是否意味着结果错误？
+      - 中心化与特征标准化是什么关系？
+      - 重根子空间如何比较、白化额外做什么？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI27；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI27 技术定义 1
+      url: https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+  - id: TML-008
+    title: KNN 分类与余弦近邻检索
+    status: ready
+    domain: machine_learning_math
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.machine_learning_math.linear_algebra
+    canonical_skills:
+    - skill.machine_learning_math.linear_algebra
+    validation: {level: oracle, field_runs: 0, fingerprint: cb1cf361b43c9ec1264ff239dff8a68496e1df720c4ce17f466b0d4d9f00a753}
+    assets:
+      problem_dir: curriculum/problems/TML-008-knn-and-cosine
+    interface:
+      language: python
+      framework: numpy
+      symbol: knn_predict
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 等距邻居与票数同分各用什么规则？
+      - 零向量的余弦相似度应如何处理？
+      - 分块距离计算降低的是时间还是峰值存储？
+      - 近似索引的召回率如何验证？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI28；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI28 技术定义 1
+      url: https://scikit-learn.org/stable/modules/neighbors.html
+  - id: ATT-022
+    title: Beam Search：候选分数、EOS 与缓存重排
+    status: ready
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    tier: advanced
+    difficulty:
+      concept: 4
+      coding: 4
+      debugging: 4
+    prerequisites: []
+    skills:
+    - skill.llm_vlm.generation
+    canonical_skills:
+    - skill.llm_vlm.generation
+    validation: {level: oracle, field_runs: 0, fingerprint: 2f50201bc23f1ddd6457b332eb32b87dfe31bd79a44daebf6b800635f83dd266}
+    assets:
+      problem_dir: curriculum/problems/ATT-022-beam-search-eos
+    interface:
+      language: python
+      framework: stdlib
+      symbol: beam_search
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 为什么累计 log-prob 不能换成每步概率求和？
+      - 完成路径是否继续占 beam 名额？
+      - 父 beam 重排后 KV cache 应如何重排？
+      - 增加长度惩罚后原来的早停规则还成立吗？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI29；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI29 技术定义 1
+      url: https://huggingface.co/docs/transformers/en/generation_strategies
+  - id: PT-010
+    title: GAE：终止、截断与序列边界
+    status: ready
+    domain: post_training_rl
+    tracks:
+    - post_training
+    - traditional_rl
+    - llm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.post_training_rl.policy_optimization
+    canonical_skills:
+    - skill.post_training_rl.policy_optimization
+    validation: {level: oracle, field_runs: 0, fingerprint: 51047ef6752732bc7e14e09028a5442ef7124e254e0d45f2539514126c55b4a1}
+    assets:
+      problem_dir: curriculum/problems/PT-010-gae-boundaries
+    interface:
+      language: python
+      framework: numpy
+      symbol: gae
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - termination 与时间 truncation 对 bootstrap 的影响有何区别？
+      - 为什么 boundary 应中断优势递推但不一定取消 next value？
+      - 自动 reset 后的新 observation 能代替 final observation 吗？
+      - lambda=0 时应该退化成哪个量？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI31；题面与测试在本仓库适配
+    - type: paper
+      title: AI31 技术定义 1
+      url: https://arxiv.org/abs/1506.02438
+    - type: official_source
+      title: AI31 技术定义 2
+      url: https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/
+  - id: NNL-017
+    title: Dropout 的前向、反向与训练模式
+    status: ready
+    domain: deep_learning
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    canonical_skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    validation: {level: oracle, field_runs: 0, fingerprint: 4a8ba8f4426ea538a8a7b086466a65e66adfbe6b3b653d79c6b489ad68b0e019}
+    assets:
+      problem_dir: curriculum/problems/NNL-017-inverted-dropout
+    interface:
+      language: python
+      framework: numpy
+      symbol: dropout_forward
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 反向为什么不能重新采样 dropout mask？
+      - inverted dropout 在 eval 阶段还要缩放吗？
+      - 做梯度检查为何要固定 RNG 状态？
+      - activation checkpointing 重算应保存哪些随机状态？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI32；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI32 技术定义 1
+      url: https://docs.pytorch.org/docs/2.8/generated/torch.nn.Dropout.html
+  - id: INF-008
+    title: 按通道 INT8 量化与反量化
+    status: ready
+    domain: inference_systems
+    tracks:
+    - systems
+    - llm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.inference_systems.quantization
+    canonical_skills:
+    - skill.inference_systems.quantization
+    validation: {level: oracle, field_runs: 0, fingerprint: 8153e4aee26e6c4c90d26bb84a2ea075b76e6f0a147f021e95b66f3de2a4852f}
+    assets:
+      problem_dir: curriculum/problems/INF-008-channel-int8-quantization
+    interface:
+      language: python
+      framework: numpy
+      symbol: quantize_per_channel
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 逐输出通道量化与整张量量化的误差分布有何区别？
+      - 全零通道为什么需要显式 scale 规则？
+      - ties-to-even 与输入浮点误差怎样影响临界值？
+      - 权重更小是否保证端到端推理更快？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI33；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI33 技术定义 1
+      url: https://docs.pytorch.org/docs/2.8/generated/torch.quantize_per_channel.html
+  - id: REC-007
+    title: GAUC：先分组，再说明权重口径
+    status: ready
+    domain: machine_learning_math
+    tracks:
+    - recommendation
+    - traditional_ml
+    - ai_foundation
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.machine_learning_math.statistics
+    - skill.evaluation_safety.benchmarks
+    canonical_skills:
+    - skill.machine_learning_math.statistics
+    - skill.evaluation_safety.benchmarks
+    validation: {level: oracle, field_runs: 0, fingerprint: 89f6f46a191907ce7811556e8a5084c906dd22e320b59993e16118d302f69b49}
+    assets:
+      problem_dir: curriculum/problems/REC-007-group-weighted-auc
+    interface:
+      language: python
+      framework: numpy
+      symbol: grouped_auc
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 用户等权、曝光数和样本对数加权分别代表什么？
+      - 过滤单类组时分母如何变化？
+      - 为什么组间分数整体平移不改 GAUC 却可改变 AUC？
+      - 分 batch 计算再平均会丢失什么？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI34；题面与测试在本仓库适配
+    - type: paper
+      title: AI34 技术定义 1
+      url: https://arxiv.org/pdf/1706.06978
+  - id: REC-008
+    title: NDCG@K：排序指标的 gain 与 tie 策略
+    status: ready
+    domain: machine_learning_math
+    tracks:
+    - recommendation
+    - traditional_ml
+    - ai_foundation
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.machine_learning_math.statistics
+    - skill.evaluation_safety.benchmarks
+    canonical_skills:
+    - skill.machine_learning_math.statistics
+    - skill.evaluation_safety.benchmarks
+    validation: {level: oracle, field_runs: 0, fingerprint: b9269699e6d224449a6e38b6481195b65d0ecafd597be5d6c31a4fb0f8e881fe}
+    assets:
+      problem_dir: curriculum/problems/REC-008-ndcg-tie-contract
+    interface:
+      language: python
+      framework: numpy
+      symbol: ndcg_at_k
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 指数 gain 与线性 gain 的 NDCG 能直接比较吗？
+      - 相同预测分数的固定顺序与并列期望有何区别？
+      - 全零相关性时为何需要显式约定？
+      - 不同 query 的相关性标注口径怎样影响宏平均？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI35；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI35 技术定义 1
+      url: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.ndcg_score.html
+  - id: TML-009
+    title: K-means++ 初始化
+    status: ready
+    domain: machine_learning_math
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites: []
+    skills:
+    - skill.machine_learning_math.linear_algebra
+    canonical_skills:
+    - skill.machine_learning_math.linear_algebra
+    validation: {level: oracle, field_runs: 0, fingerprint: fa9b6cf495e5e2d6f4113e7a0355967323e9d337dbf3eafe0dbd3e021d7eb892}
+    assets:
+      problem_dir: curriculum/problems/TML-009-kmeans-plus-plus
+    interface:
+      language: python
+      framework: numpy
+      symbol: kmeans_plus_plus
+    constraints:
+      forbidden_apis:
+      - torch
+      - sklearn
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 按距离和平方距离抽样有什么差异？
+      - 所有样本坐标相同如何终止且不重复选索引？
+      - 标准与 greedy k-means++ 是否是同一随机过程？
+      - 更好的初始化为什么不保证全局最优？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI37；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI37 技术定义 1
+      url: https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
+  - id: TNS-017
+    title: 最小标量自动微分引擎
+    status: ready
+    domain: deep_learning
+    tracks:
+    - traditional_ml
+    - ai_foundation
+    - llm_algorithm
+    tier: advanced
+    difficulty:
+      concept: 4
+      coding: 4
+      debugging: 4
+    prerequisites: []
+    skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    canonical_skills:
+    - skill.deep_learning.autograd
+    - skill.machine_learning_math.optimization
+    validation: {level: oracle, field_runs: 0, fingerprint: f9f063a83ce0734907bea9c53ff74e7222173364c9a0696848a9058b55d82064}
+    assets:
+      problem_dir: curriculum/problems/TNS-017-scalar-autodiff-dag
+    interface:
+      language: python
+      framework: stdlib
+      symbol: Value
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 为什么共享子图不能按树递归重复反传？
+      - 同一父节点出现两次，拓扑去重会不会丢失两条边的贡献？
+      - 重复 backward 的清零语义与累加语义有什么区别？
+      - 扩展到张量时广播梯度需要哪些额外归约？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI40；题面与测试在本仓库适配
+    - type: official_source
+      title: AI40 技术定义 1
+      url: https://github.com/karpathy/micrograd
+  - id: PT-003
+    title: 稳定交叉熵与有效 token 归约
+    status: ready
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - post_training
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - LOSS-014
+    skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    canonical_skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    validation: {level: oracle, field_runs: 0, fingerprint: acf5020d121bf894aad5e9e430cb99e167393f9649deefd2ef80af3baa839988}
+    assets:
+      problem_dir: curriculum/problems/PT-003-masked-token-cross-entropy
+    interface:
+      language: python
+      framework: pytorch
+      symbol: token_cross_entropy
+    constraints:
+      forbidden_apis:
+      - torch.nn.CrossEntropyLoss
+      - torch.nn.functional.cross_entropy
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 为什么加一个很大的公共 logit 偏置后，两个相同类别仍应得到 log(2)？
+      - 全忽略 batch 应如何保留零梯度而不产生 NaN？
+      - 加类别权重后分母的定义怎样变化？
+      - label smoothing 怎样排除 ignore token？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI01；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI01 技术定义 1
+      url: https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
+    - type: official_docs
+      title: AI01 技术定义 2
+      url: https://docs.pytorch.org/docs/stable/generated/torch.logsumexp.html
+  - id: ATT-019
+    title: 多头注意力与复合 mask
+    status: ready
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - vlm_algorithm
+    tier: advanced
+    difficulty:
+      concept: 4
+      coding: 4
+      debugging: 4
+    prerequisites:
+    - ATT-004
+    - NNL-001
+    skills:
+    - skill.llm_vlm.attention
+    - skill.llm_vlm.transformer
+    canonical_skills:
+    - skill.llm_vlm.attention
+    - skill.llm_vlm.transformer
+    validation: {level: oracle, field_runs: 0, fingerprint: 2ed5a8a4f876600ba76e560a8fe6866b97949b672cb2fc1a606146c5f614c559}
+    assets:
+      problem_dir: curriculum/problems/ATT-019-projected-masked-mha
+    interface:
+      language: python
+      framework: pytorch
+      symbol: projected_mha
+    constraints:
+      forbidden_apis:
+      - torch.nn.MultiheadAttention
+      - torch.nn.functional.scaled_dot_product_attention
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - cross-attention 的 Q 与 KV 不同长时，每一步 shape 是什么？
+      - 完全屏蔽的 query 如何避免 NaN 和输出投影后的残留？
+      - SDPA 与 key_padding_mask 的 bool 语义有什么不同？
+      - causal 和 padding 组合后，如何设计一个信息隔离的反例？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI02；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI02 技术定义 1
+      url: https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html
+  - id: ATT-020
+    title: GQA 与 KV cache：增量解码一致性
+    status: ready
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    tier: advanced
+    difficulty:
+      concept: 4
+      coding: 4
+      debugging: 4
+    prerequisites:
+    - ATT-004
+    - ATT-002
+    skills:
+    - skill.llm_vlm.attention
+    - skill.llm_vlm.transformer
+    - skill.inference_systems.kv_cache
+    canonical_skills:
+    - skill.llm_vlm.attention
+    - skill.llm_vlm.transformer
+    - skill.inference_systems.kv_cache
+    validation: {level: oracle, field_runs: 0, fingerprint: 70f93c9bc3eb8022d6698e181bf61835f339f1de89cfe83c716e93a2e8a98ad9}
+    assets:
+      problem_dir: curriculum/problems/ATT-020-gqa-incremental-cache
+    interface:
+      language: python
+      framework: pytorch
+      symbol: cached_gqa
+    constraints:
+      forbidden_apis:
+      - torch.nn.MultiheadAttention
+      - torch.nn.functional.scaled_dot_product_attention
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 单 token 解码为什么不能直接用左上对齐的 tril？
+      - GQA 减少 KV 存储，为什么不等于总计算降低相同倍数？
+      - RoPE 后的历史 K 为什么不能再次旋转？
+      - batch 内位置不同或 beam 重排时需要保存什么状态？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI03；题面与测试在本仓库适配
+    - type: paper
+      title: AI03 技术定义 1
+      url: https://arxiv.org/html/2305.13245v3#S2.SS2
+  - id: ATT-021
+    title: RoPE：旋转布局与位置偏移
+    status: ready
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - TNS-003
+    skills:
+    - skill.llm_vlm.attention
+    - skill.llm_vlm.transformer
+    canonical_skills:
+    - skill.llm_vlm.attention
+    - skill.llm_vlm.transformer
+    validation: {level: oracle, field_runs: 0, fingerprint: abb7bfacf48e08e79d768ea1c803396abaa8f38843e623d1cb2fc8fcfcc4bf94}
+    assets:
+      problem_dir: curriculum/problems/ATT-021-rope-position-offsets
+    interface:
+      language: python
+      framework: pytorch
+      symbol: rope_positions
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 相邻配对与 half-split 布局能否直接共用权重？
+      - 两侧位置共同加常数后点积为什么保持？
+      - 从位置 4 开始的分块怎样与全量前向对齐？
+      - 为什么不能使用 FP16 累加长序列位置？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI04；题面与测试在本仓库适配
+    - type: paper
+      title: AI04 技术定义 1
+      url: https://arxiv.org/html/2104.09864v5
+  - id: NNL-006
+    title: LayerNorm 与 RMSNorm
+    status: ready
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - vlm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - TNS-003
+    - TNS-013
+    skills:
+    - skill.deep_learning.neural_layers
+    canonical_skills:
+    - skill.deep_learning.neural_layers
+    validation: {level: oracle, field_runs: 0, fingerprint: 1f39673294d35c0eadd12f445f44c08a25a612d71024dafc93e6e6f104b75b52}
+    assets:
+      problem_dir: curriculum/problems/NNL-006-last-dimension-layernorm
+    interface:
+      language: python
+      framework: pytorch
+      symbol: layer_norm
+    constraints:
+      forbidden_apis:
+      - torch.nn.LayerNorm
+      - torch.nn.functional.layer_norm
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 常量输入在 LayerNorm 与 RMSNorm 中为何不同？
+      - 为什么 D=1 仍需要有定义的行为？
+      - 方差分母与 eps 不同时还可以直接比较框架结果吗？
+      - Pre-Norm 与 Post-Norm 改变了哪条残差路径？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI05；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI05 技术定义 1
+      url: https://docs.pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html
+    - type: paper
+      title: AI05 技术定义 2
+      url: https://arxiv.org/abs/1910.07467
+  - id: INF-013
+    title: LoRA 线性层与合并一致性
+    status: ready
+    domain: deep_learning
+    tracks:
+    - llm_algorithm
+    - vlm_algorithm
+    - post_training
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - NNL-001
+    skills:
+    - skill.deep_learning.neural_layers
+    - skill.post_training_rl.sft
+    canonical_skills:
+    - skill.deep_learning.neural_layers
+    - skill.post_training_rl.sft
+    validation: {level: oracle, field_runs: 0, fingerprint: 094d9896889e643e683a32c0f2d0451ae3224508b34cdad6d07431c076f11630}
+    assets:
+      problem_dir: curriculum/problems/INF-013-lora-functional-merge
+    interface:
+      language: python
+      framework: pytorch
+      symbol: lora_forward
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - B 零初始化时 A 的梯度为零，是否证明计算图断开？
+      - 为什么 A、B 同时为零不利于学习？
+      - 重复 merge 怎样避免累积同一更新？
+      - 量化或 dropout 存在时合并等价性需要什么条件？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI06；题面与测试在本仓库适配
+    - type: official_source
+      title: AI06 技术定义 1
+      url: https://github.com/microsoft/LoRA
+    - type: official_source
+      title: AI06 技术定义 2
+      url: https://github.com/microsoft/LoRA/blob/main/loralib/layers.py
+  - id: ATT-011
+    title: temperature、top-k、top-p 的顺序与边界
+    status: ready
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - LOSS-007
+    skills:
+    - skill.llm_vlm.generation
+    canonical_skills:
+    - skill.llm_vlm.generation
+    validation: {level: oracle, field_runs: 0, fingerprint: 5b5b8c82af826565435dbb293a4d4def103241e53c09aa97d97ceb0bb70efeee}
+    assets:
+      problem_dir: curriculum/problems/ATT-011-ordered-sampling
+    interface:
+      language: python
+      framework: pytorch
+      symbol: sample_filtered
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 先 top-p 再温度缩放与相反顺序等价吗？
+      - top-p 的跨阈值 token 应留下还是删除？
+      - p=1 与并列 top-k 的行为如何定义？
+      - 采样 RNG 怎样保存才能重现后续结果？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI07；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI07 技术定义 1
+      url: https://huggingface.co/docs/transformers/en/internal/generation_utils
+  - id: PT-022
+    title: DPO loss：先对齐回答 token，再比较相对偏好
+    status: ready
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - post_training
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - TNS-010
+    - LOSS-008
+    - TNS-006
+    skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    - skill.post_training_rl.preference_data
+    canonical_skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    - skill.post_training_rl.preference_data
+    validation: {level: oracle, field_runs: 0, fingerprint: 45d1f1ced29f800f7b239641c364c7e3efab38113beef45056c402db75aadc5d}
+    assets:
+      problem_dir: curriculum/problems/PT-022-shifted-completion-dpo
+    interface:
+      language: python
+      framework: pytorch
+      symbol: completion_logp
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - logits、labels 和 completion mask 需要怎样一起 shift？
+      - 回答含 EOS 但不含 padding 时，监督从哪里开始？
+      - 序列 sum 改成 mean 会不会改变 DPO 的目标？
+      - 冻结 reference 与采样 old policy 是不是同一角色？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI08；题面与测试在本仓库适配
+    - type: paper
+      title: AI08 技术定义 1
+      url: https://arxiv.org/html/2305.18290v3
+  - id: PT-023
+    title: GRPO：组内优势、ratio 与 clipping
+    status: ready
+    domain: post_training_rl
+    tracks:
+    - post_training
+    - llm_algorithm
+    tier: advanced
+    difficulty:
+      concept: 4
+      coding: 4
+      debugging: 4
+    prerequisites:
+    - TNS-010
+    - LOSS-008
+    - TNS-006
+    skills:
+    - skill.post_training_rl.policy_optimization
+    - skill.post_training_rl.grpo
+    canonical_skills:
+    - skill.post_training_rl.policy_optimization
+    - skill.post_training_rl.grpo
+    validation: {level: oracle, field_runs: 0, fingerprint: dd5d45baa1c02aab0133b09f7b11e7f0362b59f80d4c0ff3b3c675e340cd6689}
+    assets:
+      problem_dir: curriculum/problems/PT-023-grpo-response-mean-kl
+    interface:
+      language: python
+      framework: pytorch
+      symbol: grpo_outcome_loss
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 负优势时 ratio 变大，为什么仍取两个 surrogate 的 min？
+      - 逐回答平均和全 token 平均对长回答的权重有什么影响？
+      - 全组奖励相同时，有参考惩罚是否仍可能产生梯度？
+      - 旧策略 rollout 重复更新时，k3 能否无条件称为当前策略 KL 的无偏估计？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI09；题面与测试在本仓库适配
+    - type: paper
+      title: AI09 技术定义 1
+      url: https://arxiv.org/html/2402.03300v3#S4.SS1
+  - id: LOSS-004
+    title: 带 mask 的 token KL 蒸馏
+    status: ready
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - post_training
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - LOSS-008
+    skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    canonical_skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    validation: {level: oracle, field_runs: 0, fingerprint: d0e0b51c8805150f6fd86a1ce3be0fb552d06e7993d64ac2a74db895293f5389}
+    assets:
+      problem_dir: curriculum/problems/LOSS-004-masked-forward-kl
+    interface:
+      language: python
+      framework: pytorch
+      symbol: masked_distillation_kl
+    constraints:
+      forbidden_apis:
+      - torch.nn.KLDivLoss
+      - torch.nn.functional.kl_div
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - forward KL 与 reverse KL 对哪个分布取期望？
+      - KLDivLoss 的 batchmean 为什么未必等于有效 token 均值？
+      - 温度平方是数学 KL 必需的吗？
+      - 不同 tokenizer 的 teacher 能否直接做 token KL？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI10；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI10 技术定义 1
+      url: https://docs.pytorch.org/docs/stable/generated/torch.nn.KLDivLoss.html
+    - type: paper
+      title: AI10 技术定义 2
+      url: https://arxiv.org/abs/1503.02531
+  - id: LOSS-006
+    title: InfoNCE 与图文双向对比学习
+    status: ready
+    domain: deep_learning
+    tracks:
+    - vlm_algorithm
+    - llm_algorithm
+    - recommendation
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - LOSS-014
+    skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    - skill.llm_vlm.vlm_architecture
+    canonical_skills:
+    - skill.deep_learning.losses
+    - skill.deep_learning.autograd
+    - skill.llm_vlm.vlm_architecture
+    validation: {level: oracle, field_runs: 0, fingerprint: 2d2ce7bae8eb2c12e5fc6f8ea3fe3dc919776dd3a7a818706892740f1baff1a7}
+    assets:
+      problem_dir: curriculum/problems/LOSS-006-symmetric-infonce
+    interface:
+      language: python
+      framework: pytorch
+      symbol: paired_infonce
+    constraints:
+      forbidden_apis:
+      - torch.nn.CrossEntropyLoss
+      - torch.nn.functional.cross_entropy
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 为什么这里的对角线不能像某些自监督目标一样屏蔽？
+      - 重复图文正对被当作负样本会带来什么偏差？
+      - 多卡 all-gather 后正样本标签怎样加 rank 偏移？
+      - 远端 embedding detach 会改变哪些梯度？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI11；题面与测试在本仓库适配
+    - type: paper
+      title: AI11 技术定义 1
+      url: https://arxiv.org/pdf/1807.03748
+    - type: paper
+      title: AI11 技术定义 2
+      url: https://arxiv.org/abs/2103.00020
+  - id: PT-024
+    title: Packing：attention 隔离与监督隔离是两件事
+    status: ready
+    domain: post_training_rl
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - post_training
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - TNS-010
+    skills:
+    - skill.post_training_rl.sft
+    - skill.llm_vlm.context_management
+    canonical_skills:
+    - skill.post_training_rl.sft
+    - skill.llm_vlm.context_management
+    validation: {level: oracle, field_runs: 0, fingerprint: 1e910ea6ed0c86969599b1c54f7cff2c619f8eb09e50786c76af958970b5b857}
+    assets:
+      problem_dir: curriculum/problems/PT-024-packing-mask-isolation
+    interface:
+      language: python
+      framework: pytorch
+      symbol: packing_masks
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 仅 labels=-100 能阻止跨样本 attention 吗？
+      - 为什么段尾 token 不能监督下一段开头？
+      - 重置 position_ids 是否对所有序列模型都实现隔离？
+      - packing 与分开训练的 loss 怎样保持同一权重口径？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI12；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI12 技术定义 1
+      url: https://huggingface.co/docs/transformers/en/padding_free
+  - id: TNS-014
+    title: 可变长度序列的梯度累积
+    status: ready
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - post_training
+    - systems
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - TNS-013
+    - LOSS-014
+    skills:
+    - skill.deep_learning.autograd
+    - skill.training_infra.distributed
+    canonical_skills:
+    - skill.deep_learning.autograd
+    - skill.training_infra.distributed
+    validation: {level: oracle, field_runs: 0, fingerprint: 5d0a70d4e35f62a074e5a5c4ec935f3940a4f766b511b240089dadef187ca843}
+    assets:
+      problem_dir: curriculum/problems/TNS-014-token-weighted-accumulation
+    interface:
+      language: python
+      framework: pytorch
+      symbol: accumulate_token_gradients
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 不等长 microbatch 的 loss 均值能直接平均吗？
+      - DDP 默认平均梯度时，全局 token 分母如何补偿？
+      - 为什么裁剪应在累计与 unscale 后进行？
+      - 空窗口为什么也不能触发 weight decay 或 scheduler？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI15；题面与测试在本仓库适配
+    - type: official_source
+      title: AI15 技术定义 1
+      url: https://huggingface.co/blog/gradient_accumulation
+    - type: official_docs
+      title: AI15 技术定义 2
+      url: https://huggingface.co/docs/accelerate/en/usage_guides/gradient_accumulation
+  - id: ATT-015
+    title: 流式精确 attention：保存统计量，不保存完整分数矩阵
+    status: ready
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    tier: advanced
+    difficulty:
+      concept: 4
+      coding: 4
+      debugging: 4
+    prerequisites:
+    - ATT-002
+    - LOSS-007
+    skills:
+    - skill.llm_vlm.attention
+    - skill.inference_systems.kernels
+    canonical_skills:
+    - skill.llm_vlm.attention
+    - skill.inference_systems.kernels
+    validation: {level: oracle, field_runs: 0, fingerprint: 48ad93e38777964d8dfde137b70f58d18b8ebb80af2ee9ca57c31ff4b07fdb76}
+    assets:
+      problem_dir: curriculum/problems/ATT-015-online-exact-attention
+    interface:
+      language: python
+      framework: pytorch
+      symbol: streaming_attention
+    constraints:
+      forbidden_apis:
+      - torch.nn.MultiheadAttention
+      - torch.nn.functional.scaled_dot_product_attention
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 不同块的 softmax 输出为什么不能直接平均？
+      - 合并两个分片需要哪些最大值、分母和分子统计？
+      - 线性额外存储是否代表线性计算复杂度？
+      - 普通 autograd 逐块保留图为何不等于 FlashAttention 的显存保证？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI16；题面与测试在本仓库适配
+    - type: paper
+      title: AI16 技术定义 1
+      url: https://arxiv.org/pdf/2205.14135
+  - id: NNL-014
+    title: MoE Top-2：dispatch、combine 与梯度路径
+    status: ready
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - systems
+    tier: advanced
+    difficulty:
+      concept: 4
+      coding: 4
+      debugging: 4
+    prerequisites:
+    - NNL-001
+    - LOSS-007
+    skills:
+    - skill.llm_vlm.transformer
+    - skill.deep_learning.autograd
+    canonical_skills:
+    - skill.llm_vlm.transformer
+    - skill.deep_learning.autograd
+    validation: {level: oracle, field_runs: 0, fingerprint: b829a3ad417f7439419c3dfaba81bc6a2a09c9c33bc75b07950fe2dba8102db4}
+    assets:
+      problem_dir: curriculum/problems/NNL-014-top2-moe-dispatch
+    interface:
+      language: python
+      framework: pytorch
+      symbol: top2_moe
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 为什么 index_add 比直接赋值更符合 combine 语义？
+      - top-k 索引不可导，哪些 router 参数仍会得到梯度？
+      - 没有分配 token 的专家应该如何处理？
+      - 加入 capacity 后丢弃策略与负载均衡分母如何变化？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI17；题面与测试在本仓库适配
+    - type: paper
+      title: AI17 技术定义 1
+      url: https://arxiv.org/pdf/2101.03961
+  - id: NNL-005
+    title: SwiGLU FFN：形状、门控与等参数预算
+    status: ready
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - llm_algorithm
+    - vlm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - NNL-001
+    skills:
+    - skill.deep_learning.neural_layers
+    - skill.llm_vlm.transformer
+    canonical_skills:
+    - skill.deep_learning.neural_layers
+    - skill.llm_vlm.transformer
+    validation: {level: oracle, field_runs: 0, fingerprint: 72ba419060c7ae47f411af942aca369bb961cc57292a5a2fd016a1da2b453796}
+    assets:
+      problem_dir: curriculum/problems/NNL-005-swiglu-ffn
+    interface:
+      language: python
+      framework: pytorch
+      symbol: swiglu
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - SiLU 与 sigmoid 有什么区别？
+      - 为什么等预算隐藏维度约是 8D/3，而不是固定 4D？
+      - 融合 gate/up 投影节省哪些开销？
+      - FFN 为什么不在同层混合不同 token 的信息？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI18；题面与测试在本仓库适配
+    - type: paper
+      title: AI18 技术定义 1
+      url: https://arxiv.org/abs/2002.05202
+  - id: NNL-016
+    title: BatchNorm：训练与推理两套统计量
+    status: ready
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - computer_vision
+    - vlm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - TNS-003
+    - TNS-013
+    skills:
+    - skill.deep_learning.neural_layers
+    canonical_skills:
+    - skill.deep_learning.neural_layers
+    validation: {level: oracle, field_runs: 0, fingerprint: 82bf49d251e53fc8b3a70c4f110de10cc8aae1389474aa1cfc4c7bb95d4af3f8}
+    assets:
+      problem_dir: curriculum/problems/NNL-016-batchnorm-state
+    interface:
+      language: python
+      framework: pytorch
+      symbol: batch_norm
+    constraints:
+      forbidden_apis:
+      - torch.nn.BatchNorm1d
+      - torch.nn.BatchNorm2d
+      - torch.nn.functional.batch_norm
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 训练归一化和 running variance 为什么使用不同方差估计？
+      - eval 输出应否依赖同批其他样本？
+      - 梯度累积会增加 BN 的统计 batch 吗？
+      - SyncBN 为什么不能只平均各卡的方差？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI24；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI24 技术定义 1
+      url: https://docs.pytorch.org/docs/2.8/generated/torch.nn.BatchNorm2d.html
+  - id: NNL-009
+    title: 二维卷积：先写对，再考虑 im2col
+    status: ready
+    domain: deep_learning
+    tracks:
+    - ai_foundation
+    - computer_vision
+    - vlm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - NNL-001
+    skills:
+    - skill.deep_learning.neural_layers
+    - skill.llm_vlm.vlm_architecture
+    canonical_skills:
+    - skill.deep_learning.neural_layers
+    - skill.llm_vlm.vlm_architecture
+    validation: {level: oracle, field_runs: 0, fingerprint: c1c92f004509ef9c784d95539f7c3b2933af08717f1199e109e0aa4f146f72ba}
+    assets:
+      problem_dir: curriculum/problems/NNL-009-conv2d-cross-correlation
+    interface:
+      language: python
+      framework: pytorch
+      symbol: conv2d
+    constraints:
+      forbidden_apis:
+      - torch.nn.Conv2d
+      - torch.nn.functional.conv2d
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 框架卷积为何通常不翻转卷积核？
+      - stride/padding 改变输出尺寸的边界是什么？
+      - 重叠窗口反传时输入梯度应累加还是覆盖？
+      - im2col 用哪些额外空间换取 GEMM？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI25；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI25 技术定义 1
+      url: https://docs.pytorch.org/docs/2.8/generated/torch.nn.Conv2d.html
+  - id: PT-009
+    title: PPO loss：策略、价值、熵分别实现
+    status: ready
+    domain: post_training_rl
+    tracks:
+    - post_training
+    - traditional_rl
+    - llm_algorithm
+    tier: advanced
+    difficulty:
+      concept: 4
+      coding: 4
+      debugging: 4
+    prerequisites:
+    - TNS-010
+    - LOSS-008
+    - TNS-006
+    skills:
+    - skill.post_training_rl.policy_optimization
+    - skill.deep_learning.losses
+    canonical_skills:
+    - skill.post_training_rl.policy_optimization
+    - skill.deep_learning.losses
+    validation: {level: oracle, field_runs: 0, fingerprint: db7e49d4c288f1f19fd6de5427243a6feaa0c1fde2a8ef0888c94bd6bcd56bfc}
+    assets:
+      problem_dir: curriculum/problems/PT-009-ppo-loss-components
+    interface:
+      language: python
+      framework: pytorch
+      symbol: ppo_loss
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 负优势和大 ratio 的裁剪方向如何手算？
+      - value MSE 与 value clipping 为何不能混称一种实现？
+      - 熵奖励与 reference KL 惩罚有什么不同？
+      - old policy、优势、return 分别为何 detach？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI30；题面与测试在本仓库适配
+    - type: official_source
+      title: AI30 技术定义 1
+      url: https://spinningup.openai.com/en/latest/algorithms/ppo.html
+  - id: ATT-008
+    title: 完整 Decoder Block：把组件真正接起来
+    status: ready
+    domain: llm_vlm
+    tracks:
+    - llm_algorithm
+    - vlm_algorithm
+    tier: advanced
+    difficulty:
+      concept: 5
+      coding: 5
+      debugging: 5
+    prerequisites:
+    - ATT-004
+    - NNL-001
+    - TNS-003
+    - TNS-013
+    skills:
+    - skill.llm_vlm.transformer
+    - skill.inference_systems.kv_cache
+    canonical_skills:
+    - skill.llm_vlm.transformer
+    - skill.inference_systems.kv_cache
+    validation: {level: oracle, field_runs: 0, fingerprint: b470881b0981f21ca5ccd1d665b64f0baef9c4cd301a8a33dbacebbb933f4765}
+    assets:
+      problem_dir: curriculum/problems/ATT-008-pre-norm-decoder-cache
+    interface:
+      language: python
+      framework: pytorch
+      symbol: decoder_block
+    constraints:
+      forbidden_apis:
+      - torch.nn.TransformerDecoderLayer
+      - torch.nn.MultiheadAttention
+      - torch.nn.functional.scaled_dot_product_attention
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 两次 norm 参数为何必须独立？
+      - 输出投影为零时残差 block 应退化成什么？
+      - 缓存中的 RoPE K 二次旋转如何破坏增量一致性？
+      - 换成 LayerNorm/GELU 或 encoder 时需要明确哪些契约变化？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI36；题面与测试在本仓库适配
+    - type: official_source
+      title: AI36 技术定义 1
+      url: https://github.com/meta-llama/llama3/blob/main/llama/model.py
+  - id: REC-009
+    title: DIN 局部激活与兴趣聚合
+    status: ready
+    domain: deep_learning
+    tracks:
+    - recommendation
+    - ai_foundation
+    tier: advanced
+    difficulty:
+      concept: 4
+      coding: 4
+      debugging: 4
+    prerequisites:
+    - NNL-001
+    skills:
+    - skill.deep_learning.neural_layers
+    - skill.llm_vlm.attention
+    canonical_skills:
+    - skill.deep_learning.neural_layers
+    - skill.llm_vlm.attention
+    validation: {level: oracle, field_runs: 0, fingerprint: 67d412379d88e4ed2a5af18edb1c9f15667bfbee2e52317bcd6571a68ec69ad9}
+    assets:
+      problem_dir: curriculum/problems/REC-009-din-local-activation
+    interface:
+      language: python
+      framework: pytorch
+      symbol: din_interest
+    constraints:
+      forbidden_apis: []
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - 为什么 DIN 用户表示会随候选发生变化？
+      - 不作 softmax 的权重能保留什么兴趣强度信息？
+      - 所有有效权重为 1 时应是求和还是均值？
+      - padding 与历史顺序置换如何验证？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI38；题面与测试在本仓库适配
+    - type: paper
+      title: AI38 技术定义 1
+      url: https://arxiv.org/abs/1706.06978
+  - id: VLM-001
+    title: ViT Patch Embedding 与卷积等价性
+    status: ready
+    domain: llm_vlm
+    tracks:
+    - computer_vision
+    - vlm_algorithm
+    tier: core
+    difficulty:
+      concept: 3
+      coding: 3
+      debugging: 3
+    prerequisites:
+    - NNL-001
+    skills:
+    - skill.llm_vlm.vlm_architecture
+    - skill.deep_learning.tensor_ops
+    canonical_skills:
+    - skill.llm_vlm.vlm_architecture
+    - skill.deep_learning.tensor_ops
+    validation: {level: oracle, field_runs: 0, fingerprint: 76e5ef8cdb8af8ac3594762ad3918a2655ba705ab9206c660d7ef58acf2de17a}
+    assets:
+      problem_dir: curriculum/problems/VLM-001-patch-linear-projection
+    interface:
+      language: python
+      framework: pytorch
+      symbol: patch_embedding
+    constraints:
+      forbidden_apis:
+      - torch.nn.Conv2d
+      - torch.nn.functional.conv2d
+      time_limit_ms: 20000
+      output_limit_kb: 256
+    assessment:
+      runner:
+        kind: pytest
+        public_tests: test_public.py
+      oracle:
+        kind: cross_implementation
+        target: 解析小例子、独立参考及数值/状态不变量
+        description: 公开与私有用例均需执行；不使用 starter 作为正确答案。
+      oral_questions:
+      - patch 内通道和像素顺序如何对应卷积核？
+      - reshape 为什么不能随意替代 permute？
+      - 单位脉冲如何检查核方向和 patch 顺序？
+      - 图像尺寸不能整除 patch size 时应先明确什么策略？
+    variant_axes:
+    - state_or_batch_organization
+    - contract_boundary
+    - precision
+    invariants:
+    - reference_alignment
+    - input_preservation
+    - specified_state_semantics
+    common_bugs:
+    - wrong_reduction_or_axis
+    - boundary_definition_mismatch
+    - state_or_gradient_loss
+    retention:
+      d2: 关闭旧作答后更换接口组织重写；尚无独立已验证复测资产。
+      d7: 构造定义反例并调试；尚无独立已验证复测资产。
+    sources:
+    - type: internal_original
+      title: 用户整理的 AI 算法手撕专项（2026-09-08），AI39；题面与测试在本仓库适配
+    - type: official_docs
+      title: AI39 技术定义 1
+      url: https://docs.pytorch.org/docs/stable/generated/torch.nn.Conv2d.html

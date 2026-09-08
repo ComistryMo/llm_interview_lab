@@ -86,11 +86,14 @@ roles:
       skill.llm_vlm.attention: *alg_primary
       skill.llm_vlm.transformer: *alg_primary
       skill.llm_vlm.vlm_architecture: &alg_secondary {weight: 0.8, target_level: {intern: 1, new_grad: 2, mid: 3, senior: 4}}
+      skill.deep_learning.neural_layers: *alg_secondary
+      skill.llm_vlm.tokenization: *alg_secondary
+      skill.llm_vlm.generation: *alg_secondary
       skill.data_mlops.experiments: *alg_secondary
       skill.project_deep_dive.experiments: *alg_secondary
-    required_tracks: [llm_algorithm, ai_foundation]
-    recommended_quests: [tensor_and_autograd, optimizer_training_loop, transformer_forward]
-    optional_quests: [vlm_data_flow, post_training_quest]
+    required_tracks: [llm_algorithm, vlm_algorithm, ai_foundation]
+    recommended_quests: [tensor_and_autograd, optimizer_training_loop, transformer_forward, ai_handwriting_transformer, ai_handwriting_ml_recs]
+    optional_quests: [vlm_data_flow, post_training_quest, ai_handwriting_vision, ai_handwriting_post_training]
     interview_blueprints:
       intern: interview.ai_algorithm_research_engineer.intern
       new_grad: interview.ai_algorithm_research_engineer.new_grad
@@ -113,8 +116,8 @@ roles:
       skill.data_mlops.data_quality: *pt_secondary
       skill.data_mlops.experiments: *pt_secondary
     required_tracks: [post_training, llm_algorithm]
-    recommended_quests: [tensor_and_autograd, optimizer_training_loop, post_training_quest]
-    optional_quests: [vlm_data_flow, agent_runtime]
+    recommended_quests: [tensor_and_autograd, optimizer_training_loop, post_training_quest, ai_handwriting_post_training]
+    optional_quests: [vlm_data_flow, agent_runtime, ai_handwriting_transformer, ai_handwriting_vision]
     interview_blueprints:
       intern: interview.post_training_engineer.intern
       new_grad: interview.post_training_engineer.new_grad
@@ -138,7 +141,7 @@ roles:
       skill.inference_systems.capacity: &infra_support {weight: 0.6, target_level: {intern: 1, new_grad: 2, mid: 3, senior: 3}}
     required_tracks: [systems, ai_foundation]
     recommended_quests: [python_data_reliability, distributed_training]
-    optional_quests: [optimizer_training_loop, efficient_inference]
+    optional_quests: [optimizer_training_loop, efficient_inference, ai_handwriting_inference]
     interview_blueprints:
       intern: interview.ai_infra_engineer.intern
       new_grad: interview.ai_infra_engineer.new_grad
@@ -161,7 +164,7 @@ roles:
       skill.system_design.tradeoffs: *inf_secondary
       skill.system_design.reliability: *inf_secondary
     required_tracks: [systems, llm_algorithm]
-    recommended_quests: [transformer_forward, efficient_inference]
+    recommended_quests: [transformer_forward, efficient_inference, ai_handwriting_inference]
     optional_quests: [distributed_training, tensor_and_autograd]
     interview_blueprints:
       intern: interview.ai_inference_systems_engineer.intern
@@ -186,7 +189,7 @@ roles:
       skill.project_deep_dive.experiments: *eval_support
     required_tracks: [ai_foundation]
     recommended_quests: [python_data_reliability, vlm_data_flow]
-    optional_quests: [agent_runtime, post_training_quest]
+    optional_quests: [agent_runtime, post_training_quest, ai_handwriting_ml_recs]
     interview_blueprints:
       intern: interview.ai_evaluation_data_safety_engineer.intern
       new_grad: interview.ai_evaluation_data_safety_engineer.new_grad
