@@ -184,6 +184,7 @@ def test_model_settings_links_scroll_to_editable_codex_fields(scene):
     controller.finishInterview()
     QTest.qWait(60)
     _click(window, _find(window, "configureAnotherInterview"))
+    _click(window, _find(window, "interviewEditSettings"))
     _find(window, "interviewAiModeSelector").setProperty("currentIndex", 2)
     QTest.qWait(80)
     entry = _find(window, "openCodexPreferencesFromInterview")

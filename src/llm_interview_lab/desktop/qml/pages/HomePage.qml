@@ -553,16 +553,17 @@ Flickable {
 
     }
 
-    Dialog {
+    LabStandardDialog { theme: root.theme;
         id: abandonInterviewDialog
         modal: true
         anchors.centerIn: parent
         title: "放弃本场面试？"
         width: Math.min(440, root.width - 48)
-        height: 170
+        implicitHeight: homeAbandonCopy.contentHeight + header.implicitHeight + footer.implicitHeight + padding * 2 + spacing * 2
         standardButtons: Dialog.Cancel | Dialog.Ok
         onAccepted: app.finishInterview()
         contentItem: LabText {
+            id: homeAbandonCopy
             theme: root.theme
             width: 360
             text: "本场会以“未完成”留档，已锁定的回答和已有评分不会丢失。"

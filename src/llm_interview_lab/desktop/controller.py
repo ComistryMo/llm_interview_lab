@@ -885,6 +885,9 @@ class AppController(QObject):
         # Let the Text item's theme/font scale own the body and code size.
         rendered = re.sub(r"font-size:\s*\d+(?:\.\d+)?pt;", "", rendered)
         rendered = re.sub(r"font-size:(?:xx-large|x-large|large|medium|small|x-small);", f"font-size:{section_size}px;", rendered)
+        # Removing Qt's point sizes must not reactivate oversized HTML heading
+        # defaults. All Markdown sections use the caller's scaled UI token.
+        rendered = re.sub(r'(<h[1-6] style=")', rf'\1font-size:{section_size}px;', rendered)
         rendered = rendered.replace("font-family:'monospace';", f"font-family:'{code_font}';")
         return rendered.replace('<pre style="', '<pre style="white-space:pre-wrap;')
 

@@ -1,9 +1,11 @@
 """Presentation-only acceptance using the real controller and production QML."""
 import os
+import re
+import time
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QCoreApplication, QUrl, Qt, QMetaObject
+from PySide6.QtCore import QCoreApplication, QUrl, Qt, QMetaObject, QObject, QSettings
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtTest import QTest
 
@@ -34,12 +36,154 @@ def scene(controller):
     QCoreApplication.processEvents()
 
 
+def test_theme_text_and_focus_contrast(scene):
+    window, app = scene
+    theme = next(item for item in window.findChildren(QObject)
+                 if item.metaObject().className().startswith("AppTheme_QML"))
+
+    def luminance(color):
+        channels = (color.redF(), color.greenF(), color.blueF())
+        linear = [v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in channels]
+        return sum(v * weight for v, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
+
+    def ratio(first, second):
+        light, dark = sorted((luminance(first), luminance(second)), reverse=True)
+        return (light + 0.05) / (dark + 0.05)
+
+    for mode in ("light", "dark"):
+        app.setTheme(mode)
+        QCoreApplication.processEvents()
+        for surface in ("canvas", "chrome", "surface", "surfaceRaised", "surfaceSunken", "surfaceHover"):
+            for ink in ("textStrong", "text", "muted", "subtle"):
+                assert ratio(theme.property(ink), theme.property(surface)) >= 4.5, (mode, ink, surface)
+            assert ratio(theme.property("focusRing"), theme.property(surface)) >= 3.0
+
+
+def test_fresh_onboarding_at_all_display_modes(qapp, public_repo, tmp_path, monkeypatch):
+    from llm_interview_lab.desktop.controller import AppController
+
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.QSettings",
+                        lambda *args: QSettings(str(tmp_path / "first-run.ini"), QSettings.IniFormat))
+    monkeypatch.setattr(AppController, "refreshCodexAvailability", lambda self: None)
+    app = AppController(public_repo)
+    engine = QQmlApplicationEngine()
+    errors = []
+    engine.warnings.connect(lambda values: errors.extend(v.toString() for v in values))
+    engine.rootContext().setContextProperty("backend", app)
+    engine.load(QUrl.fromLocalFile(str(QML)))
+    assert engine.rootObjects(), errors
+    window = engine.rootObjects()[0]
+    try:
+        window.show()
+        page = _find(window, "onboardingPage")
+        assert page.isVisible()
+        page.setProperty("step", 1)
+        for width, height in ((900, 620), (1080, 680), (1280, 800), (1440, 900)):
+            window.resize(width, height)
+            for mode in ("light", "dark"):
+                app.setTheme(mode)
+                for scale in (1.0, 1.25):
+                    window.setProperty("displayFontScaleOverride", scale)
+                    QTest.qWait(40)
+                    assert _within_window(window, _find(window, "onboardingContinueButton"))
+                    summary = _find(window, "onboardingSelectionSummary")
+                    assert _within_window(window, summary)
+                    grid = _find(window, "onboardingRoleGrid")
+                    assert grid.height() > 100
+                    for card in _items(grid):
+                        if not card.objectName().startswith("onboardingRoleCard-"):
+                            continue
+                        for label in _items(card):
+                            if label.property("contentHeight") is not None and label.isVisible():
+                                assert label.property("contentHeight") <= label.height() + 1
+                    if (width, scale) == (1280, 1.0):
+                        _capture(window, f"onboarding-{mode}")
+        assert not errors, errors
+    finally:
+        window.close()
+        engine.deleteLater()
+        app.shutdown()
+        QCoreApplication.processEvents()
+
+
+def test_refresh_confirmation_fits_large_text(scene):
+    window, app = scene
+    window.resize(900, 620)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    app.navigate("settings")
+    dialog = _find(window, "refreshDirtyDraftDialog")
+    QMetaObject.invokeMethod(dialog, "open", Qt.DirectConnection)
+    QTest.qWait(60)
+    assert dialog.property("height") <= window.height()
+    body = dialog.property("contentItem")
+    for item in _items(body):
+        if item.property("contentHeight") is not None:
+            assert item.property("contentHeight") <= item.height() + 1
+    QMetaObject.invokeMethod(dialog, "reject", Qt.DirectConnection)
+    assert not dialog.property("visible")
+    QCoreApplication.processEvents()
+
+
+def test_markdown_headings_use_the_scaled_section_token(scene):
+    _, app = scene
+    rendered = app.renderMarkdown("# 标题\n\n## 接口\n\n中文正文\n\n```python\nprint(1)\n```", 23, "Cascadia Mono")
+    assert len(re.findall(r'<h[12] style="font-size:23px;', rendered)) == 2
+    assert "中文正文" in rendered and "print(1)" in rendered
+    assert "white-space:pre-wrap" in rendered
+
+
+def test_visible_coding_workspace_runs_real_script_and_keeps_draft(scene):
+    window, app = scene
+    window.resize(1280, 800)
+    _enter_coding_round(app)
+    editor = _find(window, "interviewCodingEditor")
+    script = "# 合成 UI 验收，不是本题答案\nprint(sum([2, 3, 4]))\n"
+    editor.setProperty("text", script)
+    _click(window, _find(window, "runInterviewScript"))
+    deadline = time.monotonic() + 15
+    while app.busy and time.monotonic() < deadline:
+        QTest.qWait(30)
+        time.sleep(0.005)
+    assert not app.busy
+    result = app.interview["coding_run"]
+    assert result["exit_code"] == 0 and result["stdout"] == "9\n"
+    assert "9" in _find(window, "interviewCodingOutput").property("text")
+    assert editor.property("text") == script
+    assert _find(window, "submitInterviewCode").isEnabled()
+    assert app.interview.get("coding_test_status") != "passed"
+
+
+def test_connection_error_remains_below_fields_and_retryable(scene):
+    window, app = scene
+    window.resize(900, 620)
+    window.setProperty("displayFontScaleOverride", 1.25)
+    app.navigate("connections")
+    QTest.qWait(60)
+    _click(window, _find(window, "saveAndTestConnection"))
+    error = _find(window, "connectionFormError")
+    assert error.isVisible() and error.property("text")
+    assert not app.busy and not app.connections
+    assert _find(window, "saveAndTestConnection").isEnabled()
+    page = _find(window, "connectionsPage")
+    for theme in ("light", "dark"):
+        app.setTheme(theme)
+        page.setProperty("contentY", max(0, page.property("contentHeight") - page.height()))
+        QTest.qWait(50)
+        assert error.property("contentHeight") <= error.height() + 1
+        assert _within_window(window, error)
+        _capture(window, f"connection-error-900-125-{theme}")
+
+
 @pytest.mark.parametrize("page", ["home", "setup", "answer", "coding", "report", "connections", "settings"])
 def test_production_page_gallery(scene, page):
     window, app = scene
     window.resize(1280, 800)
     if page == "coding":
         _enter_coding_round(app)
+        QTest.qWait(100)
+        # Read the beginning of the real prompt for the comparison capture.
+        # This is a viewport operation, not a synthetic editor or product change.
+        _find(window, "interviewQuestionScroll").property("contentItem").setProperty("contentY", 0)
     elif page == "report":
         app.lockInterviewAnswer("合成验收：我负责构造独立验证集，比较训练前后的错误类型。没有真实个人资料。")
         app.finishInterview()

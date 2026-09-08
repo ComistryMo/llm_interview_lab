@@ -106,6 +106,64 @@ py -3.11 scripts/capture_product_v1_visual_directions.py --settle-ms 220
 
 1. 公共控件、导航、首页、首次使用：统一 Basic 控件外观、移除首页大卡片，岗位卡按文字缩放增加高度而非压缩字号。四种尺寸首用布局、首／第四／第八岗位点击、提示隐藏和原生标准弹窗接受动作均有定向检查。
 2. 面试、代码与报告：统一准备／记录页签，收起配置后主动作跟随摘要；回答区由四行增长至页面高度的 40% 再内部滚动；报告使用换行标题与短动作；编辑区去除外层重复边框。四尺寸深浅主题与 100%／125% 的准备、代码、报告定向检查通过，长回答光标跟随、独立滚动、稳定提交位置、中文组字和上下文弹窗保持可用。录音 UI 测试只把过期的批量转录 mock 改成流式 mock，未修改语音业务。
-3. 其余页面与最终视觉复核：待完成。
+3. 刷题、知识、进度、材料、连接、设置：统一字体与表单组件，取消固定高度证据容器，按自然内容高度排版；材料导入保留可见标签和完整授权说明；连接与 Codex 使用一致的行宽和动作，No-AI 仅作简短说明；设置改为轻分区。保存、删除确认、模型设置跳转仍调用原入口。
 
 Windows 离屏插件未正确渲染中文字体，其截图不作为视觉验收证据。正式对照使用 Windows 原生 Qt 平台和隔离合成 Profile，不读取真实材料，不调用付费模型。
+
+### 两轮视觉复核与修正
+
+- 第一轮：统一控件与字号后检查正式页面，进一步收紧准备页空白、表单宽度、报告长标题和复选框换行。使用 `LabText.strong` 统一字重，避免子页的 `font.bold` 与组件 `font.weight` 同时设置。
+- 第二轮：修正连接表单错误说明越界、放大字体的确认弹窗高度，以及宽屏代码区“几何存在但未实际绘制”的问题。代码区保留唯一编辑器并固定在同一滚动容器，小窗口切换显示区域，不再在两个活动视口之间重新挂载。验证了编辑器像素、对象身份、切换后的草稿和真实脚本运行，不仅检查空容器边界。
+- 辅助文字对比度已调整；浅／深主题四种普通文字 token 对六种不透明表面均达到 4.5:1，蓝色焦点对这些表面均达到 3:1。该检查不等同于所有语法高亮与禁用态的完整无障碍认证。
+- Markdown 修改仅限显示：防止移除 Qt 点制字号后又触发过大的默认 HTML 标题。题面、代码内容及接口没有改写。
+
+### 正式页面 Before / After
+
+Before 加载只读 `6a1fd20` 工作树的正式 QML；After 加载本轮正式 QML。两者使用同一测试场景定义及真实隔离 Controller，不使用 Phase 0 原型或 demo controller。档案名称、计时秒数和视口位置可能不同，图片用于布局比较，不是逐像素性能基准。
+
+全部示例回答、Session 和报告证据均由本地测试建立，没有连接真实 AI。图中 No-AI 状态与测试场景并存，不作为真实连接或面试解锁成功的证据。首次使用截图单独从无档案的真实启动状态采集。
+
+| 页面 | Before | After |
+| --- | --- | --- |
+| 首页 | [浅色](../images/ui-unification-20260908/before-home-light.png) · [深色](../images/ui-unification-20260908/before-home-dark.png) | [浅色](../images/ui-unification-20260908/after-home-light.png) · [深色](../images/ui-unification-20260908/after-home-dark.png) |
+| 准备面试 | [浅色](../images/ui-unification-20260908/before-setup-light.png) · [深色](../images/ui-unification-20260908/before-setup-dark.png) | [浅色](../images/ui-unification-20260908/after-setup-light.png) · [深色](../images/ui-unification-20260908/after-setup-dark.png) |
+| 回答区 | [浅色](../images/ui-unification-20260908/before-answer-light.png) · [深色](../images/ui-unification-20260908/before-answer-dark.png) | [浅色](../images/ui-unification-20260908/after-answer-light.png) · [深色](../images/ui-unification-20260908/after-answer-dark.png) |
+| 代码区 | [浅色](../images/ui-unification-20260908/before-coding-light.png) · [深色](../images/ui-unification-20260908/before-coding-dark.png) | [浅色](../images/ui-unification-20260908/after-coding-light.png) · [深色](../images/ui-unification-20260908/after-coding-dark.png) |
+| 报告 | [浅色](../images/ui-unification-20260908/before-report-light.png) · [深色](../images/ui-unification-20260908/before-report-dark.png) | [浅色](../images/ui-unification-20260908/after-report-light.png) · [深色](../images/ui-unification-20260908/after-report-dark.png) |
+| AI 连接 | [浅色](../images/ui-unification-20260908/before-connections-light.png) · [深色](../images/ui-unification-20260908/before-connections-dark.png) | [浅色](../images/ui-unification-20260908/after-connections-light.png) · [深色](../images/ui-unification-20260908/after-connections-dark.png) |
+| 设置 | [浅色](../images/ui-unification-20260908/before-settings-light.png) · [深色](../images/ui-unification-20260908/before-settings-dark.png) | [浅色](../images/ui-unification-20260908/after-settings-light.png) · [深色](../images/ui-unification-20260908/after-settings-dark.png) |
+
+补充：[无档案首用浅色](../images/ui-unification-20260908/after-onboarding-light.png)、[深色](../images/ui-unification-20260908/after-onboarding-dark.png)；[900×620／125% 连接错误浅色](../images/ui-unification-20260908/after-connection-error-900-125-light.png)、[深色](../images/ui-unification-20260908/after-connection-error-900-125-dark.png)。
+
+32 张正式图片及其尺寸、SHA-256、源码指纹见 [证据清单](../images/ui-unification-20260908/manifest.json)。常规对照逻辑尺寸为 1280×800、100% 字体；实际 PNG 尺寸随 Windows 显示缩放变化，不将物理像素误写成窗口逻辑尺寸。中间诊断与第一轮图片留在 ignored 维护目录，不加入公共仓库。
+
+### 实际执行的定向验证
+
+测试使用 `QT_QPA_PLATFORM=windows`、`QT_QUICK_BACKEND=software` 和隔离临时数据。以下记录各组最终定向结果，不把重复运行次数相加，也不是全量回归结论。
+
+| 测试文件与选择范围 | 实际结果 |
+| --- | --- |
+| `test_ui_visual_unification.py`：`test_page_text_and_controls_fit_all_display_modes` | 6 passed；六个页面各覆盖四尺寸 × 两主题 × 两字体比例，共 16 种显示组合 |
+| 同文件：`test_fresh_onboarding_at_all_display_modes`、`test_refresh_confirmation_fits_large_text` | 各 1 passed；无档案首用覆盖 16 种组合，确认弹窗覆盖 900×620／125% |
+| 同文件：`test_theme_text_and_focus_contrast`、`test_shared_controls_keep_native_input_and_dialog_contracts` | 2 passed；文字／焦点对比、复选框、开关、键盘数字步进和确认弹窗信号 |
+| `test_unified_interview_ui.py` 三项 | 3 passed；准备／记录、代码和报告的尺寸矩阵；编辑器切换不丢草稿，知识链接可达 |
+| `test_ui_visual_unification.py`：`test_production_page_gallery` | 7 passed；七个正式场景分别采集浅／深主题 |
+| 同文件：Markdown 标题、真实代码运行、连接字段错误三个单项 | 各 1 passed；实际脚本输出 `9`、退出码 0，未把脚本运行标为公开测试通过；错误文本可见且可重试 |
+| `test_interview_input_runtime.py`：回答 IME、长回答滚动、长上下文弹窗 | 5 passed；焦点／组字／提交文本提示隐藏、内部滚动和稳定提交位置 |
+| `test_desktop_polish_ui.py`：录音状态四场景 | 4 passed；使用流式转录替身验证 UI，不声称本轮完成真实麦克风或语音模型测试 |
+| 模型设置跳转、设置保存、已保存 Key 修改／删除确认 | 3 passed；只使用测试连接与测试密钥存储替身 |
+| 首页真实入口、连接行与动作 | 6 passed；包括小窗口及放大字体 |
+| 单次提交进入下一问、保存失败、缺少 consent、取消／超时、切档草稿、简历与 JD 授权 | 8 passed；传输采用可控替身，不作真实 Codex／DeepSeek 成功声明 |
+| `test_onboarding_qml_hotfix.py`：岗位列表与首／第四／第八项点击 | 定向通过；保持显式选择、原创建入口和重复点击门控 |
+
+这些都是实际运行的目标用例。命令形式为 `.venv\Scripts\python.exe -m pytest tests/infrastructure/<文件>.py::<上述用例> -q`；多项按需同次指定。仅修正已过期的测试夹具：下一问响应补当前协议要求的 `coverage`、语音 mock 使用已有流式接口、首页断言匹配基线已有路由。没有为使测试通过而修改生产协议。
+
+交付前静态检查通过：32 张图的 SHA／尺寸、26 个表现层源码指纹、本文与桌面指南的本地链接，以及 `git diff --check`。源码指纹是交付状态快照；清单明确记录工作树采集，不冒充来自干净提交的截图。
+
+未运行：完整 pytest、付费模型请求、RC CI、Windows/macOS 打包或发布、macOS 实机与真实系统输入法候选窗人工验收。中文输入验证使用 Qt 输入法事件，并非声称人工遍历了每一种输入法。DeepSeek 高推理传输问题未在本轮修复。
+
+### 交付与边界复核
+
+三个实现批次均已完成。修改仅涉及 QML、公共样式、两个结构图标、Markdown 显示字号、目标测试及文档证据；未改 Provider、面试协议／Prompt、评分／计时、材料授权、语音模型、Catalog 或 Mastery。
+
+保留原有私人 UAT 目录、未跟踪反馈和原始附件；不纳入本轮提交。源码提交使用 `[skip ci]`，仅推送 `main`，不创建 Tag／Release。下一步是用户对当前源码页面进行人工视觉验收；本轮停止于此，不扩展业务功能。

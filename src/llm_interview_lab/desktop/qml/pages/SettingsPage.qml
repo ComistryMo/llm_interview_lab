@@ -42,21 +42,21 @@ Flickable {
 
     ColumnLayout {
         id: content
-        x: root.compactLayout ? 18 : 30
+        x: (root.width - width) / 2
         y: root.compactLayout ? 18 : 28
-        width: parent.width - (root.compactLayout ? 36 : 60)
-        spacing: root.compactLayout ? 12 : 16
+        width: Math.min(root.theme.formWidth, parent.width - (root.compactLayout ? 36 : 60))
+        spacing: 24
 
         // Main.qml owns the route title; keep the page body focused on the
         // settings context instead of repeating the same large heading.
-        Text {
+        LabText { theme: root.theme;
             objectName: "settingsRouteContext"
             text: "本地设置与连接"
             color: root.colors.text
-            font.pixelSize: 16
-            font.bold: true
+            font.pixelSize: root.theme.scaledPx(18)
+            strong: true
         }
-        Text {
+        LabText { theme: root.theme;
             text: Qt.platform.os === "osx"
                   ? "调整显示、查看本地数据，并在 Finder 启动无法继承 PATH 时指定 Codex。"
                   : Qt.platform.os === "windows"
@@ -70,7 +70,7 @@ Flickable {
         LabCard {
             objectName: "settingsAppearanceCard"
             Layout.fillWidth: true
-            cardColor: root.colors.surface; borderColor: root.colors.border
+            theme: root.theme; padding: 0; cardColor: root.theme.canvas; borderColor: "transparent"
             LabText { theme: root.theme; text: "外观"; variant: "section"; strong: true }
             GridLayout {
                 width: parent.width
@@ -150,7 +150,7 @@ Flickable {
                     }
                 }
             }
-            Text {
+            LabText { theme: root.theme;
                 width: parent.width
                 text: app.language === "en"
                       ? "语言选择会在下次启动时保留；题面内容仍以课程提供的语言为准。"
@@ -164,9 +164,9 @@ Flickable {
         LabCard {
             objectName: "profileSwitcherCard"
             Layout.fillWidth: true
-            cardColor: root.colors.surface; borderColor: root.colors.border
-            Text { text: "学习档案"; color: root.colors.text; font.bold: true; font.pixelSize: 18 }
-            Text {
+            theme: root.theme; padding: 0; cardColor: root.theme.canvas; borderColor: "transparent"
+            LabText { theme: root.theme; text: "学习档案"; color: root.colors.text; strong: true; font.pixelSize: root.theme.scaledPx(18) }
+            LabText { theme: root.theme;
                 width: parent.width
                 text: "切换后，材料、作答、面试和进度都会从所选档案重新读取。"
                 color: root.colors.muted
@@ -175,7 +175,7 @@ Flickable {
             RowLayout {
                 width: parent.width
                 spacing: 10
-                ComboBox {
+                LabComboBox { theme: root.theme;
                     id: profilePicker
                     objectName: "profileSwitcher"
                     Layout.fillWidth: true
@@ -217,20 +217,20 @@ Flickable {
                     tone: app.profileSwitchBusy ? root.colors.warning : root.colors.success
                 }
             }
-            Text {
+            LabText { theme: root.theme;
                 width: parent.width
                 visible: (app.profileOptions || []).length === 0
                 text: "当前没有可切换的学习档案。返回首次启动流程即可创建一个新的档案。"
                 color: root.colors.muted
                 wrapMode: Text.Wrap
             }
-            Button {
+            LabButton { theme: root.theme;
                 objectName: "startProfileSetupFromSettings"
                 visible: (app.profileOptions || []).length === 0
                 text: "重新创建学习档案"
                 onClicked: app.retryProfileSetup()
             }
-            Text {
+            LabText { theme: root.theme;
                 objectName: "profileSwitcherError"
                 width: parent.width
                 visible: (app.profileSwitchError || app.profileRestoreError || "").length > 0
@@ -238,29 +238,29 @@ Flickable {
                 color: root.colors.danger
                 wrapMode: Text.Wrap
             }
-            Text {
+            LabText { theme: root.theme;
                 width: parent.width
                 visible: (app.profileRestoreErrorCode || "").length > 0
                 text: "错误编号：" + app.profileRestoreErrorCode + "。请先备份数据目录，再选择其他档案或重新创建。"
                 color: root.colors.muted
                 wrapMode: Text.Wrap
-                font.pixelSize: 12
+                font.pixelSize: root.theme.scaledPx(12)
             }
         }
 
         LabCard {
             Layout.fillWidth: true
-            cardColor: root.colors.surface; borderColor: root.colors.border
-            Text { text: "本地数据"; color: root.colors.text; font.bold: true; font.pixelSize: 18 }
-            Text { width: parent.width; text: "学习档案、答案和面试记录默认只保存在本机。应用不提供遥测、账号或云同步。"; color: root.colors.muted; wrapMode: Text.Wrap }
-            Text { width: parent.width; text: "数据目录：" + app.dataDirectory; color: root.colors.text; elide: Text.ElideMiddle; font.pixelSize: 12 }
-            Text { width: parent.width; text: "日志目录：" + app.logDirectory; color: root.colors.text; elide: Text.ElideMiddle; font.pixelSize: 12 }
+            theme: root.theme; padding: 0; cardColor: root.theme.canvas; borderColor: "transparent"
+            LabText { theme: root.theme; text: "本地数据"; color: root.colors.text; strong: true; font.pixelSize: root.theme.scaledPx(18) }
+            LabText { theme: root.theme; width: parent.width; text: "学习档案、答案和面试记录默认只保存在本机。应用不提供遥测、账号或云同步。"; color: root.colors.muted; wrapMode: Text.Wrap }
+            LabText { theme: root.theme; width: parent.width; text: "数据目录：" + app.dataDirectory; color: root.colors.text; elide: Text.ElideMiddle; font.pixelSize: root.theme.scaledPx(12) }
+            LabText { theme: root.theme; width: parent.width; text: "日志目录：" + app.logDirectory; color: root.colors.text; elide: Text.ElideMiddle; font.pixelSize: root.theme.scaledPx(12) }
             Flow {
                 width: parent.width
                 spacing: 8
-                Button { text: "打开数据目录"; onClicked: app.openDataDirectory() }
-                Button { text: "打开日志目录"; onClicked: app.openLogDirectory() }
-                Button {
+                LabButton { theme: root.theme; text: "打开数据目录"; onClicked: app.openDataDirectory() }
+                LabButton { theme: root.theme; text: "打开日志目录"; onClicked: app.openLogDirectory() }
+                LabButton { theme: root.theme;
                     objectName: "refreshLocalState"
                     text: "刷新本地状态"
                     onClicked: {
@@ -278,9 +278,9 @@ Flickable {
             id: codexSettings
             objectName: "codexSettingsSection"
             Layout.fillWidth: true
-            cardColor: root.colors.surface; borderColor: root.colors.border
-            Text { text: "Codex 可执行文件"; color: root.colors.text; font.bold: true; font.pixelSize: 18 }
-            Text {
+            theme: root.theme; padding: 0; cardColor: root.theme.canvas; borderColor: "transparent"
+            LabText { theme: root.theme; text: "Codex 可执行文件"; color: root.colors.text; strong: true; font.pixelSize: root.theme.scaledPx(18) }
+            LabText { theme: root.theme;
                 width: parent.width
                 text: app.codexExecutableDisplay || (Qt.platform.os === "osx"
                       ? "自动查找（PATH、Homebrew 和常见用户目录）"
@@ -293,7 +293,7 @@ Flickable {
             RowLayout {
                 width: parent.width
                 spacing: 8
-                StatusPill {
+                StatusPill { theme: root.theme;
                     objectName: "codexDiscoveryStatus"
                     compact: true
                     text: app.codexProbeRunning ? "检查中"
@@ -305,7 +305,7 @@ Flickable {
                           : app.codexDiscoveryState === "found" ? root.colors.accent
                           : root.colors.muted
                 }
-                Text {
+                LabText { theme: root.theme;
                     Layout.fillWidth: true
                     text: app.codexDiscoveryMessage || ""
                     color: root.colors.muted
@@ -313,23 +313,27 @@ Flickable {
                     elide: Text.ElideRight
                 }
             }
-            Text {
+            LabText { theme: root.theme;
                 objectName: "codexDiscoveredPath"
                 width: parent.width
                 visible: app.codexDiscoveryState === "found" && (app.codexDiscoveredPath || "").length > 0
                 text: "来源：" + app.codexDiscoveredPath
                 color: root.colors.text
                 elide: Text.ElideMiddle
-                font.pixelSize: 12
+                font.pixelSize: root.theme.scaledPx(12)
             }
-            Text { text: "模型与推理强度"; color: root.colors.text; font.bold: true }
+            LabText { theme: root.theme; text: "模型与推理强度"; color: root.colors.text; strong: true }
             GridLayout {
                 width: parent.width
                 columns: root.compactLayout ? 1 : 2
                 columnSpacing: 10
                 rowSpacing: 8
+                LabText { theme: root.theme; text: "模型 ID"; variant: "caption"; tone: "muted"; Layout.row: 0; Layout.column: 0 }
+                LabText { theme: root.theme; text: "推理强度"; variant: "caption"; tone: "muted"; Layout.row: root.compactLayout ? 2 : 0; Layout.column: root.compactLayout ? 0 : 1 }
                 LabTextField {
                     id: codexModelField
+                    Layout.row: 1
+                    Layout.column: 0
                     objectName: "codexModelField"
                     theme: root.theme
                     Layout.fillWidth: true
@@ -337,8 +341,10 @@ Flickable {
                     placeholderText: "模型 ID（留空使用 Codex 默认模型）"
                     accessibleLabel: "Codex 模型 ID"
                 }
-                ComboBox {
+                LabComboBox { theme: root.theme;
                     id: codexEffort
+                    Layout.row: root.compactLayout ? 3 : 1
+                    Layout.column: root.compactLayout ? 0 : 1
                     objectName: "codexReasoningEffort"
                     Layout.fillWidth: true
                     textRole: "label"
@@ -355,7 +361,7 @@ Flickable {
             }
             RowLayout {
                 width: parent.width
-                Button {
+                LabButton { theme: root.theme;
                     objectName: "saveCodexModelPreferences"
                     text: "保存模型设置"
                     onClicked: {
@@ -367,29 +373,29 @@ Flickable {
                         app.setCodexReasoningEffort(effort)
                     }
                 }
-                Text {
+                LabText { theme: root.theme;
                     Layout.fillWidth: true
                     text: "只影响新的 Codex 请求；模型不支持所选强度时会返回明确错误。"
                     color: root.colors.muted
                     wrapMode: Text.Wrap
-                    font.pixelSize: 12
+                    font.pixelSize: root.theme.scaledPx(12)
                 }
             }
             Flow {
                 width: parent.width
                 spacing: 8
-                Button { text: "选择 Codex"; onClicked: codexPicker.open() }
+                LabButton { theme: root.theme; text: "选择 Codex"; onClicked: codexPicker.open() }
                 // Keep this action available even on a fresh install.  The
                 // controller clears a stale manual path and starts the same
                 // asynchronous discovery used at launch, so a missing Codex
                 // is a retryable state rather than a dead control.
-                Button {
+                LabButton { theme: root.theme;
                     objectName: "restoreCodexAutoDiscovery"
                     text: app.codexExecutable ? "恢复自动查找" : "重新自动查找"
                     onClicked: app.clearCodexExecutable()
                 }
             }
-            Text {
+            LabText { theme: root.theme;
                 width: parent.width
                 text: app.codexDiscoveryState === "found" && app.aiStatusVariant !== "connected"
                       ? "已发现只代表找到可执行文件；连接还需要 Codex 已登录并成功创建 App Server 会话。"
@@ -401,12 +407,12 @@ Flickable {
 
         LabCard {
             Layout.fillWidth: true
-            cardColor: root.colors.surface; borderColor: root.colors.border
-            Text { text: "安全边界"; color: root.colors.text; font.bold: true; font.pixelSize: 18 }
-            Text { width: parent.width; text: "本地 Grader 只用于运行你本人信任的代码，不是恶意代码安全沙箱。连接远程 AI 前请核对上下文预览。"; color: root.colors.muted; wrapMode: Text.Wrap }
+            theme: root.theme; padding: 0; cardColor: root.theme.canvas; borderColor: "transparent"
+            LabText { theme: root.theme; text: "安全边界"; color: root.colors.text; strong: true; font.pixelSize: root.theme.scaledPx(18) }
+            LabText { theme: root.theme; width: parent.width; text: "本地 Grader 只用于运行你本人信任的代码，不是恶意代码安全沙箱。连接远程 AI 前请核对上下文预览。"; color: root.colors.muted; wrapMode: Text.Wrap }
         }
 
-        Text { text: "LLM Interview Lab v" + Qt.application.version + " · 中文优先桌面体验"; color: root.colors.muted; font.pixelSize: 12 }
+        LabText { theme: root.theme; text: "LLM Interview Lab v" + Qt.application.version + " · 中文优先桌面体验"; color: root.colors.muted; font.pixelSize: root.theme.scaledPx(12) }
     }
 
     FileDialog {
@@ -416,13 +422,13 @@ Flickable {
         onAccepted: app.setCodexExecutable(selectedFile.toString())
     }
 
-    Dialog {
+    LabStandardDialog { theme: root.theme;
         id: refreshWarningDialog
         objectName: "refreshDirtyDraftDialog"
         modal: true
         anchors.centerIn: parent
         width: Math.min(460, root.width - 48)
-        implicitHeight: 220
+        implicitHeight: refreshWarningBody.implicitHeight + header.implicitHeight + footer.implicitHeight + padding * 2 + spacing * 2
         height: implicitHeight
         title: "丢弃未保存编辑并刷新？"
         standardButtons: Dialog.Cancel | Dialog.Ok
@@ -431,8 +437,10 @@ Flickable {
             refreshRequested = false
         }
         contentItem: ColumnLayout {
+            id: refreshWarningBody
+            width: refreshWarningDialog.availableWidth
             spacing: 8
-            Text {
+            LabText { theme: root.theme;
                 Layout.fillWidth: true
                 text: (app.submissionDirty
                        ? "当前题目有未保存的编辑。"
@@ -447,17 +455,17 @@ Flickable {
                 color: root.colors.text
                 wrapMode: Text.Wrap
             }
-            Text {
+            LabText { theme: root.theme;
                 Layout.fillWidth: true
                 text: "刷新不会修改课程或其他 Profile。"
                 color: root.colors.muted
-                font.pixelSize: 12
+                font.pixelSize: root.theme.scaledPx(12)
                 wrapMode: Text.Wrap
             }
         }
     }
 
-    Dialog {
+    LabStandardDialog { theme: root.theme;
         id: migrationDialog
         visible: app.legacyMigrationAvailable
         modal: true
@@ -467,7 +475,7 @@ Flickable {
         standardButtons: Dialog.NoButton
         contentItem: ColumnLayout {
             spacing: 14
-            Text {
+            LabText { theme: root.theme;
                 Layout.fillWidth: true
                 text: "检测到 v0.4.0-alpha.1 的学习档案。迁移会先复制、计算 SHA-256 并保留备份；不会删除或覆盖旧目录。\n\n旧目录：" + app.legacyDataDirectory
                 color: root.colors.text
@@ -475,8 +483,8 @@ Flickable {
             }
             RowLayout {
                 Item { Layout.fillWidth: true }
-                Button { text: "稍后处理"; onClicked: { app.dismissLegacyMigration(); migrationDialog.close() } }
-                Button { text: "安全复制"; highlighted: true; onClicked: { app.migrateLegacyData(); migrationDialog.close() } }
+                LabButton { theme: root.theme; text: "稍后处理"; onClicked: { app.dismissLegacyMigration(); migrationDialog.close() } }
+                LabButton { theme: root.theme; text: "安全复制"; highlighted: true; onClicked: { app.migrateLegacyData(); migrationDialog.close() } }
             }
         }
     }

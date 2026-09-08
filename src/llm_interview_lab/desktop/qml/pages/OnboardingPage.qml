@@ -258,7 +258,7 @@ Rectangle {
                                     text: "✓"
                                     color: root.colors.accent
                                     font.pixelSize: root.scaledPx(12)
-                                    font.bold: true
+                                    strong: true
                                 }
                             }
                             LabText { theme: root.theme;
@@ -346,7 +346,7 @@ Rectangle {
                               + " / " + root.stepCount
                         color: root.theme ? root.theme.subtle : root.colors.muted
                         font.pixelSize: root.scaledPx(12)
-                        font.bold: true
+                        strong: true
                     }
                 }
 
@@ -558,7 +558,7 @@ Rectangle {
                                                 visible: root.selectedRole === modelData.id
                                                 color: root.colors.accent
                                                 font.pixelSize: root.scaledPx(17)
-                                                font.bold: true
+                                                strong: true
                                                 horizontalAlignment: Text.AlignRight
                                             }
                                         }
@@ -665,7 +665,7 @@ Rectangle {
                                                : (root.theme ? root.theme.subtle
                                                              : root.colors.muted)
                                         font.pixelSize: root.scaledPx(12)
-                                        font.bold: root.selectedRoleCard !== null
+                                        strong: root.selectedRoleCard !== null
                                         elide: Text.ElideRight
                                     }
                                     Rectangle {

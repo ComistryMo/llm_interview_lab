@@ -28,7 +28,7 @@ Basic.Switch {
             width: 18
             height: 18
             radius: 9
-            color: control.theme ? control.theme.primaryForeground : "white"
+            color: control.theme ? (control.checked ? control.theme.accentForeground : control.theme.textStrong) : "white"
         }
     }
     contentItem: Text {

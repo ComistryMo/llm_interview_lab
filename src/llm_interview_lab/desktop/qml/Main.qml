@@ -571,7 +571,7 @@ ApplicationWindow {
                         Qt.callLater(settingsPage.showCodexSettings)
                     }
                 }
-                ProgressPage { objectName: "progressPage"; app: backend; colors: window.colors }
+                ProgressPage { objectName: "progressPage"; app: backend; colors: window.colors; theme: appTheme }
                 ConnectionsPage {
                     objectName: "connectionsPage"; app: backend; colors: window.colors; theme: appTheme
                     onCodexSettingsRequested: {
@@ -791,7 +791,7 @@ ApplicationWindow {
             toastTimer.restart()
         }
     }
-    Dialog {
+    LabStandardDialog { theme: appTheme;
         id: approvalDialog
         objectName: "codexApprovalDetails"
         title: "检查 Codex 操作"
@@ -865,7 +865,7 @@ ApplicationWindow {
                         tone: "muted"
                         strong: true
                     }
-                    TextArea {
+                    LabTextArea { theme: appTheme;
                         visible: !!(window.pendingCodexApproval
                                     && window.pendingCodexApproval.diff)
                         Layout.fillWidth: true

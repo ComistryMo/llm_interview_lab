@@ -929,6 +929,12 @@ def test_connections_compact_rows_align_and_actions_work(scene, monkeypatch, siz
                 assert start.x() >= 0 and start.y() >= 0
                 assert end.x() <= card.width() + 1 and end.y() <= card.height() + 1
     assert _within_window(window, codex)
+    # Long labels grow naturally at 125%; the passive local-capability note
+    # may need a short scroll while both actionable connection rows stay visible.
+    if not _within_window(window, notice):
+        page = _find(window, "connectionsPage")
+        page.setProperty("contentY", max(0, page.property("contentHeight") - page.height()))
+        QTest.qWait(30)
     assert _within_window(window, notice)
     _capture(window, f"connections-compact-{size[0]}-{theme}")
     _click(window, _find(window, "openCodexModelSettings"))
@@ -1812,12 +1818,11 @@ def test_ui_single_submit_codex_response_enters_next_question(scene, size):
     assert draft in backend.calls[0][0][1]
     assert backend.calls[0][1]["output_schema"]["properties"]["next_stage"]["enum"] == ["experience"]
     result = {
-        "scores": {key: 3 for key in controller.interview["question"]["rubric"]["dimensions"]},
-        "evidence": "候选人说明了先测量失败率，并使用独立验证集核对改动效果。",
-        "confidence": "medium", "fatal_issues": [],
         "follow_up": "你怎样选择验证集，并排除训练数据泄漏？",
         "next_stage": "experience", "coding_problem_id": "",
         "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))],
+        "coverage": {"experience": "独立验证集", "angle": "数据泄漏", "topic": "",
+                     "evidence": "候选人说明先测量失败率，用独立验证集核对效果。", "sufficient": False},
     }
     for method, extra in (
         ("turn/started", {}),
@@ -2576,7 +2581,10 @@ def test_home_layout_and_real_entry_points(scene, theme):
     assert _find(window, "interviewAnswerEditor").isVisible()
     controller.navigate("home")
     QTest.qWait(100)
-    _click(window, _find(window, "homeBrowseTraining"))
+    practice = _find(window, "homeCurrentPractice")
+    practice_action = next(item for item in _items(practice)
+                           if item.metaObject().className().startswith("LabButton_QML"))
+    _click(window, practice_action)
     QTest.qWait(100)
     assert controller.currentPage == "learn"
     controller.navigate("home")
@@ -2590,5 +2598,5 @@ def test_home_layout_and_real_entry_points(scene, theme):
     _capture(window, f"home-practice-1440x900-{theme}")
     _click(window, _find(window, "homePrimaryAction"))
     QTest.qWait(100)
-    assert controller.currentPage == "exercise"
-    assert _find(window, "exerciseEditorFrame").isVisible()
+    assert controller.currentPage == "interview"
+    assert _find(window, "startConfiguredInterview").isVisible()

@@ -146,7 +146,7 @@ def test_role_cards_have_positive_non_overlapping_geometry(onboarding_scene) -> 
     assert grid.width() >= 760
 
     for card in cards:
-        assert 92 <= card.height() <= 108
+        assert card.height() >= 112
         assert card.width() > 0
         assert card.height() > 0
 
@@ -176,7 +176,7 @@ def test_supported_small_window_uses_one_reliable_role_column(onboarding_scene) 
     assert grid.property("columnCount") == 1
     cards = _role_cards(onboarding_scene)
     assert cards
-    assert all(card.width() > 0 and 92 <= card.height() <= 108 for card in cards)
+    assert all(card.width() > 0 and card.height() >= 112 for card in cards)
 
 
 @pytest.mark.parametrize(

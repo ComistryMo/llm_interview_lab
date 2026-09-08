@@ -31,7 +31,7 @@ QtObject {
     readonly property color textStrong: darkMode ? "#ececec" : "#202020"
     readonly property color text: darkMode ? "#c7c7c7" : "#484848"
     readonly property color muted: darkMode ? "#ababab" : "#666666"
-    readonly property color subtle: darkMode ? "#939393" : "#707070"
+    readonly property color subtle: darkMode ? "#a3a3a3" : "#666666"
     readonly property color primary: darkMode ? "#ececec" : "#202020"
     readonly property color primaryHover: darkMode ? "#d8d8d8" : "#363636"
     readonly property color primaryPressed: darkMode ? "#c4c4c4" : "#484848"

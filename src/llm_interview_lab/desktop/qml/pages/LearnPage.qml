@@ -235,20 +235,18 @@ Item {
                 RowLayout {
                     anchors.fill: parent
                     spacing: 2
-                    LabButton {
+                    LabTabButton {
                         theme: root.theme
                         Layout.fillWidth: true
-                        compact: true
-                        variant: root.section === "courses" ? "primary" : "ghost"
+                        checked: root.section === "courses"
                         text: "课程"
                         onClicked: root.selectSection("courses")
                     }
-                    LabButton {
+                    LabTabButton {
                         objectName: "knowledgeBrowserButton"
                         theme: root.theme
                         Layout.fillWidth: true
-                        compact: true
-                        variant: root.section === "knowledge" ? "primary" : "ghost"
+                        checked: root.section === "knowledge"
                         text: "知识库"
                         onClicked: root.selectSection("knowledge")
                     }
@@ -353,7 +351,7 @@ Item {
                                 required property var modelData
                                 objectName: "learnProblemRow-" + modelData.problem_id
                                 width: problemList.width
-                                height: Math.max(88, root.theme ? root.theme.scaledPx(88) : 88)
+                                height: Math.max(88, problemRowContent.implicitHeight + 24)
                                 radius: root.theme ? root.theme.radiusMedium : 9
                                 color: selected || hoverHandler.hovered
                                        ? (root.theme ? root.theme.surfaceHover : root.colors.surfaceAlt)
@@ -369,6 +367,7 @@ Item {
                                 Accessible.selected: selected
 
                                 ColumnLayout {
+                                    id: problemRowContent
                                     anchors.fill: parent
                                     anchors.margins: root.theme ? root.theme.space3 : 12
                                     spacing: 3
@@ -630,7 +629,7 @@ Item {
                                 required property var modelData
                                 objectName: "knowledgeRow-" + modelData.id
                                 width: knowledgeList.width
-                                height: Math.max(80, root.theme ? root.theme.scaledPx(80) : 80)
+                                height: Math.max(72, knowledgeRowContent.implicitHeight + 24)
                                 radius: root.theme ? root.theme.radiusMedium : 9
                                 color: hoverHandlerKnowledge.hovered
                                        ? (root.theme ? root.theme.surfaceHover : root.colors.surfaceAlt)
@@ -639,6 +638,7 @@ Item {
                                 Accessible.role: Accessible.ListItem
                                 Accessible.name: modelData.title || "未命名卡片"
                                 ColumnLayout {
+                                    id: knowledgeRowContent
                                     anchors.fill: parent
                                     anchors.margins: root.theme ? root.theme.space3 : 12
                                     spacing: 3
@@ -647,6 +647,8 @@ Item {
                                         Layout.fillWidth: true
                                         text: modelData.title || "未命名卡片"
                                         strong: true
+                                        wrapMode: Text.Wrap
+                                        maximumLineCount: 2
                                         elide: Text.ElideRight
                                     }
                                     LabText {
@@ -712,7 +714,7 @@ Item {
                                 ColumnLayout {
                                     id: knowledgeDetailContent
                                     objectName: "knowledgeDetailContent"
-                                    width: knowledgeDetailScroll.availableWidth
+                                    width: Math.min(knowledgeDetailScroll.availableWidth, root.theme.readingWidth)
                                     spacing: root.theme ? root.theme.space3 : 12
                                     property var detail: app.knowledgeDetail || ({})
                                     property bool answersVisible: false

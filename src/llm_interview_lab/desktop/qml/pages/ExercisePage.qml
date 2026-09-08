@@ -184,11 +184,11 @@ Item {
                 Column {
                     id: detailsColumn
                     width: detailsScroll.availableWidth; spacing: 12
-                    LabText { theme: root.theme; width: parent.width; text: root.hasTask ? app.currentTask.problem_id : "尚未选择题目"; color: root.hasTask ? root.colors.accent : root.colors.muted; font.bold: true; font.pixelSize: root.theme.scaledPx(12) }
-                    LabText { theme: root.theme; width: parent.width; text: root.displayTitle(); color: root.colors.text; font.pixelSize: root.theme.scaledPx(24); font.bold: true; wrapMode: Text.Wrap }
+                    LabText { theme: root.theme; width: parent.width; text: root.hasTask ? app.currentTask.problem_id : "尚未选择题目"; color: root.hasTask ? root.colors.accent : root.colors.muted; strong: true; font.pixelSize: root.theme.scaledPx(12) }
+                    LabText { theme: root.theme; width: parent.width; text: root.displayTitle(); color: root.colors.text; font.pixelSize: root.theme.scaledPx(24); strong: true; wrapMode: Text.Wrap }
                     StatusPill { text: root.hasTask ? (app.currentTask.validation || "尚未开始") : "未选择"; tone: root.hasTask ? root.colors.success : root.colors.muted }
                     Rectangle { width: parent.width; height: 1; color: root.colors.border }
-                    LabText { theme: root.theme; objectName: "practiceQuestionPrompt"; width: parent.width; text: app.renderMarkdown(root.displayTask(), root.theme.fontBodyLarge, root.theme.monospaceFontFamily); color: root.colors.text; font.pixelSize: root.theme.fontBodyLarge; wrapMode: Text.Wrap; textFormat: Text.RichText; lineHeight: 1.6 }
+                    LabText { theme: root.theme; objectName: "practiceQuestionPrompt"; width: parent.width; text: app.renderMarkdown(root.displayTask(), root.theme.fontSection, root.theme.monospaceFontFamily); color: root.colors.text; font.pixelSize: root.theme.fontBodyLarge; wrapMode: Text.Wrap; textFormat: Text.RichText; lineHeight: 1.6 }
                     LabButton { theme: root.theme;
                         visible: app.language !== "en" && root.hasTask && !!app.currentTask.task && !root.sourceTaskChinese
                         text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
@@ -207,7 +207,7 @@ Item {
                         lineHeight: 1.2
                     }
                     Rectangle { width: parent.width; height: 1; color: root.colors.border }
-                    LabText { theme: root.theme; text: "掌握流程"; color: root.colors.text; font.bold: true }
+                    LabText { theme: root.theme; text: "掌握流程"; color: root.colors.text; strong: true }
                     LabText { theme: root.theme;
                         width: detailsColumn.width
                         text: root.actionExplanation()
@@ -237,7 +237,7 @@ Item {
                         anchors.leftMargin: 8
                         anchors.rightMargin: 8
                         spacing: 2
-                        LabText { theme: root.theme; text: "submission.py"; color: root.colors.text; font.bold: true; Layout.leftMargin: 4 }
+                        LabText { theme: root.theme; text: "submission.py"; color: root.colors.text; strong: true; Layout.leftMargin: 4 }
                         Item { Layout.fillWidth: true }
                         // Reference panes remain available on compact layouts;
                         // wide screens keep the editor deliberately quiet.
@@ -269,7 +269,7 @@ Item {
                             text: (app.currentTask.problem_id || "当前题目")
                                   + " · " + root.displayTitle()
                             color: root.colors.text
-                            font.bold: true
+                            strong: true
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
@@ -306,7 +306,7 @@ Item {
                                 anchors.leftMargin: 14
                                 anchors.rightMargin: 12
                                 spacing: 10
-                                LabText { theme: root.theme; text: "Python"; color: root.colors.accent; font.bold: true; font.pixelSize: root.theme.scaledPx(12) }
+                                LabText { theme: root.theme; text: "Python"; color: root.colors.accent; strong: true; font.pixelSize: root.theme.scaledPx(12) }
                                 LabText { theme: root.theme; text: "本地作答"; color: root.colors.muted; font.pixelSize: root.theme.scaledPx(12) }
                                 Item { Layout.fillWidth: true }
                                 LabText { theme: root.theme; text: app.submissionDirty ? "本地草稿 · 尚未保存" : "本地草稿 · 已保存"; color: app.submissionDirty ? root.colors.warning : root.colors.muted; font.pixelSize: root.theme.scaledPx(12) }
@@ -346,7 +346,7 @@ Item {
                                 text: "还没有打开题目"
                                 color: root.colors.text
                                 font.pixelSize: root.theme.scaledPx(18)
-                                font.bold: true
+                                strong: true
                                 horizontalAlignment: Text.AlignHCenter
                             }
                             LabText { theme: root.theme;
@@ -401,7 +401,7 @@ Item {
                         LabText { theme: root.theme;
                             text: "公开测试输出"
                             color: root.colors.muted
-                            font.bold: true
+                            strong: true
                             font.pixelSize: root.theme.scaledPx(12)
                         }
                         ScrollView {
@@ -439,7 +439,7 @@ Item {
                                 text: root.primaryActionKind() === "blocked" ? "下一阶段暂不可用" : "下一步"
                                 color: root.primaryActionKind() === "blocked" ? root.colors.warning : root.colors.accent
                                 font.pixelSize: root.theme.scaledPx(12)
-                                font.bold: true
+                                strong: true
                             }
                             LabText { theme: root.theme;
                                 Layout.fillWidth: true
@@ -467,7 +467,7 @@ Item {
                             contentItem: LabText { theme: root.theme;
                                 text: practicePrimaryButton.text
                                 color: practicePrimaryButton.enabled ? "white" : root.colors.muted
-                                font.bold: true
+                                strong: true
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                             }
@@ -505,7 +505,7 @@ Item {
                 x: 20
                 width: parent.width - 40
                 spacing: 12
-                LabText { theme: root.theme; text: root.displayTitle(); color: root.colors.text; font.pixelSize: root.theme.scaledPx(24); font.bold: true; wrapMode: Text.Wrap; width: parent.width }
+                LabText { theme: root.theme; text: root.displayTitle(); color: root.colors.text; font.pixelSize: root.theme.scaledPx(24); strong: true; wrapMode: Text.Wrap; width: parent.width }
                 LabText { theme: root.theme; text: app.renderMarkdown(root.displayTask(), root.theme.fontSection, root.theme.monospaceFontFamily); color: root.colors.text; font.pixelSize: root.theme.fontBodyLarge; wrapMode: Text.Wrap; textFormat: Text.RichText; width: parent.width }
                 LabButton { theme: root.theme;
                     visible: app.language !== "en" && root.hasTask && !!app.currentTask.task && !root.sourceTaskChinese

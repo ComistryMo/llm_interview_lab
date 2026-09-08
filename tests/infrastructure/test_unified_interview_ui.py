@@ -55,6 +55,7 @@ def test_unified_setup_home_history_at_all_sizes(scene):
 def test_coding_workspace_keeps_one_editor_and_actions(scene):
     window, controller = scene
     _enter_coding_round(controller)
+    original_editor = _find(window, "interviewCodingEditor")
     for width, height in ((900, 620), (1080, 680), (1280, 800), (1440, 900)):
         window.resize(width, height)
         for theme in ("light", "dark"):
@@ -63,6 +64,7 @@ def test_coding_workspace_keeps_one_editor_and_actions(scene):
                 window.setProperty("displayFontScaleOverride", scale)
                 QTest.qWait(60)
                 editor = _find(window, "interviewCodingEditor")
+                assert editor is original_editor
                 toggle = _find(window, "toggleInterviewCodingPrompt")
                 if width < 1180 and not editor.isVisible():
                     _click(window, toggle)
@@ -84,6 +86,20 @@ def test_coding_workspace_keeps_one_editor_and_actions(scene):
                 QTest.keyClick(window, Qt.Key_Tab)
                 assert editor.property("text").endswith("\n    ")
                 assert "中文注释" in editor.property("text")
+                if width >= 1180:
+                    # Geometry alone cannot catch a reparented editor culled
+                    # by its previous viewport. Verify it is actually painted.
+                    QTest.qWait(30)
+                    shot = window.grabWindow()
+                    point = editor.mapToScene(QPointF(editor.width() - 24, editor.height() - 24))
+                    painted = shot.pixelColor(round(point.x() * shot.width() / window.width()),
+                                              round(point.y() * shot.height() / window.height()))
+                    assert painted.name() == editor.property("theme").property("surface").name()
+                else:
+                    draft = editor.property("text")
+                    _click(window, toggle)
+                    _click(window, toggle)
+                    assert editor.property("text") == draft
                 if (width, scale) == (1280, 1.0):
                     _capture(window, f"unified-coding-{theme}")
 
