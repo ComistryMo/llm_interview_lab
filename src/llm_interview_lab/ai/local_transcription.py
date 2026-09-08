@@ -63,7 +63,11 @@ class LocalSpeechTranscriber:
 
     @staticmethod
     def runtime_available() -> bool:
-        return all(find_spec(name) is not None for name in ("sherpa_onnx", "numpy", "soundfile", "scipy"))
+        try:
+            return all(find_spec(name) is not None for name in ("sherpa_onnx", "numpy", "soundfile", "scipy"))
+        except ImportError:
+            # Standalone builds may actively exclude an optional dependency.
+            return False
 
     def ready(self) -> bool:
         return all((self.model_root / name).is_file()

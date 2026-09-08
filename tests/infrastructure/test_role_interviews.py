@@ -408,29 +408,18 @@ def test_dynamic_role_interview_materializes_only_current_turn(tmp_path: Path) -
         "我负责数据清洗和评测。",
         now=T0 + timedelta(minutes=1),
     )
-    record_role_assessment(
-        root,
-        "learner-one",
-        session["interview_id"],
-        "q-001",
-        {"skill_depth": 3, "evidence_and_reasoning": 3},
-        evidence="引用候选人的原回答。",
-        source="ai",
-        confidence="medium",
-        now=T0 + timedelta(minutes=2),
+    from llm_interview_lab.role_interviews import advance_dynamic_role_interview
+    catalog, roles = _catalogs(root)
+    updated = advance_dynamic_role_interview(
+        root, "learner-one", session["interview_id"], catalog, roles, "q-001",
+        {"next_stage": "experience", "follow_up": "你如何验证数据清洗没有引入新的偏差？",
+         "next_skill_ids": [next(iter(roles.roles["post_training_engineer"].skill_weights))],
+         "coding_problem_id": "",
+         "coverage": {"experience": "", "angle": "", "topic": "", "evidence": "", "sufficient": False}},
+        context_sha256=context_sha, now=T0 + timedelta(minutes=2),
     )
-    updated = append_dynamic_role_question(
-        root,
-        "learner-one",
-        load_role_catalog(root, curriculum=load_catalog(root)),
-        session["interview_id"],
-        question={
-            "kind": "oral",
-            "title": "继续追问",
-            "prompt": "你如何验证数据清洗没有引入新的偏差？",
-        },
-        plan_context_sha256=context_sha,
-    )
+    assert not updated["assessments"]
+    assert list(updated["turn_decisions"]) == ["q-001"]
     assert len(updated["questions"]) == 2
     assert updated["questions"][1]["question_id"] == "q-002"
 

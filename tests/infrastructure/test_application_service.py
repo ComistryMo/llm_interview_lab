@@ -127,15 +127,21 @@ def test_shared_application_service_initializes_role_and_local_material(
     ).read_text(encoding="utf-8")
 
 
+@pytest.mark.parametrize("excluded_from_bundle", [False, True])
 def test_every_role_has_a_runnable_first_unlock_without_torch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    excluded_from_bundle: bool,
 ) -> None:
     root = _repository(tmp_path)
     service = ApplicationService(root)
+    def absent_dependency(name):
+        if excluded_from_bundle:
+            raise ImportError(f"Module '{name}' was actively excluded from Nuitka compilation")
+        return None
     monkeypatch.setattr(
         "llm_interview_lab.application.importlib.util.find_spec",
-        lambda _: None,
+        absent_dependency,
     )
 
     for index, role in enumerate(service.role_cards(), start=1):

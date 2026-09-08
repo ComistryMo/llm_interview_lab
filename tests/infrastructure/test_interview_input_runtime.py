@@ -182,6 +182,18 @@ def _enter_coding_round(controller, coding_id="FND-002"):
     QTest.qWait(100)
 
 
+def _next_reply(controller, prompt="请说明你怎样独立验证这个结果。", stage="experience"):
+    """A v2 next-question fixture: never synthesize a per-turn score."""
+    return {
+        "follow_up": prompt if stage in {"experience", "theory"} else "",
+        "next_stage": stage, "coding_problem_id": "",
+        "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))]
+                          if stage in {"experience", "theory"} else [],
+        "coverage": {"experience": "合成项目", "angle": "", "topic": "",
+                     "evidence": "", "sufficient": False},
+    }
+
+
 def _within_window(window, item):
     start = item.mapToScene(QPointF())
     return (start.x() >= 0 and start.y() >= 0
@@ -664,7 +676,7 @@ def test_voice_error_and_transcription_choices_use_real_capabilities(scene, monk
     assert error.mapToItem(viewport, QPointF(0, error.height())).y() <= viewport.height()
     _click(window, _find(window, "interviewVoiceSettings"))
     QTest.qWait(100)
-    assert "本地模型已下载" in _find(window, "interviewLocalSttStatus").property("text")
+    assert "模型已就绪" in _find(window, "interviewLocalSttStatus").property("text")
     assert _find(window, "interviewVoiceConnection").property("count") == 1
     assert _find(window, "interviewVoiceConnection").property("currentValue") == LOCAL_STT_ID
     assert not _find(window, "interviewVoiceRemoteConsent").isVisible()
@@ -999,20 +1011,37 @@ def test_real_two_pass_corrects_pauses_while_qml_accepts_ime(scene, monkeypatch,
         controller._suspend_interview_voice()
 
 
-def test_corrected_coding_selection_opens_editor_and_shows_notice(scene):
+def test_invalid_coding_selection_preserves_answer_then_real_choice_opens_editor(scene):
+    from llm_interview_lab.role_interviews import RoleInterviewError, dynamic_coding_candidates
     window, controller = scene
     window.resize(1080, 680)
-    _enter_coding_round(controller, "AI-INVENTED-404")
-    assert controller.interview["coding_selection_corrected"] is True
-    notice = _find(window, "interviewCodingSelectionNotice")
-    assert notice.isVisible() and "改选" in notice.property("text")
-    assert notice.property("contentHeight") <= notice.height() + 1
-    assert controller.interview["question"]["source"]["id"] in controller.service.catalog.problems
-    _capture(window, "coding-corrected-question")
+    iid = controller.interview["interview_id"]
+    for stage in ("experience", "theory"):
+        controller.lockInterviewAnswer("合成回答：用独立留出集验证数据去重。")
+        qid = controller.interview["question"]["question_id"]
+        controller.service.advance_dynamic_interview(controller.profileId, iid, qid,
+            _next_reply(controller, stage=stage), context_sha256="a" * 64)
+        controller._load_interview(iid)
+    controller.lockInterviewAnswer("合成原理回答：训练与评测隔离。")
+    qid = controller.interview["question"]["question_id"]
+    response = _next_reply(controller, stage="coding")
+    response["coding_problem_id"] = "AI-INVENTED-404"
+    with pytest.raises(RoleInterviewError, match="可运行候选"):
+        controller.service.advance_dynamic_interview(controller.profileId, iid, qid, response, context_sha256="a" * 64)
+    saved = controller.service.interview_session(controller.profileId, iid)
+    assert len(saved["questions"]) == 3 and qid in saved["answers"]
+    assert not saved["assessments"]
+    candidates = dynamic_coding_candidates(controller.service.catalog, controller.service.roles, saved)
+    response["coding_problem_id"] = candidates[0][0].id
+    controller.service.advance_dynamic_interview(controller.profileId, iid, qid, response, context_sha256="a" * 64)
+    controller._load_interview(iid)
+    QTest.qWait(80)
+    assert controller.interview["question"]["source"]["id"] == candidates[0][0].id
+    assert not controller.interview["coding_selection_corrected"]
     _click(window, _find(window, "toggleInterviewCodingPrompt"))
     assert _find(window, "interviewCodingEditor").isVisible()
     assert controller.interview["coding_text"]
-    _capture(window, "coding-corrected-editor")
+    _capture(window, "coding-validated-editor")
 
 
 @pytest.mark.parametrize("size,theme", [
@@ -1155,12 +1184,7 @@ def test_restarted_profile_starts_from_form_with_saved_key(controller, monkeypat
             assert json_mode is True
             conversations.append(messages)
             question = restored.interview["question"]
-            yield ChatEvent("delta", text=json.dumps({
-                "scores": {name: 3 for name in question["rubric"]["dimensions"]},
-                "evidence": "候选人说明做过偏好数据去重练习，希望应聘后训练实习，尚未展开项目细节。", "confidence": "medium", "fatal_issues": [],
-                "next_stage": "experience", "follow_up": "先聊聊这次去重练习，你自己负责了哪一部分？",
-                "next_skill_ids": [skill], "coding_problem_id": "",
-            }))
+            yield ChatEvent("delta", text=json.dumps(_next_reply(restored, "先聊聊这次去重练习，你自己负责了哪一部分？")))
     def provider(config, *, api_key):
         assert api_key == "synthetic-stored-key"
         return Provider()
@@ -1401,7 +1425,7 @@ def test_interview_coding_runs_visible_revision_and_shows_failure(scene):
     QTest.keyClick(window, Qt.Key_End, Qt.ControlModifier)
     edit = QInputMethodEvent()
     edit.setCommitString("\n# UAT latest editor revision\n")
-    QCoreApplication.sendEvent(editor, edit)
+    QCoreApplication.sendEvent(editor.findChild(QObject, "codeTextInput"), edit)
     latest = editor.property("text")
     assert "UAT latest editor revision" in latest
     digest = hashlib.sha256(latest.encode()).hexdigest()
@@ -1425,7 +1449,7 @@ def test_interview_coding_runs_visible_revision_and_shows_failure(scene):
     _capture(window, "coding-public-tests-failed")
     editor.forceActiveFocus()
     edit.setCommitString("# modified after test\n")
-    QCoreApplication.sendEvent(editor, edit)
+    QCoreApplication.sendEvent(editor.findChild(QObject, "codeTextInput"), edit)
     assert not _find(window, "recordInterviewCodingRound").isEnabled()
     assert "代码已修改" in status.property("text")
     # Reload reads only this question's persisted result, not the global output.
@@ -1486,23 +1510,30 @@ def test_real_coding_ui_runs_own_example_and_submits_to_interviewer(scene, monke
     assert controller.interview["coding_test_current"] is False
     assert "测试通过" not in _find(window, "interviewCodingStatus").property("text")
     assert controller.interview["coding_run"]["submission_sha256"] == hashlib.sha256(code.encode()).hexdigest()
-    viewport = _find(window, "interviewQuestionScroll")
+    viewport = _find(window, "interviewCodingWorkspace")
+    viewport.setProperty("contentY", max(0, viewport.property("contentHeight") - viewport.height()))
+    QTest.qWait(80)
     panel = _find(window, "interviewCodingOutputPanel")
     assert panel.mapToItem(viewport, QPointF(0, panel.height())).y() <= viewport.height() + 1
     _capture(window, f"self-run-{mode}")
 
-    response = {"scores": {"core_logic": 3, "reasoning": 2, "validation": 3},
-                "evidence": "合成评分：return sum(xs) 与样例输出 9 一致，但没有实现完整题面；局部逻辑不能证明整题正确。",
-                "confidence": "medium", "fatal_issues": [], "next_stage": "finish",
-                "follow_up": "", "coding_problem_id": "", "next_skill_ids": []}
+    # v2 freezes the submitted code first, then grades each saved answer once.
+    import re
     requests = []
+    saved_questions = controller.service.interview_session(controller.profileId, iid)["questions"]
+    def assessment(question_id):
+        question = next(q for q in saved_questions if q["question_id"] == question_id)
+        return {"scores": {d: 3 for d in question["rubric"]["dimensions"]},
+                "evidence": "合成评分：只评价这份保存答案中的局部实现或说明，不宣称完整题目或公开测试通过。",
+                "evidence_quote": "return sum(xs)" if question["kind"] == "coding" else "独立留出集",
+                "confidence": "medium", "fatal_issues": [], "follow_up": ""}
     if mode == "codex":
         class Backend:
             async def start_thread(self, **kwargs):
                 return {"thread": {"id": "coding-test-thread"}}
             async def start_turn(self, *args, **kwargs):
                 requests.append((args, kwargs))
-                return {"turn": {"id": "coding-test-turn"}}
+                return {"turn": {"id": f"coding-grade-{len(requests)}"}}
         controller._codex_backend = Backend()
         controller._codex_thread_id = "coding-test-thread"
         controller._codex_thread_mode = "interviewer"
@@ -1512,41 +1543,45 @@ def test_real_coding_ui_runs_own_example_and_submits_to_interviewer(scene, monke
         class Provider:
             async def stream_chat(self, messages):
                 requests.append(messages)
-                yield ChatEvent("delta", text=json.dumps(response))
+                question_id = re.search(r"question_id=(q-\d+)", messages[0]["content"])[1]
+                yield ChatEvent("delta", text=json.dumps(assessment(question_id)))
         def provider(config, **kwargs):
             assert config.model == "selected-model" and config.reasoning_effort == "high"
             return Provider()
         monkeypatch.setattr("llm_interview_lab.desktop.controller.create_chat_provider", provider)
 
     _click(window, _find(window, "submitInterviewCode"))
-    QTest.qWait(50)
-    assert controller.interview.get("answer_locked") or controller.interview.get("question") is None
-    for _ in range(200):
-        QTest.qWait(10)
-        time.sleep(0.005)
-        if requests and (mode == "provider" and not controller.busy or controller._codex_interview_turn_id == "coding-test-turn"):
+    assert controller.interview["status"] == "incomplete"
+    assert not controller.submitInterviewCode(code, "codex" if mode == "codex" else "coding-api", False)
+    handled = set()
+    deadline = time.monotonic() + 20
+    while time.monotonic() < deadline:
+        QTest.qWait(20)
+        time.sleep(.005)
+        if mode == "codex" and controller._codex_interview_turn_id:
+            turn = controller._codex_interview_turn_id
+            if turn not in handled:
+                handled.add(turn)
+                question_id = controller._codex_interview_identity[2]
+                grading_prompt = requests[-1][0][1]
+                assert "evidence_quote" in grading_prompt
+                assert "output_schema" not in requests[-1][1], "End grading uses its existing score contract, not the next-question schema"
+                controller._handle_codex_event(CodexEvent("item/agentMessage/delta",
+                    {"turnId": turn, "delta": json.dumps(assessment(question_id))}))
+                controller._handle_codex_event(CodexEvent("turn/completed",
+                    {"turnId": turn, "status": "completed"}))
+        final = controller.service.interview_session(controller.profileId, iid)
+        if not controller.busy and len(final["assessments"]) == len(saved_questions):
             break
-    assert len(requests) == 1, controller.interview.get("ai_error")
-    if mode == "codex":
-        assert editor.property("readOnly")
-        assert not controller.submitInterviewCode(code, "codex", False)
-        sent = requests[0][0][1]
-        assert requests[0][1]["output_schema"]["properties"]["next_stage"]["enum"] == ["finish"]
-        for method, extra in (("turn/started", {}), ("item/agentMessage/delta", {"delta": json.dumps(response)}),
-                              ("turn/completed", {"status": "completed"})):
-            controller._handle_codex_event(CodexEvent(method, {"turnId": "coding-test-turn", **extra}))
-            QCoreApplication.processEvents()
-    else:
-        sent = str(requests[0])
+    assert len(requests) == len(saved_questions) == 4, (requests, final.get("grading"))
+    assert final["assessments"][qid]["source"] == "ai", final.get("grading")
+    sent = str(requests)
     assert "core_logic" in sent and "self_run" in sent and "不等于核心逻辑全错" in sent
-    QTest.qWait(100)
-    assert controller.interview.get("question") is None, controller.interview.get("ai_error")
-    controller.finishInterview()
-    final = controller.service.interview_session(controller.profileId, iid)
-    assert final["status"] == "completed"
-    assert final["assessments"][qid]["source"] == "ai"
-    assert final["coding_evidence"] == {}
+    assert final["coding_evidence"] == {}, "Partial subjective credit must not fabricate a Grader result"
     assert "退出码 0" in controller.interview["result"]["assessment_evidence"][-1]["coding_execution_summary"]
+    controller.retryInterviewGrading()
+    QTest.qWait(80)
+    assert len(requests) == 4
     _capture(window, f"self-run-report-{mode}")
 
 
@@ -1669,6 +1704,8 @@ def test_report_recognizes_qvariant_evidence_as_scored(scene, theme):
     controller.setTheme(theme)
     window.resize(1280, 800)
     interview_id = controller.interview["interview_id"]
+    from llm_interview_lab.role_interviews import update_finished_grading
+    evidence_by_question = {}
     for index, evidence in enumerate((
         "回答描述了独立留出评估和数据去重过程，缺少具体量化结果。",
         "能够区分训练数据与评估数据；需要进一步解释近重复样本的判定阈值。",
@@ -1676,21 +1713,23 @@ def test_report_recognizes_qvariant_evidence_as_scored(scene, theme):
     )):
         question = controller.interview["question"]
         controller.lockInterviewAnswer("合成回答：先隔离训练与评估数据，再通过对照实验核对效果。")
-        controller.service.score_interview(
-            controller.profileId, interview_id, question["question_id"],
-            {name: 3 for name in question["rubric"]["dimensions"]},
-            evidence=evidence, source="ai", confidence="medium",
-        )
+        evidence_by_question[question["question_id"]] = evidence
         if index < 2:
-            current = controller.service.interview_session(controller.profileId, interview_id)
-            controller.service.append_dynamic_interview_question(
-                controller.profileId, interview_id,
-                question={"kind": question["kind"], "title": ("数据质量与评估隔离", "上线验证与失败定位")[index],
-                          "prompt": "请说明你会如何验证这个结论，以及什么结果会让你改变判断。"},
-                context_sha256=current["plan_context_sha256"],
-            )
+            controller.service.advance_dynamic_interview(controller.profileId, interview_id,
+                question["question_id"], _next_reply(controller),
+                context_sha256="a" * 64)
             controller._load_interview(interview_id)
-    controller.finishInterview()
+    controller.service.finish_interview(controller.profileId, interview_id, confirm_incomplete=True)
+    session = controller.service.interview_session(controller.profileId, interview_id)
+    assert not session["assessments"]
+    for question in session["questions"]:
+        update_finished_grading(controller.repo_root, controller.profileId, interview_id,
+            question["question_id"],
+            result={"scores": {d: 3 for d in question["rubric"]["dimensions"]},
+                    "evidence": evidence_by_question[question["question_id"]],
+                    "evidence_quote": "隔离训练与评估数据",
+                    "confidence": "medium", "fatal_issues": [], "follow_up": ""})
+    controller._load_interview(interview_id)
     QTest.qWait(80)
     summary = _find(window, "interviewResultSummary").property("text")
     assert "部分证据分数" in summary and "尚未评分" not in summary
@@ -1859,17 +1898,10 @@ def test_question_switch_clears_drafts_without_touching_saved_answer(scene):
     assert answer.property("text") == draft
     controller.lockInterviewAnswer(draft)
     interview_id = controller.interview["interview_id"]
-    controller.service.score_interview(
+    controller.service.advance_dynamic_interview(
         controller.profileId, interview_id, "q-001",
-        {key: 3 for key in controller.interview["question"]["rubric"]["dimensions"]},
-        evidence="The answer names held-out evaluation and a rollback threshold.",
-        source="ai", confidence="medium",
-    )
-    current = controller.service.interview_session(controller.profileId, interview_id)
-    controller.service.append_dynamic_interview_question(
-        controller.profileId, interview_id,
-        question={"kind": current["questions"][0]["kind"], "title": "合成追问", "prompt": "怎样验证这次改动的实际效果？"},
-        context_sha256=current["plan_context_sha256"],
+        _next_reply(controller, "怎样验证这次改动的实际效果？"),
+        context_sha256=controller.service.interview_session(controller.profileId, interview_id)["plan_context_sha256"],
     )
     controller._load_interview(interview_id)
     QTest.qWait(30)
@@ -1877,7 +1909,7 @@ def test_question_switch_clears_drafts_without_touching_saved_answer(scene):
     assert evidence.property("text") == ""
     assert followup.property("text") == ""
     session = controller.service.interview_session(controller.profileId, interview_id)
-    assert "q-001" in session["answers"] and "q-001" in session["assessments"]
+    assert "q-001" in session["answers"] and not session["assessments"]
     assert controller.service.interview_answer_text(controller.profileId, interview_id, "q-001") == draft
 
 
@@ -1978,7 +2010,8 @@ def test_single_submit_retries_saved_answer_after_malformed_response(controller)
         if controller._codex_interview_turn_id == "retry-turn": break
     controller._codex_interview_buffer = '{"follow_up":"missing required fields"}'
     controller._finish_codex_interview_assessment(controller._codex_interview_identity)
-    assert "AI_RESPONSE_INVALID" in controller.interview["ai_error"]
+    assert "INTERVIEW_REQUEST_FAILED" in controller.interview["ai_error"]
+    assert "字段" in controller.interview["ai_error"]
     assert "操作未完成" not in controller.interview["ai_error"]
     assert controller.interview["answer_text"] == draft
     assert not controller.busy
@@ -2072,12 +2105,7 @@ def test_single_submit_provider_preserves_selected_connection_and_advances(contr
     controller.startDynamicPersonalizedInterview("post_training_engineer", "intern", "hard", "local-selected", "", False, preview["context_sha256"])
     assert controller.interview["connection_id"] == "local-selected"
     calls = []
-    response = {
-        "scores": {d: 3 for d in controller.interview["question"]["rubric"]["dimensions"]},
-        "evidence": "合成测试：回答明确提到数据去重和按用户隔离训练评测。", "confidence": "medium", "fatal_issues": [],
-        "follow_up": "你如何核对按用户隔离后不存在语义重复？", "next_stage": "experience", "coding_problem_id": "",
-        "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))],
-    }
+    response = _next_reply(controller, "你如何核对按用户隔离后不存在语义重复？")
     class Provider:
         async def stream_chat(self, messages):
             calls.append(messages)
@@ -2146,7 +2174,7 @@ def test_deepseek_high_real_adapter_ui_retries_then_advances(scene, monkeypatch)
         payload = json.loads(request.content)
         requests.append(payload)
         assert payload["model"] == "deepseek-v4-flash" and payload["reasoning_effort"] == "high"
-        assert payload["thinking"] == {"type": "enabled"} and "response_format" not in payload
+        assert payload["thinking"] == {"type": "enabled"} and payload["response_format"] == {"type": "json_object"}
         assert "JSON" in payload["messages"][-1]["content"]
         content = "" if len(requests) == 1 else json.dumps(reply, ensure_ascii=False)
         chunks = [{"choices": [{"delta": {"reasoning_content": "synthetic reasoning, not an answer"}}]},
@@ -2177,10 +2205,8 @@ def test_deepseek_high_real_adapter_ui_retries_then_advances(scene, monkeypatch)
     assert not controller.service.interview_session(controller.profileId, controller.interview["interview_id"])["assessments"]
     _capture(window, "deepseek-high-empty-retry")
     for index in (2, 3):
-        reply.update(scores={d: 3 for d in controller.interview["question"]["rubric"]["dimensions"]},
-                     evidence="合成回答明确说明个人负责偏好数据清洗，并以独立验证集检查数据泄漏。", confidence="medium", fatal_issues=[],
-                     follow_up=f"第 {index} 问：你怎样验证按用户划分没有数据泄漏？", next_stage="experience",
-                     coding_problem_id="", next_skill_ids=[next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))])
+        reply.clear()
+        reply.update(_next_reply(controller, f"第 {index} 问：你怎样验证按用户划分没有数据泄漏？"))
         if index == 3:
             answer.setProperty("text", "合成补充：我对分组划分做了重复度检查，保留独立测试集。")
         _click(window, submit)
@@ -2192,7 +2218,8 @@ def test_deepseek_high_real_adapter_ui_retries_then_advances(scene, monkeypatch)
         assert controller.interview["question"]["question_id"] == f"q-{index:03d}", controller.interview.get("ai_error")
         assert not controller.interview.get("ai_error") and answer.property("text") == ""
         final = controller.service.interview_session(controller.profileId, controller.interview["interview_id"])
-        assert len(final["answers"]) == len(final["assessments"]) == index - 1
+        assert len(final["answers"]) == index - 1
+        assert not final["assessments"] and len(final["turn_decisions"]) == index - 1
     assert len(requests) == 3 and all(c.is_closed for c in clients)
     assert requests[0]["messages"] == requests[1]["messages"], "Retry reuses the saved answer/context"
     _capture(window, "deepseek-high-next-question")
@@ -2238,14 +2265,7 @@ def test_dynamic_followups_advance_once_without_duplicate_scoring(controller, mo
         question_id = f"q-{index:03d}"
         controller.lockInterviewAnswer("I measured the failure rate and tested a held-out baseline.")
         controller.interviewContextPreview(controller.interview["answer_text"], False)
-        result = {
-            "scores": {name: 3 for name in controller.interview["question"]["rubric"]["dimensions"]},
-            "evidence": "The answer describes measuring failure rates and testing a held-out baseline.",
-            "confidence": "medium", "fatal_issues": [],
-            "follow_up": f"第 {index + 1} 问：你怎样验证这次改动的效果？",
-            "next_stage": "experience", "coding_problem_id": "",
-            "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))],
-        }
+        result = _next_reply(controller, f"第 {index + 1} 问：你怎样验证这次改动的效果？")
         if mode == "codex":
             operation = f"test-followup-{index}"
             identity = (controller.profileId, interview_id, question_id, operation, "codex")
@@ -2255,13 +2275,14 @@ def test_dynamic_followups_advance_once_without_duplicate_scoring(controller, mo
             controller._codex_interview_include_materials = False
             controller._finish_codex_interview_assessment(identity)
         else:
-            monkeypatch.setattr(controller, "_background", lambda operation, complete, failed=None: complete(result))
+            monkeypatch.setattr(controller, "_background", lambda operation, complete, failed=None, **kwargs: complete(result))
             controller.assessInterviewWithProvider("", "fake-connection", False)
         assert not errors, errors
         assert controller.interview["question"]["question_id"] == f"q-{index + 1:03d}"
         session = controller.service.interview_session(controller.profileId, interview_id)
         assert len(session["questions"]) == index + 1
-        assert len(session["assessments"]) == index
+        assert not session["assessments"]
+        assert len(session["turn_decisions"]) == index
 
 
 @pytest.mark.parametrize("size", [(900, 620), (1080, 680), (1280, 800), (1440, 900)])
@@ -2453,6 +2474,7 @@ def test_interview_removes_details_and_reconfigure_preserves_results(scene):
     previous_id = controller.interview["interview_id"]
     assert _find(window, "interviewConversation").isVisible()
     _click(window, _find(window, "configureAnotherInterview"))
+    _click(window, _find(window, "interviewEditSettings"))
     assert _find(window, "interviewRoleSelector").isVisible()
     back = next(item for item in _items(window.contentItem()) if item.isVisible() and item.property("text") == "返回上一场结果" and hasattr(item, "clicked"))
     back.clicked.emit()
@@ -2496,10 +2518,7 @@ def test_codex_reuses_interview_thread_until_model_or_material_scope_changes(con
             time.sleep(0.005)
             if controller._codex_interview_turn_id == f"turn-{index + 1}": break
         assert len(backend.turns) == index + 1
-        result = {"scores": {d: 3 for d in controller.interview["question"]["rubric"]["dimensions"]},
-                  "evidence": "合成回答明确说明独立验证集和按用户划分。", "confidence": "medium", "fatal_issues": [],
-                  "follow_up": f"请说明第 {index + 1} 次划分如何避免泄漏？", "next_stage": "experience",
-                  "coding_problem_id": "", "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))]}
+        result = _next_reply(controller, f"请说明第 {index + 1} 次划分如何避免泄漏？")
         controller._codex_interview_buffer = json.dumps(result)
         controller._finish_codex_interview_assessment(controller._codex_interview_identity)
         assert not controller.busy and not controller.interview.get("ai_error")
@@ -2565,8 +2584,8 @@ def test_deepseek_connection_controls_and_coding_language_are_real(scene, monkey
     assert controller.addMaterial(str(material_path), "resume", "合成布局材料", True)
     material_id = controller.materials[0]["id"]
     controller.finishInterview()
-    preview = controller.dynamicInterviewContextPreview("post_training_engineer", "intern", "hard", material_id, True)
-    controller.startDynamicPersonalizedInterview("post_training_engineer", "intern", "hard", "deepseek-main", material_id, True, preview["context_sha256"])
+    preview = controller.previewInterviewSettings("post_training_engineer", "easy", material_id, True)
+    controller.startConfiguredInterview("post_training_engineer", "easy", "deepseek-main", material_id, True, preview["context_sha256"])
     QTest.qWait(80)
     connection_choice = _find(window, "interviewActiveProvider")
     consent_choice = _find(window, "includeInterviewMaterialsToggle")
@@ -2575,22 +2594,26 @@ def test_deepseek_connection_controls_and_coding_language_are_real(scene, monkey
     _capture(window, "composer-aligned-dark")
     _enter_coding_round(controller)
     text = _find(window, "interviewQuestionPrompt")
-    assert "sample_id" in text.property("text") and "校验" in text.property("text")
-    assert "## Goal" not in text.property("text")
+    question = controller.interview["question"]
+    chinese = controller.problemStatement(question["source"]["id"], question["prompt"])
+    import re
+    english = re.sub(r"^#[^\n]+\n+", "", question["prompt"])
+    assert text.property("markdown") == chinese and chinese != english
+    assert any("\u4e00" <= char <= "\u9fff" for char in chinese)
     toggle = _find(window, "toggleInterviewQuestionLanguage")
     # Long task scroll positions do not change the underlying language action.
     toggle.clicked.emit()
     QCoreApplication.processEvents()
-    assert "## Goal" in text.property("text")
+    assert text.property("markdown") == english
     toggle.clicked.emit()
     QCoreApplication.processEvents()
-    assert "校验" in text.property("text")
+    assert text.property("markdown") == chinese
     controller.setLanguage("en")
     QCoreApplication.processEvents()
-    assert "## Goal" in text.property("text")
+    assert text.property("markdown") == english
     controller.setLanguage("zh-CN")
     QCoreApplication.processEvents()
-    assert "校验" in text.property("text")
+    assert text.property("markdown") == chinese
     _capture(window, "coding-chinese-dark")
 
 
@@ -2612,6 +2635,7 @@ def test_shell_setup_home_and_settings_have_readable_controls(scene, theme):
     controller.finishInterview()
     QTest.qWait(80)
     _click(window, _find(window, "configureAnotherInterview"))
+    _click(window, _find(window, "interviewEditSettings"))
     selector = _find(window, "interviewAiModeSelector")
     selector.setProperty("currentIndex", 2)
     for size in ((900, 620), (1080, 680), (1280, 800), (1440, 900)):

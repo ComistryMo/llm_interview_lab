@@ -115,6 +115,30 @@ def test_clean_no_ai_onboarding_enters_first_problem_and_can_resume(
     controller.shutdown()
 
 
+def test_bundled_optional_dependency_exclusion_does_not_block_onboarding(tmp_path, qapp, monkeypatch):
+    import importlib.util
+    from llm_interview_lab.role_interviews import dynamic_coding_candidates
+    from llm_interview_lab.ai.local_transcription import LocalSpeechTranscriber
+    original = importlib.util.find_spec
+    def bundled_spec(name, *args):
+        if name in {"torch", "numpy"}:
+            raise ImportError(f"Module '{name}' was actively excluded from Nuitka compilation")
+        return original(name, *args)
+    monkeypatch.setattr(importlib.util, "find_spec", bundled_spec)
+    monkeypatch.setattr("llm_interview_lab.ai.local_transcription.find_spec", bundled_spec)
+    controller = _controller(tmp_path, qapp)
+    try:
+        assert controller.completeOnboarding("bundled-synthetic", "ai_product_manager", "new_grad", "disabled", "{}")
+        assert not controller.onboardingRequired and controller.currentPage == "exercise"
+        assert controller.onboardingError == ""
+        assert not LocalSpeechTranscriber.runtime_available()
+        session = {"role_id": "post_training_engineer", "difficulty": "hard", "interaction_version": 2}
+        candidates = dynamic_coding_candidates(controller.service.catalog, controller.service.roles, session)
+        assert all(p.raw.get("interface", {}).get("framework") not in {"pytorch", "numpy"} for p, _ in candidates)
+    finally:
+        controller.shutdown()
+
+
 def test_default_desktop_restart_restores_the_last_profile(
     tmp_path: Path, qapp
 ) -> None:

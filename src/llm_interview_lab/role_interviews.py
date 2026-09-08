@@ -209,6 +209,14 @@ def _requires_torch(problem: Problem) -> bool:
     return isinstance(interface, Mapping) and str(interface.get("framework", "")).lower() == "pytorch"
 
 
+def _optional_dependency_available(name: str) -> bool:
+    try:
+        return importlib.util.find_spec(name) is not None
+    except ImportError:
+        # Nuitka's explicitly excluded modules raise rather than return None.
+        return False
+
+
 def _coding_candidates(
     catalog: Catalog,
     role_catalog: RoleCatalog,
@@ -235,7 +243,7 @@ def _coding_candidates(
             and (torch_available or not _requires_torch(problem))
             and (
                 problem.raw.get("interface", {}).get("framework") != "numpy"
-                or importlib.util.find_spec("numpy") is not None
+                or _optional_dependency_available("numpy")
             )
         ):
             candidates.append((problem, matched_skills))
@@ -313,7 +321,7 @@ def interview_preflight(
         }
 
     has_torch = (
-        importlib.util.find_spec("torch") is not None
+        _optional_dependency_available("torch")
         if torch_available is None
         else bool(torch_available)
     )
@@ -1095,7 +1103,7 @@ def dynamic_coding_candidates(
     band = session["difficulty"] if unified else {"intern": "easy", "new_grad": "medium", "mid": "hard"}[session["seniority"]]
     candidates = _coding_candidates(
         catalog, role_catalog, tuple(role.required_tracks), band,
-        tuple(role.skill_weights), torch_available=importlib.util.find_spec("torch") is not None,
+        tuple(role.skill_weights), torch_available=_optional_dependency_available("torch"),
         coding_band=frozenset({3, 4, 5}) if unified and band == "hard" else None,
     )
     if unified and band == "hard":
@@ -1288,7 +1296,7 @@ def preview_personalized_role_interview(
     ensure_profile_is_ignored(repo_root, profile_id)
     if type(seed) is not int or isinstance(seed, bool) or seed < 0:
         raise RoleInterviewError("seed must be a non-negative integer")
-    torch_available = importlib.util.find_spec("torch") is not None
+    torch_available = _optional_dependency_available("torch")
     selection = _personalized_round_selection(
         catalog,
         role_catalog,
@@ -1379,7 +1387,7 @@ def create_role_interview(
         raise RoleInterviewError("AI-generated plans require an enabled AI mode")
     role = role_catalog.resolve_role(role_id)
     blueprint = role_catalog.blueprint_for(role.id, seniority)
-    torch_available = importlib.util.find_spec("torch") is not None
+    torch_available = _optional_dependency_available("torch")
     selection: Mapping[str, Any] | None = None
     if generated_questions is not None:
         generated_questions = tuple(generated_questions)

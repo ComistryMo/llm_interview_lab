@@ -718,7 +718,11 @@ class ApplicationService:
         interface = problem.raw.get("interface", {})
         framework = interface.get("framework", "") if isinstance(interface, Mapping) else ""
         module = {"pytorch": "torch", "numpy": "numpy"}.get(str(framework).lower())
-        return module is None or importlib.util.find_spec(module) is not None
+        try:
+            return module is None or importlib.util.find_spec(module) is not None
+        except ImportError:
+            # Nuitka raises for modules deliberately excluded from a bundle.
+            return False
 
     def _problem_environment(self, problem: Problem) -> dict[str, Any]:
         available = self._problem_environment_available(problem)
