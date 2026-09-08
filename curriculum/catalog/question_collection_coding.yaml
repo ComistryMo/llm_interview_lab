@@ -1,0 +1,339 @@
+schema_version: 2
+problems:
+  - id: ATT-001
+    title: "正弦位置编码：奇数维与分段位置"
+    status: ready
+    domain: transformer
+    tracks: ["llm_algorithm", "ai_foundation", "vlm_algorithm"]
+    tier: core
+    difficulty: {concept: 2, coding: 2, debugging: 3}
+    prerequisites: ["TNS-003"]
+    skills: ["skill.llm_vlm.transformer"]
+    canonical_skills: ["skill.llm_vlm.transformer"]
+    validation: {level: oracle, field_runs: 0, fingerprint: 9ef709cc6a4767d7c3f298860e76ac732046b4187486573f5a0538438b198d78}
+    assets:
+      problem_dir: curriculum/problems/ATT-001-sinusoidal-position-encoding
+    interface: {language: python, framework: pytorch, symbol: sinusoidal_encoding}
+    constraints:
+      forbidden_apis: ["torch.nn.Transformer"]
+      time_limit_ms: 30000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: "解析边界、独立数值/框架参考、状态及梯度不变量"
+        description: "维护者参考和私测只保存在 ignored Workspace；实际运行通过后才升级 oracle。"
+      oral_questions:
+      - "为何频率分母用原始 d_model，而不是偶数通道数？"
+      - "奇数维、零长度和 offset 拼接各能暴露什么错误？"
+      - "固定 sin/cos 与 RoPE 分别作用于哪个对象？"
+      - "长度外推可计算是否等于模型可靠外推？"
+    variant_axes: [shape_and_axis, numerical_boundary, state_or_gradient]
+    invariants: [reference_alignment, input_preservation, specified_gradient_and_state]
+    common_bugs: [wrong_axis_or_reduction, unstated_architecture_substitution, boundary_or_gradient_loss]
+    retention:
+      d2: "关闭旧实现后更换接口或输入组织独立重写；尚无独立已验证复测资产。"
+      d7: "构造目标定义反例并迁移调试；尚无独立已验证复测资产。"
+    sources:
+    - type: internal_original
+      title: "用户题目.md 前 40 项（2026-09-08）第 31 项；原创固定契约，未读取缺失图片"
+    - type: paper
+      title: "Attention Is All You Need，位置编码定义"
+      url: https://arxiv.org/html/1706.03762v7
+  - id: NNL-018
+    title: "Linear 反向传播：任意前导维度的 VJP"
+    status: ready
+    domain: deep_learning
+    tracks: ["ai_foundation", "llm_algorithm", "traditional_ml"]
+    tier: core
+    difficulty: {concept: 2, coding: 3, debugging: 3}
+    prerequisites: []
+    skills: ["skill.deep_learning.autograd", "skill.deep_learning.neural_layers"]
+    canonical_skills: ["skill.deep_learning.autograd", "skill.deep_learning.neural_layers"]
+    validation: {level: oracle, field_runs: 0, fingerprint: 2dd1b6bf878581fb84b1897c37f9d61c105f05a3f515af6ee6cd3457d02ac510}
+    assets:
+      problem_dir: curriculum/problems/NNL-018-linear-manual-backward
+    interface: {language: python, framework: numpy, symbol: linear_backward}
+    constraints:
+      forbidden_apis: ["torch", "jax", "autograd"]
+      time_limit_ms: 30000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: "解析边界、独立数值/框架参考、状态及梯度不变量"
+        description: "维护者参考和私测只保存在 ignored Workspace；实际运行通过后才升级 oracle。"
+      oral_questions:
+      - "为何 weight 的梯度需归约所有前导轴？"
+      - "什么时候应该平均梯度，为什么此接口不能自行平均？"
+      - "向量、序列、空 batch 如何统一解释？"
+      - "如何用有限差分验证任意上游 VJP，而不只验证 sum(y)？"
+    variant_axes: [shape_and_axis, numerical_boundary, state_or_gradient]
+    invariants: [reference_alignment, input_preservation, specified_gradient_and_state]
+    common_bugs: [wrong_axis_or_reduction, unstated_architecture_substitution, boundary_or_gradient_loss]
+    retention:
+      d2: "关闭旧实现后更换接口或输入组织独立重写；尚无独立已验证复测资产。"
+      d7: "构造目标定义反例并迁移调试；尚无独立已验证复测资产。"
+    sources:
+    - type: internal_original
+      title: "用户题目.md 前 40 项（2026-09-08）第 25 项；原创固定契约，未读取缺失图片"
+    - type: official_source
+      title: "PyTorch Linear，权重布局及前向定义"
+      url: https://docs.pytorch.org/docs/stable/generated/torch.nn.Linear.html
+  - id: NNL-019
+    title: "ReLU、Sigmoid 与 SwiGLU 独立激活"
+    status: ready
+    domain: deep_learning
+    tracks: ["ai_foundation", "llm_algorithm", "traditional_ml", "vlm_algorithm"]
+    tier: core
+    difficulty: {concept: 2, coding: 2, debugging: 3}
+    prerequisites: []
+    skills: ["skill.deep_learning.neural_layers", "skill.deep_learning.autograd"]
+    canonical_skills: ["skill.deep_learning.neural_layers", "skill.deep_learning.autograd"]
+    validation: {level: oracle, field_runs: 0, fingerprint: 2b217ecee9c44f824df227898e4718198db9732f721c268668bb099c51a9c525}
+    assets:
+      problem_dir: curriculum/problems/NNL-019-stable-elementwise-activations
+    interface: {language: python, framework: pytorch, symbol: stable_sigmoid}
+    constraints:
+      forbidden_apis: ["torch.sigmoid", "torch.Tensor.sigmoid", "torch.relu", "torch.Tensor.relu", "torch.nn.Sigmoid", "torch.nn.ReLU", "torch.nn.SiLU", "torch.nn.GLU", "torch.nn.functional.sigmoid", "torch.nn.functional.relu", "torch.nn.functional.silu", "torch.nn.functional.glu", "torch.special.expit"]
+      time_limit_ms: 30000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: "解析边界、独立数值/框架参考、状态及梯度不变量"
+        description: "维护者参考和私测只保存在 ignored Workspace；实际运行通过后才升级 oracle。"
+      oral_questions:
+      - "Sigmoid 的稳定前向为何仍可能有不稳定反向？"
+      - "ReLU 在零点不可导时，框架需要固定什么约定？"
+      - "SwiGLU 的 gate 与 up 可以任意交换吗？"
+      - "激活函数与完整 MLP 的参数、维度与输出投影有什么区别？"
+    variant_axes: [shape_and_axis, numerical_boundary, state_or_gradient]
+    invariants: [reference_alignment, input_preservation, specified_gradient_and_state]
+    common_bugs: [wrong_axis_or_reduction, unstated_architecture_substitution, boundary_or_gradient_loss]
+    retention:
+      d2: "关闭旧实现后更换接口或输入组织独立重写；尚无独立已验证复测资产。"
+      d7: "构造目标定义反例并迁移调试；尚无独立已验证复测资产。"
+    sources:
+    - type: internal_original
+      title: "用户题目.md 前 40 项（2026-09-08）第 32、33、34 项；原创固定契约，未读取缺失图片"
+    - type: official_source
+      title: "PyTorch Sigmoid 定义"
+      url: https://docs.pytorch.org/docs/2.12/generated/torch.nn.Sigmoid.html
+    - type: official_source
+      title: "PyTorch ReLU 定义"
+      url: https://docs.pytorch.org/docs/2.12/generated/torch.nn.ReLU.html
+    - type: paper
+      title: "GLU Variants Improve Transformer"
+      url: https://arxiv.org/abs/2002.05202
+  - id: TNS-018
+    title: "余弦相似度：广播、归约轴与零向量"
+    status: ready
+    domain: machine_learning_math
+    tracks: ["ai_foundation", "traditional_ml", "llm_algorithm", "vlm_algorithm"]
+    tier: core
+    difficulty: {concept: 2, coding: 2, debugging: 3}
+    prerequisites: []
+    skills: ["skill.machine_learning_math.linear_algebra"]
+    canonical_skills: ["skill.machine_learning_math.linear_algebra"]
+    validation: {level: oracle, field_runs: 0, fingerprint: c709f4bc2c9a071e872422473911d5c013c6cbb64d8b4a947005b8838f6b3a2f}
+    assets:
+      problem_dir: curriculum/problems/TNS-018-broadcast-cosine-similarity
+    interface: {language: python, framework: pytorch, symbol: cosine_similarity}
+    constraints:
+      forbidden_apis: ["torch.cosine_similarity", "torch.nn.CosineSimilarity", "torch.nn.functional.cosine_similarity"]
+      time_limit_ms: 30000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: "解析边界、独立数值/框架参考、状态及梯度不变量"
+        description: "维护者参考和私测只保存在 ignored Workspace；实际运行通过后才升级 oracle。"
+      oral_questions:
+      - "先广播后按哪个维度求内积，输出 shape 是什么？"
+      - "分别截断两个范数与截断范数乘积会得到相同值吗？"
+      - "零向量的数值输出、数学定义和梯度如何分别约定？"
+      - "在范数不触发 eps 时，正比例缩放应保留什么不变量？"
+    variant_axes: [shape_and_axis, numerical_boundary, state_or_gradient]
+    invariants: [reference_alignment, input_preservation, specified_gradient_and_state]
+    common_bugs: [wrong_axis_or_reduction, unstated_architecture_substitution, boundary_or_gradient_loss]
+    retention:
+      d2: "关闭旧实现后更换接口或输入组织独立重写；尚无独立已验证复测资产。"
+      d7: "构造目标定义反例并迁移调试；尚无独立已验证复测资产。"
+    sources:
+    - type: internal_original
+      title: "用户题目.md 前 40 项（2026-09-08）第 30 项；原创固定契约，未读取缺失图片"
+    - type: official_source
+      title: "PyTorch functional cosine_similarity 的逐范数 eps 定义"
+      url: https://docs.pytorch.org/docs/2.12/generated/torch.nn.functional.cosine_similarity.html
+  - id: LOSS-017
+    title: "成对 Contrastive Loss：标签方向与 margin"
+    status: ready
+    domain: deep_learning
+    tracks: ["ai_foundation", "traditional_ml", "vlm_algorithm", "llm_algorithm"]
+    tier: core
+    difficulty: {concept: 2, coding: 2, debugging: 3}
+    prerequisites: []
+    skills: ["skill.deep_learning.losses", "skill.llm_vlm.vlm_architecture"]
+    canonical_skills: ["skill.deep_learning.losses", "skill.llm_vlm.vlm_architecture"]
+    validation: {level: oracle, field_runs: 0, fingerprint: 617b4797d4adc76354ca714196ea0956e13a44d86160e2354f35f390445f0aaa}
+    assets:
+      problem_dir: curriculum/problems/LOSS-017-pairwise-margin-contrastive
+    interface: {language: python, framework: pytorch, symbol: pairwise_contrastive}
+    constraints:
+      forbidden_apis: ["torch.nn.CosineEmbeddingLoss", "torch.nn.TripletMarginLoss"]
+      time_limit_ms: 30000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: "解析边界、独立数值/框架参考、状态及梯度不变量"
+        description: "维护者参考和私测只保存在 ignored Workspace；实际运行通过后才升级 oracle。"
+      oral_questions:
+      - "同类标签 True 在两个分支分别乘上什么？"
+      - "距离超过 margin 的负对为什么不继续推远？"
+      - "对比损失的 pairwise margin 形式与 InfoNCE 的负样本竞争有何区别？"
+      - "零距离负对处为何需要约定子梯度，这能否自动打破完全塌缩？"
+    variant_axes: [shape_and_axis, numerical_boundary, state_or_gradient]
+    invariants: [reference_alignment, input_preservation, specified_gradient_and_state]
+    common_bugs: [wrong_axis_or_reduction, unstated_architecture_substitution, boundary_or_gradient_loss]
+    retention:
+      d2: "关闭旧实现后更换接口或输入组织独立重写；尚无独立已验证复测资产。"
+      d7: "构造目标定义反例并迁移调试；尚无独立已验证复测资产。"
+    sources:
+    - type: internal_original
+      title: "用户题目.md 前 40 项（2026-09-08）第 15 项；原创固定契约，未读取缺失图片"
+    - type: paper
+      title: "Hadsell、Chopra、LeCun：Dimensionality Reduction by Learning an Invariant Mapping"
+      url: https://www.cs.toronto.edu/~hinton/csc2535/readings/hadsell-chopra-lecun-06-1.pdf
+  - id: ATT-024
+    title: "GPT-2 Block：LayerNorm、GELU 与因果缓存"
+    status: ready
+    domain: transformer
+    tracks: ["llm_algorithm", "ai_foundation", "systems"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: []
+    skills: ["skill.llm_vlm.transformer", "skill.llm_vlm.attention", "skill.inference_systems.kv_cache"]
+    canonical_skills: ["skill.llm_vlm.transformer", "skill.llm_vlm.attention", "skill.inference_systems.kv_cache"]
+    validation: {level: oracle, field_runs: 0, fingerprint: ebefce6820566391ef9782fed116f132edac0f325d5c57e0d2df6de170c1f178}
+    assets:
+      problem_dir: curriculum/problems/ATT-024-gpt2-layernorm-decoder
+    interface: {language: python, framework: pytorch, symbol: gpt2_block}
+    constraints:
+      forbidden_apis: ["torch.nn.Transformer", "torch.nn.TransformerDecoderLayer", "torch.nn.MultiheadAttention", "torch.nn.functional.scaled_dot_product_attention", "torch.nn.LayerNorm", "torch.nn.functional.layer_norm", "torch.nn.GELU", "torch.nn.functional.gelu"]
+      time_limit_ms: 30000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: "解析边界、独立数值/框架参考、状态及梯度不变量"
+        description: "维护者参考和私测只保存在 ignored Workspace；实际运行通过后才升级 oracle。"
+      oral_questions:
+      - "为什么两次 LayerNorm 的参数必须独立，且必须减去均值？"
+      - "GPT-2 的位置向量应在哪加入，为什么不能在缓存 K 上额外施加 RoPE？"
+      - "多 token chunk 接在 cache 后面时，因果对角线偏移是多少？"
+      - "tanh-GELU、精确 GELU 与 SwiGLU 会改变哪些数值或形状？"
+    variant_axes: [shape_and_axis, numerical_boundary, state_or_gradient]
+    invariants: [reference_alignment, input_preservation, specified_gradient_and_state]
+    common_bugs: [wrong_axis_or_reduction, unstated_architecture_substitution, boundary_or_gradient_loss]
+    retention:
+      d2: "关闭旧实现后更换接口或输入组织独立重写；尚无独立已验证复测资产。"
+      d7: "构造目标定义反例并迁移调试；尚无独立已验证复测资产。"
+    sources:
+    - type: internal_original
+      title: "用户题目.md 前 40 项（2026-09-08）第 37 项；原创固定契约，未读取缺失图片"
+    - type: official_source
+      title: "OpenAI GPT-2 原始 block、norm、gelu 定义"
+      url: https://github.com/openai/gpt-2/blob/master/src/model.py
+  - id: VLM-015
+    title: "ViT Transformer Block：双向注意力与 GELU"
+    status: ready
+    domain: llm_vlm
+    tracks: ["vlm_algorithm", "llm_algorithm", "ai_foundation", "computer_vision"]
+    tier: core
+    difficulty: {concept: 3, coding: 4, debugging: 4}
+    prerequisites: []
+    skills: ["skill.llm_vlm.vlm_architecture", "skill.llm_vlm.transformer", "skill.deep_learning.neural_layers"]
+    canonical_skills: ["skill.llm_vlm.vlm_architecture", "skill.llm_vlm.transformer", "skill.deep_learning.neural_layers"]
+    validation: {level: oracle, field_runs: 0, fingerprint: ec39a85ee9576a6196a2d6f39ccb443a67df5a897e36bee9a64d61b32bc90ff3}
+    assets:
+      problem_dir: curriculum/problems/VLM-015-vit-layernorm-encoder
+    interface: {language: python, framework: pytorch, symbol: vit_block}
+    constraints:
+      forbidden_apis: ["torch.nn.Transformer", "torch.nn.TransformerEncoderLayer", "torch.nn.MultiheadAttention", "torch.nn.functional.scaled_dot_product_attention", "torch.nn.LayerNorm", "torch.nn.functional.layer_norm", "torch.nn.GELU", "torch.nn.functional.gelu"]
+      time_limit_ms: 30000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: "解析边界、独立数值/框架参考、状态及梯度不变量"
+        description: "维护者参考和私测只保存在 ignored Workspace；实际运行通过后才升级 oracle。"
+      oral_questions:
+      - "为何后面 patch 的变化应能影响前面 token，怎样反证误加 causal mask？"
+      - "key padding mask 是否自动让 padding query 输出为零？"
+      - "Pre-LayerNorm 的残差路径在常量平移下有什么性质？"
+      - "patch embedding、CLS、位置编码、block 与最后的 encoder norm 分别属于哪一层？"
+    variant_axes: [shape_and_axis, numerical_boundary, state_or_gradient]
+    invariants: [reference_alignment, input_preservation, specified_gradient_and_state]
+    common_bugs: [wrong_axis_or_reduction, unstated_architecture_substitution, boundary_or_gradient_loss]
+    retention:
+      d2: "关闭旧实现后更换接口或输入组织独立重写；尚无独立已验证复测资产。"
+      d7: "构造目标定义反例并迁移调试；尚无独立已验证复测资产。"
+    sources:
+    - type: internal_original
+      title: "用户题目.md 前 40 项（2026-09-08）第 27 项；原创固定契约，未读取缺失图片"
+    - type: official_source
+      title: "Google Vision Transformer 官方 encoder 结构"
+      url: https://github.com/google-research/vision_transformer/blob/main/vit_jax/models_vit.py
+    - type: paper
+      title: "An Image is Worth 16x16 Words"
+      url: https://arxiv.org/abs/2010.11929
+  - id: ATT-023
+    title: "MLA：联合 KV 压缩与解耦 RoPE 缓存"
+    status: ready
+    domain: transformer
+    tracks: ["llm_algorithm", "systems", "post_training"]
+    tier: advanced
+    difficulty: {concept: 4, coding: 5, debugging: 4}
+    prerequisites: []
+    skills: ["skill.llm_vlm.attention", "skill.inference_systems.kv_cache"]
+    canonical_skills: ["skill.llm_vlm.attention", "skill.inference_systems.kv_cache"]
+    validation: {level: oracle, field_runs: 0, fingerprint: e5b0dc8645af78d2c2e9a64ce4a0d0e341e2e82a088fc993ccee56936ea8f894}
+    assets:
+      problem_dir: curriculum/problems/ATT-023-mla-latent-cache
+    interface: {language: python, framework: pytorch, symbol: mla_attention}
+    constraints:
+      forbidden_apis: ["torch.nn.MultiheadAttention", "torch.nn.functional.scaled_dot_product_attention", "torch.nn.Transformer"]
+      time_limit_ms: 30000
+      output_limit_kb: 256
+    assessment:
+      runner: {kind: pytest, public_tests: test_public.py}
+      oracle:
+        kind: cross_implementation
+        target: "解析边界、独立数值/框架参考、状态及梯度不变量"
+        description: "维护者参考和私测只保存在 ignored Workspace；实际运行通过后才升级 oracle。"
+      oral_questions:
+      - "缓存 cKV 与共享旋转 key 分别解决哪部分问题，元素数如何计算？"
+      - "为什么将 RoPE 直接施加在所有 content key 上会妨碍投影吸收？"
+      - "query 低秩压缩为什么不直接减少 KV cache？"
+      - "展开 K/V 与吸收投影的数值等价是否能直接证明 GPU 速度更快？"
+    variant_axes: [shape_and_axis, numerical_boundary, state_or_gradient]
+    invariants: [reference_alignment, input_preservation, specified_gradient_and_state]
+    common_bugs: [wrong_axis_or_reduction, unstated_architecture_substitution, boundary_or_gradient_loss]
+    retention:
+      d2: "关闭旧实现后更换接口或输入组织独立重写；尚无独立已验证复测资产。"
+      d7: "构造目标定义反例并迁移调试；尚无独立已验证复测资产。"
+    sources:
+    - type: internal_original
+      title: "用户题目.md 前 40 项（2026-09-08）第 8 项；原创固定契约，未读取缺失图片"
+    - type: paper
+      title: "DeepSeek-V2 第 2.1 节和附录 C 的 MLA 定义"
+      url: https://arxiv.org/html/2405.04434v5

@@ -80,16 +80,6 @@ problems:
     prerequisites: ["NNL-014"]
     problem_type: implementation
     description: "Compute differentiable expert usage and probability balancing terms."
-  - id: ATT-001
-    title: "Sinusoidal Position Encoding"
-    status: planned
-    domain: transformer
-    tracks: ["llm_algorithm"]
-    tier: core
-    difficulty: {concept: 3, coding: 4, debugging: 4}
-    prerequisites: ["TNS-003"]
-    problem_type: implementation
-    description: "Generate deterministic sine and cosine features for arbitrary positions."
   - id: ATT-003
     title: "Causal and Padding Mask Composition"
     status: ready
