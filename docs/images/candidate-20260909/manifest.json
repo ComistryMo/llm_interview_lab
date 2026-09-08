@@ -222,7 +222,7 @@
       ]
     },
     "after": {
-      "source_commit": "4a987a74d1062007b222cab484ac7cd376150b87",
+      "source_commit": "f0b173c6193ec54fd045d556c9e95c3e8756adcc",
       "source_inputs": {
         "curriculum/roles/profiles.yaml": "f9b225536a51148a5c0b90405b8cfd98ed3849c0617f449792c3212bb89ebfab",
         "src/llm_interview_lab/__init__.py": "4a7431fc42723b7ac87893567c76b6ff3557b34abcf220d42e5a16f66a67aaeb",
@@ -232,7 +232,7 @@
         "src/llm_interview_lab/desktop/coding_statements_zh.py": "93e179e2bcbf58d7b5ae7de4a33069ed32512c1b3fb6e6ffd9c141d9ff6f6a69",
         "src/llm_interview_lab/desktop/controller.py": "7a72df995ed06d237b50e76a6276cfe86a03128cb70d5503165bb16c4919c5b0",
         "src/llm_interview_lab/desktop/i18n.py": "009798df1b0002df2817acf4020c30ecd97b0b19804789608ecfc2033d4e0a15",
-        "src/llm_interview_lab/desktop/main.py": "452385f0f4d102af340cb70f4e24595bca8a6805c24866e024aa53c49fca732b",
+        "src/llm_interview_lab/desktop/main.py": "648fa829dcd343d628a96440a9f6407471d6ac49e678da9cc814838f9db0b803",
         "src/llm_interview_lab/desktop/qml/Main.qml": "1d891d972a883fc8801e35a58b4759aede054c23d6b4746c6fd0035da332d3e0",
         "src/llm_interview_lab/desktop/qml/components/AppTheme.qml": "3713d4f958d2372bb15906586805a2f0b03ad9c102a6d7c0a7bcc9614d67845c",
         "src/llm_interview_lab/desktop/qml/components/ContextPreviewList.qml": "b91f4b15eb2d9fff08400c03543e97b2fa070c992543a4a42699c421654b1c2f",
@@ -261,14 +261,14 @@
         "src/llm_interview_lab/desktop/qml/components/StatusPill.qml": "5cf79812db427658b0b62c7be8835065b778960745398bc79abaa41f7d59890a",
         "src/llm_interview_lab/desktop/qml/components/UpdateSettings.qml": "399286b6f97173834364967d9b4bcbda7a956ea9c651d301988460ecfa353545",
         "src/llm_interview_lab/desktop/qml/pages/CareerPage.qml": "f5f583a7687680961fa68fcf6f0a5e449203d5689eb2bdd319de40741ee443c9",
-        "src/llm_interview_lab/desktop/qml/pages/ConnectionsPage.qml": "295d1470847494c219673b223d8a6b6e83d60614dd6d59edebf66bb3183b7a19",
+        "src/llm_interview_lab/desktop/qml/pages/ConnectionsPage.qml": "a352b3adc172e70c84c1b3ebd9f5f962477bbacc0dab158649085f72387eecfb",
         "src/llm_interview_lab/desktop/qml/pages/ExercisePage.qml": "efec7a8b145a64bd76d36ccef8a9a9bd024f2a04fb2def997f49395ffe81d487",
         "src/llm_interview_lab/desktop/qml/pages/HomePage.qml": "e49518913d6c20e85692928f7e2639290939fecf8d5b8ec96f524ea4cdf29c5b",
-        "src/llm_interview_lab/desktop/qml/pages/InterviewPage.qml": "eeeaf16a82a6eb51b49729a65a94d0c11505c4008e92b970671922696501c4e1",
+        "src/llm_interview_lab/desktop/qml/pages/InterviewPage.qml": "f307b90e46da200f9cb47e00dfd326c7b975a2f72e72fadda29b94415bbd29d9",
         "src/llm_interview_lab/desktop/qml/pages/LearnPage.qml": "1a5e4448046a4f8cd981a9e6d5a85cd08a05852d46cb99a0e1b711760dcf929a",
         "src/llm_interview_lab/desktop/qml/pages/OnboardingPage.qml": "ddf7070a3dc344f10d27cc438f68f5430281e6a5f74e94412cf79cd4e454b83c",
         "src/llm_interview_lab/desktop/qml/pages/ProgressPage.qml": "5ee745e016e4b8dfbe69e46bc7badd1ce2fb2cfa523378f928285048955cacb8",
-        "src/llm_interview_lab/desktop/qml/pages/SettingsPage.qml": "b9d01a4e040b5c4a895997bfcb6bb59e14e9103c0a08dbea74932e34ad0c76ec",
+        "src/llm_interview_lab/desktop/qml/pages/SettingsPage.qml": "2713b00f8ef1d36ac79b7c8f7c3defe06ad565f6df856d3c58c3b648dfae6e7f",
         "src/llm_interview_lab/desktop/qml/prototypes/ProductV1WorkbenchPrototype.qml": "f0d3a484b9d5b4a35f9aaf9e14efee1ee4d59bb7260dd97c84ce1f1e37d2524e",
         "src/llm_interview_lab/desktop/resources/app-icon.png": "432901ce813f846914c44667d178dd76c52957bb96fdffa217a94681a19f085f",
         "src/llm_interview_lab/desktop/resources/icons/LICENSE.md": "b2243d585c960cc9d62042f4ac41f34cfbae850d15cad79432cc8bce19e8df37",
@@ -287,7 +287,7 @@
         "src/llm_interview_lab/desktop/resources/icons/search.svg": "b80d9ae649857933955f85b07399ed7b02580952eb508a64eb0aa1638eee4a8c",
         "src/llm_interview_lab/desktop/resources/icons/settings.svg": "0a91142da66191e8e57f9a06584e2ffd15f25c800b96532d32ceca7d865022bc",
         "src/llm_interview_lab/desktop/resources/icons/user.svg": "c6da6d22b11573ca90bb5dbac8aed37cfc6b388cc3fbbbbc27bb62987908ae51",
-        "src/llm_interview_lab/desktop/runtime.py": "519e1f4a28880d62151d2d256a6b7c07ea1559013baa90edd39c3ea1c9431c05",
+        "src/llm_interview_lab/desktop/runtime.py": "0daa121a8a4523a53c54dce3ad7545ecf9884aa22c4481bca3380f2b2b610101",
         "src/llm_interview_lab/desktop/updates.py": "7fe72e986a9cac3fb6f430181836aff1fede698666cea23f3a5f908bdee0c4cb",
         "src/llm_interview_lab/desktop/voice.py": "faf3ae194098898b6e3d27e74b77503e17461316e4bdd5273ed0fe8bb72d7610",
         "src/llm_interview_lab/roles.py": "765d3ad414a21348c7e8161b16d377e23bb73b61ddc9af17c09d010478489933"
@@ -351,7 +351,7 @@
             1920,
             1200
           ],
-          "sha256": "c282a5a35c7dd77615fcae919d0e89c2088c8e73462ccc664106c9fe5870d0f9"
+          "sha256": "3404128c86d98a0f8279985f172dc62d38103ae80b6c1b2715d45ddbe97d3883"
         },
         {
           "page": "coding",
@@ -421,7 +421,7 @@
             1920,
             1200
           ],
-          "sha256": "3b93058b5450257e7e37e59dab3a33ac18877badfe0795864d15abfa01acfd9c"
+          "sha256": "6c37de3378392d3968cc53635bd8fb9c27cce07067c8db05736a69d43a620761"
         },
         {
           "page": "settings",
@@ -431,7 +431,7 @@
             1920,
             1200
           ],
-          "sha256": "ffd2d83165ce458e9f19fe886e43634e9bfd375f67b5da0e98fe2bf416c5d74c"
+          "sha256": "3ceec3a57f1e8646fcd04aae79953a67332c148c4d67674ab9e3e25b34918e77"
         }
       ]
     }

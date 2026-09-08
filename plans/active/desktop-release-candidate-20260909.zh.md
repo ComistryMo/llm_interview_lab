@@ -116,6 +116,16 @@ git diff --check
 
 ### 当前定向证据与待查
 
+#### 2026-09-09 05:23 HKT 续接
+
+- 唯一全量失败清单逐项重跑：54 passed；截图/仓库文档契约组合：118 passed。不重跑全量。
+- `4a987a7` 包完成并通过原 Artifact smoke，真实原生操作可创建中文合成档案并打开 FND-001；保存正常，但无 Python 路径下脚本/Grader 启动失败。因此此包仍不可交付。
+- 已直接读取本轮合成应用进程的两个运行变量确认：Nuitka 将 `sys.executable` 指向未随包交付的 `python.exe`。`f0b173c` 改用正在运行应用的 argv[0]，增加已有脚本业务的私有 worker 分派，同时明确打入 pytest 动态插件。Windows/macOS Artifact 检查现在实际执行 stdin → stdout 和 pytest/unittest 子进程，不能仅以窗口 smoke 放行。新增相关目标组合 24 passed。
+- 新建仅安装 dev 的隔离环境复现 CI 缺 httpx：补充 dev 依赖后 660 项成功收集；DeepSeek/worker/release 定向 24 passed。无 Torch 环境的 45 项面试/内容目标验证通过：不可运行题明确排除，流程记 coding 缺口，不改生产选题资格或分数。
+- macOS `34276888730` 原始结果为 926 passed / 12 failed / 8 skipped，未进行构建。现在可使用已有 GitHub 连接读取日志（gh 仍未登录），不需要用户凭证。按具体失败修复紧凑页面的宽度来源、连接表单重排定位和展开面试配置后的字段可达性；Windows 对应 14 passed，连接精简后的复查 8 passed。macOS 修复仍须远端重新验证。
+- 正式截图重新取自 `f0b173c`，七页双主题 7 passed。Before 保持 cb3d13b 历史源码，未篡改旧图。Windows 新包正在构建，输出目录 `dist/candidate-workers-windows`。
+- 使用生产下载器实际从官方 GitHub 下载 Alpha.3 历史 Windows 包（只下载，不启动、不安装），99,776,341 字节，SHA-256 `ff67ae6564808b7f8aa5109dc3e9cf559e2307b813d1605ab732464f99d01150` 与官方清单一致，20.63 秒；重复调用重新校验并复用。当前 a4 尚未公开，实际新版发现成功仍不能声称完成；公共 API 限流错误已单独记录。
+
 - 六项反馈测试初轮 8 passed；草稿/重启/偏好组合 7 passed；本地 STT 与知识测试 27 passed / 2 skipped（既有实际模型/录音环境要求未满足，不是新增跳过）。928 tests collected 为实现中快照，非最终测试总数。
 - 所有上述网络动作是受控替身，无真实凭证、麦克风或付费 AI 调用；正式 Windows QML 截图仅证明布局，不证明 AI 已连通。
 - 性能脚本将新 fixture 放在仓库嵌套 E 盘路径时出现 Qt 原生访问错误，定位在 QSettings 同步附近；单独 QSettings 及定向测试通过。改用系统临时目录后连续 5 个新进程完成；这不是根因证明，仍需检查 E 盘/打包入口。正式应用使用系统 QSettings，而非此脚本的 INI 覆盖。没有修改生产序列化或编辑器实例来掩盖错误。
