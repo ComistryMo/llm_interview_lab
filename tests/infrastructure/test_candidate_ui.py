@@ -1,9 +1,10 @@
 """New discovery and update controls exercised on the real QML shell."""
+from tests.infrastructure.test_interview_input_runtime import qapp, public_repo, controller, scene, _find, _click, _wait_for_asr, _within_window, _capture
+
 from PySide6.QtCore import Q_ARG, QMetaObject, QPointF, Qt
 from PySide6.QtTest import QTest
 
 from llm_interview_lab.desktop import updates
-from tests.infrastructure.test_interview_input_runtime import qapp, public_repo, controller, scene, _find, _click, _wait_for_asr, _within_window, _capture
 from tests.infrastructure.test_desktop_updates import selected
 
 

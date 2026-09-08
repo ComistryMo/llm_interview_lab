@@ -120,7 +120,7 @@ def _home_component(dashboard: dict, *, width: int = 900, height: int = 620):
     return application, engine, component, root, evidence, content
 
 
-def test_due_d2_replaces_reviewed_current_attempt_as_home_focus(tmp_path: Path) -> None:
+def test_due_d2_remains_actionable_below_interview_primary(tmp_path: Path) -> None:
     service = ApplicationService(_repository(tmp_path))
     service.initialize_profile("reviewed-user", role_id="applied_ai_engineer")
     _mark_reviewed(service, "reviewed-user", "FND-001")
@@ -132,12 +132,16 @@ def test_due_d2_replaces_reviewed_current_attempt_as_home_focus(tmp_path: Path) 
     _application, engine, _component, root, _evidence, _content = _home_component(
         dashboard
     )
-    assert root.property("focusKind") == "retention"
+    assert root.property("focusKind") == "new_interview"
+    assert root.property("currentPractice") is None
+    assert root.property("dueRetentionCount") == 1
+    retention = root.property("actionableRetention")
+    assert retention["problem_id"] == "FND-001" and retention["stage"] == "d2"
     root.deleteLater()
     engine.deleteLater()
 
 
-def test_due_d7_replaces_retained_d2_current_attempt_as_home_focus(
+def test_due_d7_remains_actionable_below_interview_primary(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     service = ApplicationService(_repository(tmp_path))
@@ -168,7 +172,11 @@ def test_due_d7_replaces_retained_d2_current_attempt_as_home_focus(
     _application, engine, _component, root, _evidence, _content = _home_component(
         dashboard
     )
-    assert root.property("focusKind") == "retention"
+    assert root.property("focusKind") == "new_interview"
+    assert root.property("currentPractice") is None
+    assert root.property("dueRetentionCount") == 1
+    retention = root.property("actionableRetention")
+    assert retention["problem_id"] == "FND-001" and retention["stage"] == "d7"
     root.deleteLater()
     engine.deleteLater()
 

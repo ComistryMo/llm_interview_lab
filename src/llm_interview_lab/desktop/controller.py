@@ -521,7 +521,11 @@ class AppController(QObject):
         self._ai_status = text("status.ai_offline")
         self._workers: set[Worker] = set()
         self._thread_pool = QThreadPool.globalInstance()
-        self._settings = QSettings("ComistryMo", "LLMInterviewLab")
+        # Explicit UAT/build isolation; normal launches keep their existing OS
+        # settings namespace and never migrate or reset saved preferences.
+        settings_file = os.environ.get("LLM_LAB_DESKTOP_SETTINGS_FILE")
+        self._settings = (QSettings(settings_file, QSettings.IniFormat) if settings_file
+                          else QSettings("ComistryMo", "LLMInterviewLab"))
         self._updates = UpdateManager(self._settings, parent=self)
         language = str(self._settings.value("language", "zh-CN") or "zh-CN")
         self._language = language if language in {"zh-CN", "en"} else "zh-CN"

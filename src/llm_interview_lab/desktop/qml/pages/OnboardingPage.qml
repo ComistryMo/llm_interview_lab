@@ -530,6 +530,7 @@ Rectangle {
                                     Accessible.description: modelData.summary || ""
                                     Accessible.role: Accessible.ListItem
                                     Accessible.selected: root.selectedRole === modelData.id
+                                    Accessible.onPressAction: root.selectRole(modelData.id)
 
                                     ColumnLayout {
                                         anchors.fill: parent

@@ -6,15 +6,16 @@ import subprocess
 import sys
 
 import pytest
+from tests.infrastructure.test_interview_input_runtime import (
+    qapp, public_repo, controller, scene, _find, _click, _wait_for_asr, REPO,
+)
+
 from PySide6.QtCore import QCoreApplication, QMetaObject, Qt
 from PySide6.QtGui import QInputMethodEvent
 from PySide6.QtTest import QTest
 
 from llm_interview_lab.application import ApplicationError
 from llm_interview_lab.desktop.controller import AppController
-from tests.infrastructure.test_interview_input_runtime import (
-    qapp, public_repo, controller, scene, _find, _click, _wait_for_asr, REPO,
-)
 
 
 def identity(controller):

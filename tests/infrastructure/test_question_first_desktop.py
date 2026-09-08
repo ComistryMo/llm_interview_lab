@@ -6,11 +6,12 @@ import re
 import pytest
 from types import SimpleNamespace
 
+from tests.infrastructure.test_interview_input_runtime import qapp, public_repo, controller, scene, _find
+
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtTest import QTest
 from llm_interview_lab.ai.base import ChatEvent
 from llm_interview_lab.ai.codex_backend import CodexEvent
-from tests.infrastructure.test_interview_input_runtime import qapp, public_repo, controller, scene, _find
 from tests.infrastructure.test_question_first_interview import decision
 
 

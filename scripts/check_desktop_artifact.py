@@ -93,6 +93,8 @@ def main() -> int:
             "TMP": str(root),
             "QT_QPA_PLATFORM": "offscreen",
             "QT_QUICK_BACKEND": "software",
+            "LLM_LAB_DESKTOP_SETTINGS_FILE": str(root / "settings.ini"),
+            "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
         }
         version = subprocess.run(
             [str(executable), "--version"],

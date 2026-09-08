@@ -4,6 +4,11 @@ import re
 from pathlib import Path
 
 import pytest
+from tests.infrastructure.test_interview_input_runtime import (
+    qapp, public_repo, controller, scene, _find, _click, _capture, _within_window,
+    _wait_for_asr, _visible_hints,
+)
+
 from PySide6.QtCore import QObject, QPointF, QMetaObject, Qt
 from PySide6.QtGui import QInputMethodEvent
 from PySide6.QtTest import QTest
@@ -11,10 +16,6 @@ from PySide6.QtTest import QTest
 from llm_interview_lab.ai.base import ConnectionResult
 from llm_interview_lab.desktop.controller import AppController
 from llm_interview_lab.desktop.coding_statements_zh import CONTRACTS, chinese_statement
-from tests.infrastructure.test_interview_input_runtime import (
-    qapp, public_repo, controller, scene, _find, _click, _capture, _within_window,
-    _wait_for_asr, _visible_hints,
-)
 
 
 def test_sidebar_and_interview_use_desktop_space_without_losing_input(scene, qapp):

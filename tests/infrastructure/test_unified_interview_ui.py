@@ -1,12 +1,12 @@
 """Production QML acceptance for role-only preparation and the shared editor."""
 import pytest
-from PySide6.QtCore import QObject, QPointF, Qt
-from PySide6.QtTest import QTest
-
 from tests.infrastructure.test_interview_input_runtime import (
     qapp, public_repo, controller, scene, _find, _click, _within_window,
     _capture, _enter_coding_round,
 )
+
+from PySide6.QtCore import QObject, QPointF, Qt
+from PySide6.QtTest import QTest
 
 
 def test_unified_setup_home_history_at_all_sizes(scene):

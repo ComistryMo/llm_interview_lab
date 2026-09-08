@@ -16,7 +16,7 @@ Basic.SpinBox {
     bottomInset: 0
     palette.text: theme ? theme.textStrong : "#202020"
     palette.highlight: theme ? theme.accentSoft : "#e9eff5"
-    palette.highlightedText: palette.text
+    palette.highlightedText: theme ? theme.textStrong : "#202020"
     contentItem: TextInput {
         text: control.displayText
         font: control.font

@@ -36,12 +36,16 @@ def check_source(root: Path, tag: str | None = None) -> dict:
     return metadata
 
 
-def write_build_metadata(root: Path, bundle_assets: Path) -> None:
+def write_build_metadata(root: Path, bundle_assets: Path, *, source_commit: str | None = None) -> None:
     metadata = check_source(root)
-    metadata["source_commit"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
-    tracked_dirty = subprocess.check_output(["git", "diff", "HEAD", "--name-only"], cwd=root, text=True).strip()
-    if tracked_dirty:
-        raise RuntimeError("commit tracked source changes before producing a candidate bundle")
+    if source_commit is None:
+        source_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+        tracked_dirty = subprocess.check_output(["git", "diff", "HEAD", "--name-only"], cwd=root, text=True).strip()
+        if tracked_dirty:
+            raise RuntimeError("commit tracked source changes before producing a candidate bundle")
+    # Windows passes the exact commit archived into its immutable public-only
+    # source snapshot. Later worktree edits cannot change the snapshot's origin.
+    metadata["source_commit"] = source_commit
     public_files = []
     for directory in ("curriculum", "coach", "workspace/schema", "workspace/templates"):
         public_files.extend(path for path in (root / directory).rglob("*")

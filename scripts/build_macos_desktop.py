@@ -152,6 +152,8 @@ def main() -> int:
     }
     with tempfile.TemporaryDirectory(prefix="llm-lab-macos-smoke-") as directory:
         environment["LLM_LAB_DESKTOP_DATA_ROOT"] = str(Path(directory) / "应用 数据")
+        environment["LLM_LAB_DESKTOP_SETTINGS_FILE"] = str(Path(directory) / "settings.ini")
+        environment["PYTHON_KEYRING_BACKEND"] = "keyring.backends.null.Keyring"
         version = run(executable, "--version", capture_output=True, env=environment)
         if VERSION not in version.stdout:
             raise RuntimeError(f"unexpected packaged version: {version.stdout.strip()}")

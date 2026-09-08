@@ -57,29 +57,57 @@ def test_screenshot_source_commit_is_resolvable_history_evidence() -> None:
         "screenshots must come from the current HEAD or one of its ancestors"
     )
 
-    screenshot_inputs = (
-        "src/llm_interview_lab/desktop/qml",
-        "src/llm_interview_lab/desktop/resources",
-        "src/llm_interview_lab/desktop/main.py",
-        "src/llm_interview_lab/desktop/controller.py",
-        "src/llm_interview_lab/desktop/i18n.py",
-        "src/llm_interview_lab/application.py",
-        "src/llm_interview_lab/roles.py",
-        "curriculum/roles",
-        "scripts/capture_desktop_screenshots.py",
-    )
-    changed = _git(
-        "diff",
-        "--name-only",
-        f"{source_commit}..HEAD",
-        "--",
-        *screenshot_inputs,
-    )
-    assert changed.returncode == 0, changed.stderr
-    assert not changed.stdout.strip(), (
-        "checked-in screenshots are stale because screenshot-affecting files "
-        "changed after source_commit:\n" + changed.stdout
-    )
+    # This manifest is Alpha.3 historical evidence, not today's desktop.
+    # Its hashes/ancestry remain mandatory; the current candidate has a
+    # separate, stricter input-fingerprint contract below.
+
+
+def test_current_candidate_captures_match_production_source_and_pixels() -> None:
+    from llm_interview_lab import __version__
+    import struct
+
+    path = REPO_ROOT / "docs/images/candidate-20260909/manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    assert manifest["version"] == __version__
+    assert manifest["synthetic"] is True and manifest["language"] == "zh-CN"
+    assert manifest["logical_size"] == [1280, 800]
+    assert "production AppController" in manifest["renderer"]
+    assert set(manifest["sets"]) == {"before", "after"}
+    expected = {(page, theme) for page in (
+        "home", "setup", "answer", "coding", "report", "connections", "settings"
+    ) for theme in ("light", "dark")}
+    for name, evidence in manifest["sets"].items():
+        assert name in {"before", "after"}
+        commit = evidence["source_commit"]
+        assert _git("merge-base", "--is-ancestor", commit, "HEAD").returncode == 0
+        assert {(entry["page"], entry["theme"]) for entry in evidence["screenshots"]} == expected
+        assert len(evidence["screenshots"]) == len(expected)
+        for entry in evidence["screenshots"]:
+            asset = (REPO_ROOT / entry["path"]).resolve()
+            assert asset.is_relative_to(path.parent.resolve())
+            raw = asset.read_bytes()
+            assert raw[:8] == b"\x89PNG\r\n\x1a\n"
+            assert hashlib.sha256(raw).hexdigest() == entry["sha256"]
+            assert list(struct.unpack(">II", raw[16:24])) == entry["pixel_size"]
+        inputs = evidence["source_inputs"]
+        assert "src/llm_interview_lab/desktop/controller.py" in inputs
+        assert "src/llm_interview_lab/application.py" in inputs
+        for relative, digest in inputs.items():
+            original = subprocess.check_output(["git", "show", f"{commit}:{relative}"], cwd=REPO_ROOT)
+            assert hashlib.sha256(original).hexdigest() == digest
+            if name == "after":
+                # Compare bytes, including uncommitted changes; never stamp
+                # today's SHA onto an old image to silence freshness checks.
+                current_path = REPO_ROOT / relative
+                current = current_path.read_bytes()
+                if current_path.suffix in {".py", ".qml", ".svg", ".md", ".yaml", ".yml", ".json", ".txt", ".qrc"} or current_path.name == "qmldir":
+                    current = current.replace(b"\r\n", b"\n")
+                assert hashlib.sha256(current).hexdigest() == digest, relative
+        if name == "after":
+            current_names = _git("ls-files", "--", "src/llm_interview_lab/desktop",
+                                 "src/llm_interview_lab/application.py", "src/llm_interview_lab/roles.py",
+                                 "src/llm_interview_lab/__init__.py", "curriculum/roles").stdout.splitlines()
+            assert set(current_names) == set(inputs)
 
 
 def test_screenshot_coverage_and_assets_match_the_manifest() -> None:

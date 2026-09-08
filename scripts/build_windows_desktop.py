@@ -37,6 +37,7 @@ def main():
     metadata = check_source(root)
     if subprocess.check_output(["git", "diff", "HEAD", "--name-only"], cwd=root, text=True).strip():
         raise RuntimeError("commit tracked changes before building a candidate")
+    source_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     snapshot = output / "source-snapshot"
@@ -45,7 +46,7 @@ def main():
     public_paths = ("src", "curriculum", "coach", "workspace/schema", "workspace/templates",
                     "AGENTS.md", ".gitignore", "pyproject.toml", "LICENSE", "scripts/pysidedeploy.spec",
                     "scripts/generate_desktop_icons.py", "docs/desktop-app.md", "docs/third-party-notices.md", metadata["notes"])
-    run("git", "archive", "--format=tar", f"--output={archive}", "HEAD", *public_paths, cwd=root)
+    run("git", "archive", "--format=tar", f"--output={archive}", source_commit, *public_paths, cwd=root)
     # Archive is produced above from explicit repository-owned public paths.
     with tarfile.open(archive) as source:
         source.extractall(snapshot, filter="data")
@@ -57,6 +58,8 @@ def main():
     config.read(snapshot / "scripts/pysidedeploy.spec", encoding="utf-8")
     major, minor, patch, _, number = version_key(metadata["version"])
     config["nuitka"]["extra_args"] += f" --jobs={args.jobs} --file-version={major}.{minor}.{patch}.{number} --product-version={major}.{minor}.{patch}.{number}"
+    # Keep PySide's finalizer and Nuitka's long-command entrypoint in agreement.
+    config["nuitka"]["extra_args"] += " --output-folder-name=main.dist"
     if args.mingw:
         config["nuitka"]["extra_args"] += " --mingw64"
     config_path = snapshot / "dist/pysidedeploy-candidate.spec"
@@ -69,8 +72,15 @@ def main():
     deploy = shutil.which("pyside6-deploy", path=environment["PATH"])
     if not deploy:
         raise RuntimeError("pyside6-deploy is unavailable")
-    run(deploy, "-c", config_path, "-f", cwd=snapshot, env=environment)
-    bundle_source = snapshot / "dist/desktop/LLMInterviewLab.dist"
+    # PySide 6.11 compiles long Windows commands as deploy_main.py, but its
+    # finalizer still looks for main.dist. Retain our private staging directory
+    # and consume the actual Nuitka result; never let that mismatch erase it.
+    run(deploy, "-c", config_path, "-f", "--keep-deployment-files", cwd=snapshot, env=environment)
+    candidates = [deployment / name for name in ("main.dist", "deploy_main.dist")
+                  if (deployment / name).is_dir()]
+    if len(candidates) != 1:
+        raise RuntimeError("build did not produce exactly one standalone directory; inspect retained deployment files")
+    bundle_source = candidates[0]
     executables = list(bundle_source.glob("*.exe"))
     if len(executables) != 1:
         raise RuntimeError("build did not produce exactly one standalone executable; inspect the retained snapshot")
@@ -80,7 +90,7 @@ def main():
         (bundle / executables[0].name).rename(bundle / "LLMInterviewLab.exe")
     for source, name in (("LICENSE", "LICENSE"), ("docs/third-party-notices.md", "THIRD_PARTY_NOTICES.md"), ("docs/desktop-app.md", "README.md")):
         shutil.copy2(snapshot / source, bundle / name)
-    write_build_metadata(snapshot, bundle / "runtime_assets")
+    write_build_metadata(snapshot, bundle / "runtime_assets", source_commit=source_commit)
     shutil.copy2(snapshot / "desktop-nuitka-report.xml", output / "desktop-nuitka-report.xml")
     portable = output / "LLMInterviewLab-Windows-x64-portable.zip"
     with zipfile.ZipFile(portable, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:

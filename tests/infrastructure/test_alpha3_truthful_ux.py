@@ -254,11 +254,16 @@ def test_desktop_entry_accepts_explicit_window_size_and_role_step() -> None:
     assert 'onboarding.setProperty("selectedRole", args.onboarding_role)' in source
 
 
-def test_screenshot_manifest_is_current_synthetic_chinese_evidence() -> None:
+def test_alpha3_screenshot_manifest_preserves_historical_chinese_evidence() -> None:
     manifest = json.loads(
         (REPO_ROOT / "docs/images/screenshot-manifest.json").read_text(encoding="utf-8")
     )
-    assert manifest["version"] == __version__
+    # Historical release images retain their real version, not today's source.
+    source = subprocess.check_output(
+        ["git", "show", f"{manifest['source_commit']}:src/llm_interview_lab/__init__.py"],
+        cwd=REPO_ROOT, text=True, encoding="utf-8",
+    )
+    assert f'__version__ = "{manifest["version"]}"' in source
     assert manifest["language"] == "zh-CN"
     assert manifest["synthetic"] is True
     assert len(manifest["source_commit"]) == 40
@@ -293,7 +298,9 @@ def test_practice_and_interview_surfaces_do_not_expose_fake_actions() -> None:
     interview = (
         REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/InterviewPage.qml"
     ).read_text(encoding="utf-8")
-    assert "在 AI 教练中打开当前任务" in exercise
+    # AI moved into Mock Interview; Practice continues to run local code/tests.
+    assert "app.runPracticeScript(editor.text" in exercise
+    assert "app.runTestsForCurrentSubmission(editor.text)" in exercise
     assert "发送消息" not in exercise
     assert "value: 3" not in interview
     assert "提交并锁定回答" in interview
@@ -303,7 +310,10 @@ def test_practice_and_interview_surfaces_do_not_expose_fake_actions() -> None:
 
 def test_problem_surfaces_are_chinese_first_without_changing_public_contracts() -> None:
     assert problem_title("FND-001", "Wrong Prediction Count") == "统计错误预测样本"
-    assert "实现一个纯函数" in problem_brief("FND-001", "raw task")
+    assert "与 `label` 不同的预测数量" in problem_brief("FND-001", "raw task")
+    assert "app.problemStatement(root.activeProblemId" in (
+        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/ExercisePage.qml"
+    ).read_text(encoding="utf-8")
     exercise = (
         REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/ExercisePage.qml"
     ).read_text(encoding="utf-8")
@@ -319,4 +329,5 @@ def test_problem_surfaces_are_chinese_first_without_changing_public_contracts() 
     assert "英文原始契约" not in exercise
     assert "app.problemTitle(card.problem_id" in learn
     assert "verticalAlignment: Text.AlignVCenter" in text_field
-    assert "height: Math.max(implicitHeight" in text_field
+    assert "height: implicitHeight" in text_field
+    assert "metrics.height + topPadding + bottomPadding" in text_field

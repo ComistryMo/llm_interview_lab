@@ -5,14 +5,14 @@ import time
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QCoreApplication, QUrl, Qt, QMetaObject, QObject, QSettings
-from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtTest import QTest
-
 from tests.infrastructure.test_interview_input_runtime import (
     qapp, public_repo, controller, _find, _click, _capture, _enter_coding_round,
     _within_window, _items, QML,
 )
+
+from PySide6.QtCore import QCoreApplication, QUrl, Qt, QMetaObject, QObject, QSettings
+from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtTest import QTest
 
 
 @pytest.fixture
