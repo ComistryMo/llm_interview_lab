@@ -337,6 +337,7 @@ class AppController(QObject):
     # Real App Server retries took about two minutes before returning text
     # on Windows. Allow that bounded retry cycle; the user can interrupt it.
     _CODEX_INTERVIEW_TURN_TIMEOUT_MS = 180_000
+    _PROVIDER_INTERVIEW_TIMEOUT_SECONDS = 180
 
     stateChanged = Signal()
     interviewChanged = Signal()
@@ -3877,8 +3878,16 @@ class AppController(QObject):
                         chunks.append(event.text)
                 return "".join(chunks)
 
+            async def collect_with_deadline() -> str:
+                try:
+                    # HTTP read timeouts reset on keepalive/reasoning chunks.
+                    # A whole-turn deadline also releases the UI for retry.
+                    return await asyncio.wait_for(collect(), self._PROVIDER_INTERVIEW_TIMEOUT_SECONDS)
+                except asyncio.TimeoutError as error:
+                    raise RuntimeError("AI 本轮等待超时。请重试或选择较低推理强度；回答已保留，当前设置未自动改变。") from error
+
             return _decode_ai_assessment(
-                asyncio.run(collect()), dimensions, fatal_issues,
+                asyncio.run(collect_with_deadline()), dimensions, fatal_issues,
                 dynamic=session.get("delivery_mode") == "dynamic_ai",
             )
 

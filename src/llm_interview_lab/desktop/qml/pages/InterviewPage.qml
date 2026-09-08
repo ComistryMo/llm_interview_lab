@@ -1692,11 +1692,12 @@ Item {
                         visible: !!activeQuestion && activeQuestion.kind !== "coding"
                                  && root.answerLocked && !app.interview.answer_corrupted
                                  && app.interview.ai_mode === "provider"
+                                 && (!root.dynamicInterview || !app.interview.ai_error)
                                  && providerConnection.currentIndex >= 0
                                  && !root.providerIsReady(providerConnection.currentValue)
                         width: parent.width
                         text: root.dynamicInterview
-                              ? "当前连接尚未测试通过。请到“AI 连接”完成测试，再返回生成下一问。"
+                              ? "将使用已保存的连接发送；无需重新填写 Key。也可在 AI 连接页检查设置。"
                               : "当前连接尚未测试通过。请到“AI 连接”测试后再请求评估，或改用人工评分。"
                         color: root.colors.warning
                         wrapMode: Text.Wrap

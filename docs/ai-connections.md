@@ -7,8 +7,8 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 | 模式 | 用途 | 是否需要网络或密钥 |
 |---|---|---|
 | No-AI | 本地课程、测试、复测；个性化模拟面试需要连接 AI | 否 |
-| 普通 LLM API | 解释、提示、只读审查、面试追问 | 视服务而定 |
-| Codex | 仓库感知教练、逐问个性化面试、测试、Diff 与受审批维护 | 需要 Codex 可用并完成相应认证 |
+| 普通 LLM API | 桌面中的个性化面试、逐轮追问及证据评价 | 视服务而定 |
+| Codex | 桌面中的逐问个性化面试与证据评价 | 需要 Codex 可用并完成相应认证 |
 
 首次启动默认选择 No-AI。任何连接故障都不应阻塞本地训练。
 
@@ -22,12 +22,37 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 
 - 模型提供 `deepseek-v4-flash`、`deepseek-v4-pro` 与自定义模型 ID；2026-09-07 已通过官方模型列表和真实 `/models` 请求核验，服务端模型会随时间变化。
 - 推理选项：关闭思考（默认，更快回复）、低、高、最高、服务默认。关闭对应 `thinking.type=disabled`，其余使用 `enabled` 和 `reasoning_effort=low/high/max`；服务默认不指定强度。支持范围以 [DeepSeek 思考模式文档](https://api-docs.deepseek.com/guides/thinking_mode/) 为准。
-- 实现读取 SSE 的 `delta.content`，不把 `reasoning_content` 当作回答或评分。动态面试请求 JSON 格式，仍逐轮做本地字段校验；空正文、截断和过滤响应不作为成功结果保存。
+- 实现读取 SSE 的 `delta.content`，不把 `reasoning_content` 当作回答或评分。关闭思考时使用服务端 JSON Output；开启思考时只通过提示词和 Schema 要求 JSON，避免强制 JSON Output 偶发空正文的组合。本地字段、阶段、岗位技能与代码候选校验不放宽；模型和推理强度不自动降级，也不自动重发付费请求。
 - “保存并测试”只做关闭思考的短连接检查，不承诺高强度推理的耗时。面试仍使用你保存的模型与强度。`402` 表示余额不足，`401` 表示凭证问题，`429` 表示限流。
 
 2026-09-07 Windows 源码真实验证使用 `deepseek-v4-flash`、关闭思考、合成简历/JD：连续 9 次提交均进入下一问（单轮约 5.45–7.53 秒），随后进入本地中文代码题。代码没有作答，报告如实为未完成；不把这项验证称为完整面试通过。布局和提示词收尾后又验证两轮，分别为 4.52 秒、6.81 秒。这些是该设备和连接的样本，不是服务耗时保证。
 
 本轮未重建 Windows/macOS 下载包，不能据此认为旧 Release 已包含 DeepSeek。DeepSeek 不作为当前语音转录服务。
+
+#### 高强度空正文与重试审查（2026-09-08）
+
+用户截图对应的操作编号 `3b324c62` 在本地日志中为 `provider_response / INTERVIEW_REQUEST_FAILED`。日志仅记录阶段、类别和操作编号，没有保存原始响应，因此**不能从该日志确认服务那次具体返回了什么，也不能断言是抓错字段**。未读取用户 Profile、材料、录音或 Key。
+
+已通过官方页面核对：[思考模式](https://api-docs.deepseek.com/guides/thinking_mode/) 支持 V4 Flash 的 `thinking.type=enabled` 与 `reasoning_effort=high`，最终正文仍在 `content`；[JSON Output 文档](https://api-docs.deepseek.com/guides/json_mode) 明确提示偶尔会返回空正文。这是与本次现象相符的已知风险，不是对用户那次请求的完整根因证明。适配改动保留 high，停止在思考模式叠加强制 `response_format`；继续严格解析最终 JSON，绝不把思考片段当答案。
+
+本次审查修复的直接问题：
+
+- SSE 内的 `error` 原先会被忽略，最后只提示没有正文；现在显示已知错误码及下一步，不回显可能含凭证或 Prompt 的服务原文。
+- 只有空白的 `content` 原先被当成有正文；现在与「仅返回思考」「输出预算用完」「过滤」「服务资源不足」分别提示。
+- DeepSeek 流在没有正常终止标记时结束，不再产生 `completed`；不保存半截题目或评分。
+- 普通 API 原先只有单次 HTTP 读取超时，保活/思考包可能不断重置等待；现在整轮最多 180 秒，超时关闭本次传输并解除 busy，回答继续保留。
+- 动态面试失败后可以直接重试，不再同时出现要求先跳去连接页测试的矛盾提示。
+
+实际验证（基线 `1075cef`）：
+
+- `test_deepseek.py` 与 `test_ai_connections.py`：38 passed，覆盖 none/low/high/max/服务默认的请求、思考与最终文本分离、SSE 失败、连接关闭及原兼容服务。
+- `test_interview_input_runtime.py -k deepseek_high_real_adapter`：1 passed。使用正式 Windows QML、真实 Controller、HTTP/SSE 适配器和隔离档案；Keyring 和网络响应为测试替身。实际点击一次失败，再点击重试到 q-002，提交下一次回答到 q-003；每次都保留 V4 Flash/high，失败回答不重写、不重复评分。最终直接复验耗时 8.65 秒。
+- 同文件 `-k provider_deadline`：1 passed。模拟持续保活流，验证超时取消、连接操作释放、原回答和未评分状态保留。
+- 故障用例先在旧实现下失败，再修复并通过。新 QML 测试曾因合成证据不足 20 字、未等下一帧的编辑器清空而失败；修正测试数据和事件循环等待后通过，没有降低产品校验。
+
+已查看正式页的失败重试与第三问截图，位于 ignored `workspace/maintainer/agent-runs/deepseek-high-20260908/`。截图中的 AI 状态和问句是模拟服务结果，不证明真实账户成功。本轮未向真实 DeepSeek 发起付费请求；高强度线上效果仍需使用原连接复测，不能声称所有服务端空响应已消除。没有运行全量 pytest、CI、打包或发布。
+
+使用当前源码重启，继续原来的面试，点击「重试生成下一问」即可检验；无需重填 Key、关闭高强度或重建档案。已锁定回答会继续使用。
 
 打包桌面重点验证：
 
@@ -35,7 +60,7 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 - OpenAI-compatible；
 - Ollama `/v1`。
 
-源码安装的统一 Provider 层还支持 Anthropic 与 Gemini。当前语音转录只走 OpenAI / OpenAI-compatible 的 `/audio/transcriptions` 接口；它是面试回答的可选草稿工具，不会自动提交或评分。Embedding、图像生成、RAG、MCP Runtime 与 Tool Marketplace 不在本版本范围内。
+源码安装的统一 Provider 层还支持 Anthropic 与 Gemini。语音默认使用 [SenseVoiceSmall 本地转录](local-stt.md)，可选远程转录走 OpenAI / OpenAI-compatible 的 `/audio/transcriptions` 接口；它是面试回答的草稿工具，不会自动提交或评分。Embedding、图像生成、RAG、MCP Runtime 与 Tool Marketplace 不在本版本范围内。
 
 ### 安装
 
@@ -58,7 +83,7 @@ Python 3.11 是统一 Provider 可选依赖的推荐版本。
 
 ### 面试语音转录（可选）
 
-非代码面试回答可以先在本机录音，再由用户主动点击“转录到回答框”。录音默认保存在当前学习档案的面试目录；只有选择已测试的 OpenAI / OpenAI-compatible AI 服务并勾选本场远程授权后，音频才会发送。转录结果只是可编辑草稿，仍需检查、修改并点击“提交并锁定回答”。
+非代码面试点击「语音输入」开始本地录音，点击「完成录音」自动转成文字。录音保存在当前学习档案的面试目录；默认本地识别，不上传音频。只有在「语音设置」选择可用的 OpenAI / OpenAI-compatible 转录服务并明确授权这次远程发送，音频才会发送。结果追加到可编辑草稿，仍需检查、修改并点击「提交并继续」。
 
 没有麦克风、转录服务不可用、网络中断或不愿发送音频时，直接使用文字回答即可。应用不会把音频写入 Profile YAML、事件日志或普通配置，也不会因为转录失败阻塞 No-AI 训练。
 

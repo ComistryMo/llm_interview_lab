@@ -40,7 +40,12 @@ def test_deepseek_wire_and_reasoning_content_is_not_an_answer(effort):
     asyncio.run(run())
     assert all(c.is_closed for c in clients)
     assert requests[0]["thinking"] == {"type": "disabled"}
-    assert requests[1]["response_format"] == {"type": "json_object"}
+    if effort == "none":
+        assert requests[1]["response_format"] == {"type": "json_object"}
+    else:
+        # Keep thinking/high intact, but do not combine it with the vendor's
+        # JSON Output mode, which officially may return an empty body.
+        assert "response_format" not in requests[1]
     assert requests[1]["thinking"]["type"] == ("disabled" if effort == "none" else "enabled")
     assert requests[1].get("reasoning_effort") == (effort if effort not in {None, "none"} else None)
 
@@ -56,6 +61,69 @@ def test_deepseek_incomplete_or_reasoning_only_is_not_success(finish):
         with pytest.raises(ProviderError, match="未完整|未返回回答正文"):
             _ = [event async for event in provider.stream_chat([{"role": "user", "content": "test"}])]
     asyncio.run(run())
+
+
+def test_deepseek_high_keeps_reasoning_and_reads_final_delta_without_json_mode():
+    """Simulate the documented empty JSON Output failure, not a live API claim."""
+    requests = []
+
+    def handle(request):
+        payload = json.loads(request.content)
+        requests.append(payload)
+        assert payload["thinking"] == {"type": "enabled"}
+        assert payload["reasoning_effort"] == "high"
+        final = "" if "response_format" in payload else '{"follow_up":"请说明如何验证收益？"}'
+        chunks = [
+            {"choices": [{"delta": {"reasoning_content": "private internal reasoning", "content": None}}]},
+            {"choices": [{"delta": {"content": final}, "finish_reason": "stop"}]},
+            {"choices": [], "usage": {"completion_tokens": 200}},
+        ]
+        return httpx.Response(200, text="\n\n".join("data: " + json.dumps(c) for c in chunks) + "\n\ndata: [DONE]\n\n")
+
+    provider = OpenAICompatibleChatProvider(
+        ProviderConfig("test", "deepseek", "deepseek-v4-flash", "DeepSeek", reasoning_effort="high"),
+        api_key="fake-key", client_factory=lambda **kw: httpx.AsyncClient(transport=httpx.MockTransport(handle), **kw))
+
+    async def run():
+        events = [e async for e in provider.stream_chat([{"role": "user", "content": 'Return JSON: {"follow_up":"..."}'}], json_mode=True)]
+        assert "".join(e.text for e in events) == '{"follow_up":"请说明如何验证收益？"}'
+        assert events[-1].kind == "completed"
+
+    asyncio.run(run())
+    assert len(requests) == 1, "Never silently retry/disable thinking or spend another request"
+
+
+@pytest.mark.parametrize(("chunks", "expected"), [
+    ([{"choices": [{"delta": {"content": "  \n"}, "finish_reason": "stop"}]}], "空白"),
+    ([{"choices": [{"delta": {"reasoning_content": "private"}, "finish_reason": "stop"}]}], "仅返回思考"),
+    ([{"choices": [{"delta": {"content": '{"follow_up":"incomplete"}'}}]}], "中断"),
+    ([{"error": {"code": 429, "message": "private-key-and-prompt"}}], "429"),
+    ([{"error": {"code": "unknown", "message": "private-key-and-prompt"}}], "服务端错误"),
+    ([{"choices": [{"delta": {"content": "partial"}, "finish_reason": "length"}]}], "输出预算"),
+])
+def test_stream_failure_is_actionable_and_cannot_become_completed(chunks, expected):
+    clients = []
+
+    def client(**kwargs):
+        body = "\n\n".join("data: " + json.dumps(c) for c in chunks) + "\n\n"
+        value = httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(200, text=body)), **kwargs)
+        clients.append(value)
+        return value
+
+    provider = OpenAICompatibleChatProvider(
+        ProviderConfig("test", "deepseek", "deepseek-v4-flash", "DeepSeek", reasoning_effort="high"),
+        api_key="fake-key", client_factory=client)
+    events = []
+
+    async def run():
+        with pytest.raises(ProviderError, match=expected) as failure:
+            async for event in provider.stream_chat([{"role": "user", "content": "synthetic"}], json_mode=True):
+                events.append(event)
+        assert "private" not in str(failure.value)
+
+    asyncio.run(run())
+    assert all(e.kind != "completed" for e in events)
+    assert all(c.is_closed for c in clients)
 
 
 def test_current_chinese_statements_match_frozen_sources_and_keep_interfaces():

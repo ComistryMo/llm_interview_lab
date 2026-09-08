@@ -256,9 +256,16 @@ class OpenAICompatibleChatProvider:
                 "stream": True,
             }
             payload.update(self._reasoning_options())
-            if json_mode:
+            deepseek_thinking = (self.config.provider_id == "deepseek"
+                                 and payload["thinking"]["type"] == "enabled")
+            # DeepSeek documents occasional empty content in JSON Output mode.
+            # Keep the user's model/effort; thinking requests use the caller's
+            # JSON instructions and local schema validation, not response_format.
+            if json_mode and not deepseek_thinking:
                 payload["response_format"] = {"type": "json_object"}
             received_text = False
+            received_reasoning = False
+            stream_finished = False
             async with client.stream(
                 "POST",
                 "chat/completions",
@@ -270,6 +277,7 @@ class OpenAICompatibleChatProvider:
                         continue
                     data = line[5:].strip()
                     if data == "[DONE]":
+                        stream_finished = True
                         break
                     if not data:
                         continue
@@ -277,18 +285,42 @@ class OpenAICompatibleChatProvider:
                         chunk = json.loads(data)
                     except (ValueError, TypeError) as error:
                         raise ProviderError("provider returned malformed streaming JSON") from error
+                    if not isinstance(chunk, dict):
+                        raise ProviderError("AI 返回的流格式不正确。请重试；回答已保留。")
+                    if "error" in chunk:
+                        # The raw service message may echo the request or Key.
+                        # Surface only known codes, never its message/body.
+                        failure = chunk["error"]
+                        code = str(failure.get("code", "")) if isinstance(failure, dict) else ""
+                        hints = {"400": "模型或推理参数不被接受", "401": "凭证无效，请更新 API Key",
+                                 "402": "账户余额不足", "429": "请求限流，请稍后重试",
+                                 "500": "服务暂时异常", "503": "服务繁忙，请稍后重试"}
+                        detail = f"（{code}）：{hints[code]}" if code in hints else ""
+                        raise ProviderError(f"AI 响应流返回服务端错误{detail}。请重试；回答已保留。")
                     text = _delta_text(chunk)
+                    if not isinstance(text, str):
+                        raise ProviderError("AI 正文不是文本格式。请重试；回答已保留。")
                     if text:
-                        received_text = True
+                        received_text = received_text or bool(text.strip())
                         yield ChatEvent("text_delta", text)
                     # DeepSeek sends reasoning_content separately. Only final
                     # content is an answer; never parse its thinking as a score.
                     choices = chunk.get("choices", [])
                     finish = choices[0].get("finish_reason") if choices else None
-                    if finish in {"length", "content_filter", "insufficient_system_resource"}:
-                        raise ProviderError("AI 回复未完整生成（" + finish + "）。请重试或降低推理强度；回答已保留。")
+                    if choices and choices[0].get("delta", {}).get("reasoning_content"):
+                        received_reasoning = True
+                    if finish == "stop":
+                        stream_finished = True
+                    elif finish == "length":
+                        raise ProviderError("AI 回复未完整生成：输出预算已用完（包含思考消耗）。请降低推理强度后重试；回答已保留。")
+                    elif finish in {"content_filter", "insufficient_system_resource"}:
+                        reason = "服务内容过滤" if finish == "content_filter" else "服务算力暂时不足"
+                        raise ProviderError(f"AI 回复未完整生成（{reason}）。请重试；回答已保留。")
+            if self.config.provider_id == "deepseek" and not stream_finished:
+                raise ProviderError("AI 响应流在完成前中断，未收到结束标记。请重试；不会保存半截题目或评分，回答已保留。")
             if not received_text:
-                raise ProviderError("服务未返回回答正文。请重试或关闭思考模式；不会把思考片段当作面试结果。")
+                reason = "服务仅返回思考，未返回回答正文" if received_reasoning else "服务返回空白，未返回回答正文"
+                raise ProviderError(f"{reason}。请重试；不会把思考内容当作题目，原模型与推理强度未改变。")
             yield ChatEvent("completed")
         except asyncio.CancelledError:
             yield ChatEvent("cancelled")

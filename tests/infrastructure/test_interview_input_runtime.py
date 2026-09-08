@@ -1844,6 +1844,115 @@ def test_single_submit_rejects_revoked_material_and_retains_scene_consent(contro
     assert not controller.interview["answer_locked"] and not sent
 
 
+def test_deepseek_high_real_adapter_ui_retries_then_advances(scene, monkeypatch):
+    """Production QML/controller/HTTP parser; SSE and Keyring are isolated doubles."""
+    import httpx
+    from llm_interview_lab.ai.credentials import KeyringCredentialStore
+    from llm_interview_lab.ai.providers import OpenAICompatibleChatProvider
+
+    window, controller = scene
+    secrets, requests, clients = {}, [], []
+    class Keyring:
+        def set_password(self, service, reference, secret): secrets[reference] = secret
+        def get_password(self, service, reference): return secrets.get(reference)
+    store = KeyringCredentialStore(Keyring())
+    monkeypatch.setattr("llm_interview_lab.ai.connections.KeyringCredentialStore", lambda: store)
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.KeyringCredentialStore", lambda: store)
+    assert controller.saveConnection("deepseek-high", "deepseek", "deepseek-v4-flash", "合成 DeepSeek", "", "test-only-key", "high")
+    controller.finishInterview()
+    preview = controller.dynamicInterviewContextPreview("post_training_engineer", "intern", "hard", "", False)
+    controller.startDynamicPersonalizedInterview("post_training_engineer", "intern", "hard", "deepseek-high", "", False, preview["context_sha256"])
+    window.resize(1080, 680)
+    controller.setTheme("dark")
+    reply = {}
+
+    def respond(request):
+        payload = json.loads(request.content)
+        requests.append(payload)
+        assert payload["model"] == "deepseek-v4-flash" and payload["reasoning_effort"] == "high"
+        assert payload["thinking"] == {"type": "enabled"} and "response_format" not in payload
+        assert "JSON" in payload["messages"][-1]["content"]
+        content = "" if len(requests) == 1 else json.dumps(reply, ensure_ascii=False)
+        chunks = [{"choices": [{"delta": {"reasoning_content": "synthetic reasoning, not an answer"}}]},
+                  {"choices": [{"delta": {"content": content}, "finish_reason": "stop"}]}]
+        return httpx.Response(200, text="\n\n".join("data: " + json.dumps(c) for c in chunks) + "\n\ndata: [DONE]\n\n")
+
+    def client(**kw):
+        value = httpx.AsyncClient(transport=httpx.MockTransport(respond), **kw)
+        clients.append(value)
+        return value
+
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.create_chat_provider",
+                        lambda config, **kw: OpenAICompatibleChatProvider(config, client_factory=client, **kw))
+    answer = _find(window, "interviewAnswerEditor")
+    draft = "合成简历背景：负责偏好数据清洗、GRPO 消融和独立评测。"
+    answer.setProperty("text", draft)
+    submit = _find(window, "lockInterviewAnswer")
+    _click(window, submit)
+    deadline = time.monotonic() + 8
+    while controller.busy and time.monotonic() < deadline:
+        QTest.qWait(20)
+        time.sleep(0.005)
+    assert "仅返回思考" in controller.interview.get("ai_error", "")
+    assert controller.interview["answer_locked"] and answer.property("text") == draft
+    assert submit.isEnabled() and "重试" in submit.property("text")
+    assert not any(item.isVisible() and "完成测试，再返回" in str(item.property("text") or "")
+                   for item in _items(window.contentItem()))
+    assert not controller.service.interview_session(controller.profileId, controller.interview["interview_id"])["assessments"]
+    _capture(window, "deepseek-high-empty-retry")
+    for index in (2, 3):
+        reply.update(scores={d: 3 for d in controller.interview["question"]["rubric"]["dimensions"]},
+                     evidence="合成回答明确说明个人负责偏好数据清洗，并以独立验证集检查数据泄漏。", confidence="medium", fatal_issues=[],
+                     follow_up=f"第 {index} 问：你怎样验证按用户划分没有数据泄漏？", next_stage="experience",
+                     coding_problem_id="", next_skill_ids=[next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))])
+        if index == 3:
+            answer.setProperty("text", "合成补充：我对分组划分做了重复度检查，保留独立测试集。")
+        _click(window, submit)
+        deadline = time.monotonic() + 8
+        while controller.busy and time.monotonic() < deadline:
+            QTest.qWait(20)
+            time.sleep(0.005)
+        QTest.qWait(80)  # Let the production Qt.callLater editor reset reach the next frame.
+        assert controller.interview["question"]["question_id"] == f"q-{index:03d}", controller.interview.get("ai_error")
+        assert not controller.interview.get("ai_error") and answer.property("text") == ""
+        final = controller.service.interview_session(controller.profileId, controller.interview["interview_id"])
+        assert len(final["answers"]) == len(final["assessments"]) == index - 1
+    assert len(requests) == 3 and all(c.is_closed for c in clients)
+    assert requests[0]["messages"] == requests[1]["messages"], "Retry reuses the saved answer/context"
+    _capture(window, "deepseek-high-next-question")
+
+
+def test_provider_deadline_releases_retry_and_keeps_locked_answer(controller, monkeypatch):
+    import asyncio
+    import threading
+    from llm_interview_lab.ai.base import ChatEvent
+    assert controller.saveConnection("deadline-api", "ollama", "synthetic-model", "Synthetic", "http://127.0.0.1:11434", "", "high")
+    controller.finishInterview()
+    preview = controller.dynamicInterviewContextPreview("post_training_engineer", "intern", "hard", "", False)
+    controller.startDynamicPersonalizedInterview("post_training_engineer", "intern", "hard", "deadline-api", "", False, preview["context_sha256"])
+    closed = threading.Event()
+    class Provider:
+        async def stream_chat(self, messages):
+            try:
+                while True:
+                    yield ChatEvent("heartbeat")
+                    await asyncio.sleep(0.01)
+            finally:
+                closed.set()
+    monkeypatch.setattr("llm_interview_lab.desktop.controller.create_chat_provider", lambda *a, **kw: Provider())
+    monkeypatch.setattr(controller, "_PROVIDER_INTERVIEW_TIMEOUT_SECONDS", 0.05)
+    assert controller.submitInterviewAnswer("合成回答：我负责数据划分与独立验证。", "deadline-api", False)
+    deadline = time.monotonic() + 5
+    while controller.busy and time.monotonic() < deadline:
+        QTest.qWait(20)
+        time.sleep(0.005)
+    assert not controller.busy and closed.is_set()
+    assert not controller._interview_provider_operation_id
+    assert "等待超时" in controller.interview.get("ai_error", "")
+    assert controller.interview["answer_locked"] and controller.interview["question"]["question_id"] == "q-001"
+    assert not controller.service.interview_session(controller.profileId, controller.interview["interview_id"])["assessments"]
+
+
 @pytest.mark.parametrize("mode", ["codex", "provider"])
 def test_dynamic_followups_advance_once_without_duplicate_scoring(controller, monkeypatch, mode):
     errors = []
