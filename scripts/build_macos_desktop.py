@@ -22,8 +22,9 @@ from check_desktop_workers import check_workers
 APP_NAME = "LLMInterviewLab"
 VERSION = __version__
 RELEASE = release_metadata()
-# The candidate uses Qt 6.11 wheels tagged macosx_13_0 (also Qt's support floor).
-MINIMUM_MACOS = "13.0"
+# CI selects NumPy/SciPy macosx_14_0 Accelerate wheels; Qt itself requires 13.
+# Declare the complete bundled runtime's floor, not only the UI library's.
+MINIMUM_MACOS = "14.0"
 
 
 def run(*arguments: str | Path, **kwargs) -> subprocess.CompletedProcess[str]:

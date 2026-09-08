@@ -32,15 +32,15 @@ def test_source_tag_notes_and_bundle_versions_are_consistent():
         assert f"      - {job}" in publish
 
 
-def test_macos_candidate_minimum_matches_actual_qt_wheel():
-    # CI installs pyside6-6.11.2-...-macosx_13_0_universal2.whl. Do not
-    # advertise macOS 12 while distributing a runtime which requires 13.
+def test_macos_candidate_minimum_matches_actual_runtime_wheels():
+    # Qt's wheel requires 13, but the installed NumPy/SciPy Accelerate wheels
+    # require 14. The declaration must cover the complete bundled runtime.
     build = (ROOT / "scripts/build_macos_desktop.py").read_text("utf-8")
     checker = (ROOT / "scripts/check_macos_artifact.py").read_text("utf-8")
     spec = (ROOT / "scripts/pysidedeploy-macos.spec").read_text("utf-8")
-    assert 'MINIMUM_MACOS = "13.0"' in build
-    assert '"LSMinimumSystemVersion": "13.0"' in checker
-    assert "--macos-app-macos-min-version=13.0" in spec
+    assert 'MINIMUM_MACOS = "14.0"' in build
+    assert '"LSMinimumSystemVersion": "14.0"' in checker
+    assert "--macos-app-macos-min-version=14.0" in spec
 
 
 def test_release_assembly_verifies_producer_hashes_and_duplicates(tmp_path):

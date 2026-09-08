@@ -24,7 +24,7 @@
 
 ## 安装与更新
 
-Windows 下载 `LLMInterviewLab-Windows-x64-portable.zip`，解压到新目录；退出旧应用后启动新版 `LLMInterviewLab.exe`。macOS Apple Silicon 使用 `LLMInterviewLab-macOS-arm64.dmg`；候选版实际 Qt 6.11 依赖要求 macOS 13+，不沿用旧版的 12+ 声明。退出旧应用后再替换应用，不删除应用数据目录。无自动安装或静默替换。
+Windows 下载 `LLMInterviewLab-Windows-x64-portable.zip`，解压到新目录；退出旧应用后启动新版 `LLMInterviewLab.exe`。macOS Apple Silicon 使用 `LLMInterviewLab-macOS-arm64.dmg`；候选版完整 Qt / NumPy / SciPy 运行时要求 macOS 14+，不沿用旧版的 12+ 声明。退出旧应用后再替换应用，不删除应用数据目录。无自动安装或静默替换。
 
 保存原数据目录和旧包即可回退应用。新版启动只同步公共课程和规则，不覆盖 Profile、events、回答草稿、材料、连接引用或语音模型。SHA-256 只证明与发布清单一致，不是代码签名或安全审计。
 

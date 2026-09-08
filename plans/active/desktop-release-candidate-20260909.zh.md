@@ -137,6 +137,12 @@ git diff --check
 - 仅修改 macOS 打包声明、对应 Artifact 断言、一个一致性目标及安装文档；直接目标 5 passed / 0.42 秒。没有修改应用逻辑、UI、Windows spec、公共课程或用户数据，因此最终 Windows 本地包、图片及性能仍对应同一应用源码，不需重建本地 Windows。
 - macOS 必须使用修正后的构建来源获得 CI/Artifact；运行时声明为 12 的旧候选即使编译成功，也不作为最终 macOS 交付。
 
+#### 2026-09-09 07:00 HKT 完整依赖平台复核
+
+- 补查 CI 中全部实际 wheel 标签，而不是仅 Qt：NumPy 2.4.6 和 SciPy 1.17.1 均安装 `macosx_14_0_arm64` 的 Accelerate wheel，其他所选依赖没有高于 14 的标签。因此完整包最低系统修正为 **14.0**；前一条仅 Qt 的 13.0 是中间核对结果，不是最终兼容结论。没有声称下调编译参数能让高版本依赖在旧系统运行。
+- 原因与 [NumPy 官方说明](https://numpy.org/doc/2.0/release/2.0.0-notes.html#macos-accelerate-support-including-the-ilp64) 一致：14+ 的 pip 会选择 Accelerate wheel。采用实际已安装的运行库，不在收尾降级或重建依赖。Nuitka、plist、Artifact 契约及中英安装说明同步为 14，直接目标再次 5 passed / 0.37 秒。
+- d7791ee 的 macOS 全量测试已经通过并进入编译，证明设置布局等待修正有效；但它的旧最低版本声明不作为最终交付。最终 macOS 包仍必须来自 14.0 声明的新候选来源，Windows 本地包和应用源码保持不变。
+
 #### 2026-09-09 06:04 HKT 续接
 
 - macOS 修复后全量为 939 passed / 3 failed / 8 skipped：两项 GridView 缓存 delegate 的异步生成未等待，一项已禁用的缺依赖关联题仍可通过直接 Controller 入口创建任务。未把失败改成跳过。

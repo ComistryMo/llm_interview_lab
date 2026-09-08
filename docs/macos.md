@@ -4,16 +4,16 @@
 
 Alpha.3 构建在固定 GitHub Apple Silicon Runner 上生成、检查架构并执行离屏启动验证。
 
-当前 Alpha.4 候选尚未发布。实际构建使用 PySide6 6.11.2 的 `macosx_13_0` wheel，最低系统为 **macOS 13**，不是旧版的 macOS 12。平台验收与候选包见[本轮报告](desktop-candidate-20260909-report.zh.md)。
+当前 Alpha.4 候选尚未发布。实际构建使用 PySide6 6.11.2 的 `macosx_13_0` wheel，以及 NumPy 2.4.6 / SciPy 1.17.1 的 `macosx_14_0` Accelerate wheel；完整包最低系统为 **macOS 14**，不能只按 Qt 的要求写 13，更不是旧版的 12。平台验收与候选包见[本轮报告](desktop-candidate-20260909-report.zh.md)。
 
 ## 系统要求
 
 - Apple Silicon（M1、M2、M3、M4 或更新）；
-- 当前候选需要 macOS 13 或更新；旧 Alpha.3 的要求为 macOS 12；
+- 当前候选需要 macOS 14 或更新；旧 Alpha.3 的要求为 macOS 12；
 - 不要求 Python；
 - AI 连接可选，无网络也能使用本地课程；候选版个性化模拟面试需要 AI，No-AI 下显示连接说明，不创建假面试。
 
-候选构建参数和 `LSMinimumSystemVersion=13.0` 与实际 wheel 及 [Qt 6.11 官方支持范围](https://doc.qt.io/qt-6/supported-platforms.html#macos) 一致。旧 Alpha.3 元数据不回写；项目不宣称已实测全部 macOS 版本。
+候选构建参数和 `LSMinimumSystemVersion=14.0` 与 CI 实际安装的最高 wheel 平台要求一致。[Qt 6.11](https://doc.qt.io/qt-6/supported-platforms.html#macos) 自身要求 13，[NumPy 的 Accelerate wheel](https://numpy.org/doc/2.0/release/2.0.0-notes.html#macos-accelerate-support-including-the-ilp64) 则区分 14+。旧 Alpha.3 元数据不回写；项目不宣称已实测全部 macOS 版本。
 
 ## 下载哪个文件
 
@@ -103,7 +103,7 @@ Codex 使用官方 App Server，不解析交互式终端输出。
 ## 常见问题
 
 - **“无法验证开发者”：** 本版未公证。先核对 SHA-256，再从隐私与安全页面确认；不要用来路不明的绕过命令。
-- **App 无法打开：** 确认是 Apple Silicon；当前候选需要 macOS 13+，旧 Alpha.3 为 macOS 12+。查看对应版本的已知限制。
+- **App 无法打开：** 确认是 Apple Silicon；当前候选需要 macOS 14+，旧 Alpha.3 为 macOS 12+。查看对应版本的已知限制。
 - **Codex 未检测到：** 在设置选择可执行文件。
 - **Ollama 连接失败：** 先启动 Ollama，再测试本地地址。
 - **Keychain 拒绝访问：** 不会保存明文 Key；先用 No-AI。

@@ -37,7 +37,7 @@ The isolated `candidate/desktop-release-20260909` branch uses source version `0.
 
 All 96 ready problem assets are included. The Windows candidate without PyTorch has 27 runtime-eligible validated coding problems, not the development environment's 84. Planned nodes and missing dependencies are not counted as runnable practice. See the [coverage definitions](docs/content/release-candidate-coverage-20260909.zh.md) and [same-host performance measurements](docs/performance/desktop-candidate-20260909.zh.md).
 
-The Alpha.4 macOS candidate uses Qt 6.11 and requires Apple Silicon / macOS 13+, unlike the published Alpha.3 requirement below. Platform validation is tracked separately in the candidate report.
+The Alpha.4 macOS candidate's complete Qt / NumPy / SciPy runtime requires Apple Silicon / macOS 14+, unlike the published Alpha.3 requirement below. Platform validation is tracked separately in the candidate report.
 
 | User | Artifact |
 |---|---|
