@@ -177,19 +177,19 @@ Item {
             SplitView.preferredWidth: root.wideLayout ? 330 : 300
             SplitView.minimumWidth: 248
             color: root.colors.surface
-            border.color: root.colors.border
+            border.color: "transparent"
             ScrollView {
                 id: detailsScroll
                 anchors.fill: parent; anchors.margins: 20; clip: true
                 Column {
                     id: detailsColumn
                     width: detailsScroll.availableWidth; spacing: 12
-                    Text { width: parent.width; text: root.hasTask ? app.currentTask.problem_id : "尚未选择题目"; color: root.hasTask ? root.colors.accent : root.colors.muted; font.bold: true; font.pixelSize: 12 }
-                    Text { width: parent.width; text: root.displayTitle(); color: root.colors.text; font.pixelSize: 21; font.bold: true; wrapMode: Text.Wrap }
+                    LabText { theme: root.theme; width: parent.width; text: root.hasTask ? app.currentTask.problem_id : "尚未选择题目"; color: root.hasTask ? root.colors.accent : root.colors.muted; font.bold: true; font.pixelSize: root.theme.scaledPx(12) }
+                    LabText { theme: root.theme; width: parent.width; text: root.displayTitle(); color: root.colors.text; font.pixelSize: root.theme.scaledPx(24); font.bold: true; wrapMode: Text.Wrap }
                     StatusPill { text: root.hasTask ? (app.currentTask.validation || "尚未开始") : "未选择"; tone: root.hasTask ? root.colors.success : root.colors.muted }
                     Rectangle { width: parent.width; height: 1; color: root.colors.border }
-                    Text { objectName: "practiceQuestionPrompt"; width: parent.width; text: app.renderMarkdown(root.displayTask(), root.theme.fontSection, root.theme.monospaceFontFamily); color: root.colors.text; font.pixelSize: root.theme.fontBodyLarge; wrapMode: Text.Wrap; textFormat: Text.RichText; lineHeight: 1.25 }
-                    Button {
+                    LabText { theme: root.theme; objectName: "practiceQuestionPrompt"; width: parent.width; text: app.renderMarkdown(root.displayTask(), root.theme.fontBodyLarge, root.theme.monospaceFontFamily); color: root.colors.text; font.pixelSize: root.theme.fontBodyLarge; wrapMode: Text.Wrap; textFormat: Text.RichText; lineHeight: 1.6 }
+                    LabButton { theme: root.theme;
                         visible: app.language !== "en" && root.hasTask && !!app.currentTask.task && !root.sourceTaskChinese
                         text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
                         flat: true
@@ -197,7 +197,7 @@ Item {
                         Layout.alignment: Qt.AlignLeft
                         onClicked: root.showOriginalContract = !root.showOriginalContract
                     }
-                    Text {
+                    LabText { theme: root.theme;
                         visible: root.showOriginalContract
                         width: parent.width
                         text: app.renderMarkdown(app.currentTask.task || "", root.theme.fontSection, root.theme.monospaceFontFamily)
@@ -207,13 +207,13 @@ Item {
                         lineHeight: 1.2
                     }
                     Rectangle { width: parent.width; height: 1; color: root.colors.border }
-                    Text { text: "掌握流程"; color: root.colors.text; font.bold: true }
-                    Text {
+                    LabText { theme: root.theme; text: "掌握流程"; color: root.colors.text; font.bold: true }
+                    LabText { theme: root.theme;
                         width: detailsColumn.width
                         text: root.actionExplanation()
                         color: root.primaryActionKind() === "blocked" ? root.colors.warning : root.colors.muted
                         wrapMode: Text.Wrap
-                        font.pixelSize: 12
+                        font.pixelSize: root.theme.scaledPx(12)
                     }
                 }
             }
@@ -228,27 +228,27 @@ Item {
                 Rectangle {
                     objectName: "exerciseToolbar"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 42
-                    radius: 10
-                    color: root.colors.surfaceAlt
-                    border.color: root.colors.border
+                    Layout.preferredHeight: root.theme.controlHeight + 8
+                    radius: 0
+                    color: "transparent"
+                    border.color: "transparent"
                     RowLayout {
                         anchors.fill: parent
                         anchors.leftMargin: 8
                         anchors.rightMargin: 8
                         spacing: 2
-                        Text { text: "submission.py"; color: root.colors.text; font.bold: true; Layout.leftMargin: 4 }
+                        LabText { theme: root.theme; text: "submission.py"; color: root.colors.text; font.bold: true; Layout.leftMargin: 4 }
                         Item { Layout.fillWidth: true }
                         // Reference panes remain available on compact layouts;
                         // wide screens keep the editor deliberately quiet.
-                        Button {
+                        LabButton { theme: root.theme;
                             visible: !root.wideLayout
                             text: "题面"
                             flat: true
                             palette.buttonText: root.colors.text
                             onClicked: detailsDrawer.open()
                         }
-                        Button { text: "保存"; flat: true; palette.buttonText: root.colors.text; enabled: root.hasTask && !app.busy; onClicked: app.saveSubmission(editor.text) }
+                        LabButton { theme: root.theme; text: "保存"; flat: true; palette.buttonText: root.colors.text; enabled: root.hasTask && !app.busy; onClicked: app.saveSubmission(editor.text) }
                         LabButton { objectName: "runPracticeScript"; theme: root.theme; text: "运行代码"; variant: "secondary"; enabled: root.hasTask && !app.busy; onClicked: app.runPracticeScript(editor.text, "") }
                     }
                 }
@@ -264,7 +264,7 @@ Item {
                         anchors.leftMargin: 12
                         anchors.rightMargin: 12
                         spacing: 10
-                        Text {
+                        LabText { theme: root.theme;
                             objectName: "exerciseContextLabel"
                             text: (app.currentTask.problem_id || "当前题目")
                                   + " · " + root.displayTitle()
@@ -288,9 +288,8 @@ Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     color: root.colors.surface
-                    radius: 9
-                    border.color: editor.activeFocus ? root.colors.accent : root.colors.border
-                    border.width: editor.activeFocus ? 2 : 1
+                    radius: root.theme.radiusMedium
+                    border.color: "transparent"
                     clip: true
 
                     ColumnLayout {
@@ -299,18 +298,18 @@ Item {
                         Rectangle {
                             objectName: "exerciseEditorHeader"
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 30
-                            color: root.colors.surfaceAlt
-                            border.color: root.colors.border
+                            Layout.preferredHeight: Math.max(32, root.theme.fontCaption + 16)
+                            color: "transparent"
+                            border.color: "transparent"
                             RowLayout {
                                 anchors.fill: parent
                                 anchors.leftMargin: 14
                                 anchors.rightMargin: 12
                                 spacing: 10
-                                Text { text: "Python"; color: root.colors.accent; font.bold: true; font.pixelSize: 11 }
-                                Text { text: "本地作答"; color: root.colors.muted; font.pixelSize: 11 }
+                                LabText { theme: root.theme; text: "Python"; color: root.colors.accent; font.bold: true; font.pixelSize: root.theme.scaledPx(12) }
+                                LabText { theme: root.theme; text: "本地作答"; color: root.colors.muted; font.pixelSize: root.theme.scaledPx(12) }
                                 Item { Layout.fillWidth: true }
-                                Text { text: app.submissionDirty ? "本地草稿 · 尚未保存" : "本地草稿 · 已保存"; color: app.submissionDirty ? root.colors.warning : root.colors.muted; font.pixelSize: 11 }
+                                LabText { theme: root.theme; text: app.submissionDirty ? "本地草稿 · 尚未保存" : "本地草稿 · 已保存"; color: app.submissionDirty ? root.colors.warning : root.colors.muted; font.pixelSize: root.theme.scaledPx(12) }
                             }
                         }
                         LabCodeEditor {
@@ -323,21 +322,13 @@ Item {
                             color: root.colors.text
                             selectionColor: root.colors.accent
                             font.family: root.codeFontFamily
-                            font.pixelSize: 14
+                            font.pixelSize: root.theme.scaledPx(14)
                             wrapMode: TextEdit.NoWrap
                             tabStopDistance: 32
                             clip: true
                             Accessible.name: "Submission editor"
                             onTextChanged: if (!root.syncingEditor) app.updateSubmissionDraft(text)
                         }
-                    }
-                    // A quiet rail makes the editor boundary legible without
-                    // pretending to render a second, non-interactive editor.
-                    Rectangle {
-                        x: 0; y: 30; width: 3
-                        height: Math.max(0, parent.height - 30)
-                        color: root.colors.accent
-                        opacity: 0.72
                     }
                     Rectangle {
                         objectName: "exerciseNoTaskState"
@@ -350,22 +341,22 @@ Item {
                             anchors.centerIn: parent
                             width: Math.min(parent.width - 48, 360)
                             spacing: 10
-                            Text {
+                            LabText { theme: root.theme;
                                 Layout.fillWidth: true
                                 text: "还没有打开题目"
                                 color: root.colors.text
-                                font.pixelSize: 18
+                                font.pixelSize: root.theme.scaledPx(18)
                                 font.bold: true
                                 horizontalAlignment: Text.AlignHCenter
                             }
-                            Text {
+                            LabText { theme: root.theme;
                                 Layout.fillWidth: true
                                 text: "先从刷题训练选择一道可运行题目，编辑器和公开测试会自动绑定到当前作答。"
                                 color: root.colors.muted
                                 wrapMode: Text.Wrap
                                 horizontalAlignment: Text.AlignHCenter
                             }
-                            Button {
+                            LabButton { theme: root.theme;
                                 objectName: "exerciseChooseProblem"
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.preferredHeight: 40
@@ -379,14 +370,14 @@ Item {
                 }
                 RowLayout {
                     Layout.fillWidth: true
-                    Text {
+                    LabText { theme: root.theme;
                         visible: app.testedRevision.length > 0
                         text: "测试版本：" + app.testedRevision.slice(0, 12)
                         color: root.colors.muted
-                        font.pixelSize: 11
+                        font.pixelSize: root.theme.scaledPx(12)
                     }
                     Item { Layout.fillWidth: true }
-                    Text { visible: app.submissionDirty; text: "未保存"; color: root.colors.warning; font.pixelSize: 11 }
+                    LabText { theme: root.theme; visible: app.submissionDirty; text: "未保存"; color: root.colors.warning; font.pixelSize: root.theme.scaledPx(12) }
                 }
                 Rectangle {
                     objectName: "exerciseTestOutput"
@@ -407,22 +398,22 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 12
                         spacing: 6
-                        Text {
+                        LabText { theme: root.theme;
                             text: "公开测试输出"
                             color: root.colors.muted
                             font.bold: true
-                            font.pixelSize: 11
+                            font.pixelSize: root.theme.scaledPx(12)
                         }
                         ScrollView {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             clip: true
-                            Text {
+                            LabText { theme: root.theme;
                                 width: parent.width
                                 text: app.testOutput || "运行公开测试后，结果会显示在这里。"
                                 color: root.colors.text
                                 font.family: root.codeFontFamily
-                                font.pixelSize: 12
+                                font.pixelSize: root.theme.scaledPx(12)
                                 wrapMode: Text.Wrap
                             }
                         }
@@ -444,23 +435,23 @@ Item {
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 2
-                            Text {
+                            LabText { theme: root.theme;
                                 text: root.primaryActionKind() === "blocked" ? "下一阶段暂不可用" : "下一步"
                                 color: root.primaryActionKind() === "blocked" ? root.colors.warning : root.colors.accent
-                                font.pixelSize: 11
+                                font.pixelSize: root.theme.scaledPx(12)
                                 font.bold: true
                             }
-                            Text {
+                            LabText { theme: root.theme;
                                 Layout.fillWidth: true
                                 text: root.actionExplanation()
                                 color: root.colors.text
-                                font.pixelSize: 12
+                                font.pixelSize: root.theme.scaledPx(12)
                                 wrapMode: Text.Wrap
                                 maximumLineCount: 2
                                 elide: Text.ElideRight
                             }
                         }
-                        Button {
+                        LabButton { theme: root.theme;
                             id: practicePrimaryButton
                             objectName: "practicePrimaryAction"
                             visible: root.primaryActionKind() !== "blocked"
@@ -473,7 +464,7 @@ Item {
                                 radius: 8
                                 color: practicePrimaryButton.enabled ? root.colors.accent : root.colors.border
                             }
-                            contentItem: Text {
+                            contentItem: LabText { theme: root.theme;
                                 text: practicePrimaryButton.text
                                 color: practicePrimaryButton.enabled ? "white" : root.colors.muted
                                 font.bold: true
@@ -482,7 +473,7 @@ Item {
                             }
                             onClicked: root.runPrimaryAction()
                         }
-                        Button {
+                        LabButton { theme: root.theme;
                             objectName: "practiceBlockedNextAction"
                             visible: root.primaryActionKind() === "blocked"
                             text: "返回可做题目"
@@ -494,7 +485,7 @@ Item {
                         }
                     }
                 }
-                Text { text: "实现、审查与间隔复测会分别留证；一次测试通过不会直接授予已掌握。"; color: root.colors.muted; font.pixelSize: 12; wrapMode: Text.Wrap }
+                LabText { theme: root.theme; text: "实现、审查与间隔复测会分别留证；一次测试通过不会直接授予已掌握。"; color: root.colors.muted; font.pixelSize: root.theme.scaledPx(12); wrapMode: Text.Wrap }
             }
         }
 
@@ -514,22 +505,22 @@ Item {
                 x: 20
                 width: parent.width - 40
                 spacing: 12
-                Text { text: root.displayTitle(); color: root.colors.text; font.pixelSize: 20; font.bold: true; wrapMode: Text.Wrap; width: parent.width }
-                Text { text: app.renderMarkdown(root.displayTask(), root.theme.fontSection, root.theme.monospaceFontFamily); color: root.colors.text; font.pixelSize: root.theme.fontBodyLarge; wrapMode: Text.Wrap; textFormat: Text.RichText; width: parent.width }
-                Button {
+                LabText { theme: root.theme; text: root.displayTitle(); color: root.colors.text; font.pixelSize: root.theme.scaledPx(24); font.bold: true; wrapMode: Text.Wrap; width: parent.width }
+                LabText { theme: root.theme; text: app.renderMarkdown(root.displayTask(), root.theme.fontSection, root.theme.monospaceFontFamily); color: root.colors.text; font.pixelSize: root.theme.fontBodyLarge; wrapMode: Text.Wrap; textFormat: Text.RichText; width: parent.width }
+                LabButton { theme: root.theme;
                     visible: app.language !== "en" && root.hasTask && !!app.currentTask.task && !root.sourceTaskChinese
                     text: root.showOriginalContract ? "隐藏英文题目" : "查看英文题目"
                     flat: true
                     palette.buttonText: root.colors.text
                     onClicked: root.showOriginalContract = !root.showOriginalContract
                 }
-                Text { visible: root.showOriginalContract; text: app.renderMarkdown(app.currentTask.task || "", root.theme.fontSection, root.theme.monospaceFontFamily); color: root.colors.muted; wrapMode: Text.Wrap; textFormat: Text.RichText; width: parent.width }
+                LabText { theme: root.theme; visible: root.showOriginalContract; text: app.renderMarkdown(app.currentTask.task || "", root.theme.fontSection, root.theme.monospaceFontFamily); color: root.colors.muted; wrapMode: Text.Wrap; textFormat: Text.RichText; width: parent.width }
             }
         }
     }
 
 
-    Dialog {
+    LabStandardDialog { theme: root.theme;
         id: reviewDialog
         title: "自助复盘（非正式评审）"
         modal: true
@@ -545,13 +536,13 @@ Item {
         )
         ColumnLayout {
             width: parent.width; spacing: 10
-                Text { text: "这里记录你的自我复盘（source=self），用于准备后续正式审查；不会代替导师或 AI 评审，也不会直接授予“已掌握”。"; color: root.colors.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                LabText { theme: root.theme; text: "这里记录你的自我复盘（source=self），用于准备后续正式审查；不会代替导师或 AI 评审，也不会直接授予“已掌握”。"; color: root.colors.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
                 LabTextArea { id: explanation; theme: root.theme; Layout.fillWidth: true; Layout.preferredHeight: 80; placeholderText: "解释实现思路与不变式" }
                 LabTextField { id: complexity; theme: root.theme; Layout.fillWidth: true; placeholderText: "时间与空间复杂度" }
                 LabTextArea { id: boundaries; theme: root.theme; Layout.fillWidth: true; Layout.preferredHeight: 70; placeholderText: "边界情况、异常和输入不变性" }
             RowLayout {
-                    CheckBox { id: contractPassed; text: "我已完成契约自检" }
-                    CheckBox { id: oralPassed; text: "我已完成口述自答" }
+                    LabCheckBox { theme: root.theme; id: contractPassed; text: "我已完成契约自检" }
+                    LabCheckBox { theme: root.theme; id: oralPassed; text: "我已完成口述自答" }
             }
         }
     }

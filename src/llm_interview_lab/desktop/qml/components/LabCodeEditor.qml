@@ -29,7 +29,8 @@ FocusScope {
         anchors.fill: parent
         color: control.theme ? control.theme.surface : "#ffffff"
         border.color: input.activeFocus && control.theme ? control.theme.focusRing : control.theme ? control.theme.borderSubtle : "#d0d0d0"
-        radius: 6
+        border.width: input.activeFocus ? 2 : 1
+        radius: control.theme ? control.theme.radiusMedium : 8
     }
     Rectangle {
         id: gutter

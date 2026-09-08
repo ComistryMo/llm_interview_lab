@@ -33,7 +33,13 @@ def test_dictation_status_stays_beside_composer(scene, monkeypatch, size, theme,
     window.setProperty("displayFontScaleOverride", scale)
     _dictation_model_ready(controller, monkeypatch)
     _stub_dictation_capture(controller, monkeypatch)
-    monkeypatch.setattr(controller._local_stt, "transcribe", lambda _: "合成语音：我负责独立评估。")
+    def stream(blocks, update, cancel):
+        # The production path is streaming; don't accidentally load the real
+        # decoder through an obsolete batch-transcribe mock in a UI test.
+        for _ in blocks:
+            pass
+        return "合成语音：我负责独立评估。"
+    monkeypatch.setattr(controller._local_stt, "stream", stream)
     QTest.qWait(100)
     editor = _find(window, "interviewAnswerEditor")
     editor.setProperty("text", "保留我写的回答。")

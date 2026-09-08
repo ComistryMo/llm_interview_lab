@@ -2222,7 +2222,13 @@ def test_conversation_long_answer_scrolls_without_moving_submit(scene, theme):
     cursor_bottom = answer.mapToItem(viewport, cursor.bottomRight()).y()
     assert 0 < cursor_bottom <= viewport.height() + 1, "Typing cursor must follow the independently scrolling answer"
     assert flickable.property("contentY") > 0
-    assert viewport.height() <= 180
+    # The approved UI grows the answer to at most 40% of the page viewport,
+    # rather than the previous fixed 180px cap. The remaining assertions still
+    # verify caret tracking, stable submit position and preserved draft text.
+    page = _find(window, "interviewPhaseGuidance").parentItem()
+    while page.parentItem() and not page.metaObject().className().startswith("InterviewPage_QML"):
+        page = page.parentItem()
+    assert viewport.height() <= page.height() * 0.4 + 1
     button = _find(window, "lockInterviewAnswer")
     button_y = button.mapToScene(QPointF()).y()
     assert _within_window(window, button)
