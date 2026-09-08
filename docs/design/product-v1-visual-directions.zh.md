@@ -1,5 +1,11 @@
 # Product V1 编程工作台视觉方向
 
+## 2026-09-09 候选版人工反馈修订（进行中）
+
+已在正式页面调整：顶栏提供可记忆的侧栏收起按钮，移除左下档案装饰（设置保留档案切换）；面试整体宽度随大窗口增长至 1200，短问题和回答区自然相接，长历史仍独立滚动。Practice 题面分栏按可用宽度扩大，默认呈现完整中文要求，不再把列表摘要当题面。颜色与现有 Graphite Blue 组件不变。
+
+定向验证使用真实 Controller/QML、隔离 synthetic 档案与连接替身；未使用真实简历或 AI。8 项反馈检查已通过；最新 Windows 原生截图还在候选证据整理中，不用这些结果冒称候选包或 macOS 实机验收通过。完整候选进度见[ExecPlan](../../plans/active/desktop-release-candidate-20260909.zh.md)。下面的 2026-09-08 和 Phase 0 内容保留为历史事实。
+
 > 决策状态：`VISUAL_DIRECTION_SELECTED_GRAPHITE_BLUE`。Graphite Blue 已冻结为生产主方向；本文件中的六张图仍是 Phase 0 合成原型和历史设计证据，不是正式业务页面。
 
 > Phase 0 原型评审稿。六张图使用同一份合成中文题面、代码和测试用例，生成于 `scripts/capture_product_v1_visual_directions.py`。原型只验证信息层级与视觉气质，不代表已实现的编辑器、Grader 或面试状态。

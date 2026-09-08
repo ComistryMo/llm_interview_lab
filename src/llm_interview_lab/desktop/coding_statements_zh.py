@@ -239,9 +239,57 @@ CONTRACTS = {
 }
 
 
+# These are translations of the source Acceptance / Oral defense sections,
+# not a generic substitute for their problem-specific requirements.
+ACCEPTANCE = {
+    "FND": "覆盖正常、边界、异常、确定性与输入不变性。使用虚构数据，不使用公司数据或复制外部作业。",
+    "TNS": "覆盖 shape、dtype、device、数值、梯度、非法输入及适用的输入不变性。",
+    "LOSS": "与框架参考实现对比数值和梯度，并覆盖极端值、reduction、非法输入及输入不变性。",
+    "NNL": "检查注册参数、形状、初始化、数值、dtype、device、梯度、非法输入和参考实现一致性。",
+    "OPT": "覆盖闭式更新、缺失梯度、状态隔离、参数校验与 no-grad 更新语义。",
+    "ATT": "覆盖形状、参考数值、mask、dtype、device、梯度或推理 detach、非法输入及输入不变性。",
+    "PT": "覆盖形状、mask、数值稳定、梯度、退化组、非法数据及输入不变性。",
+    "AGT": "覆盖有效流程、非法 action / 数据、确定顺序、状态隔离、终止和输入不变性。",
+    "CAP-FND-001": "仅当 FND-001～FND-006 均已掌握后解锁；验证完整的数据流水线。",
+    "PT-016": "覆盖过滤后的统计量、无效离群值与哨兵、单元素与零方差组、全无效处理、dtype / device、梯度 detach、形状与取值校验及输入不变性。",
+    "VLM-007": "覆盖参考数值、因果错位、图像 / 提示词 / Padding 优先级、逐行空目标、dtype / device / shape、梯度、输入不变性和非法输入。",
+    "INF-003": "覆盖 FIFO 准入、prefill 与 KV 预算、轮询公平性、自动完成、手动 finish / cancel、到期、零预算、快照、输入校验及终态容量释放。",
+}
+
+ORAL_DEFENSE = {
+    "FND": "解释运行时输入要求、一个会拒绝的边界例子、时间和额外空间复杂度，以及为何不会修改输入。",
+    "TNS": "说明每个输入 / 输出的形状，解释轴或视图操作、梯度流向，并给出时间和额外空间复杂度。",
+    "LOSS": "推导稳定公式，说明 reduction 和输出形状，解释反向传播信号，并给出时间 / 空间复杂度。",
+    "NNL": "解释参数形状和初始化，推导前向公式，指出梯度流向，并说明时间 / 空间复杂度。",
+    "OPT": "写出更新公式，指出持久状态张量，解释 step 时机和偏置修正，区分耦合 L2 与解耦权重衰减。",
+    "ATT": "画出每一步形状变化，解释缩放和 mask 位置，按题意比较 MHA / MQA / GQA 的 KV 头，并说明 prefill / decode 的时间和显存成本。",
+    "PT": "从 token 或 reward 追踪到目标函数，推导公式，解释 mask / reduction，并指出奖励投机或零方差的失效情形。",
+    "AGT": "解释 schema 校验、状态转移、非法 action、终止、确定性回放，以及生产隔离中哪些能力不在本题范围内。",
+    "PT-016": """- 为什么把无效 completion 纳入统计，会同时改变所有有效优势的基线和尺度？
+- 推导总体方差；在小组中，它与无偏样本标准差有何差异？
+- 如何处理全部被 verifier 拒绝的一组？为什么不能悄悄把它视为零奖励？
+- 为什么 reward 和 advantage 要从策略计算图 detach？
+- 如何允许无效位置含 NaN 哨兵，但不让它污染归约？""",
+    "VLM-007": """- 画出 `(B,L,V) → (B,L-1,V)` 与 `(B,L) → (B,L-1)` 的错位。
+- 为什么视觉嵌入和提示词是上下文而非 SFT 目标？为什么 image mask 优先于 assistant mask？
+- 不同图像数量与 Padding 如何经过 collator，而不把标签泄漏到其他样本？
+- 一行目标全被忽略会怎样？生产 collator 应如何过滤或报告？
+- 哪些张量需要梯度？样本 token 数不同时，loss reduction 有何区别？""",
+    "INF-003": """- 画出 queued、active、completed、cancelled、expired 状态机。
+- 为什么 prefill 受 prompt token 限制，而 decode 每次增加一个 KV token？预留最大输出为何可能浪费容量？
+- decode 预算小于批大小时，持久轮询游标如何避免长请求使后来者饥饿？
+- 队首阻塞与跳过大请求有何权衡？不同延迟目标可能选择什么策略？
+- 真实服务还需怎样处理取消竞争、租户公平性、GPU kernel 打包、prefix cache 归属和墙钟截止时间？""",
+}
+
+
 def chinese_statement(problem_id: str, original: str) -> str:
     """Local display only; do not change a frozen Session or translate via AI."""
     original = original.replace("\r\n", "\n")
+    # Chinese-authored revisions are already complete. In particular AdamW
+    # gained checkpoint requirements; never replace them with its old glossary.
+    if problem_id != "PT-005" and re.search(r"^## (?:目标|任务|题目要求)\s*$", original, re.M):
+        return re.sub(r"^# [^\n]+\n+", "", original)
     if problem_id in SOURCE_SHA256 and hashlib.sha256(original.encode("utf-8")).hexdigest() != SOURCE_SHA256[problem_id]:
         return "这份历史题目的中文版本尚未同步。请点击“查看英文题目”阅读该场冻结的原题；现有作答不会改变。"
     contract = CONTRACTS.get(problem_id)
@@ -251,10 +299,24 @@ def chinese_statement(problem_id: str, original: str) -> str:
         if problem_id == "PT-005":
             body = "这是一道合成数据校验题；接口、示例与测试由本课程编写，所引论文仅提供概念背景。\n\n" + body[body.index("## 目标"):]
         return body
+    goal, _, requirements = contract.partition("\n")
     interfaces = re.findall(r"```python\n.*?```", original, re.DOTALL)
-    return ("## 题目要求\n\n" + contract + "\n\n## 接口\n\n" + "\n\n".join(interfaces)
-            + "\n\n## 验收与口述\n\n使用本页的公开测试验证当前代码；说明接口、边界、输入是否变化及时间 / 空间复杂度。"
-              "张量题还需解释 Shape、dtype、device、数值与梯度行为。公开测试通过不等于已掌握。")
+    commands = re.findall(r"```(?:bash|sh)\n.*?```", original, re.DOTALL)
+    family = problem_id.split("-")[0]
+    acceptance = ACCEPTANCE.get(problem_id, ACCEPTANCE.get(family, "验证接口、边界、数值和输入不变性。"))
+    oral = ORAL_DEFENSE.get(problem_id, ORAL_DEFENSE.get(family, "解释各阶段接口、边界与时间 / 空间复杂度。"))
+    body = (goal + "\n\n## 接口\n\n" + "\n\n".join(interfaces)
+            + "\n\n## 题目要求\n\n" + requirements)
+    if problem_id == "FND-001":
+        body += ("\n\n## 示例\n\n"
+                 "- `label=1, predictions=[1, 0, 1, 2]`：返回 `2`。\n"
+                 "- `label=3, predictions=[3]`：返回 `0`。\n"
+                 "- 空列表 `[]`、`label=True` 或预测含 `False`：抛出 `ValueError`，不能当作零错误。")
+    body += ("\n\n## 验收\n\n使用本页的“运行公开测试”，或运行 "
+             f"`llm-lab test {problem_id} --profile <id>`。" + acceptance)
+    if commands:
+        body += "\n\n### 命令示例\n\n以下沿用英文题面的 `default` 示例；实际操作请使用自己的档案 ID。\n\n" + "\n\n".join(commands)
+    return body + "\n\n## 口述与复盘\n\n" + oral + "\n\n公开测试通过只记录实现证据，不代表口述、保持、迁移或掌握已通过。"
 
 
 SOURCE_SHA256 = {

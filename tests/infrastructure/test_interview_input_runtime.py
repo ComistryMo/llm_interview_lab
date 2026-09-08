@@ -19,7 +19,7 @@ os.environ.setdefault("QT_QUICK_BACKEND", "software")
 os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Material")
 pytest.importorskip("PySide6")
 
-from PySide6.QtCore import QCoreApplication, QMetaObject, QObject, QPoint, QPointF, QSettings, Qt, QTimer, QUrl
+from PySide6.QtCore import QCoreApplication, QEventLoop, QMetaObject, QObject, QPoint, QPointF, QSettings, Qt, QTimer, QUrl
 from PySide6.QtGui import QFont, QGuiApplication, QInputMethodEvent
 from PySide6.QtWidgets import QApplication
 from PySide6.QtQml import QQmlApplicationEngine
@@ -130,6 +130,24 @@ def _capture(window, name):
         destination = Path(directory)
         destination.mkdir(parents=True, exist_ok=True)
         assert window.grabWindow().save(str(destination / f"{name}.png"))
+
+
+def _wait_for_asr(condition, timeout_ms=20000):
+    """Run the real Qt event loop, without QTest.qWait holding the Python GIL."""
+    loop = QEventLoop()
+    poll = QTimer()
+    poll.setInterval(20)
+    poll.timeout.connect(lambda: loop.quit() if condition() else None)
+    timeout = QTimer()
+    timeout.setSingleShot(True)
+    timeout.timeout.connect(loop.quit)
+    if not condition():
+        poll.start()
+        timeout.start(timeout_ms)
+        loop.exec()
+    poll.stop()
+    timeout.stop()
+    return condition()
 
 
 def _enter_coding_round(controller, coding_id="FND-002"):
@@ -528,13 +546,19 @@ def test_recording_ticks_do_not_refresh_application_or_probe_stt(scene, monkeypa
 def test_interview_preferences_survive_process_restart_and_stay_profile_local(controller, tmp_path):
     from llm_interview_lab.workspace import init_profile
     # Existing users inherit their actual last session, then changes are saved
-    # before starting another one. No materials/consent/secret belong in this map.
+    # before starting another one. Material IDs/SHA grants are allowed; content
+    # and secrets are not. Legacy seniority does not create a new interview tier.
     assert controller.interviewPreferences()["difficulty"] == "hard"
-    assert controller.interviewPreferences()["seniority"] == "intern"
+    assert "seniority" not in controller.interviewPreferences()
     saved = dict(role_id="ai_product_manager", seniority="mid", difficulty="easy",
                  ai_mode="provider", connection_id="second-api", transcription_connection_id="speech-api")
     controller.saveInterviewPreferences({**saved, "consent": True, "api_key": "do-not-store"})
-    assert controller.interviewPreferences() == saved
+    expected = {key: value for key, value in saved.items() if key != "seniority"}
+    saved = controller.interviewPreferences()
+    assert all(saved[key] == value for key, value in expected.items())
+    assert int(saved["duration_minutes"]) == 60
+    assert not saved["material_consent"] and saved["material_grants"] == {}
+    assert "seniority" not in saved and "api_key" not in saved and "consent" not in saved
     controller.setCodexModel("persisted-synthetic-model")
     controller.setCodexReasoningEffort("low")
     controller._settings.sync()
@@ -591,18 +615,19 @@ def test_interview_setup_remembers_user_choices_after_navigation_and_connection_
         QTest.qWait(30)
         assert item.property("currentIndex") == index
 
-    select("interviewSenioritySelector", 2)
+    _click(window, _find(window, "interviewEditSettings"))
+    QTest.qWait(60)
     select("interviewDifficultySelector", 0)
     select("interviewAiModeSelector", 1)
     select("personalizedInterviewConnection", 1)
     connection = _find(window, "personalizedInterviewConnection").property("currentValue")
     saved = controller.interviewPreferences()
-    assert (saved["seniority"], saved["difficulty"], saved["ai_mode"], saved["connection_id"]) == ("mid", "easy", "provider", connection)
+    assert (saved["difficulty"], saved["ai_mode"], saved["connection_id"]) == ("easy", "provider", connection)
+    assert "seniority" not in saved
     controller.navigate("home")
     QTest.qWait(50)
     controller.navigate("interview")
     QTest.qWait(100)
-    assert _find(window, "interviewSenioritySelector").property("currentValue") == "mid"
     assert _find(window, "interviewDifficultySelector").property("currentValue") == "easy"
     assert _find(window, "interviewAiModeSelector").property("currentValue") == "provider"
     controller.refresh()
@@ -848,14 +873,11 @@ def test_real_local_stt_from_production_page(scene, monkeypatch, size):
     assert button.isEnabled() and _within_window(window, button)
     _capture(window, f"local-stt-ready-{size[0]}")
     first_word_at = time.perf_counter()
-    for _ in range(250):
-        QTest.qWait(20)
-        time.sleep(.005)
-        if "早上" in controller.interviewVoice["live_text"]:
-            break
+    _wait_for_asr(lambda: "早上" in controller.interviewVoice["live_text"])
     assert controller.interviewVoice["state"] == "recording"
     assert "早上" in controller.interviewVoice["live_text"], controller.interviewVoice
     assert _find(window, "interviewLiveTranscript").isVisible()
+    answer.setProperty("text", "先保留这句已输入的回答。录音时继续打字。")
     print(f"LOCAL_STT_FIRST_TEXT_QML width={size[0]} seconds={time.perf_counter() - first_word_at:.2f}")
     _capture(window, f"local-stt-streaming-{size[0]}")
     started = time.perf_counter()
@@ -863,22 +885,118 @@ def test_real_local_stt_from_production_page(scene, monkeypatch, size):
     assert controller.interviewVoice["transcription_state"] == "transcribing"
     assert not button.isVisible()
     assert not _find(window, "toggleInterviewVoice").isVisible()
-    for _ in range(300):
-        QTest.qWait(30)
-        # Unlike app.exec(), QTest.qWait repeatedly holds the Python GIL.
-        # Let the cold native-module imports on the worker thread progress.
-        time.sleep(0.01)
-        if controller.interviewVoice["transcription_state"] in {"transcribed", "error"}:
-            break
+    _wait_for_asr(lambda: controller.interviewVoice["transcription_state"] in {"transcribed", "error"})
     assert controller.interviewVoice["transcription_state"] == "transcribed", controller.interviewVoice
     answer = _find(window, "interviewAnswerEditor")
-    assert "早上九点" in answer.property("text") and "下午五点" in answer.property("text")
-    assert answer.property("text").startswith("先保留这句已输入的回答。\n")
+    normalized = answer.property("text").translate(str.maketrans({"點": "点", "9": "九", "5": "五"}))
+    assert "早上九点" in normalized and "下午五点" in normalized
+    assert answer.property("text").startswith("先保留这句已输入的回答。录音时继续打字。\n")
     assert _find(window, "interviewVoiceState").property("text") == "已添加到回答框"
     assert not answer.property("readOnly") and not controller.interview["answer_locked"]
     assert controller._voice_recorder.path.read_bytes() == source.read_bytes()
     print(f"LOCAL_STT_QML width={size[0]} seconds={time.perf_counter() - started:.2f}")
     _capture(window, f"local-stt-transcribed-{size[0]}")
+
+
+@pytest.mark.skipif(not os.environ.get("LLM_LAB_TEST_TWO_PASS_AUDIO_ROOT"), reason="Explicit public/TTS audio directory required")
+def test_real_two_pass_corrects_pauses_while_qml_accepts_ime(scene, monkeypatch, tmp_path):
+    """Real ASR, real QML and real event loop; only microphone input is replayed."""
+    import socket
+    import threading
+    import numpy as np
+    import soundfile as sf
+    from llm_interview_lab.ai.local_transcription import LocalSpeechTranscriber
+
+    window, controller = scene
+    transcriber = LocalSpeechTranscriber(Path(os.environ["LLM_LAB_TEST_LOCAL_STT_MODEL_ROOT"]))
+    controller._local_stt = transcriber
+    controller._refresh_local_stt_status()
+    audio_root = Path(os.environ["LLM_LAB_TEST_TWO_PASS_AUDIO_ROOT"])
+    clips = [sf.read(audio_root / name, dtype="float32") for name in ("tts-intro.wav", "tts-grpo.wav")]
+    assert all(rate == 16000 for _, rate in clips)
+    samples = np.concatenate((clips[0][0], np.zeros(19200, dtype=np.float32), clips[1][0], np.zeros(19200, dtype=np.float32)))
+    source = tmp_path / "公开合成语音.wav"
+    sf.write(source, samples, 16000, subtype="PCM_16")
+    _stub_dictation_capture(controller, monkeypatch, source)
+
+    def no_network(*_args, **_kwargs):
+        pytest.fail("Local recognition must not access a provider or credentials")
+
+    monkeypatch.setattr(socket.socket, "connect", no_network)
+    monkeypatch.setattr("llm_interview_lab.ai.credentials.KeyringCredentialStore.load", no_network)
+    correcting = threading.Event()
+    completions, preview_during_correction, gaps = [], [], []
+    started = time.perf_counter()
+    previous_tick = started
+    heartbeat = QTimer()
+    heartbeat.setInterval(20)
+
+    def tick():
+        nonlocal previous_tick
+        now = time.perf_counter()
+        gaps.append(now - previous_tick)
+        previous_tick = now
+
+    heartbeat.timeout.connect(tick)
+    original_correct = transcriber._correct
+
+    def measured_correct(pcm, cancel):
+        correcting.set()
+        begin = time.perf_counter()
+        try:
+            result = original_correct(pcm, cancel)
+            completions.append((time.perf_counter() - begin, result))
+            return result
+        finally:
+            correcting.clear()
+
+    monkeypatch.setattr(transcriber, "_correct", measured_correct)
+    controller.interviewVoiceChanged.connect(lambda: preview_during_correction.append(controller.interviewVoice["live_text"])
+                                            if correcting.is_set() and controller.interviewVoice["live_text"] else None)
+    controller.stateChanged.emit()
+    window.resize(1080, 680)
+    answer = _find(window, "interviewAnswerEditor")
+    answer.setProperty("text", "原有草稿。")
+    heartbeat.start()
+    try:
+        _click(window, _find(window, "toggleInterviewVoice"))
+        assert _wait_for_asr(correcting.is_set), controller.interviewVoice
+        assert controller.interviewVoice["state"] == "recording"
+        assert not controller.busy and not answer.property("readOnly")
+        answer.forceActiveFocus()
+        event = QInputMethodEvent()
+        event.setCommitString("校准期间手打的补充。")
+        QCoreApplication.sendEvent(answer, event)
+        draft = answer.property("text")
+        assert "原有草稿。" in draft and "校准期间手打的补充。" in draft
+        assert _wait_for_asr(lambda: len(completions) >= 2, 30000), controller.interviewVoice
+        assert _wait_for_asr(lambda: controller.interviewVoice["live_text"] == "\n".join(item[1] for item in completions), 3000)
+        assert controller.interviewVoice["state"] == "recording", "Pause correction happens before Stop"
+        assert answer.property("text") == draft
+        assert len(set(preview_during_correction)) > 1, "Preview continues while Qwen is working"
+        _capture(window, "two-pass-pauses-1080")
+        stopped = time.perf_counter()
+        _click(window, _find(window, "finishInterviewDictation"))
+        assert _wait_for_asr(lambda: controller.interviewVoice["transcription_state"] in {"transcribed", "error"})
+        assert controller.interviewVoice["transcription_state"] == "transcribed", controller.interviewVoice
+        result = answer.property("text")
+        assert result.startswith(draft + "\n")
+        # Acoustic accuracy is not an exact-string UI oracle. Preserve the
+        # model's real output (including mistakes), while checking both turns
+        # were appended once and no preview hypothesis was appended as well.
+        assert result == draft + "\n" + "\n".join(item[1] for item in completions)
+        assert result.replace(" ", "").count("GRPO") == 1
+        assert "奖励函数" in result and "训练数据" in result
+        assert not controller.interview["answer_locked"]
+        _capture(window, "two-pass-final-1080")
+        assert max(gaps) < 1, "Neither cold model loading nor correction may freeze the Qt event loop"
+        print("TWO_PASS_QML " + json.dumps({"elapsed_s": round(time.perf_counter() - started, 3),
+              "stop_s": round(time.perf_counter() - stopped, 3), "heartbeat_max_s": round(max(gaps), 3),
+              "correction_s": [round(item[0], 3) for item in completions],
+              "preview_updates_during_correction": len(set(preview_during_correction))}))
+    finally:
+        heartbeat.stop()
+        controller._suspend_interview_voice()
 
 
 def test_corrected_coding_selection_opens_editor_and_shows_notice(scene):

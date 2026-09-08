@@ -49,7 +49,8 @@ ApplicationWindow {
                                        : "Noto Sans SC"
     readonly property string layoutMode: width < 1040 ? "compact"
                                          : width < 1400 ? "standard" : "wide"
-    readonly property bool compactShell: width < 1180 || height < 700
+    readonly property bool compactShell: backend.sidebarMode === "collapsed"
+        || (backend.sidebarMode === "auto" && (width < 1180 || height < 700))
     readonly property int sidebarWidth: compactShell ? 64 : 220
     // Keep the command surface intentionally small: every entry maps to an
     // existing controller action, so keyboard navigation never exposes a
@@ -202,7 +203,11 @@ ApplicationWindow {
         }
     }
 
-    onClosing: backend.shutdown()
+    onClosing: function(close) {
+        Qt.inputMethod.commit()
+        close.accepted = interviewPage.flushDraft() && learnPage.flushDraft()
+        if (close.accepted) backend.shutdown()
+    }
 
     RowLayout {
         anchors.fill: parent
@@ -359,53 +364,6 @@ ApplicationWindow {
                 }
 
                 Item { Layout.fillHeight: true }
-                LabSurface {
-                    objectName: "sidebarProfileSwitcher"
-                    theme: appTheme
-                    visible: !window.compactShell
-                    level: "chrome"
-                    outlined: false
-                    padding: 0
-                    interactive: true
-                    accessibleName: "切换学习档案"
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: profileSummary.implicitHeight + 24
-                    onActivated: backend.navigate("settings")
-                    RowLayout {
-                        id: profileSummary
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 10
-                        Rectangle {
-                            Layout.preferredWidth: 32; Layout.preferredHeight: 32
-                            radius: 16
-                            color: appTheme.surfaceHover
-                            LabText { theme: appTheme;
-                                anchors.centerIn: parent
-                                text: (backend.profileDisplayName || backend.profileId || "我").slice(0, 1)
-                                color: appTheme.textStrong
-                                font.pixelSize: appTheme.fontBody
-                            }
-                        }
-                        ColumnLayout {
-                            spacing: 2
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            LabText { theme: appTheme; text: backend.profileDisplayName || backend.profileId; strong: true; elide: Text.ElideRight; Layout.fillWidth: true }
-                            LabText { theme: appTheme; text: "本地学习档案"; variant: "caption"; tone: "muted"; elide: Text.ElideRight; Layout.fillWidth: true }
-                        }
-                    }
-                }
-                LabIconButton {
-                    visible: window.compactShell
-                    theme: appTheme
-                    iconSource: Qt.resolvedUrl("../resources/icons/user.svg")
-                    accessibleName: backend.profileDisplayName || backend.profileId || "学习档案"
-                    toolTip: (backend.profileDisplayName || backend.profileId || "学习档案")
-                             + " · 数据保存在本机"
-                    Layout.alignment: Qt.AlignHCenter
-                    onClicked: backend.navigate("settings")
-                }
             }
         }
 
@@ -433,6 +391,14 @@ ApplicationWindow {
                     anchors.leftMargin: window.layoutMode === "compact" ? 14 : 20
                     anchors.rightMargin: window.layoutMode === "compact" ? 14 : 20
                     spacing: 10
+                    LabIconButton {
+                        objectName: "toggleSidebar"
+                        theme: appTheme
+                        iconSource: Qt.resolvedUrl("../resources/icons/panel-left.svg")
+                        accessibleName: window.compactShell ? "展开侧栏" : "收起侧栏"
+                        toolTip: accessibleName
+                        onClicked: backend.setSidebarCollapsed(!window.compactShell)
+                    }
                     LabText {
                         objectName: "shellRouteTitle"
                         theme: appTheme
@@ -560,6 +526,7 @@ ApplicationWindow {
                 }
                 ExercisePage { app: backend; colors: window.colors; theme: appTheme }
                 InterviewPage {
+                    id: interviewPage
                     app: backend; colors: window.colors; theme: appTheme
                     onKnowledgeRequested: function(cardId) {
                         learnPage.selectSection("knowledge")

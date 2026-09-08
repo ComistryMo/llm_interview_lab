@@ -168,6 +168,15 @@ Item {
         if (app.openKnowledgeCard(cardId) && root.drillDownLayout)
             root.compactKnowledgeDetail = true
     }
+    function flushDraft() {
+        knowledgeDraftSave.stop()
+        if (knowledgeAnswer.preeditText.length) return false
+        return knowledgeDetailContent.saveDraft()
+    }
+    Timer {
+        id: knowledgeDraftSave; interval: 600
+        onTriggered: root.flushDraft()
+    }
     function relatedProblem(problemId) {
         var problems = app.problems || []
         for (var i = 0; i < problems.length; ++i) {
@@ -773,6 +782,8 @@ Item {
                                         Layout.minimumHeight: root.theme ? root.theme.scaledPx(170) : 170
                                         Layout.preferredHeight: Math.max(Layout.minimumHeight, implicitHeight)
                                         placeholderText: "先用自己的话回答：机制、公式或一个具体例子……"
+                                        onTextChanged: if (!preeditText.length) knowledgeDraftSave.restart()
+                                        onPreeditTextChanged: if (!preeditText.length) knowledgeDraftSave.restart()
                                         onActiveFocusChanged: {
                                             if (!activeFocus && knowledgeDetailContent.draftProfile === app.profileId)
                                                 knowledgeDetailContent.saveDraft()

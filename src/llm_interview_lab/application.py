@@ -463,6 +463,51 @@ class ApplicationService:
         finally:
             temporary.unlink(missing_ok=True)
 
+    def _interview_draft_context(self, profile_id: str, interview_id: str, question_id: str):
+        """Resolve one frozen oral question; drafts never become session evidence."""
+        session = self.interview_session(profile_id, interview_id)
+        question = next((q for q in session["questions"] if q["question_id"] == question_id), None)
+        if question is None or question["kind"] == "coding":
+            raise ApplicationError("口述草稿没有对应的面试问题，请返回当前题目。")
+        paths = profile_paths(self.repo_root, profile_id)
+        path = paths.root / "interview_drafts" / interview_id / f"{question_id}.json"
+        ensure_profile_path_is_safe(self.repo_root, profile_id, path)
+        fingerprint = hashlib.sha256(json.dumps(question, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+        return session, path, fingerprint
+
+    def interview_draft(self, profile_id: str, interview_id: str, question_id: str) -> str:
+        session, path, fingerprint = self._interview_draft_context(profile_id, interview_id, question_id)
+        if question_id in session["answers"] or session["status"] not in {"active", "paused"} or not path.exists():
+            return ""
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+            if (value["profile_id"], value["interview_id"], value["question_id"], value["question_sha256"]) != (profile_id, interview_id, question_id, fingerprint):
+                raise ValueError("draft identity changed")
+            answer = value["text"]
+            if not isinstance(answer, str) or hashlib.sha256(answer.encode()).hexdigest() != value["revision"]:
+                raise ValueError("draft revision changed")
+            return answer
+        except (ValueError, KeyError, TypeError, UnicodeError) as error:
+            raise ApplicationError("本题草稿文件损坏或题目版本不匹配；原文件已保留，请先备份再重新输入。") from error
+
+    def save_interview_draft(self, profile_id: str, interview_id: str, question_id: str, answer: str) -> None:
+        if not isinstance(answer, str) or len(answer) > 100_000:
+            raise ApplicationError("口述草稿最多 100000 个字符，请缩短后保存。")
+        session, path, fingerprint = self._interview_draft_context(profile_id, interview_id, question_id)
+        if question_id in session["answers"] or session["status"] not in {"active", "paused"}:
+            raise ApplicationError("回答已锁定或面试已结束，不能覆盖为草稿。")
+        ensure_profile_is_ignored(self.repo_root, profile_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        value = {"schema_version": 1, "profile_id": profile_id, "interview_id": interview_id,
+                 "question_id": question_id, "question_sha256": fingerprint, "text": answer,
+                 "revision": hashlib.sha256(answer.encode()).hexdigest()}
+        temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+        try:
+            temporary.write_text(json.dumps(value, ensure_ascii=False) + "\n", encoding="utf-8")
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
     def initialize_profile(
         self,
         profile_id: str = "default",

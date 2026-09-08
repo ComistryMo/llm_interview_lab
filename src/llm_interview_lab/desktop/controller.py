@@ -38,6 +38,7 @@ from ..ai.local_transcription import (
     DOWNLOAD_BYTES, LOCAL_STT_ID, MODEL_LICENSE_URL, MODEL_NAME,
     DownloadCancelled, LocalSpeechTranscriber,
 )
+from ..ai.local_stt_assets import QWEN_LICENSE_URL, VAD_LICENSE_URL
 from ..application import ApplicationError, ApplicationService
 from ..coach_sessions import (
     CoachSessionError,
@@ -459,6 +460,11 @@ class AppController(QObject):
         self._test_output = ""
         self._interview: dict[str, Any] = {}
         self._interview_draft_dirty = False
+        self._pending_interview_draft: tuple[str, str, str, str] | None = None
+        self._interview_draft_timer = QTimer(self)
+        self._interview_draft_timer.setSingleShot(True)
+        self._interview_draft_timer.setInterval(600)
+        self._interview_draft_timer.timeout.connect(self.flushInterviewDraft)
         self._interview_plan_preview: dict[str, Any] = {}
         self._interview_plan_request: dict[str, Any] | None = None
         self._voice_recorder = InterviewVoiceRecorder(self)
@@ -527,6 +533,8 @@ class AppController(QObject):
             self._profile_id = self._restore_active_profile_id(requested_profile_id)
         self._theme = str(self._settings.value("theme", "system"))
         self._font_scale = float(self._settings.value("fontScale", 1.0))
+        self._sidebar_mode = str(self._settings.value("sidebarMode", "auto"))
+        self._ai_restore_profile = ""
         if demo_page:
             # Release screenshots and offscreen smoke evidence must not inherit
             # a maintainer's persisted theme or accessibility settings.
@@ -645,6 +653,8 @@ class AppController(QObject):
             # Finder/Explorer startup must not synchronously scan PATH or
             # launch a subprocess from a QML property getter.
             QTimer.singleShot(0, self.refreshCodexAvailability)
+            if not self._onboarding:
+                QTimer.singleShot(0, self._restore_ai_connection)
 
     def _load_demo(self, page: str) -> None:
         self._profile_id = "demo"
@@ -918,8 +928,8 @@ class AppController(QObject):
         return "interviewPreferences/" + hashlib.sha256(identity.encode("utf-8")).hexdigest()[:24]
 
     @Slot(result="QVariantMap")
-    def interviewPreferences(self) -> dict[str, str]:
-        """Restore this Profile's form choices, never material or audio consent."""
+    def interviewPreferences(self) -> dict[str, Any]:
+        """Restore choices and consent for the same, unchanged material snapshots."""
         role = self._dashboard.get("role") or {}
         defaults = {
             "role_id": self._interview.get("role_id") or role.get("primary_role", ""),
@@ -929,22 +939,53 @@ class AppController(QObject):
             "connection_id": (self._interview.get("connection_id", "")
                               if self._interview.get("ai_mode") == "provider" else ""),
             "transcription_connection_id": "",
+            "material_id": "", "additional_material_id": "",
+            "use_materials": False, "use_additional_material": False,
+            "material_grants": {},
         }
         restored = {**defaults, **self._settings.value(self._interview_preferences_key(), {})}
         restored.pop("seniority", None)
+        selected = [restored["material_id"]] if restored["use_materials"] else []
+        if selected and restored["use_additional_material"]:
+            selected.append(restored["additional_material_id"])
+        records = {item["id"]: item for item in self._materials}
+        grants = restored.get("material_grants", {})
+        restored["material_consent"] = bool(selected) and all(
+            material_id in records and records[material_id].get("ai_access")
+            and grants.get(material_id) == self._material_preference_fingerprint(records[material_id])
+            for material_id in selected
+        )
         return restored
+
+    @staticmethod
+    def _material_preference_fingerprint(record: Mapping[str, Any]) -> str:
+        snapshot = record.get("text_snapshot") or {}
+        return str(record["sha256"]) + ":" + str(snapshot.get("sha256", ""))
 
     @Slot("QVariantMap")
     def saveInterviewPreferences(self, preferences: Mapping[str, Any]) -> None:
-        # Only selection IDs belong here. Models/effort stay in existing AI
-        # settings, credentials in Keyring, and authorization in each session.
+        # Remember only selection IDs and authorized hashes, never material text
+        # or API keys. Session creation still validates the actual source files.
         saved = self.interviewPreferences()
         for key in ("role_id", "difficulty", "duration_minutes", "ai_mode", "connection_id",
-                    "transcription_connection_id"):
+                    "transcription_connection_id", "material_id", "additional_material_id"):
             if key in preferences:
                 if key == "connection_id" and preferences[key] == "codex":
                     continue  # Keep the last ordinary API choice when switching to Codex.
                 saved[key] = str(preferences[key])
+        for key in ("use_materials", "use_additional_material"):
+            if key in preferences:
+                saved[key] = bool(preferences[key])
+        if "material_consent" in preferences:
+            selected = [saved["material_id"]] if saved["use_materials"] else []
+            if selected and saved["use_additional_material"]:
+                selected.append(saved["additional_material_id"])
+            saved["material_grants"] = {
+                item["id"]: self._material_preference_fingerprint(item)
+                for item in self._materials
+                if item["id"] in selected and item.get("ai_access")
+            } if preferences["material_consent"] else {}
+        saved.pop("material_consent", None)
         if not self._demo_mode:
             self._settings.setValue(self._interview_preferences_key(), saved)
             self._settings.sync()
@@ -1043,6 +1084,8 @@ class AppController(QObject):
             "error": self._local_stt_download_error,
             "download_mb": round(DOWNLOAD_BYTES / 1_000_000),
             "license_url": MODEL_LICENSE_URL,
+            "correction_license_url": QWEN_LICENSE_URL,
+            "vad_license_url": VAD_LICENSE_URL,
         }
 
     def _refresh_local_stt_status(self) -> None:
@@ -1208,6 +1251,18 @@ class AppController(QObject):
     @Property(float, notify=stateChanged)
     def fontScale(self) -> float:
         return self._font_scale
+
+    @Property(str, notify=stateChanged)
+    def sidebarMode(self) -> str:
+        return self._sidebar_mode
+
+    @Slot(bool)
+    def setSidebarCollapsed(self, collapsed: bool) -> None:
+        self._sidebar_mode = "collapsed" if collapsed else "expanded"
+        if not self._demo_mode:
+            self._settings.setValue("sidebarMode", self._sidebar_mode)
+            self._settings.sync()
+        self.stateChanged.emit()
 
     @Property(str, notify=aiStateChanged)
     def aiStatus(self) -> str:
@@ -2146,6 +2201,45 @@ class AppController(QObject):
     def setInterviewDraftDirty(self, dirty: bool) -> None:
         self._interview_draft_dirty = dirty
 
+    @Slot(str, str, str, str, result=bool)
+    def queueInterviewDraft(self, profile_id: str, interview_id: str, question_id: str, value: str) -> bool:
+        question = self._interview.get("question") or {}
+        identity = (self._profile_id, self._interview.get("interview_id"), question.get("question_id"))
+        if ((profile_id, interview_id, question_id) != identity or self._demo_mode
+                or question.get("kind") == "coding" or self._interview.get("answer_locked")):
+            return False
+        if self._pending_interview_draft and self._pending_interview_draft[:3] != identity:
+            if not self.flushInterviewDraft():
+                return False
+        if value == self._interview.get("draft_text", "") and not self._pending_interview_draft:
+            return True
+        self._pending_interview_draft = (profile_id, interview_id, question_id, value)
+        self._interview["draft_text"] = value
+        self._interview["draft_status"] = "pending"
+        self._interview["draft_error"] = ""
+        self._interview_draft_timer.start()
+        self.interviewChanged.emit()
+        return True
+
+    @Slot(result=bool)
+    def flushInterviewDraft(self) -> bool:
+        self._interview_draft_timer.stop()
+        pending = self._pending_interview_draft
+        if not pending:
+            return True
+        try:
+            self.service.save_interview_draft(*pending)
+        except Exception as error:
+            self._interview["draft_status"] = "error"
+            self._interview["draft_error"] = "草稿尚未保存到磁盘：" + friendly_error(error) + " 当前文字仍在，请重试保存后再关闭。"
+            self.interviewChanged.emit()
+            return False
+        self._pending_interview_draft = None
+        self._interview["draft_status"] = "saved"
+        self._interview["draft_error"] = ""
+        self.interviewChanged.emit()
+        return True
+
     @Slot(str, result=bool)
     def switchProfile(self, profile_id: str) -> bool:
         """Switch the desktop snapshot to one validated local Profile.
@@ -2261,6 +2355,8 @@ class AppController(QObject):
             self._persist_active_profile_id()
             self._refresh_profile_options()
             self.navigate("home")
+            self._ai_restore_profile = ""
+            QTimer.singleShot(0, self._restore_ai_connection)
             self._set_action_result(
                 success=True,
                 operation_id=operation_id,
@@ -2597,6 +2693,12 @@ class AppController(QObject):
             self.service.set_material_ai_access(
                 self._profile_id, material_id, enabled
             )
+            if not enabled:
+                saved = self.interviewPreferences()
+                saved["material_grants"].pop(material_id, None)
+                saved.pop("material_consent", None)
+                self._settings.setValue(self._interview_preferences_key(), saved)
+                self._settings.sync()
             self.refresh()
             self.toast.emit(
                 "已允许该材料在每场面试单独确认后供 AI 使用。"
@@ -3117,6 +3219,14 @@ class AppController(QObject):
         # assessment callback that still belongs to the previous view.
         self._interview_provider_operation_id = ""
         session = self.service.interview_session(self._profile_id, interview_id)
+        pending = self._pending_interview_draft
+        if pending and pending[:2] == (self._profile_id, interview_id) and pending[2] in session["answers"]:
+            # Successful submission is already durable. Do not re-save its
+            # earlier debounce snapshot as an editable/locked answer.
+            self._pending_interview_draft = None
+            self._interview_draft_timer.stop()
+        elif not self.flushInterviewDraft():
+            return
         if session.get("ai_wait_started_at") and not self._busy:
             session = set_role_ai_wait(self.repo_root, self._profile_id, interview_id, False)
         if session.get("status") in {"completed", "incomplete"}:
@@ -3274,6 +3384,14 @@ class AppController(QObject):
                 self._interview["answer_error"] = ""
                 self._interview["assessment_recorded"] = False
                 self._interview["phase"] = "answering"
+                if question.get("kind") != "coding":
+                    try:
+                        self._interview["draft_text"] = self.service.interview_draft(self._profile_id, interview_id, question_id)
+                        self._interview["draft_status"] = "saved" if self._interview["draft_text"] else "idle"
+                    except Exception as error:
+                        self._interview["draft_text"] = ""
+                        self._interview["draft_status"] = "error"
+                        self._interview["draft_error"] = friendly_error(error)
         if question and question.get("kind") == "coding":
             coding = self.service.current_interview_coding_submission(
                 self._profile_id, interview_id
@@ -3390,6 +3508,8 @@ class AppController(QObject):
             self.stateChanged.emit()
             return
         try:
+            if not self.flushInterviewDraft():
+                return
             self.service.answer_interview(
                 self._profile_id,
                 self._interview["interview_id"],
@@ -3644,6 +3764,9 @@ class AppController(QObject):
                 try:
                     value = frames.get(timeout=0.1)
                 except Empty:
+                    # A correction can finish while capture has no new PCM.
+                    # Wake the stream to publish it, without inventing audio.
+                    yield b"", 16000, 1
                     continue
                 if value is None:
                     break
@@ -4354,6 +4477,8 @@ class AppController(QObject):
             self.toast.emit("这场面试已经结束；可查看报告或开始新场次。")
             return
         try:
+            if not self.flushInterviewDraft():
+                return
             session = self.service.finish_interview(
                 self._profile_id,
                 interview_id,
@@ -4548,10 +4673,28 @@ class AppController(QObject):
 
     @Slot(str)
     def testConnection(self, connection_id: str) -> None:
+        self._test_connection(connection_id)
+
+    def _restore_ai_connection(self) -> None:
+        """Reconnect only this Profile's last interviewer, without sending materials."""
+        if (self._demo_mode or self._onboarding or self._shutdown_done
+                or self._ai_restore_profile == self._profile_id):
+            return
+        saved = self.interviewPreferences()
+        mode = saved.get("ai_mode", "disabled")
+        if mode == "codex" and not self._codex_available:
+            return  # Discovery's completion will resume this one-time action.
+        self._ai_restore_profile = self._profile_id
+        if mode == "codex":
+            self.connectCodex("interviewer")
+        elif mode == "provider" and saved.get("connection_id"):
+            self._test_connection(saved["connection_id"], automatic=True)
+
+    def _test_connection(self, connection_id: str, *, automatic: bool = False) -> None:
         if self._profile_id == "demo":
             self.toast.emit("虚构演示连接检查完成。")
             return
-        if self._busy:
+        if self._busy and not automatic:
             self.toast.emit("已有本地操作正在进行，请稍候。")
             return
 
@@ -4566,6 +4709,8 @@ class AppController(QObject):
         if selected is None:
             self._connection_error = "找不到这条连接。请重新保存配置，或继续使用 No-AI。"
             self.stateChanged.emit()
+            return
+        if selected.get("status") == "测试中" or (automatic and selected.get("ready")):
             return
         selected["ready"] = False
         selected["status"] = "测试中"
@@ -4631,7 +4776,8 @@ class AppController(QObject):
                     item["status"] = "已连接" if result.ok else "连接失败"
             self._connection_error = "" if result.ok else friendly_error(result.message)
             self.stateChanged.emit()
-            self.toast.emit("连接成功。" if result.ok else friendly_error(result.message))
+            if not automatic:
+                self.toast.emit("连接成功。" if result.ok else friendly_error(result.message))
 
         def failed(message: str) -> None:
             if generation != self._background_generation or profile_id != self._profile_id:
@@ -4644,14 +4790,32 @@ class AppController(QObject):
                 ),
                 None,
             )
-            if current is not None:
-                current["ready"] = False
-                current["status"] = "连接失败"
+            if current is None or tuple(str(current.get(field) or "") for field in (
+                "provider_id", "model", "reasoning_effort", "display_name", "base_url"
+            )) != selected_identity:
+                return
+            current["ready"] = False
+            current["status"] = "连接失败"
             self._connection_error = friendly_error(message)
             self.stateChanged.emit()
-            self._show_error(message)
+            if not automatic:
+                self._show_error(message)
 
-        self._background(operation, complete, failed)
+        if automatic:
+            # Connection checks must not disable typing/navigation at startup.
+            worker = Worker(operation)
+            self._workers.add(worker)
+            def connected(result):
+                self._workers.discard(worker)
+                complete(result)
+            def rejected(message):
+                self._workers.discard(worker)
+                failed(message)
+            worker.signals.completed.connect(connected)
+            worker.signals.failed.connect(rejected)
+            self._thread_pool.start(worker)
+        else:
+            self._background(operation, complete, failed)
 
     def _practice_context_preview(
         self,
@@ -8169,6 +8333,7 @@ class AppController(QObject):
                     "codex.missing", language=self._language
                 )
             self.aiStateChanged.emit()
+            self._restore_ai_connection()
 
         def fail(_: str) -> None:
             if probe_token != self._codex_probe_token or self._shutdown_done:
@@ -8323,6 +8488,8 @@ class AppController(QObject):
     @Slot()
     def shutdown(self) -> None:
         if self._shutdown_done:
+            return
+        if not self.flushInterviewDraft():
             return
         self._shutdown_done = True
         self._suspend_interview_voice()

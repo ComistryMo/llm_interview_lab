@@ -125,7 +125,8 @@ Item {
     }
 
     function displayTask() {
-        return app.problemBrief(root.activeProblemId,
+        if (app.language === "en") return app.currentTask.task || "Select a problem to begin."
+        return app.problemStatement(root.activeProblemId,
                                 app.currentTask.task || "请先从刷题训练中打开已解锁的题目。")
     }
 
@@ -174,7 +175,7 @@ Item {
 
         Rectangle {
             visible: root.wideLayout || root.mediumLayout
-            SplitView.preferredWidth: root.wideLayout ? 330 : 300
+            SplitView.preferredWidth: root.wideLayout ? Math.min(560, root.width * 0.38) : 300
             SplitView.minimumWidth: 248
             color: root.colors.surface
             border.color: "transparent"
@@ -186,7 +187,7 @@ Item {
                     width: detailsScroll.availableWidth; spacing: 12
                     LabText { theme: root.theme; width: parent.width; text: root.hasTask ? app.currentTask.problem_id : "尚未选择题目"; color: root.hasTask ? root.colors.accent : root.colors.muted; strong: true; font.pixelSize: root.theme.scaledPx(12) }
                     LabText { theme: root.theme; width: parent.width; text: root.displayTitle(); color: root.colors.text; font.pixelSize: root.theme.scaledPx(24); strong: true; wrapMode: Text.Wrap }
-                    StatusPill { text: root.hasTask ? (app.currentTask.validation || "尚未开始") : "未选择"; tone: root.hasTask ? root.colors.success : root.colors.muted }
+                    StatusPill { theme: root.theme; text: root.hasTask ? (app.currentTask.validation || "尚未开始") : "未选择"; tone: root.hasTask ? root.colors.success : root.colors.muted }
                     Rectangle { width: parent.width; height: 1; color: root.colors.border }
                     LabText { theme: root.theme; objectName: "practiceQuestionPrompt"; width: parent.width; text: app.renderMarkdown(root.displayTask(), root.theme.fontSection, root.theme.monospaceFontFamily); color: root.colors.text; font.pixelSize: root.theme.fontBodyLarge; wrapMode: Text.Wrap; textFormat: Text.RichText; lineHeight: 1.6 }
                     LabButton { theme: root.theme;
@@ -274,6 +275,7 @@ Item {
                             Layout.fillWidth: true
                         }
                         StatusPill {
+                            theme: root.theme
                             objectName: "exerciseContextStatus"
                             text: app.submissionDirty ? "未保存" : (app.testState || "未测试")
                             tone: app.submissionDirty ? root.colors.warning

@@ -33,6 +33,23 @@ Item {
     property string phase: app.interview.phase || (answerLocked ? "assessment" : "answering")
     property var interviewResult: app.interview.result || ({})
     property string answerDraft: ""
+    property string editorQuestionKey: ""
+    property bool draftCompositionPending: false
+    function queueAnswerDraft() {
+        if (!root.syncingQuestionEditors && !root.answerLocked && !root.codingQuestion
+                && root.editorQuestionKey === root.activeQuestionKey && !answer.preeditText.length) {
+            root.draftCompositionPending = false
+            app.queueInterviewDraft(app.profileId, app.interview.interview_id || "", root.activeQuestionId, answer.text)
+        }
+    }
+    function flushDraft() {
+        if (!root.answerLocked && answer.preeditText.length) {
+            root.draftCompositionPending = true
+            return false
+        }
+        root.queueAnswerDraft()
+        return app.flushInterviewDraft()
+    }
     // Keep a confirmation snapshot so an accidental click cannot lock a
     // changing editor value.  The backend remains the source of truth for
     // the actual frozen answer.
@@ -84,7 +101,7 @@ Item {
     readonly property string setupProfileId: app.profileId
     onSetupProfileIdChanged: {
         Qt.callLater(root.initializeSetup)
-        Qt.callLater(root.clearSetupConsent)
+        voiceConsent.checked = false
     }
     // A coding round can only be recorded when the visible editor still
     // matches the revision that the local Grader tested. TextArea bindings are
@@ -112,6 +129,10 @@ Item {
     // layout at a normal 1280×800 window; only genuinely narrow/short views
     // switch to the compact editor sizing.
     property bool compactInterviewLayout: width < 900 || height < 600
+    // The workspace grows with a desktop window; a reading column must not
+    // constrain the transcript, composer and toolbar together to 760 px.
+    readonly property real conversationWidth: Math.min(1200, Math.max(760, width * 0.78))
+    readonly property bool naturalConversationHeight: root.dynamicInterview && !root.codingQuestion && !root.interviewFinished
     property var configuration: ({"available": true, "user_message": "", "missing_rounds": [], "missing_environment": []})
     property string codeFontFamily: Qt.platform.os === "windows" ? "Cascadia Mono"
                                     : Qt.platform.os === "osx" ? "Menlo" : "monospace"
@@ -124,6 +145,7 @@ Item {
     }
     onAnswerLockedChanged: Qt.callLater(root.syncQuestionEditors)
     onVisibleChanged: {
+        if (!visible) app.flushInterviewDraft()
         if (!visible) root.pendingConnectionCheck = null
         if (visible && leftPanel.setupVisible) Qt.callLater(root.initializeSetup)
     }
@@ -163,10 +185,12 @@ Item {
     function syncQuestionEditors() {
         root.syncingQuestionEditors = true
         if (answer)
-            answer.text = root.answerLocked ? (app.interview.answer_text || "") : ""
+            answer.text = root.answerLocked ? (app.interview.answer_text || "") : (app.interview.draft_text || "")
         if (codingEditor)
             codingEditor.text = app.interview.coding_text || ""
         root.codingEditorDirty = false
+        root.answerDraft = answer.text
+        root.editorQuestionKey = root.activeQuestionKey
         root.syncingQuestionEditors = false
     }
 
@@ -244,7 +268,6 @@ Item {
         if (aiMode.currentValue === "provider" && !root.providerIsReady(planConnection.currentValue)) {
             root.pendingConnectionCheck = {profile: app.profileId, connection: planConnection.currentValue}
             app.testConnection(planConnection.currentValue)
-            if (!app.busy) root.pendingConnectionCheck = null
             return
         }
         root.openPersonalizedPlanContext()
@@ -252,6 +275,9 @@ Item {
 
     function finishConnectionCheck() {
         var pending = root.pendingConnectionCheck
+        if (pending && app.connections.some(function(item) {
+            return item.connection_id === pending.connection && item.status === "测试中"
+        })) return
         root.pendingConnectionCheck = null
         if (pending && root.visible && leftPanel.setupVisible
                 && pending.profile === app.profileId
@@ -451,6 +477,7 @@ Item {
         root.transcriptionConnectionId = saved.transcription_connection_id || ""
         root.restoreSetupConnection()
         root.restoreTranscriptionConnection()
+        root.restoreMaterialSelection()
         root.refreshConfiguration()
     }
 
@@ -459,7 +486,11 @@ Item {
         app.saveInterviewPreferences({
             role_id: role.currentValue || "", duration_minutes: String(duration.value),
             difficulty: difficulty.currentValue || "", ai_mode: aiMode.currentValue || "disabled",
-            connection_id: root.setupConnectionId
+            connection_id: root.setupConnectionId,
+            material_id: material.currentValue || "",
+            additional_material_id: jd.currentValue || "",
+            use_materials: useMaterial.checked,
+            use_additional_material: useJD.checked
         })
         root.refreshConfiguration()
     }
@@ -475,11 +506,19 @@ Item {
         voiceConnection.currentIndex = savedIndex >= 0 ? savedIndex : (voiceConnection.count ? 0 : -1)
     }
 
-    function clearSetupConsent() {
-        useMaterial.checked = false
-        useJD.checked = false
+    function restoreMaterialSelection() {
+        var saved = app.interviewPreferences()
+        material.currentIndex = saved.material_id ? material.indexOfValue(saved.material_id) : (material.count ? 0 : -1)
+        jd.currentIndex = saved.additional_material_id ? jd.indexOfValue(saved.additional_material_id) : (jd.count ? 0 : -1)
+        useMaterial.checked = saved.use_materials === true
+        useJD.checked = saved.use_additional_material === true
+        consent.checked = saved.material_consent === true
+    }
+
+    function changeMaterialSelection() {
         consent.checked = false
-        voiceConsent.checked = false
+        root.saveSetup()
+        app.saveInterviewPreferences({material_consent: false})
     }
 
     function configurationMessage() {
@@ -685,6 +724,14 @@ Item {
 
     Connections {
         target: app
+        function onStateChanged() {
+            if (!root.pendingConnectionCheck) return
+            var connection = app.connections.find(function(item) {
+                return item.connection_id === root.pendingConnectionCheck.connection
+            })
+            if (!connection || connection.ready === true || connection.status === "连接失败")
+                Qt.callLater(root.finishConnectionCheck)
+        }
         function onInterviewSetupRequested() {
             root.showingHistory = false
             root.configuringNewInterview = !root.interviewCanEdit
@@ -812,7 +859,7 @@ Item {
         anchors.topMargin: interviewNavigation.visible ? 58 : root.compactInterviewLayout ? 12 : 24
         anchors.bottomMargin: 12
         width: Math.min(root.width - (root.compactInterviewLayout ? 32 : 64),
-                        root.codingQuestion ? 1600 : leftPanel.setupVisible ? root.theme.formWidth : root.theme.readingWidth)
+                        root.codingQuestion ? 1600 : leftPanel.setupVisible ? root.theme.formWidth : root.conversationWidth)
         visible: !root.showingHistory
         spacing: 0
         clip: true
@@ -877,6 +924,7 @@ Item {
                         theme: root.theme; width: parent.width; wrapMode: Text.Wrap
                         text: useMaterial.checked
                               ? "材料 · " + (material.currentText || "尚未选择") + (useJD.checked ? "、" + (jd.currentText || "尚未选择 JD") : "")
+                                + (materialConsent.checked ? " · 沿用相同版本的选择，开始前确认范围" : " · 尚未授权本次使用")
                               : "材料 · 本场不使用求职材料"
                         tone: "muted"
                     }
@@ -1059,6 +1107,7 @@ Item {
                         visible: leftPanel.setupVisible
                         enabled: aiMode.currentValue !== "disabled" && app.materials.length > 0
                         text: "使用求职材料（可选）"
+                        onToggled: root.changeMaterialSelection()
                         contentItem: LabText { theme: root.theme;
                             text: useMaterial.text
                             font: useMaterial.font
@@ -1077,6 +1126,8 @@ Item {
                         model: app.materials
                         textRole: "title"
                         valueRole: "id"
+                        onActivated: root.changeMaterialSelection()
+                        onModelChanged: Qt.callLater(root.restoreMaterialSelection)
                     }
                     LabCheckBox { theme: root.theme;
                         id: useJD
@@ -1084,6 +1135,7 @@ Item {
                         width: parent.width
                         visible: leftPanel.setupVisible && useMaterial.checked
                         text: "再选择一份 JD / 补充经历材料"
+                        onToggled: root.changeMaterialSelection()
                     }
                     LabComboBox {
                         id: jd
@@ -1094,6 +1146,7 @@ Item {
                         model: app.materials
                         textRole: "title"
                         valueRole: "id"
+                        onActivated: root.changeMaterialSelection()
                     }
                     LabText { theme: root.theme;
                         width: parent.width
@@ -1141,7 +1194,11 @@ Item {
                         objectName: "interviewMaterialConsent"
                         width: parent.width
                         visible: leftPanel.setupVisible && useMaterial.checked
-                        text: "允许本场面试使用所选材料"
+                        text: "允许面试使用所选材料，并记住本次选择"
+                        onToggled: {
+                            root.saveSetup()
+                            app.saveInterviewPreferences({material_consent: checked})
+                        }
                         contentItem: LabText { theme: root.theme;
                             text: consent.text
                             font: consent.font
@@ -1159,7 +1216,7 @@ Item {
                                  && material.currentIndex >= 0
                                  && app.materials[material.currentIndex].ai_access
                                  && !consent.checked
-                        text: "请勾选上方授权后，Codex 才会读取这份材料；未勾选不会发送。"
+                        text: "未授权或材料版本已变化，请确认后勾选。只会在开始面试、提交回答时发送，不会因启动或连接 AI 自动发送。"
                         color: root.colors.warning
                         wrapMode: Text.Wrap
                         font.pixelSize: root.theme.scaledPx(12)
@@ -1318,7 +1375,10 @@ Item {
             theme: root.theme
             Layout.fillWidth: true
             Layout.minimumWidth: 0
-            Layout.fillHeight: true
+            Layout.fillHeight: !root.naturalConversationHeight
+            Layout.preferredHeight: root.naturalConversationHeight
+                ? Math.min(parent.height, conversationLayout.implicitHeight) : -1
+            Layout.alignment: Qt.AlignTop
             clip: true
             cardColor: "transparent"
             borderColor: "transparent"
@@ -1329,6 +1389,7 @@ Item {
             // ColumnLayout rather than relying on ignored Layout.fillHeight
             // hints inside that Column.
             ColumnLayout {
+                id: conversationLayout
                 width: parent.width
                 height: parent.height
                 spacing: 12
@@ -1382,6 +1443,7 @@ Item {
                 id: interviewWorkSplit
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.preferredHeight: root.naturalConversationHeight ? questionScroll.contentHeight : -1
                 orientation: Qt.Horizontal
                 ScrollView {
                 id: questionScroll
@@ -1550,7 +1612,13 @@ Item {
                             visible: !!activeQuestion && activeQuestion.kind !== "coding"
                             text: root.answerLocked ? (app.interview.answer_text || "") : root.answerDraft
                             readOnly: root.answerLocked || !root.interviewCanEdit
-                            onTextChanged: if (!root.answerLocked && !root.syncingQuestionEditors) root.answerDraft = text
+                            onTextChanged: {
+                                if (!root.answerLocked && !root.syncingQuestionEditors) {
+                                    root.answerDraft = text
+                                    root.queueAnswerDraft()
+                                }
+                            }
+                            onPreeditTextChanged: if (!preeditText.length) root.queueAnswerDraft()
                             placeholderText: root.answerLocked ? "回答已锁定" : !root.interviewCanEdit ? "面试已暂停或结束" : "输入你的回答……"
                             background: Rectangle {
                                 color: root.dynamicInterview ? "transparent" : root.theme.surfaceRaised
@@ -1587,9 +1655,9 @@ Item {
                                 LabText {
                                     objectName: "interviewVoiceState"
                                     theme: root.theme
-                                    text: app.interviewVoice.transcription_state === "loading" ? "正在加载流式模型，可以继续说话…"
-                                          : root.voiceRecording ? (root.usingLocalStt ? "正在听 · 实时转文字" : "正在录音 · 完成后远程转录")
-                                          : root.voiceTranscribing ? (root.usingLocalStt ? "正在补齐最后一句…" : "正在转成文字…")
+                                    text: app.interviewVoice.transcription_state === "loading" ? "正在加载本地语音，可以继续说话…"
+                                          : root.voiceRecording ? (root.usingLocalStt ? "正在听 · 流式预览，停句自动校准" : "正在录音 · 完成后远程转录")
+                                          : root.voiceTranscribing ? (root.usingLocalStt ? "正在完成本地 0.6B 校准，可以继续打字…" : "正在转成文字…")
                                           : app.interviewVoice.error ? "语音输入未完成"
                                           : app.interviewVoice.transcription_state === "transcribed" ? "已添加到回答框" : "语音输入"
                                     tone: root.voiceRecording ? "warning" : "muted"
@@ -1681,7 +1749,7 @@ Item {
                                     Layout.fillWidth: true
                                     variant: "caption"; tone: "muted"; wrapMode: Text.Wrap
                                     text: root.usingLocalStt
-                                          ? "边说边在本机识别，下方实时显示文字。完成录音后补齐尾句并加入草稿，不覆盖手打内容、不自动提交，也不上传音频。"
+                                          ? "边说边显示预览，停句后由本地 Qwen3-ASR 0.6B 根据原音频校准。完成录音后加入草稿；识别仍可能有误，请检查后提交。不覆盖手打内容，也不上传音频。"
                                           : "远程转录需你明确授权。结束录音后自动转文字；不会自动提交回答。"
                                 }
                                 GridLayout {
@@ -1732,8 +1800,8 @@ Item {
                                               : app.localStt.downloading
                                                 ? "正在下载本地模型：" + app.localStt.progress + "%（不会上传录音）"
                                                 : app.localStt.ready
-                                                  ? "本地模型已下载 · 边说边识别；无需联网或 Key，首次使用会加载模型。"
-                                                  : "首次需下载约 " + app.localStt.download_mb + " MB 流式模型，之后可离线转录中文或英文。"
+                                                  ? "预览与 0.6B 校准模型已就绪 · 无需联网或 Key。首次停句校准需加载模型；后续复用。"
+                                                  : "完整本地组合约 " + app.localStt.download_mb + " MB，已有完整文件会复用，只下载缺失项。支持中英识别；不会上传录音。"
                                         color: root.colors.muted
                                         font.pixelSize: root.theme.scaledPx(12)
                                         wrapMode: Text.Wrap
@@ -1775,7 +1843,7 @@ Item {
                                     }
                                     LabText { theme: root.theme;
                                         Layout.fillWidth: true
-                                        text: "Zipformer 流式中英模型 · sherpa-onnx 本地推理。点击下载表示同意 <a href='" + app.localStt.license_url + "'>模型使用许可</a>。"
+                                        text: "sherpa-onnx 本地 CPU 推理。模型许可：<a href='" + app.localStt.license_url + "'>Zipformer</a> · <a href='" + app.localStt.correction_license_url + "'>Qwen3-ASR 0.6B</a> · <a href='" + app.localStt.vad_license_url + "'>Silero VAD</a>。点击下载表示同意上述许可。"
                                         textFormat: Text.RichText
                                         color: root.colors.muted
                                         linkColor: root.colors.accent
@@ -2597,6 +2665,23 @@ Item {
                         onClicked: root.codexSettingsRequested()
                     }
                 }
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: !!root.activeQuestion && !root.codingQuestion && !root.answerLocked
+                    LabText {
+                        objectName: "interviewDraftStatus"
+                        theme: root.theme; Layout.fillWidth: true; variant: "caption"; wrapMode: Text.Wrap
+                        tone: root.draftCompositionPending || app.interview.draft_status === "error" ? "warning" : "muted"
+                        text: root.draftCompositionPending ? "请完成正在输入的文字后再关闭。"
+                              : app.interview.draft_error || (app.interview.draft_status === "pending" ? "正在保存本地草稿…"
+                              : app.interview.draft_status === "saved" ? "草稿已保存 · 重新启动可继续；尚未提交或发送" : "回答会自动保存为本地草稿")
+                    }
+                    LabButton {
+                        objectName: "retryInterviewDraft"; theme: root.theme; variant: "secondary"
+                        text: "重试保存"; visible: app.interview.draft_status === "error"
+                        onClicked: root.flushDraft()
+                    }
+                }
                 LabText { theme: root.theme;
                     visible: !!app.interview.ai_assessment_state
                              && app.interview.ai_assessment_state !== "complete"
@@ -2645,7 +2730,7 @@ Item {
                         variant: "primary"
                         visible: app.interview.status === "completed" || app.interview.status === "incomplete"
                         text: "再面试一场"
-                        onClicked: { root.configuringNewInterview = true; root.clearSetupConsent(); root.initializeSetup() }
+                        onClicked: { root.configuringNewInterview = true; voiceConsent.checked = false; root.initializeSetup() }
                     }
                 }
             }

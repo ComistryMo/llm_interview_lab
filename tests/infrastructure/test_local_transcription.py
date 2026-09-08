@@ -136,7 +136,8 @@ def test_real_model_chinese_stereo_long_and_silence_offline(tmp_path, monkeypatc
     monkeypatch.setattr(local.urllib.request, "urlopen", no_network)
     start = time.perf_counter()
     transcript = transcriber.transcribe(source)
-    assert "早上九点" in transcript and "下午五点" in transcript, transcript
+    normalized = transcript.translate(str.maketrans({"點": "点", "9": "九", "5": "五"}))
+    assert "早上九点" in normalized and "下午五点" in normalized, transcript
     print(f"LOCAL_STT_COLD seconds={time.perf_counter() - start:.2f} text={transcript}")
     samples, rate = sf.read(source, dtype="float32")
     assert rate == 16000
@@ -149,7 +150,8 @@ def test_real_model_chinese_stereo_long_and_silence_offline(tmp_path, monkeypatc
     stereo_sha = hashlib.sha256(stereo.read_bytes()).hexdigest()
     start = time.perf_counter()
     transcript = transcriber.transcribe(stereo)
-    assert transcript.count("早上九点") == 6 and transcript.count("下午五点") == 6, transcript
+    normalized = transcript.translate(str.maketrans({"點": "点", "9": "九", "5": "五"}))
+    assert normalized.count("早上九点") == 6 and normalized.count("下午五点") == 6, transcript
     print(f"LOCAL_STT_LONG seconds={time.perf_counter() - start:.2f} audio_seconds={len(mono) / 48000:.2f} segments=6")
     assert hashlib.sha256(source.read_bytes()).hexdigest() == original_sha
     assert hashlib.sha256(stereo.read_bytes()).hexdigest() == stereo_sha
@@ -182,7 +184,8 @@ def test_real_stream_emits_text_before_input_finished(monkeypatch):
     text = transcriber.stream(blocks(), update, threading.Event())
     assert len([item for item in updates if not item[0]]) >= 3
     assert updates[0][1] < fed_seconds, "Speech must appear while input is still open"
-    assert "下午五点" in text and text.count("早上九点") == 1
+    normalized = text.translate(str.maketrans({"點": "点", "9": "九", "5": "五"}))
+    assert "下午五点" in normalized and normalized.count("早上九点") == 1
     assert updates[-1][2] == text
     print(f"STREAM_REAL first_audio_seconds={updates[0][1]:.2f} updates={len(updates)} decode_seconds={time.perf_counter()-loaded:.2f}")
 

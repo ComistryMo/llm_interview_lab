@@ -282,10 +282,13 @@ def problem_title(problem_id: str, fallback: str = "", language: str = "zh-CN") 
 
 
 def problem_brief(problem_id: str, fallback: str = "", language: str = "zh-CN") -> str:
-    """Return a concise Chinese first-read contract; English remains opt-in."""
+    """List summaries only; workspaces must use the complete problemStatement."""
 
     if language in {"en", "en-US", "en-GB"}:
         return fallback
+    from .coding_statements_zh import CONTRACTS
+    if problem_id in CONTRACTS:
+        return CONTRACTS[problem_id].splitlines()[0]
     # Chinese-authored tasks are already the full user-facing statement, not
     # an English source that needs a short first-read translation.
     if "\n## 任务\n" in fallback:
