@@ -19,9 +19,9 @@
 [**浏览课程（Browse Curriculum）**](#如何开始训练) ·
 [**连接 AI（Use with AI）**](#如何接入-ai)
 
-![当前源码：面试优先的中文首页](docs/images/unified-interview-20260908/home-dark.png)
+![当前候选：面试优先的中文首页](docs/images/candidate-20260909/after/home-dark.png)
 
-当前源码的正式页面，使用隔离合成档案；[深浅主题与源码证据](docs/images/unified-interview-20260908/manifest.json)。新面试取消求职阶段分档，提交后优先逐问生成、结束再评分；[本轮实现与真实传输限制](plans/active/unified-difficulty-interview-workbench.zh.md)。旧安装包可参考[历史首页截图](docs/images/desktop-home.png)，未随本轮源码重新发布。
+当前候选的正式页面，使用隔离合成档案；[七页深浅主题 Before/After](docs/design/desktop-candidate-20260909.zh.md)及[候选验收与限制](docs/desktop-candidate-20260909-report.zh.md)。侧栏可收起、中文题面完整展示、口述草稿本地恢复；新面试取消求职阶段分档，提交后优先逐问生成、结束再评分。旧安装包可参考[历史首页截图](docs/images/desktop-home.png)，未随候选分支自动发布。
 
 **岗位路线 · 经过测试的练习 · AI 模拟面试 · 证据复盘 · 间隔复测**
 
@@ -63,6 +63,8 @@ LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）�
 ## 下载与三分钟开始
 
 当前候选分支为 `candidate/desktop-release-20260909`，源码版本 `0.4.0a4`，对应 `v0.4.0-alpha.4`（**未发布**）。候选包和验收门禁仍在核对，不能视为已发布版本。下方 [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) 属于既有发布，不包含候选升级；当前发布状态以官方 Release 页面为准。
+
+候选包完整携带 96 道 ready 题资产；未内置 PyTorch 的 Windows 包中，27 道已验证代码题具备运行环境，不能按开发机的 84 道宣传全题可运行。详见[覆盖口径](docs/content/release-candidate-coverage-20260909.zh.md)及[同机性能数据](docs/performance/desktop-candidate-20260909.zh.md)。
 
 | 你使用的环境 | 推荐方式 |
 |---|---|

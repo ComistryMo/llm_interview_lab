@@ -2,7 +2,7 @@
 
 [简体中文（规范版本）](README.md) | English
 
-> This is the English translation for the v0.4.0-alpha.3 Alpha release. The Chinese documentation is canonical when wording differs.
+> English translation of the current candidate documentation. The Chinese documentation is canonical when wording differs. Candidate changes are not part of the published Alpha.3 release.
 
 A local-first, role-aware, AI-assisted interview workbench. It combines role skill maps, structured mock interviews, tested coding exercises, oral review, and spaced retention so that “I understand it” can become “I can implement and explain it independently.”
 
@@ -14,11 +14,11 @@ A local-first, role-aware, AI-assisted interview workbench. It combines role ski
 
 [Download](#download) · [CLI quick start](#cli-quick-start) · [Connect AI](#optional-ai-connections)
 
-![Desktop home](docs/images/desktop-home.png)
+![Candidate desktop home with synthetic data](docs/images/candidate-20260909/after/home-dark.png)
 
 **Role-aware paths · Tested exercises · AI interviews · Evidence review · Retention**
 
-Current source has an interview-first home and no standalone AI Coach or permanent Exercise navigation item. New dynamic interviews use role, authorized background and difficulty, not intern/new-grad/experience tiers. Answers are saved before streaming the next question; grading happens after the interview. Invalid coding IDs are rejected, not silently replaced. The shared native editor separates running a script from public tests. See the [implementation and live-test limits](plans/active/unified-difficulty-interview-workbench.zh.md) and [current screenshots](docs/images/unified-interview-20260908/manifest.json). Older release screenshots remain historical; downloaded binaries were not updated.
+Current source has an interview-first home, a collapsible sidebar, complete Chinese task statements and local oral-draft recovery. New dynamic interviews use role, authorized background and difficulty, not intern/new-grad/experience tiers. Answers are saved before streaming the next question; grading happens after the interview. Invalid coding IDs are rejected, not silently replaced. The shared native editor separates running a script from public tests. See the [candidate evidence and live-test limits](docs/desktop-candidate-20260909-report.zh.md) and [production Before/After screenshots](docs/design/desktop-candidate-20260909.zh.md). Older release screenshots remain historical; public downloads were not replaced.
 
 This is not a random question list, a one-pass mastery badge, or a way for AI to silently write a learner's answer. Local practice requires no AI connection; personalized interviews do.
 
@@ -33,7 +33,9 @@ This is not a random question list, a one-pass mastery badge, or a way for AI to
 
 ## Download
 
-This iteration updates **`main` source only**, retaining package version `0.4.0a3`. The existing [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) does not include the new unified-difficulty workbench. Use source installation to try these changes; no desktop build or release was made in this iteration.
+The isolated `candidate/desktop-release-20260909` branch uses source version `0.4.0a4`; `v0.4.0-alpha.4` is **not published**. Candidate packages and platform gates are documented in the report above. `main` and existing releases have not been overwritten. The existing [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) does not include these candidate changes.
+
+All 96 ready problem assets are included. The Windows candidate without PyTorch has 27 runtime-eligible validated coding problems, not the development environment's 84. Planned nodes and missing dependencies are not counted as runnable practice. See the [coverage definitions](docs/content/release-candidate-coverage-20260909.zh.md) and [same-host performance measurements](docs/performance/desktop-candidate-20260909.zh.md).
 
 | User | Artifact |
 |---|---|
