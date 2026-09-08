@@ -6,7 +6,7 @@
 
 - 仓库 `ComistryMo/llm_interview_lab`，本地 `E:\hz-llm-interview-lab-codex`。
 - 候选分支 `candidate/desktop-release-20260909`；起点/main 为 `cb3d13bba6368ee26a2efeb660f625e22b43edce`。起点已有的 tracked 流式语音/UI 改动一并保留在 `b319934`，没有从旧源码重建而遗漏近期功能。
-- 最终 Windows 包及正式截图的生产源码为 `2729e280d75273df55cdc5e61e3828ea07b1d258`。性能复测及 CI 来源 `d7791ee21dfd8d3a17edfd9ac3e09729d3c6c107`，后续提交只调整测试/文档，未改变生产源码。包内 `runtime_assets/BUILD-METADATA.json` 保存准确来源及文件 SHA。
+- 最终 Windows 本地包及正式截图的应用源码为 `2729e280d75273df55cdc5e61e3828ea07b1d258`。性能复测来源 `d7791ee21dfd8d3a17edfd9ac3e09729d3c6c107`；后续只调整测试/文档及 macOS 最低系统声明，Windows 应用、公共课程及界面源码未变。包内 `runtime_assets/BUILD-METADATA.json` 保存准确来源及文件 SHA。
 - 未知未跟踪的反馈、计划书、原图、`test结果.md`、`题目.md`、旧 UAT 目录和临时文件没有被打包、提交、清理或读取。用户原先运行的应用及其数据未触碰。
 - 本轮只使用新建 synthetic 档案、题面公共资产、自己生成的运行探针和可控传输替身；公开测试通过路径的 AUTHOR 验收实现仅放在本轮 ignored 空间。没有读取真实简历、录音、API Key、系统密钥或历史维护者 Oracle。
 
@@ -53,6 +53,12 @@
 
 此前 `2cc62ad`、`4a987a7` 包在首次建档或执行入口上失败，仅作为 ignored 诊断保留，不是可交付版本。`f0b173c` 是可用的上一候选 checkpoint，最终交付使用 `2729e280`。Artifact 检查已加强为实际执行 script/pytest 两个 worker，不能只凭窗口 smoke 放行。
 
+### Windows CI 的独立构建证据
+
+[MSVC Artifact 10080687734](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34284301760/artifacts/10080687734) 来源 `aed507c`（与本地最终包的应用源码相同），已下载到 `dist/candidate-ci-aed507c/windows/`。内层便携 ZIP 为 172,108,415 字节，SHA-256 `0a74d986f6306fdac4c942ef674ba41a6dc9b933963177668d3896f8877fb0b4`，与生产方清单相符；GitHub 外层 Artifact ZIP 摘要为 `0b7c92acdb16ca354851a8ff6c7400b5a3d933730f64605d4d09173f975c9396`，两者不能混用。
+
+这份实际下载的包也解压到新中文/空格路径，移除 Python 路径后用原生窗口创建 `synthetic-msvc`，进入完整中文 FND-001，保存并运行非题解探针，得到 `9`/退出 0；公开测试如实返回 missing_symbol。没有读取开发机 Profile 或凭证。MSVC 与 MinGW 产物大小、SHA 不同是不同工具链的实际结果，不宣称二进制可重复构建。
+
 ## 4. 视觉、内容和性能
 
 - [正式 Before/After](design/desktop-candidate-20260909.zh.md)：7 个页面 × 两种主题 × 前后，共 28 张。来源和文件 SHA 在 manifest；未使用 Phase 0 图冒充。
@@ -90,10 +96,12 @@
 
 ## 6. CI、发布与回退
 
-当前 [候选 CI 34286507207](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34286507207) 正在验证最终生产源码。前一轮 `34284301760` 的 Ubuntu 3.10/3.11/3.12、Windows 3.11/3.12、CPU PyTorch、文档通过；macOS 为 942 passed / 1 failed / 8 skipped，失败是设置页在固定 80 ms 时仍未完成布局。现已改为有上限的几何等待，不减断言，最终平台结果仍待回填。更早 Windows core 的 12 分钟限额已延长至 35 分钟，没有减少测试。
+当前 [候选 CI 34288557804](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34288557804) 验证 `4f939695ce0d411356f6121ea46e5569018366a2`。前一 `d7791ee` 轮 macOS 整套测试已通过并进入构建；更早 `34284301760` 的六个核心 Python/系统矩阵、CPU PyTorch、文档及 Windows 构建均通过，macOS 留下的一个固定 80 ms 布局等待失败已修正，未减断言。Windows core 旧 12 分钟限额延长至 35 分钟，没有减少测试。
+
+最终 macOS 包要求 Apple Silicon / **macOS 14+**。CI 实际安装 Qt 的 13+ wheel 和 NumPy/SciPy 的 14+ Accelerate wheel，不能仅按 Qt 写 13，也不能沿用 Alpha.3 的 12+ 声明。`4f93969` 同步编译参数、plist 和 Artifact 检查为 14；仅更改元数据不能证明在较低系统兼容。仍使用 ad-hoc signing，无 Developer ID、无公证，macOS 15 CI 不能代替用户实机验收。
 
 源版本 `0.4.0a4` / 预期发布 Tag `v0.4.0-alpha.4` 只用于一致性校验，不代表 Tag 或 Release 已创建。[发布说明与安装步骤](release-notes-v0.4.0-alpha.4.md)保留候选状态。
 
 用户审阅后如需发布，现有工作流要求手动 publish、匹配已存在 Tag、本轮全部测试和两个平台 Artifact 通过；禁止覆盖旧 Release。Windows 解压到新目录再切换入口，macOS 退出后替换 app；保留旧包及原数据目录可回退，不删除 Profile、events、材料、草稿、密钥引用或模型缓存。
 
-剩余事项：补齐远端核心与 macOS 平台门禁，核验候选 macOS 产物；公开发布前仍应做目标机器麦克风/真实模型及 macOS 交互验收。Practice 输出标题已统一为“执行输出”，正文明确区分脚本退出码与公开测试结果。
+剩余事项：补齐最终远端核心与 macOS 平台门禁，核验候选 macOS 产物；公开发布前仍应做目标机器麦克风/真实模型及 macOS 交互验收。Practice 输出标题已统一为“执行输出”，正文明确区分脚本退出码与公开测试结果。另有不阻断执行的 P2 文案：结果尾部“测试版本”实际显示的是被测作答摘要 `tested_revision`，后续可改为“作答版本”；不为这一标签再次重建本轮 Windows 包。

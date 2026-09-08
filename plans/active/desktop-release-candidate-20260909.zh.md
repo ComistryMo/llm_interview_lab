@@ -143,6 +143,13 @@ git diff --check
 - 原因与 [NumPy 官方说明](https://numpy.org/doc/2.0/release/2.0.0-notes.html#macos-accelerate-support-including-the-ilp64) 一致：14+ 的 pip 会选择 Accelerate wheel。采用实际已安装的运行库，不在收尾降级或重建依赖。Nuitka、plist、Artifact 契约及中英安装说明同步为 14，直接目标再次 5 passed / 0.37 秒。
 - d7791ee 的 macOS 全量测试已经通过并进入编译，证明设置布局等待修正有效；但它的旧最低版本声明不作为最终交付。最终 macOS 包仍必须来自 14.0 声明的新候选来源，Windows 本地包和应用源码保持不变。
 
+#### 2026-09-09 07:22 HKT 远端 Windows 下载验收
+
+- Windows MSVC 构建 aed507c / Run 34284301760 已成功；下载 Artifact 10080687734，外层 SHA 与 GitHub digest 匹配。内层便携包 172,108,415 字节，SHA `0a74d986f6306fdac4c942ef674ba41a6dc9b933963177668d3896f8877fb0b4` 与生产方清单一致；本地路径 `dist/candidate-ci-aed507c/windows/`。
+- 实际启动这份下载包，空的新 synthetic-msvc 档案、中文/空格路径、无 Python PATH：建档 → FND-001 → 保存非题解探针 → 脚本输出 9/退出 0 → 公开测试明确 missing_symbol。不是重新运行源码来替代 MSVC 包验证；原生应用已正常关闭。
+- MinGW 最终包仍位于 `dist/candidate-final-windows`，已有 17 个公开测试通过、提交实现、待复盘、重启及旧数据升级证据。两个工具链 SHA 和大小不同，报告分别列出，不假称字节可重复构建。
+- 当前最终平台 Run 为 34288557804 / 4f93969（macOS 14 最低声明），仍待其 macOS 编译与 Artifact。实际应用源码未再改动；发现结果尾部“测试版本”其实指被测作答 SHA 的 P2 文案，留待后续，不为此重复 Windows 构建。
+
 #### 2026-09-09 06:04 HKT 续接
 
 - macOS 修复后全量为 939 passed / 3 failed / 8 skipped：两项 GridView 缓存 delegate 的异步生成未等待，一项已禁用的缺依赖关联题仍可通过直接 Controller 入口创建任务。未把失败改成跳过。
