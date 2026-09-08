@@ -438,5 +438,7 @@ def prepare_desktop_repository() -> Path:
     # grader at it would make Python interpret ``--grader-worker`` as an
     # unknown option and contaminate subsequent in-process tests.
     if getattr(sys, "frozen", False) or "__compiled__" in globals():
-        os.environ["LLM_LAB_GRADER_EXECUTABLE"] = str(Path(sys.executable).resolve())
+        # Nuitka can leave sys.executable pointing to a non-shipped python.exe.
+        # argv[0] is the running standalone application, including after moves.
+        os.environ["LLM_LAB_GRADER_EXECUTABLE"] = str(Path(sys.argv[0]).resolve())
     return find_repository_root(destination)

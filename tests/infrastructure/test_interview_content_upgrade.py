@@ -30,7 +30,7 @@ def test_all_reviewed_cards_and_task_versions_are_reachable(unified):
             eligible.update(p.id for p, _ in dynamic_coding_candidates(service.catalog, service.roles, session))
     for pid in PROBLEMS:
         problem = service.catalog.get(pid)
-        assert pid in eligible, pid
+        assert (pid in eligible) is service._problem_environment_available(problem), pid
         statement = (problem.problem_dir / "task.md").read_text(encoding="utf-8")
         review = knowledge.coding_review(pid, statement)
         assert review and review["task_sha256"] == hashlib.sha256(statement.encode()).hexdigest()

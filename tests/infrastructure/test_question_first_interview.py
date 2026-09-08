@@ -18,7 +18,7 @@ from llm_interview_lab.role_interviews import (
 def decision(service, session, stage, *, angle="", topic="", sufficient=False):
     candidates = dynamic_coding_candidates(service.catalog, service.roles, session)
     return {"next_stage": stage, "follow_up": "你刚才提到独立评测集，能说说如何避免训练数据泄漏吗？" if stage in {"experience", "theory"} else "",
-            "coding_problem_id": candidates[0][0].id if stage == "coding" else "",
+            "coding_problem_id": candidates[0][0].id if stage == "coding" and candidates else "",
             "next_skill_ids": [next(iter(service.roles.roles[session["role_id"]].skill_weights))] if stage in {"experience", "theory"} else [],
             "coverage": {"experience": "合成研究项目", "angle": angle, "topic": topic,
                          "evidence": "独立评测集" if sufficient else "", "sufficient": sufficient}}
@@ -42,6 +42,7 @@ def advance(service, profile, iid, stage, **coverage):
 def test_twelve_coverage_trajectories_and_deferred_scoring(unified, role, difficulty, sufficient):
     service, profile = unified
     session = create(service, profile, role_id=role, difficulty=difficulty)
+    coding_available = bool(dynamic_coding_candidates(service.catalog, service.roles, session))
     iid = session["interview_id"]
     service.start_interview(profile, iid)
     session = advance(service, profile, iid, "experience")
@@ -51,13 +52,14 @@ def test_twelve_coverage_trajectories_and_deferred_scoring(unified, role, diffic
     topics = ["优化目标", "数值稳定", "Attention"] + (["替代解释"] if difficulty == "hard" else [])
     for index, topic in enumerate(topics):
         session = advance(service, profile, iid, "coding" if index == len(topics) - 1 else "theory", topic=topic, sufficient=sufficient)
-    assert session["questions"][-1]["kind"] == "coding"
+    assert (session["questions"][-1]["kind"] == "coding") is coding_available
     assert not session["assessments"]
     assert "seniority" not in session
-    session = advance(service, profile, iid, "finish")
+    if coding_available:
+        session = advance(service, profile, iid, "finish")
     assert service.current_interview(profile, iid)["question"] is None
     coverage = flow_coverage(session)
-    assert coverage["complete"] is sufficient
+    assert coverage["complete"] is (sufficient and coding_available)
     finished = service.finish_interview(profile, iid, confirm_incomplete=True)
     assert not finished["assessments"] and finished["result"]["unscored"]
     original_finished = finished["result"]["finished_at"]
@@ -66,9 +68,13 @@ def test_twelve_coverage_trajectories_and_deferred_scoring(unified, role, diffic
                   "evidence": "本题回答描述了独立评测思路；实现细节仍缺少更完整证据。",
                   "evidence_quote": "独立评测集", "confidence": "medium", "fatal_issues": [], "follow_up": ""}
         finished = update_finished_grading(service.repo_root, profile, iid, q["question_id"], result=result)
-    assert finished["result"]["overall_score"] == 50
+    if coding_available:
+        assert finished["result"]["overall_score"] == 50
+    else:
+        assert finished["result"]["overall_score"] < 50
+        assert "coding" in coverage["missing_stages"]
     assert finished["result"]["finished_at"] == original_finished
-    assert finished["status"] == ("completed" if sufficient else "incomplete")
+    assert finished["status"] == ("completed" if sufficient and coding_available else "incomplete")
     assert all(v["status"] == "complete" for v in finished["grading"]["questions"].values())
 
 

@@ -1221,7 +1221,7 @@ def test_restarted_profile_starts_from_form_with_saved_key(controller, monkeypat
         for _ in range(150):
             QTest.qWait(10)
             time.sleep(0.005)
-            if window.findChild(QObject, "personalizedInterviewContextDialog").property("visible"):
+            if window.findChild(QObject, "personalizedInterviewContextDialog").property("visible") and probes:
                 break
         assert probes == [True], restored.connectionError
         confirm = _find(window, "confirmInterviewSetupContext")

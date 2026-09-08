@@ -16,6 +16,7 @@ import tempfile
 from llm_interview_lab import __version__
 from llm_interview_lab.release_version import release_metadata
 from release_metadata import write_build_metadata
+from check_desktop_workers import check_workers
 
 
 APP_NAME = "LLMInterviewLab"
@@ -158,6 +159,7 @@ def main() -> int:
         if VERSION not in version.stdout:
             raise RuntimeError(f"unexpected packaged version: {version.stdout.strip()}")
         run(executable, "--smoke-test", capture_output=True, env=environment, timeout=120)
+        check_workers(executable, Path(directory), environment)
 
     zip_path = release / "LLMInterviewLab-macOS-arm64.app.zip"
     run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", app, zip_path)

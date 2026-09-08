@@ -183,6 +183,13 @@ def test_knowledge_related_mla_button_opens_real_coding_workspace(scene):
     editor.setProperty("text", "先解释压缩缓存与解耦位置分量，再实现代码。")
     viewport = _find(window, "knowledgeDetailScroll").property("contentItem")
     button = _find(window, "knowledgeProblem-ATT-023")
+    if not controller.service._problem_environment_available(controller.service.catalog.get("ATT-023")):
+        assert not button.isEnabled()
+        problem = next(p for p in controller.problems if p["problem_id"] == "ATT-023")
+        assert "PyTorch" in problem["environment"]
+        assert not controller.openProblem("ATT-023")
+        assert not controller.currentTask.get("problem_id")
+        return
     assert button.isEnabled()
     y = button.mapToItem(viewport, QPointF()).y()
     viewport.setProperty("contentY", max(0, viewport.property("contentY") + y - viewport.height() + button.height() + 24))

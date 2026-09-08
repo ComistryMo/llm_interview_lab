@@ -10,12 +10,15 @@ import time
 def run_local_python(path: Path, stdin: str = "", *, repo_root: Path, timeout: float = 30) -> dict:
     started = time.monotonic()
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"}
+    desktop_executable = os.environ.get("LLM_LAB_GRADER_EXECUTABLE")
+    command = ([desktop_executable, "--script-worker", str(path)]
+               if desktop_executable else [sys.executable, str(path)])
     with (tempfile.TemporaryFile(dir=path.parent) as source,
           tempfile.TemporaryFile(dir=path.parent) as out, tempfile.TemporaryFile(dir=path.parent) as err):
         source.write(stdin.encode("utf-8"))
         source.seek(0)
         with subprocess.Popen(
-            [os.environ.get("LLM_LAB_GRADER_EXECUTABLE") or sys.executable, str(path)],
+            command,
             stdin=source, stdout=out, stderr=err, cwd=path.parent, env=env,
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         ) as process:

@@ -935,7 +935,14 @@ Item {
                     LabButton {
                         objectName: "interviewEditSettings"; theme: root.theme; variant: "secondary"
                         text: root.setupExpanded ? "收起配置" : "修改岗位、难度与材料"
-                        onClicked: root.setupExpanded = !root.setupExpanded
+                        onClicked: {
+                            root.setupExpanded = !root.setupExpanded
+                            Qt.callLater(function() {
+                                var view = setupScroll.contentItem
+                                var bottom = duration.mapToItem(view, 0, duration.height).y + view.contentY
+                                view.contentY = root.setupExpanded ? Math.max(0, bottom - setupScroll.availableHeight + 16) : 0
+                            })
+                        }
                     }
                     Column {
                     width: parent.width; spacing: 12

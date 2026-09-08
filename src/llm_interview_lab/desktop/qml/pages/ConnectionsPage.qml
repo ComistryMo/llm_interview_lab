@@ -36,6 +36,14 @@ Flickable {
     property bool compactForm: width < 760
     property string pendingDeleteConnectionId: ""
     property string pendingDeleteConnectionName: ""
+    function revealEditingForm() {
+        root.cancelFlick()
+        root.contentY = Math.max(0, Math.min(content.y + connectionForm.y - 12, contentHeight - height))
+    }
+    onContentHeightChanged: {
+        if (editingConnectionId.length > 0 && (modelField.activeFocus || deepseekModel.activeFocus))
+            Qt.callLater(root.revealEditingForm)
+    }
 
     function requestDeleteConnection(item) {
         if (!item)
@@ -95,8 +103,7 @@ Flickable {
                 modelField.forceActiveFocus()
                 modelField.selectAll()
             } else deepseekModel.forceActiveFocus()
-            root.cancelFlick()
-            root.contentY = Math.max(0, content.y + connectionForm.y - 12)
+            root.revealEditingForm()
         })
     }
 
@@ -141,13 +148,14 @@ Flickable {
         id: content
         x: (root.width - width) / 2
         y: root.compactOverview ? 12 : 24
-        width: Math.min(root.theme.formWidth, parent.width - (root.compactForm ? 36 : 56))
-        spacing: root.compactOverview ? 12 : 16
+        width: Math.min(root.theme.formWidth, root.width - (root.compactForm ? 36 : 56))
+        spacing: root.compactOverview ? 8 : 16
 
         // Main.qml owns the route title; use this smaller line for the
         // actionable context and keep the optional nature visible.
         LabText { theme: root.theme;
             objectName: "connectionsRouteContext"
+            visible: !root.compactOverview || app.connections.length === 0
             text: "本地优先，按需连接 AI"
             color: root.colors.text
             font.pixelSize: root.theme.scaledPx(18)

@@ -11,6 +11,7 @@ import tempfile
 import zipfile
 
 from PySide6.QtGui import QImage
+from check_desktop_workers import check_workers
 
 
 FORBIDDEN_REPORT_FRAGMENTS = (
@@ -122,6 +123,7 @@ def main() -> int:
             raise SystemExit(
                 f"desktop event-loop smoke failed: {smoke_cycle.stdout}{smoke_cycle.stderr}"
             )
+        check_workers(executable, root, environment)
         screenshot = root / "onboarding.png"
         smoke = subprocess.run(
             [

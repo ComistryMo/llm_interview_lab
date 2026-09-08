@@ -50,7 +50,7 @@ Flickable {
         id: content
         x: (root.width - width) / 2
         y: root.compactLayout ? 18 : 28
-        width: Math.min(root.theme.formWidth, parent.width - (root.compactLayout ? 36 : 60))
+        width: Math.min(root.theme.formWidth, root.width - (root.compactLayout ? 36 : 60))
         spacing: 24
 
         // Main.qml owns the route title; keep the page body focused on the
@@ -76,6 +76,8 @@ Flickable {
         LabCard {
             objectName: "settingsAppearanceCard"
             Layout.fillWidth: true
+            Layout.minimumWidth: 0
+            Layout.preferredWidth: content.width
             theme: root.theme; padding: 0; cardColor: root.theme.canvas; borderColor: "transparent"
             LabText { theme: root.theme; text: "外观"; variant: "section"; strong: true }
             GridLayout {

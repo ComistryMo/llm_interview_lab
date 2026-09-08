@@ -55,6 +55,17 @@ def _grader_worker(arguments: list[str]) -> int:
     return int(pytest.main(arguments))
 
 
+def _script_worker(arguments: list[str]) -> int:
+    """Execute the learner's saved script using the bundled Python runtime."""
+    import runpy
+
+    script = Path(arguments[0]).resolve()
+    sys.argv = [str(script), *arguments[1:]]
+    sys.path.insert(0, str(script.parent))
+    runpy.run_path(str(script), run_name="__main__")
+    return 0
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="llm-lab-gui")
     parser.add_argument("--profile", default="default")
@@ -174,6 +185,8 @@ def main(argv: list[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
     if arguments and arguments[0] == "--grader-worker":
         return _grader_worker(arguments[1:])
+    if arguments and arguments[0] == "--script-worker":
+        return _script_worker(arguments[1:])
     args = _parser().parse_args(arguments)
     if args.version:
         print(f"llm-lab-gui {__version__}")

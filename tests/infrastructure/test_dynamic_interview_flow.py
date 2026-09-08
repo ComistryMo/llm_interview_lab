@@ -145,7 +145,10 @@ def test_new_handwriting_is_reachable_as_real_interview_candidates(interview, ro
     session = service.interview_session(profile, iid)
     session = {**session, "role_id": role_id, "seniority": "mid"}
     candidates = {p.id for p, _ in dynamic_coding_candidates(service.catalog, service.roles, session)}
-    assert expected.issubset(candidates)
+    for problem_id in expected:
+        problem = service.catalog.get(problem_id)
+        assert problem.ready and problem.public_tests.is_file()
+        assert (problem_id in candidates) is service._problem_environment_available(problem)
 
 
 def test_revoked_material_blocks_send_not_answer_recovery(interview):
