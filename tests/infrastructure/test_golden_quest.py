@@ -75,7 +75,7 @@ def test_each_mastery_unlocks_only_the_next_golden_node(tmp_path, monkeypatch, c
     main(["init", "--profile", "learner-one"]); capsys.readouterr()
     for index, problem_id in enumerate(QUEST_IDS[:-1]):
         _master(root, "learner-one", problem_id)
-        assert main(["next", "--profile", "learner-one"]) == 0
+        assert main(["next", "--profile", "learner-one", "--quest", "python_data_reliability"]) == 0
         output = capsys.readouterr().out
         assert QUEST_IDS[index + 1] in output
         if index + 2 < len(QUEST_IDS):
@@ -87,10 +87,10 @@ def test_capstone_unlocks_only_after_all_six_are_mastered(tmp_path, monkeypatch,
     main(["init", "--profile", "learner-one"]); capsys.readouterr()
     for problem_id in QUEST_IDS[:-1]:
         _master(root, "learner-one", problem_id)
-    main(["next", "--profile", "learner-one"])
+    main(["next", "--profile", "learner-one", "--quest", "python_data_reliability"])
     assert "CAP-FND-001" not in capsys.readouterr().out
     _master(root, "learner-one", QUEST_IDS[-1])
-    main(["next", "--profile", "learner-one"])
+    main(["next", "--profile", "learner-one", "--quest", "python_data_reliability"])
     assert "CAP-FND-001 Hard Sample Data Pipeline" in capsys.readouterr().out
     assert main(["start", "CAP-FND-001", "--profile", "learner-one"]) == 0
 

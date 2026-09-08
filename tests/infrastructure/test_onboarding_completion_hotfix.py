@@ -101,7 +101,10 @@ def test_clean_no_ai_onboarding_enters_first_problem_and_can_resume(
     )
     assert not controller.onboardingRequired
     assert controller.currentPage == "exercise"
-    assert controller.currentTask["problem_id"] == "FND-001"
+    problem = controller.service.catalog.get(controller.currentTask["problem_id"])
+    assert problem.ready and problem.recommendable
+    assert controller.service._problem_environment_available(problem)
+    assert controller.service.current_submission("first-user")["problem_id"] == problem.id
     assert controller.onboardingError == ""
 
     assert controller.completeOnboarding(

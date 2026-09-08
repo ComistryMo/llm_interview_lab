@@ -139,6 +139,8 @@ def test_controller_starts_only_explicit_non_coding_interview_fallback(
     tmp_path: Path, qapp, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     del qapp
+    from tests.fixtures.legacy_interview_candidates import torch_only_candidates
+    torch_only_candidates(monkeypatch)
     QSettings.setDefaultFormat(QSettings.IniFormat)
     QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(tmp_path / "settings"))
     root = _repository(tmp_path)
@@ -415,7 +417,7 @@ def test_provider_assessment_scores_the_locked_answer_once(
         "provider-user", "ai_product_manager", "new_grad", "provider", "{}"
     )
     controller.createConfiguredInterview(
-        "ai_product_manager", "new_grad", "medium", "provider"
+        "ai_product_manager", "intern", "medium", "provider"
     )
     assert _wait_for(lambda: controller.interview.get("question") is not None)
     question = controller.interview["question"]
@@ -423,7 +425,7 @@ def test_provider_assessment_scores_the_locked_answer_once(
     controller.lockInterviewAnswer(answer)
     scores = {name: 4 for name in question["rubric"]["dimensions"]}
 
-    def synchronous_background(operation, complete, failed=None):
+    def synchronous_background(operation, complete, failed=None, **kwargs):
         del operation, failed
         complete(
             {
@@ -684,6 +686,7 @@ def test_codex_dynamic_first_question_accepts_completed_item_payload(
         "role_id": "post_training_engineer",
         "seniority": "intern",
         "difficulty": "medium",
+        "duration_minutes": "60",
         "material_id": "",
         "consent": False,
         "context_sha256": context["context_sha256"],
@@ -1035,7 +1038,7 @@ def test_delayed_provider_assessment_cannot_rewrite_frozen_evidence(
         "delayed-provider-user", "ai_product_manager", "new_grad", "provider", "{}"
     )
     controller.createConfiguredInterview(
-        "ai_product_manager", "new_grad", "medium", "provider"
+        "ai_product_manager", "intern", "medium", "provider"
     )
     assert _wait_for(lambda: controller.interview.get("question") is not None)
     question = controller.interview["question"]
@@ -1043,7 +1046,7 @@ def test_delayed_provider_assessment_cannot_rewrite_frozen_evidence(
     controller.lockInterviewAnswer(answer)
     callbacks: dict[str, object] = {}
 
-    def delayed_background(operation, complete, failed=None):
+    def delayed_background(operation, complete, failed=None, **kwargs):
         del operation, failed
         callbacks["complete"] = complete
 
@@ -1113,7 +1116,7 @@ def test_locked_interview_answer_corruption_is_visible_and_blocks_scoring(
         "corrupt-answer-user", "ai_product_manager", "new_grad", "disabled", "{}"
     )
     controller.createConfiguredInterview(
-        "ai_product_manager", "new_grad", "medium", "disabled"
+        "ai_product_manager", "intern", "medium", "disabled"
     )
     assert _wait_for(lambda: controller.interview.get("question") is not None)
     question = controller.interview["question"]
@@ -1148,7 +1151,7 @@ def test_tampered_interview_answer_path_cannot_escape_the_profile(
         "path-guard-user", "ai_product_manager", "new_grad", "disabled", "{}"
     )
     controller.createConfiguredInterview(
-        "ai_product_manager", "new_grad", "medium", "disabled"
+        "ai_product_manager", "intern", "medium", "disabled"
     )
     assert _wait_for(lambda: controller.interview.get("question") is not None)
     question = controller.interview["question"]
@@ -1317,7 +1320,8 @@ def test_home_and_practice_expose_truthful_next_actions() -> None:
     assert "app.startRetentionFor(modelData.problem_id, modelData.stage)" in home
     assert 'objectName: "dueRetentionList"' in home
     assert "modelData.blocked_reason" in home
-    assert "id: continueTrainingButton" in home
+    assert 'objectName: "homeCurrentPractice"' in home
+    assert "app.openProblem(root.currentPractice.problem_id)" in home
     assert 'return "继续面试"' in home
 
     assert 'objectName: "practicePrimaryAction"' in exercise
@@ -1382,10 +1386,10 @@ def test_home_and_learn_prioritize_primary_actions_and_secondary_metadata() -> N
     )
     assert 'readonly property string focusKind:' in home
     assert ': activeInterview ? "interview"' in home
-    assert ': currentPractice ? "practice"' in home
-    assert ': actionableRetention ? "retention"' in home
-    assert ': firstUnlock ? "unlock" : "empty"' in home
-    assert 'id: evidenceRail' in home
+    assert ': "new_interview"' in home
+    assert 'objectName: "homeCurrentPractice"' in home
+    assert 'objectName: "dueRetentionList"' in home
+    assert 'objectName: "homeEvidenceRail"' in home
     assert 'return "浏览可练题目"' in home
     assert 'StatusPill {' in home
 
@@ -1406,153 +1410,49 @@ def test_home_and_learn_prioritize_primary_actions_and_secondary_metadata() -> N
 
 
 def test_interview_setup_uses_profile_role_availability_and_real_report() -> None:
-    interview = (
-        REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/InterviewPage.qml"
-    ).read_text(encoding="utf-8")
-
+    """Current v2 setup/submit; legacy objects stay readable but aren't new flow."""
+    interview = (REPO_ROOT / "src/llm_interview_lab/desktop/qml/pages/InterviewPage.qml").read_text(encoding="utf-8")
     assert "app.dashboard.role.primary_role" in interview
-    assert "app.interviewConfiguration(roleId, seniority.currentValue, difficulty.currentValue)" in interview
-    assert 'objectName: "interviewConfigurationMessage"' in interview
-    assert "root.configuration.available !== false" in interview
-    assert "root.configuration.missing_rounds" in interview
-    assert "root.configuration.missing_environment" in interview
-    assert "root.configuration.non_coding_fallback" in interview
-    assert "root.missingRoundLabel(rounds[i])" in interview
-    assert "root.roundTypeText(item.round || item.type || \"\")" in interview
-    assert "no_strict_candidate" in interview
-    assert 'item.skills.join("、")' not in interview
-    assert "root.assessmentSourceText(modelData.source)" in interview
-    assert "root.confidenceText(modelData.confidence)" in interview
-    assert 'rounds.join("、")' not in interview
-    assert 'role.currentValue || "applied_ai_engineer"' not in interview
-    assert 'objectName: "startNonCodingInterview"' in interview
-    assert 'role.currentValue === "post_training_engineer"' not in interview
-    assert 'seniority.currentValue === "new_grad"' not in interview
-    assert 'difficulty.currentValue === "medium"' not in interview
-    assert "求职材料（可选）" in interview
-    assert 'objectName: "personalizedInterviewConnection"' in interview
-    assert 'objectName: "personalizedInterviewAlphaScope"' in interview
-    assert 'objectName: "personalizedInterviewContextDialog"' in interview
-    assert 'objectName: "personalizedInterviewPlanDialog"' in interview
-    assert 'objectName: "confirmPersonalizedInterviewPlan"' in interview
-    assert 'objectName: "interviewVoiceCard"' in interview
-    assert 'objectName: "toggleInterviewVoice"' in interview
-    assert 'objectName: "interviewVoiceSettings"' in interview
-    assert 'objectName: "transcribeInterviewRecording"' in interview
-    assert 'objectName: "interviewVoiceRemoteConsent"' in interview
-    assert 'app.startInterviewDictation(' in interview
-    assert 'app.stopInterviewRecording()' in interview
-    assert 'app.transcribeInterviewRecording(' in interview
-    assert 'function onInterviewTranscriptReady(value)' in interview
-    # Append dictation to the editable draft; preserve already typed text and
-    # still require the normal lock/submit action.
-    assert 'answer.text + "\\n" + value : value' in interview
-    assert 'app.lockInterviewAnswer(value)' not in interview
-    assert "app.dynamicInterviewContextPreview(" in interview
-    assert "app.startDynamicPersonalizedInterview(" in interview
-    assert "app.personalizedInterviewPlanContext(" not in interview
+    assert "app.dynamicInterviewConfiguration(roleId, difficulty.currentValue)" in interview
+    assert "seniority.currentValue" not in interview
+    assert "app.previewInterviewSettings(" in interview
+    assert "app.startConfiguredInterview(" in interview
+    assert "app.submitInterviewAnswer(" in interview
+    assert "app.submitInterviewCode(" in interview
     assert "app.generatePersonalizedInterviewPlan(" not in interview
     assert "app.generatePersonalizedInterviewPlanWithCodex(" not in interview
-    # Dynamic interviews enter on a local process opening and materialize only
-    # the current turn.  The legacy plan dialog remains a compatibility object
-    # but must never be opened by the current GUI path.
-    assert 'app.interviewPlanPreview.plan_mode !== "dynamic_ai"' not in interview
-    assert 'function onInterviewPlanReady()' in interview
-    signal_body = interview.split('function onInterviewPlanReady()', 1)[1].split(
-        'function onInterviewTranscriptReady', 1
-    )[0]
-    assert '.open()' not in signal_body
-    assert 'startDynamicPersonalizedInterview(' in interview
-    assert '正在准备第一问' not in interview
-    dialog_body = interview.split('objectName: "personalizedInterviewContextDialog"', 1)[1].split(
-        'objectName: "personalizedInterviewPlanDialog"', 1
-    )[0]
-    assert 'StatusPill {' not in dialog_body
-    assert 'ContextPreviewList {' in dialog_body
-    context_list = (REPO_ROOT / "src/llm_interview_lab/desktop/qml/components/ContextPreviewList.qml").read_text(encoding="utf-8")
-    assert 'height: rowContent.implicitHeight + 24' in context_list
-    assert 'wrapMode: Text.Wrap' in context_list
-    assert 'objectName: "personalizedInterviewCodexPreferences"' in interview
-    assert 'objectName: "openCodexPreferencesFromInterview"' in interview
-    assert 'text: "设置模型与推理强度"' in interview
-    assert 'objectName: "personalizedInterviewMaterialAccessNotice"' in interview
-    assert 'objectName: "openMaterialsForInterviewAuthorization"' in interview
-    assert "app.setMaterialAiAccess(material.currentValue, true)" in interview
-    assert 'objectName: "personalizedInterviewConsentNotice"' in interview
-    assert "难度用于调整 AI 追问强度" in interview
-    assert "高压设置不会阻止" not in interview  # no duplicate, misleading coding promise
-    assert 'property bool codexPlanPending: false' in interview
-    assert 'function onAiStateChanged()' in interview
-    assert 'Qt.callLater(root.openPersonalizedPlanContext)' in interview
-    assert 'app.navigate("settings")' in interview
-    assert "outputSchema" not in interview  # schema stays in the controller
-    assert "app.confirmPersonalizedInterviewPlan()" in interview
-    assert 'visible: false' in interview
-    assert interview.index('objectName: "startNonCodingInterview"') < interview.index(
-        'objectName: "interviewPyTorchEnvironmentHelp"'
-    )
-    assert 'objectName: "nonCodingInterviewConfirmationDialog"' in interview
-    assert 'title: "这不是完整岗位蓝图"' in interview
-    assert 'height: Math.min(500, root.height - 48)' in interview
-    assert 'id: fallbackDialogViewport' in interview
-    assert 'contentHeight: fallbackDialogContent.implicitHeight' in interview
-    assert 'footer: DialogButtonBox {' in interview
-    assert 'alignment: Qt.AlignRight' in interview
-    assert 'objectName: "nonCodingInterviewBackButton"' in interview
-    assert 'text: "返回"' in interview
-    assert 'objectName: "nonCodingInterviewConfirmButton"' in interview
-    assert 'text: "确认开始专项"' in interview
-    assert 'onOpened: fallbackBackButton.forceActiveFocus()' in interview
-    assert "各轮仍保留原蓝图权重，不会重新归一化" in interview
-    assert "始终标记为未完整，只形成部分面试证据" in interview
-    assert "技术状态：incomplete / partial evidence" in interview
-    assert "专项结果不会改变 Practice mastery" in interview
-    assert "root.fallbackRoundSummary(root.nonCodingFallback().included_rounds)" in interview
-    assert "root.fallbackRoundSummary(root.nonCodingFallback().omitted_rounds)" in interview
-    assert "root.nonCodingFallback().duration_minutes" in interview
-    assert "root.fallbackCoveragePercent()" in interview
-    assert 'app.createNonCodingInterview(' in interview
-    assert 'useMaterial.checked ? material.currentValue : ""' in interview
-    assert 'useMaterial.checked ? consent.checked : false' in interview
-    assert 'python -m pip install -e \\".[torch,dev]\\"' in interview
-    assert "桌面应用不会自行安装依赖" in interview
-    assert "需先克隆源码并进入仓库根目录" in interview
-    assert 'objectName: "interviewSourceEnvironmentLink"' in interview
-    assert 'objectName: "interviewFallbackSourceEnvironmentLink"' in interview
-    assert "https://github.com/ComistryMo/llm_interview_lab/blob/main/docs/desktop-app.md" in interview
-    assert "Qt.openUrlExternally(link)" in interview
-    assert "当前环境暂缺所需依赖；可先切换到“标准”或查看环境说明。" not in interview
-    # Partial-evidence disclosure lives with the result, not in a duplicate
-    # setup banner removed by the conversational page layout.
-    assert 'visible: root.interviewResult.delivery_mode === "non_coding_fallback"' in interview
-    assert 'objectName: "interviewFallbackResultScope"' in interview
-    assert "非代码专项 · 蓝图证据覆盖 " in interview
-    assert "省略代码实现轮次：" in interview
-    assert "root.interviewResult.blueprint_coverage" in interview
-
-    assert 'objectName: "interviewResultCard"' in interview
-    for evidence_field in (
-        "result.overall_score",
-        "root.interviewResult.completion_status",
-        "root.interviewResult.assessment_evidence",
-        "modelData.source",
-        "modelData.evidence",
-        "modelData.confidence",
-        "root.interviewResult.critical_gaps",
-        "result.unscored",
+    for name in (
+        "interviewSetupAiSummary", "interviewSetupMaterialsSummary",
+        "interviewMaterialConsent", "personalizedInterviewContextDialog",
+        "confirmInterviewSetupContext", "openCodexPreferencesFromInterview",
+        "interviewVoiceCard", "interviewVoiceSettings", "interviewVoiceRemoteConsent",
+        "toggleInterviewVoice", "interviewCodingEditor", "runInterviewScript",
+        "runInterviewGrader", "submitInterviewCode", "interviewResultCard",
+        "interviewQuestionScroll", "interviewPhaseGuidance",
     ):
-        assert evidence_field in interview
-    assert "root.interviewResult.source" not in interview
-    assert "root.interviewResult.evidence" not in interview
-    assert "root.interviewResult.confidence" not in interview
-    # The interview editor must fill the question panel viewport; otherwise
-    # ScrollView sizes its content to the TextArea implicit width and the
-    # phase row collides with the submit action.
-    assert 'id: questionScroll' in interview
-    assert 'contentWidth: availableWidth' in interview
-    assert 'width: questionScroll.availableWidth' in interview
-    assert 'objectName: "interviewPhasePill"' in interview
+        assert f'objectName: "{name}"' in interview
+    assert "ContextPreviewList {" in interview
+    assert "app.startInterviewDictation(" in interview
+    assert "app.stopInterviewRecording()" in interview
+    assert "app.transcribeInterviewRecording(" in interview
+    assert 'answer.text + "\\n" + value : value' in interview
+    assert "app.lockInterviewAnswer(value)" not in interview
+    assert "outputSchema" not in interview
+    assert "LabCodeEditor {" in interview
+    # Historical partial sessions retain coverage/evidence disclosure. Their
+    # creation path must not replace current one-question-at-a-time setup.
+    for field in ("root.interviewResult.completion_status",
+                  "root.interviewResult.assessment_evidence", "modelData.source",
+                  "modelData.evidence", "modelData.confidence",
+                  "root.interviewResult.critical_gaps", "result.unscored",
+                  "root.interviewResult.blueprint_coverage"):
+        assert field in interview
     assert "不改变刷题训练的掌握状态" in interview
+    assert "未完成" in interview
+    assert "root.assessmentSourceText(modelData.source)" in interview
+    assert "root.confidenceText(modelData.confidence)" in interview
+    assert "app.confirmPersonalizedInterviewPlan()" in interview  # Legacy route.
+    assert "app.createNonCodingInterview(" in interview
     assert 'font.family: "Cascadia Mono, Consolas, monospace"' not in interview
 
 

@@ -837,6 +837,10 @@ class ApplicationService:
             )
             if state.problem_status(problem.id) == "not_started"
         ]
+        # Rank runnable work before missing optional dependencies, while keeping
+        # the catalog's stable order within either group. Do this before taking
+        # the three home-page suggestions, not after discarding viable tasks.
+        available.sort(key=lambda problem: not self._problem_environment_available(problem))
         due_review = [
             attempt.problem_id
             for attempt in state.attempts.values()
@@ -2107,16 +2111,22 @@ class ApplicationService:
         return view
 
     def interview_dialogue(self, profile_id: str, session: Mapping[str, Any]) -> list[dict[str, Any]]:
+        """Display-only history; damaged answers stay marked and are never read as evidence."""
         dialogue = []
         for question in session["questions"]:
             qid = question["question_id"]
             if qid not in session["answers"] and session["status"] not in {"completed", "incomplete"}:
                 continue
-            answer = self.interview_answer_text(profile_id, session["interview_id"], qid) if qid in session["answers"] else ""
+            answer_error = ""
+            try:
+                answer = self.interview_answer_text(profile_id, session["interview_id"], qid) if qid in session["answers"] else ""
+            except ApplicationError:
+                answer = ""
+                answer_error = "本题回答校验失败。请恢复原文件后重试；损坏内容不会用于评分。"
             if answer and question["kind"] == "coding":
                 snapshot = json.loads(answer)
                 answer = snapshot["code"]
-            dialogue.append({"question_id": qid, "question": question["prompt"], "answer": answer,
+            dialogue.append({"question_id": qid, "question": question["prompt"], "answer": answer, "answer_error": answer_error,
                              "kind": question["kind"], "title": question["title"]})
         return dialogue
 

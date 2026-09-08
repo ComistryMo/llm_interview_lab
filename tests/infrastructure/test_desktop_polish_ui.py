@@ -153,7 +153,11 @@ def test_model_settings_links_scroll_to_editable_codex_fields(scene):
     QTest.qWait(100)
     assert controller.currentPage == "settings"
     model = _find(window, "codexModelField")
-    assert _within_window(window, model) and model.hasActiveFocus()
+    assert _within_window(window, model) and model.hasActiveFocus(), (
+        model.mapToScene(QPointF()), model.size(),
+        _find(window, "settingsPage").property("contentY"),
+        _find(window, "settingsPage").property("contentHeight"), model.hasActiveFocus(),
+    )
     # Exercise native editing: setProperty would remove the QML text binding
     # and conceal resets caused by the controller's coarse stateChanged.
     for key in (Qt.Key_M, Qt.Key_O, Qt.Key_D, Qt.Key_E, Qt.Key_L):

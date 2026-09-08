@@ -106,8 +106,13 @@ def test_windows_release_uses_one_standalone_portable_bundle() -> None:
 
     assert "mode = standalone" in spec
     assert "mode = onefile" not in spec
-    assert "Directory.Name -eq 'LLMInterviewLab.dist'" in workflow
-    assert "Rename-Item -LiteralPath $generatedExecutable -NewName 'LLMInterviewLab.exe'" in workflow
+    builder = (REPO_ROOT / "scripts/build_windows_desktop.py").read_text(encoding="utf-8")
+    assert "scripts/build_windows_desktop.py" in workflow
+    assert '"--keep-deployment-files"' in builder
+    assert "--output-folder-name=main --output-filename=LLMInterviewLab.exe" in builder
+    assert 'get("completion") != "yes"' in builder
+    assert '("main.dist", "deploy_main.dist")' in builder
+    assert 'rename(bundle / "LLMInterviewLab.exe")' in builder
     assert "dist/release/LLMInterviewLab/LLMInterviewLab.exe" in workflow
     assert "LLMInterviewLab-Windows-x64-portable.zip" in workflow
     assert "LLMInterviewLab-Windows-x64.exe" not in workflow

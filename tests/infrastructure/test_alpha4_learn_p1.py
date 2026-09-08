@@ -5,6 +5,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 import os
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 
@@ -21,6 +22,7 @@ from PySide6.QtQuick import QQuickItem
 from PySide6.QtTest import QTest
 
 from llm_interview_lab.desktop.controller import AppController
+from tests.infrastructure.test_interview_input_runtime import public_repo
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -71,12 +73,16 @@ def _click(window: QQuickItem, item: QQuickItem) -> None:
 @contextmanager
 def _learn_scene(
     qapp: QGuiApplication,
+    public_repo: Path,
     *,
     width: int,
     height: int,
     font_scale: float = 1.0,
 ):
-    controller = AppController(REPO_ROOT, demo_page="learn")
+    profile = "learn-layout-" + uuid4().hex[:10]
+    controller = AppController(public_repo, profile_id=profile)
+    assert controller.completeOnboarding(profile, "applied_ai_engineer", "new_grad", "disabled", "{}")
+    controller.navigate("learn")
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("backend", controller)
     engine.load(QUrl.fromLocalFile(str(QML_PATH)))
@@ -103,11 +109,12 @@ def _learn_scene(
 )
 def test_course_list_drills_into_detail_and_back(
     qapp: QGuiApplication,
+    public_repo: Path,
     width: int,
     height: int,
     layout_mode: str,
 ) -> None:
-    with _learn_scene(qapp, width=width, height=height) as (window, page, _):
+    with _learn_scene(qapp, public_repo, width=width, height=height) as (window, page, _):
         assert page.property("layoutMode") == layout_mode
         row = _find_prefix(page, "learnProblemRow-")
         assert row.property("visible") is True
@@ -124,9 +131,10 @@ def test_course_list_drills_into_detail_and_back(
 
 def test_knowledge_detail_wraps_without_horizontal_overflow_at_140_percent(
     qapp: QGuiApplication,
+    public_repo: Path,
 ) -> None:
     with _learn_scene(
-        qapp, width=900, height=620, font_scale=1.4
+        qapp, public_repo, width=900, height=620, font_scale=1.4
     ) as (window, page, controller):
         _click(window, page.findChild(QQuickItem, "knowledgeBrowserButton"))
         assert controller.knowledgeLoaded is True
@@ -156,9 +164,10 @@ def test_knowledge_detail_wraps_without_horizontal_overflow_at_140_percent(
 
 def test_knowledge_load_failure_keeps_retry_action_and_recovers(
     qapp: QGuiApplication,
+    public_repo: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    with _learn_scene(qapp, width=900, height=620) as (window, page, controller):
+    with _learn_scene(qapp, public_repo, width=900, height=620) as (window, page, controller):
         original = controller.service.knowledge_cards
         attempts = 0
 

@@ -40,7 +40,7 @@ LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）�
 
 - 硬依赖、测试、计时、解锁和掌握状态由确定性代码计算。
 - 公开测试通过只是实现证据；契约审查、口述答辩和 D+2 / D+7 间隔复测共同组成掌握条件。
-- 桌面 AI 只用于面试追问与证据评价，不代写练习、不自行授予“已掌握”；旧 CLI 教练协议保留兼容。
+- 已移除独立 AI 辅助页面。桌面 AI 只用于面试追问与证据评价，一次只生成下一问，不直接修改候选人答案、不自行授予“已掌握”；旧 CLI 教练协议保留兼容。
 - 真实答案、材料、面试记录和连接配置默认保存在本机，并被 Git 忽略。
 
 ## 适合哪些 AI 岗位
@@ -62,7 +62,7 @@ LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）�
 
 ## 下载与三分钟开始
 
-本轮更新的是 **`main` 源码**，包版本标记仍为 `0.4.0a3`，没有重新构建或发布安装包。下方 [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) 属于既有发布，不包含本轮统一难度工作台；验收本轮改动请使用源码安装。
+当前候选分支为 `candidate/desktop-release-20260909`，源码版本 `0.4.0a4`，对应 `v0.4.0-alpha.4`（**未发布**）。候选包和验收门禁仍在核对，不能视为已发布版本。下方 [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) 属于既有发布，不包含候选升级；当前发布状态以官方 Release 页面为准。
 
 | 你使用的环境 | 推荐方式 |
 |---|---|

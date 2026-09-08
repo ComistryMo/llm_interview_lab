@@ -15,6 +15,7 @@ import subprocess
 import sys
 import sysconfig
 import tarfile
+import xml.etree.ElementTree as ET
 import zipfile
 
 from llm_interview_lab.release_version import version_key
@@ -59,7 +60,7 @@ def main():
     major, minor, patch, _, number = version_key(metadata["version"])
     config["nuitka"]["extra_args"] += f" --jobs={args.jobs} --file-version={major}.{minor}.{patch}.{number} --product-version={major}.{minor}.{patch}.{number}"
     # Keep PySide's finalizer and Nuitka's long-command entrypoint in agreement.
-    config["nuitka"]["extra_args"] += " --output-folder-name=main.dist"
+    config["nuitka"]["extra_args"] += " --output-folder-name=main --output-filename=LLMInterviewLab.exe"
     if args.mingw:
         config["nuitka"]["extra_args"] += " --mingw64"
     config_path = snapshot / "dist/pysidedeploy-candidate.spec"
@@ -76,6 +77,11 @@ def main():
     # finalizer still looks for main.dist. Retain our private staging directory
     # and consume the actual Nuitka result; never let that mismatch erase it.
     run(deploy, "-c", config_path, "-f", "--keep-deployment-files", cwd=snapshot, env=environment)
+    # pyside6-deploy can log a compiler exception and still return exit code 0.
+    # An executable left before DLL/data collection is not a standalone bundle.
+    report = snapshot / "desktop-nuitka-report.xml"
+    if not report.is_file() or ET.parse(report).getroot().get("completion") != "yes":
+        raise RuntimeError("Nuitka did not complete; inspect the retained build report and log")
     candidates = [deployment / name for name in ("main.dist", "deploy_main.dist")
                   if (deployment / name).is_dir()]
     if len(candidates) != 1:

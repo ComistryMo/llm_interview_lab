@@ -238,7 +238,7 @@ def test_two_profiles_are_independent_and_mastery_unlocks_the_next_node(
     assert learner_one.problem_status("FND-001") == "mastered"
     assert learner_two.problem_status("FND-001") == "not_started"
 
-    assert main(["next", "--profile", "learner-one"]) == 0
+    assert main(["next", "--profile", "learner-one", "--quest", "python_data_reliability"]) == 0
     output = capsys.readouterr().out
     assert "FND-002 Sample Contract Validation" in output
     assert main(["start", "FND-002", "--profile", "learner-one"]) == 0

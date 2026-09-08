@@ -17,9 +17,15 @@ Flickable {
     readonly property string savedCodexEffort: app.codexReasoningEffort || ""
     property bool refreshRequested: false
     function showCodexSettings() {
-        contentY = Math.max(0, Math.min(codexSettings.y + content.y - 16, contentHeight - height))
         codexModelField.forceActiveFocus()
+        revealCodexModel()
     }
+    function revealCodexModel() {
+        contentY = Math.max(0, Math.min(codexModelField.mapToItem(root.contentItem, 0, 0).y - 32, contentHeight - height))
+    }
+    // The hidden page is relaid out when navigation changes its available width.
+    // Re-reveal the focused field after that layout, without resetting its text.
+    onContentHeightChanged: if (codexModelField.activeFocus) Qt.callLater(root.revealCodexModel)
     function codexEffortIndex(value) {
         var values = ["", "low", "medium", "high", "xhigh"]
         var index = values.indexOf(String(value || ""))

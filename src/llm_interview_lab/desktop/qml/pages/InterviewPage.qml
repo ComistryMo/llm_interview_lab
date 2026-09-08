@@ -928,7 +928,7 @@ Item {
                         theme: root.theme; width: parent.width; wrapMode: Text.Wrap
                         text: useMaterial.checked
                               ? "材料 · " + (material.currentText || "尚未选择") + (useJD.checked ? "、" + (jd.currentText || "尚未选择 JD") : "")
-                                + (materialConsent.checked ? " · 沿用相同版本的选择，开始前确认范围" : " · 尚未授权本次使用")
+                                + (consent.checked ? " · 沿用相同版本的选择，开始前确认范围" : " · 尚未授权本次使用")
                               : "材料 · 本场不使用求职材料"
                         tone: "muted"
                     }
@@ -1500,7 +1500,11 @@ Item {
                             LabText { theme: root.theme; text: "面试官 · " + modelData.question_id; variant: "caption"; tone: "muted" }
                             LabText { theme: root.theme; Layout.fillWidth: true; text: modelData.question; wrapMode: Text.Wrap; variant: "bodyLarge" }
                             LabText { theme: root.theme; text: "你的回答"; variant: "caption"; tone: "muted"; Layout.topMargin: 8 }
-                            LabText { theme: root.theme; Layout.fillWidth: true; text: modelData.answer || "本题未作答"; wrapMode: Text.Wrap }
+                            LabText {
+                                theme: root.theme; Layout.fillWidth: true; wrapMode: Text.Wrap
+                                text: modelData.answer_error || modelData.answer || "本题未作答"
+                                tone: modelData.answer_error ? "danger" : "normal"
+                            }
                             LabDivider { theme: root.theme; Layout.fillWidth: true; Layout.topMargin: 12; Layout.bottomMargin: 12 }
                         }
                     }

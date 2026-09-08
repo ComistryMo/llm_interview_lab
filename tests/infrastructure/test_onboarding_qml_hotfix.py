@@ -328,7 +328,10 @@ def test_no_ai_first_run_reaches_the_first_exercise(onboarding_scene) -> None:
             break
         QTest.qWait(100)
     assert controller.currentPage == "exercise"
-    assert controller.currentTask["problem_id"] == "FND-001"
+    problem = controller.service.catalog.get(controller.currentTask["problem_id"])
+    assert problem.ready and problem.recommendable
+    assert controller.service._problem_environment_available(problem)
+    assert controller.service.current_submission("hotfix-user")["problem_id"] == problem.id
     assert profile_paths(controller.repo_root, "hotfix-user").profile_file.is_file()
 
 

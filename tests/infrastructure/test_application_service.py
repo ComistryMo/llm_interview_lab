@@ -229,7 +229,11 @@ def test_dashboard_does_not_report_uncovered_role_skills_as_zero_ability(
     assert evidence
     assert all(item["assessed_mastery"] is None for item in evidence)
     assert all(item["assessment_coverage"] == 0.0 for item in evidence)
-    assert all(item["assessment_coverage_ceiling"] == 0.0 for item in evidence)
+    # The expanded public catalog now covers some product-role skills. Lack of
+    # learner evidence remains unknown, not zero ability; truly uncovered skills
+    # still have a zero ceiling.
+    assert all(item["assessment_coverage_ceiling"] >= 0.0 for item in evidence)
+    assert any(item["assessment_coverage_ceiling"] == 0.0 for item in evidence)
 
 
 def test_dashboard_counts_only_learner_attributable_test_results_as_evidence(
@@ -585,6 +589,8 @@ def test_interview_configuration_and_canonical_result_preference(tmp_path: Path)
 def test_application_service_creates_only_explicit_non_coding_fallback(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from tests.fixtures.legacy_interview_candidates import torch_only_candidates
+    torch_only_candidates(monkeypatch)
     root = _repository(tmp_path)
     service = ApplicationService(root)
     service.initialize_profile(

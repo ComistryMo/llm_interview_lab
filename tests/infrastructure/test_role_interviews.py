@@ -1015,6 +1015,8 @@ def test_interview_preflight_does_not_drop_a_runnable_coding_round(
 def test_non_coding_fallback_freezes_original_rounds_and_finishes_as_partial(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from tests.fixtures.legacy_interview_candidates import torch_only_candidates
+    torch_only_candidates(monkeypatch)
     root = _repository(tmp_path)
     catalog, roles = _catalogs(root)
     original_find_spec = importlib.util.find_spec
