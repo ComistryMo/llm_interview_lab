@@ -152,7 +152,7 @@ llm-lab quickstart
 <details>
 <summary>查看答题、面试和 AI 连接界面</summary>
 
-训练页只保留真实有效的“推荐 / 全部可做 / 实验性 / 搜索”，并在进入题目前显示当前环境是否可运行。
+训练页只保留真实有效的“推荐 / 已解锁待练 / 实验性 / 搜索”，并在进入题目前显示当前环境和进行中任务的阻断原因。
 
 ![课程筛选](docs/images/desktop-learn.png)
 
@@ -235,7 +235,9 @@ llm-lab graph --quest tensor_and_autograd
 
 ### 面经、八股与手撕题知识库
 
-项目还提供一个独立、只读的研究型知识层：`eight_stock` 是带公式/shape/排障追问的八股卡，`experience_pattern` 是注明范围和置信度的面经模式，`coding_prompt` 是原创手撕题契约。它们不改变固定题库、Grader 或掌握事件；手撕卡通过 `related_problems` 指向 Catalog 题目（已就绪题可直接运行，规划题会明确保留为后续练习入口）。
+在桌面「刷题训练 → 知识库」可以先独立作答，再展开公式、例子、追问和自查要点。回答保存在当前本地档案，不发送 AI，也不计入掌握度；可从卡片进入真实关联代码题，未解锁或缺少环境的题会说明原因。公开知识卡保持只读，CLI 仍可直接检索。
+
+[题目集完整对照](docs/content/question-bank-coverage.zh.md) 将 40 项手撕、160 项八股逐条映射到可练习内容；补齐 8 个手撕缺口，八股合并为 135 张完整题卡，差异契约明确说明。动态模拟面试在进入原理环节时，会按岗位、实际回答和已授权背景匹配少量原理题与追问，供 Codex 或普通 API 逐轮选择，不预生成整场题单。这些是当前源码的内容更新，不代表已发布新的桌面安装包。
 
 ```bash
 # 按优先级浏览（默认只列摘要）
@@ -249,7 +251,7 @@ llm-lab knowledge validate --with-catalog
 llm-lab doctor --knowledge
 ```
 
-内容采用 clean-room 链接+改写政策：论文/官方文档负责核验算法和 API，公开面经只作为带范围的题型信号，不复制原帖题面、答案、代码或个人信息。来源登记见 [`references/interview-sources.json`](references/interview-sources.json)，研究与刷新规则见 [`docs/interview-content-research.md`](docs/interview-content-research.md)。
+内容采用 clean-room 链接+改写政策：论文/官方文档负责核验算法和 API，公开面经只作为带范围的题型信号，不复制原帖题面、答案、代码或个人信息。当前题卡及其逐条来源登记在 [`knowledge.yaml`](curriculum/interviews/knowledge.yaml)，历史研究快照见 [`references/interview-sources.json`](references/interview-sources.json)，研究与刷新规则见 [`docs/interview-content-research.md`](docs/interview-content-research.md)。
 
 本轮深度研究附录按方向拆分：[`VLM/多模态`](docs/research/vlm_interview_deep_dive.md)、[`后训练/RL`](docs/research/post_training_deep_dive.md)、[`Agent/RAG/推理服务`](docs/research/agent_inference_deep_dive.md)。附录是可复核底稿，卡片是可检索摘要；易变 API 和 benchmark 仍以检索日、版本和来源定位为准。
 

@@ -50,6 +50,8 @@ Item {
     }
     function isRunnable(card) {
         return !!card
+               && !!card.problem_id
+               && !card.start_blocked_reason
                && !card.locked
                && card.asset_status !== "planned"
                && card.environment_available !== false
@@ -65,6 +67,8 @@ Item {
             return card.environment_reason || "当前安装缺少这道题需要的运行环境。"
         if (card.locked)
             return card.blocked_reason || "先完成前置能力后即可解锁。"
+        if (card.start_blocked_reason)
+            return card.start_blocked_reason
         if (card.validation === "contract")
             return "该题仍处于实验性契约阶段，暂不从普通训练入口启动。"
         if (card.status === "mastered")
@@ -88,7 +92,7 @@ Item {
         if (filterMode === "experimental")
             return "当前没有已登记的实验性题目。"
         if (filterMode === "available")
-            return "当前没有可直接开始的题目。可能是前置尚未完成，或运行环境暂不可用。"
+            return "当前没有已解锁且环境可用的待练题目。先完成前置能力，或检查题目所需的运行环境。"
         return "当前没有新的推荐题。先完成进行中的任务或到期复测。"
     }
     function refreshList() {
@@ -150,11 +154,27 @@ Item {
             compactDetail = true
     }
     function selectSection(value) {
+        if (section === "knowledge" && !knowledgeDetailContent.saveDraft())
+            return
         section = value
         compactDetail = false
         compactKnowledgeDetail = false
         if (value === "knowledge" && !app.knowledgeLoaded)
             app.loadKnowledge()
+    }
+    function chooseKnowledge(cardId) {
+        if (!knowledgeDetailContent.saveDraft())
+            return
+        if (app.openKnowledgeCard(cardId) && root.drillDownLayout)
+            root.compactKnowledgeDetail = true
+    }
+    function relatedProblem(problemId) {
+        var problems = app.problems || []
+        for (var i = 0; i < problems.length; ++i) {
+            if (problems[i].problem_id === problemId)
+                return problems[i]
+        }
+        return ({})
     }
     function listText(value) {
         if (!value)
@@ -253,7 +273,7 @@ Item {
                         theme: root.theme
                         accessibleLabel: "课程筛选"
                         Layout.preferredWidth: root.compactLayout ? 150 : 172
-                        model: ["推荐", "全部可做", "实验性"]
+                        model: ["推荐", "已解锁待练", "实验性"]
                         onCurrentIndexChanged: {
                             root.filterMode = ["recommended", "available", "experimental"][currentIndex]
                             root.refreshList()
@@ -264,7 +284,7 @@ Item {
                         objectName: "learnResultSummary"
                         theme: root.theme
                         Layout.fillWidth: true
-                        text: ({recommended: "推荐", available: "全部可做", experimental: "实验性"}[root.filterMode]
+                        text: ({recommended: "推荐", available: "已解锁待练", experimental: "实验性"}[root.filterMode]
                                || "当前") + " · " + root.filteredProblems.length + " 道"
                         tone: "muted"
                         horizontalAlignment: Text.AlignRight
@@ -554,6 +574,8 @@ Item {
                         variant: "secondary"
                         text: "刷新"
                         onClicked: {
+                            if (!knowledgeDetailContent.saveDraft())
+                                return
                             root.compactKnowledgeDetail = false
                             app.loadKnowledge()
                         }
@@ -639,17 +661,10 @@ Item {
                                 }
                                 HoverHandler { id: hoverHandlerKnowledge; cursorShape: Qt.PointingHandCursor }
                                 TapHandler {
-                                    onTapped: {
-                                        app.openKnowledgeCard(knowledgeRow.modelData.id)
-                                        if (root.drillDownLayout)
-                                            root.compactKnowledgeDetail = true
-                                    }
+                                    onTapped: root.chooseKnowledge(knowledgeRow.modelData.id)
                                 }
-                                Keys.onReturnPressed: {
-                                    app.openKnowledgeCard(modelData.id)
-                                    if (root.drillDownLayout)
-                                        root.compactKnowledgeDetail = true
-                                }
+                                Keys.onReturnPressed: root.chooseKnowledge(modelData.id)
+                                Keys.onSpacePressed: root.chooseKnowledge(modelData.id)
                             }
                         }
                     }
@@ -682,7 +697,7 @@ Item {
                                 visible: !app.knowledgeDetail || !app.knowledgeDetail.title
                                 theme: root.theme
                                 title: "选择一张知识卡"
-                                description: "查看 60 秒回答、追问、常见薄弱点和来源。"
+                                description: "先独立作答，再核对推导、追问和评分要点；回答可保存在当前档案。"
                             }
                             ScrollView {
                                 id: knowledgeDetailScroll
@@ -700,6 +715,28 @@ Item {
                                     width: knowledgeDetailScroll.availableWidth
                                     spacing: root.theme ? root.theme.space3 : 12
                                     property var detail: app.knowledgeDetail || ({})
+                                    property bool answersVisible: false
+                                    property string savedAnswer: ""
+                                    property string draftIdentity: app.profileId + ":" + (detail.profile_id || "") + ":" + (detail.id || "")
+                                    property string draftProfile: ""
+                                    readonly property bool dirty: knowledgeAnswer.text !== savedAnswer
+                                    function resetDraft() {
+                                        answersVisible = false
+                                        draftProfile = detail.profile_id || ""
+                                        savedAnswer = draftProfile === app.profileId ? (detail.draft_answer || "") : ""
+                                        knowledgeAnswer.text = savedAnswer
+                                        knowledgeDetailScroll.contentItem.contentY = 0
+                                    }
+                                    function saveDraft() {
+                                        if (!dirty || !detail.id)
+                                            return true
+                                        if (!app.saveKnowledgeAnswer(draftProfile, detail.id, knowledgeAnswer.text))
+                                            return false
+                                        savedAnswer = knowledgeAnswer.text
+                                        return true
+                                    }
+                                    onDraftIdentityChanged: resetDraft()
+                                    Component.onCompleted: resetDraft()
                                     LabText {
                                         theme: root.theme
                                         Layout.fillWidth: true
@@ -719,40 +756,147 @@ Item {
                                         wrapMode: Text.Wrap
                                     }
                                     LabText {
-                                        theme: root.theme
-                                        Layout.fillWidth: true
-                                        visible: !!parent.detail.one_liner
-                                        text: "60 秒回答\n" + (parent.detail.one_liner || "")
-                                        wrapMode: Text.Wrap
-                                    }
-                                    LabText {
+                                        objectName: "knowledgePracticePrompt"
                                         theme: root.theme
                                         Layout.fillWidth: true
                                         visible: !!parent.detail.prompt
-                                        text: "面试提示\n" + (parent.detail.prompt || "")
+                                        text: parent.detail.prompt || ""
                                         wrapMode: Text.Wrap
+                                    }
+                                    LabTextArea {
+                                        id: knowledgeAnswer
+                                        objectName: "knowledgePracticeAnswer"
+                                        theme: root.theme
+                                        Layout.fillWidth: true
+                                        Layout.minimumHeight: root.theme ? root.theme.scaledPx(170) : 170
+                                        Layout.preferredHeight: Math.max(Layout.minimumHeight, implicitHeight)
+                                        placeholderText: "先用自己的话回答：机制、公式或一个具体例子……"
+                                        onActiveFocusChanged: {
+                                            if (!activeFocus && knowledgeDetailContent.draftProfile === app.profileId)
+                                                knowledgeDetailContent.saveDraft()
+                                        }
+                                    }
+                                    Flow {
+                                        Layout.fillWidth: true
+                                        spacing: 8
+                                        LabButton {
+                                            objectName: "knowledgeSaveAnswer"
+                                            theme: root.theme
+                                            variant: "secondary"
+                                            text: knowledgeDetailContent.dirty || !knowledgeDetailContent.savedAnswer ? "保存回答" : "回答已保存"
+                                            enabled: knowledgeDetailContent.dirty
+                                            onClicked: knowledgeDetailContent.saveDraft()
+                                        }
+                                        LabButton {
+                                            objectName: "knowledgeRevealAnswer"
+                                            theme: root.theme
+                                            text: knowledgeDetailContent.answersVisible ? "收起要点" : "核对回答要点"
+                                            onClicked: {
+                                                if (knowledgeDetailContent.saveDraft())
+                                                    knowledgeDetailContent.answersVisible = !knowledgeDetailContent.answersVisible
+                                            }
+                                        }
                                     }
                                     LabText {
                                         theme: root.theme
                                         Layout.fillWidth: true
-                                        visible: (parent.detail.core_answer || []).length > 0
+                                        variant: "caption"
+                                        tone: "muted"
+                                        text: "回答仅保存在当前本地档案，不发送 AI；自查不计入课程掌握度。"
+                                        wrapMode: Text.Wrap
+                                    }
+                                    LabText {
+                                        objectName: "knowledgeShortAnswer"
+                                        theme: root.theme
+                                        Layout.fillWidth: true
+                                        visible: parent.answersVisible && !!parent.detail.one_liner
+                                        text: "60 秒要点\n" + (parent.detail.one_liner || "")
+                                        wrapMode: Text.Wrap
+                                    }
+                                    LabText {
+                                        objectName: "knowledgeCoreAnswer"
+                                        theme: root.theme
+                                        Layout.fillWidth: true
+                                        visible: parent.answersVisible && (parent.detail.core_answer || []).length > 0
                                         text: "核心回答\n• " + root.listText(parent.detail.core_answer)
                                         wrapMode: Text.Wrap
                                     }
                                     LabText {
                                         theme: root.theme
                                         Layout.fillWidth: true
-                                        visible: (parent.detail.follow_ups || []).length > 0
+                                        visible: parent.answersVisible && !!parent.detail.derivation_or_example
+                                        text: "推导与例子\n• " + root.listText(parent.detail.derivation_or_example)
+                                        wrapMode: Text.Wrap
+                                    }
+                                    LabText {
+                                        theme: root.theme
+                                        Layout.fillWidth: true
+                                        visible: parent.answersVisible && (parent.detail.follow_ups || []).length > 0
                                         text: "高频追问\n• " + root.listText(parent.detail.follow_ups)
                                         wrapMode: Text.Wrap
                                     }
                                     LabText {
                                         theme: root.theme
                                         Layout.fillWidth: true
-                                        visible: (parent.detail.pitfalls || []).length > 0
+                                        visible: parent.answersVisible && (parent.detail.pitfalls || []).length > 0
                                         text: "常见薄弱点\n• " + root.listText(parent.detail.pitfalls)
                                         tone: "warning"
                                         wrapMode: Text.Wrap
+                                    }
+                                    LabText {
+                                        theme: root.theme
+                                        Layout.fillWidth: true
+                                        visible: parent.answersVisible && (parent.detail.signals || []).length > 0
+                                        text: "自查依据\n• " + root.listText(parent.detail.signals)
+                                        wrapMode: Text.Wrap
+                                    }
+                                    Repeater {
+                                        model: knowledgeDetailContent.answersVisible ? ["L1", "L2", "L3", "L4"] : []
+                                        LabText {
+                                            required property string modelData
+                                            theme: root.theme
+                                            Layout.fillWidth: true
+                                            property var criteria: (knowledgeDetailContent.detail.acceptance || {})[modelData]
+                                            visible: !!criteria
+                                            text: modelData + " · " + root.listText(criteria)
+                                            wrapMode: Text.Wrap
+                                        }
+                                    }
+                                    LabText {
+                                        theme: root.theme
+                                        Layout.fillWidth: true
+                                        strong: true
+                                        text: "相关代码练习"
+                                    }
+                                    Repeater {
+                                        model: knowledgeDetailContent.detail.related_problems || []
+                                        ColumnLayout {
+                                            required property string modelData
+                                            property var problem: root.relatedProblem(modelData)
+                                            Layout.fillWidth: true
+                                            LabButton {
+                                                objectName: "knowledgeProblem-" + parent.modelData
+                                                theme: root.theme
+                                                variant: "secondary"
+                                                Layout.fillWidth: true
+                                                text: parent.modelData + " · " + root.displayTitle(parent.problem)
+                                                enabled: root.isRunnable(parent.problem)
+                                                onClicked: {
+                                                    if (knowledgeDetailContent.saveDraft())
+                                                        app.openProblem(parent.modelData)
+                                                }
+                                            }
+                                            LabText {
+                                                theme: root.theme
+                                                Layout.fillWidth: true
+                                                visible: !root.isRunnable(parent.problem)
+                                                text: parent.problem.problem_id ? root.blockingReason(parent.problem)
+                                                      : "关联题不在当前岗位训练范围内；可在设置调整目标岗位后练习。"
+                                                variant: "caption"
+                                                tone: "muted"
+                                                wrapMode: Text.Wrap
+                                            }
+                                        }
                                     }
                                     LabDivider { Layout.fillWidth: true; theme: root.theme }
                                     LabText {

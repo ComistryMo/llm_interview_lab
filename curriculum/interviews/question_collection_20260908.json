@@ -1,0 +1,1631 @@
+{
+  "schema_version": 1,
+  "source": {
+    "display_name": "题目.md",
+    "sha256": "4b9be92238921f4b8f06613a8164aa814ed8b1bb55b3081b83011da6e33f80bb",
+    "coding_count": 40,
+    "theory_count": 160,
+    "embedded_images_available": false
+  },
+  "coding": [
+    {
+      "id": "C001",
+      "topic": "MHA",
+      "problem_ids": [
+        "ATT-019",
+        "ATT-004"
+      ],
+      "note": "投影 self/cross 接口复用"
+    },
+    {
+      "id": "C002",
+      "topic": "GRPO Loss",
+      "problem_ids": [
+        "PT-023",
+        "PT-015"
+      ],
+      "note": "逐回答 mean + k3；旧题全 token mean 不同"
+    },
+    {
+      "id": "C003",
+      "topic": "PPO Clipped Loss",
+      "problem_ids": [
+        "PT-009"
+      ],
+      "note": "policy/value/entropy，区分三项"
+    },
+    {
+      "id": "C004",
+      "topic": "DPO Loss",
+      "problem_ids": [
+        "PT-022"
+      ],
+      "note": "completion-token 对齐的已验证 DPO；PT-002 仍为 contract，不计当前可执行覆盖"
+    },
+    {
+      "id": "C005",
+      "topic": "Softmax",
+      "problem_ids": [
+        "LOSS-007",
+        "LOSS-016"
+      ],
+      "note": "稳定前向及手算 VJP"
+    },
+    {
+      "id": "C006",
+      "topic": "KV Cache Attention",
+      "problem_ids": [
+        "ATT-020",
+        "ATT-009"
+      ],
+      "note": "增量 attention；缓存容器为准备"
+    },
+    {
+      "id": "C007",
+      "topic": "GQA",
+      "problem_ids": [
+        "ATT-006",
+        "ATT-020"
+      ],
+      "note": "分组 KV 与增量一致性"
+    },
+    {
+      "id": "C008",
+      "topic": "MLA",
+      "problem_ids": [
+        "ATT-023"
+      ],
+      "note": "新增 joint latent cache + decoupled RoPE"
+    },
+    {
+      "id": "C009",
+      "topic": "RoPE",
+      "problem_ids": [
+        "ATT-021"
+      ],
+      "note": "已验证相邻布局与绝对位置偏移；ATT-007 仍为 contract，不计当前可执行覆盖"
+    },
+    {
+      "id": "C010",
+      "topic": "softmax Attention",
+      "problem_ids": [
+        "ATT-002"
+      ],
+      "note": "scaled dot-product attention"
+    },
+    {
+      "id": "C011",
+      "topic": "Multi-Head Cross Attention",
+      "problem_ids": [
+        "ATT-019"
+      ],
+      "note": "现有契约支持 L != S"
+    },
+    {
+      "id": "C012",
+      "topic": "Cross-Entropy Loss",
+      "problem_ids": [
+        "LOSS-014",
+        "PT-003"
+      ],
+      "note": "基础 CE 与有效 token mean"
+    },
+    {
+      "id": "C013",
+      "topic": "Flash Attention",
+      "problem_ids": [
+        "ATT-015"
+      ],
+      "note": "CPU 分块 online exact 数学，不代表 GPU Flash kernel"
+    },
+    {
+      "id": "C014",
+      "topic": "AUC Score",
+      "problem_ids": [
+        "LOSS-010"
+      ],
+      "note": "同分半赢"
+    },
+    {
+      "id": "C015",
+      "topic": "Contrastive Loss",
+      "problem_ids": [
+        "LOSS-017",
+        "LOSS-006"
+      ],
+      "note": "新增 pairwise margin；InfoNCE 为明确另一个变体"
+    },
+    {
+      "id": "C016",
+      "topic": "KL散度",
+      "problem_ids": [
+        "LOSS-004"
+      ],
+      "note": "KL(teacher||student)，T=1 为普通 categorical forward KL"
+    },
+    {
+      "id": "C017",
+      "topic": "LayerNorm",
+      "problem_ids": [
+        "NNL-006"
+      ],
+      "note": "最后维总体方差"
+    },
+    {
+      "id": "C018",
+      "topic": "MQA",
+      "problem_ids": [
+        "ATT-020",
+        "ATT-006"
+      ],
+      "note": "Hkv=1 为 MQA，现有 ATT-020 public 已覆盖该形状；ATT-005 仍为 contract"
+    },
+    {
+      "id": "C019",
+      "topic": "RMSNorm",
+      "problem_ids": [
+        "NNL-008"
+      ],
+      "note": "均方根归一化"
+    },
+    {
+      "id": "C020",
+      "topic": "Adam Optimizer",
+      "problem_ids": [
+        "OPT-004"
+      ],
+      "note": "Adam，不以 AdamW 替代"
+    },
+    {
+      "id": "C021",
+      "topic": "BatchNorm",
+      "problem_ids": [
+        "NNL-016"
+      ],
+      "note": "训练与推理统计状态"
+    },
+    {
+      "id": "C022",
+      "topic": "Beam Search Decoding",
+      "problem_ids": [
+        "ATT-022"
+      ],
+      "note": "EOS 与候选"
+    },
+    {
+      "id": "C023",
+      "topic": "Dropout",
+      "problem_ids": [
+        "NNL-017"
+      ],
+      "note": "训练/推理与反向"
+    },
+    {
+      "id": "C024",
+      "topic": "K-Means",
+      "problem_ids": [
+        "TML-004",
+        "TML-009"
+      ],
+      "note": "Lloyd，++ 为扩展"
+    },
+    {
+      "id": "C025",
+      "topic": "Linear Layer Backward",
+      "problem_ids": [
+        "NNL-018",
+        "NNL-001"
+      ],
+      "note": "新增手算 VJP，forward autograd 为准备"
+    },
+    {
+      "id": "C026",
+      "topic": "SGD with Momentum",
+      "problem_ids": [
+        "OPT-002"
+      ],
+      "note": "带状态 momentum"
+    },
+    {
+      "id": "C027",
+      "topic": "Vit Transformer Block",
+      "problem_ids": [
+        "VLM-015",
+        "VLM-001"
+      ],
+      "note": "新增 LN/GELU 双向 block，patch 为准备"
+    },
+    {
+      "id": "C028",
+      "topic": "SwiGLU MLP",
+      "problem_ids": [
+        "NNL-005"
+      ],
+      "note": "含三组投影的完整 FFN"
+    },
+    {
+      "id": "C029",
+      "topic": "Embedding Layer",
+      "problem_ids": [
+        "NNL-002"
+      ],
+      "note": "参数化 embedding"
+    },
+    {
+      "id": "C030",
+      "topic": "余弦相似度",
+      "problem_ids": [
+        "TNS-018",
+        "TML-008"
+      ],
+      "note": "新增相似度输出，KNN 为应用"
+    },
+    {
+      "id": "C031",
+      "topic": "正弦位置编码",
+      "problem_ids": [
+        "ATT-001"
+      ],
+      "note": "激活既有 planned 节点，offset 与奇数维"
+    },
+    {
+      "id": "C032",
+      "topic": "ReLU",
+      "problem_ids": [
+        "NNL-019"
+      ],
+      "note": "manual_relu 独立接口"
+    },
+    {
+      "id": "C033",
+      "topic": "SwiGLU Activation",
+      "problem_ids": [
+        "NNL-019"
+      ],
+      "note": "swiglu_activation 独立接口，无线性投影"
+    },
+    {
+      "id": "C034",
+      "topic": "Sigmoid",
+      "problem_ids": [
+        "NNL-019"
+      ],
+      "note": "stable_sigmoid，有限梯度与零点"
+    },
+    {
+      "id": "C035",
+      "topic": "BPE",
+      "problem_ids": [
+        "TOK-001"
+      ],
+      "note": "确定性训练与编码"
+    },
+    {
+      "id": "C036",
+      "topic": "Top-k / Top-p Sampling",
+      "problem_ids": [
+        "ATT-011"
+      ],
+      "note": "temperature -> top-k -> top-p"
+    },
+    {
+      "id": "C037",
+      "topic": "GPT-2 Transformer Block",
+      "problem_ids": [
+        "ATT-024"
+      ],
+      "note": "新增 LN/tanh-GELU/causal cache，不带 RoPE"
+    },
+    {
+      "id": "C038",
+      "topic": "MoE层",
+      "problem_ids": [
+        "NNL-014"
+      ],
+      "note": "Top-2 dispatch/combine"
+    },
+    {
+      "id": "C039",
+      "topic": "LoRA 低秩适配线性层",
+      "problem_ids": [
+        "INF-013"
+      ],
+      "note": "functional merge 一致性"
+    },
+    {
+      "id": "C040",
+      "topic": "KL 惩罚",
+      "problem_ids": [
+        "PT-023"
+      ],
+      "note": "beta*k3 采样惩罚；不是全分布精确 KL，图片未提供"
+    }
+  ],
+  "theory": [
+    {
+      "id": "T001",
+      "topic": "请对比Adam和AdamW优化器，解释权重衰减解耦的含义，以及为什么AdamW在大模型训练中更受青睐。",
+      "card_ids": [
+        "EGT-QB-001"
+      ],
+      "coverage": "Adam/AdamW更新式、耦合L2与解耦衰减、主流选择动机及参数组边界。"
+    },
+    {
+      "id": "T002",
+      "topic": "请解释混合精度训练的原理，为什么需要FP16前向和FP32权重？Loss Scaling的作用是什么？",
+      "card_ids": [
+        "EGT-QB-002"
+      ],
+      "coverage": "AMP原理、FP16/BF16与FP32状态、主权重、loss scaling和unscale顺序；纠正必须FP16前向的前提。"
+    },
+    {
+      "id": "T003",
+      "topic": "什么是梯度检查点（Activation Checkpointing）？它如何用计算换显存？内存复杂度是如何从O(L)降到O(√L)的？",
+      "card_ids": [
+        "EGT-QB-003"
+      ],
+      "coverage": "保存边界与重算机制、A(L/k+k)推导√L、时间代价与RNG一致性。"
+    },
+    {
+      "id": "T004",
+      "topic": "请解释Flash Attention的原理，它如何通过分块计算和IO感知设计将显存从O(N²)降到O(N)并提升速度？",
+      "card_ids": [
+        "EGT-QB-004"
+      ],
+      "coverage": "FlashAttention tiling、在线softmax、线性辅助存储、精确注意力及实际HBM IO界；与T062合并。"
+    },
+    {
+      "id": "T005",
+      "topic": "为什么大模型训练需要学习率warmup？Cosine Decay调度策略的原理是什么？大模型训练中的实践经验有哪些？",
+      "card_ids": [
+        "EGT-QB-005"
+      ],
+      "coverage": "warmup稳定性动机、分段cosine公式、token/更新步预算、恢复与实践调参。"
+    },
+    {
+      "id": "T006",
+      "topic": "训练大模型时显存不足，有哪些系统性的解决方案？请从量化、梯度累积、混合精度、ZeRO、模型并行等角度综合分析。",
+      "card_ids": [
+        "EGT-QB-006"
+      ],
+      "coverage": "完整训练显存账本、量化/累积/AMP/ZeRO/模型并行/重算/offload按瓶颈选择；与T016合并。"
+    },
+    {
+      "id": "T007",
+      "topic": "请详细介绍ZeRO优化器的三个级别（ZeRO-1/2/3），每个级别分别分片了什么内容？与普通数据并行有什么区别？",
+      "card_ids": [
+        "EGT-QB-007"
+      ],
+      "coverage": "ZeRO-1/2/3各分片对象、与DDP差异、内存式与all-gather/reduce-scatter时序。"
+    },
+    {
+      "id": "T008",
+      "topic": "请对比张量并行、流水线并行和数据并行三种分布式训练策略的原理、通信开销和适用场景。",
+      "card_ids": [
+        "EGT-QB-008"
+      ],
+      "coverage": "DP/TP/PP原理、通信类型与频率、拓扑、适用场景、3D并行与bubble。"
+    },
+    {
+      "id": "T009",
+      "topic": "什么是Gradient Clipping？为什么要对梯度做范数裁剪？max_norm的值如何选择？",
+      "card_ids": [
+        "EGT-QB-009"
+      ],
+      "coverage": "全局范数裁剪公式和例子、max_norm选择、AMP/累积/分片顺序及限制。"
+    },
+    {
+      "id": "T010",
+      "topic": "大模型预训练的数据配比有什么经验和原则？代码、数学、网页、书籍等不同来源的数据比例如何选择？",
+      "card_ids": [
+        "EGT-QB-010"
+      ],
+      "coverage": "代码/数学/网页/书籍配比、token统计、质量与重复曝光、代理优化及同预算分域验证。"
+    },
+    {
+      "id": "T011",
+      "topic": "请解释KV Cache的原理，为什么自回归推理可以缓存Key和Value？显存占用如何计算？PagedAttention做了什么改进？",
+      "card_ids": [
+        "EGT-QB-011"
+      ],
+      "coverage": "因果KV可复用原因、Query无需历史缓存、字节公式及GQA头数、分页和失效边界。"
+    },
+    {
+      "id": "T012",
+      "topic": "请介绍vLLM的核心创新，包括PagedAttention的虚拟内存管理、Continuous Batching机制，以及它如何提升推理吞吐量。",
+      "card_ids": [
+        "EGT-QB-012"
+      ],
+      "coverage": "vLLM分页块表/共享/写时复制、continuous batching、吞吐与TTFT/TPOT/SLO权衡。"
+    },
+    {
+      "id": "T013",
+      "topic": "大模型预训练的完整流程是怎样的？从 0 预训练一个模型要做哪些事？",
+      "card_ids": [
+        "EGT-QB-013"
+      ],
+      "coverage": "从零预训练的数据治理、tokenizer、架构预算、loss/mask、精度并行、监控恢复评测交付闭环。"
+    },
+    {
+      "id": "T014",
+      "topic": "SFT（监督微调）的原理、流程和损失函数是什么？为什么只在 response 上算 loss？",
+      "card_ids": [
+        "EGT-QB-014"
+      ],
+      "coverage": "SFT原理流程和条件CE、response-only动机及非必然性、多轮mask、shift/packing/全mask边界。"
+    },
+    {
+      "id": "T015",
+      "topic": "为什么 SFT 之后模型通用能力会下降（灾难性遗忘）？如何缓解？",
+      "card_ids": [
+        "EGT-QB-015"
+      ],
+      "coverage": "SFT后遗忘机制、模板或评测造成的假性退化、学习率/replay/PEFT/早停及双域回归。"
+    },
+    {
+      "id": "T016",
+      "topic": "大模型训练的显存由哪几部分组成？各占多少？如何估算？",
+      "card_ids": [
+        "EGT-QB-006"
+      ],
+      "coverage": "权重、梯度、主权重、Adam矩、激活、workspace/通信/allocator逐项估算和16P条件；并入T006。"
+    },
+    {
+      "id": "T017",
+      "topic": "预训练 / SFT / RLHF 三阶段分别解决什么问题？",
+      "card_ids": [
+        "EGT-QB-017"
+      ],
+      "coverage": "预训练/SFT/对齐不同目标及数据；同时区分经典RLHF内部SFT/RM/PPO三阶段。"
+    },
+    {
+      "id": "T018",
+      "topic": "继续预训练（Continue Pre-training）怎么做？要注意什么（如何避免灾难性遗忘）？",
+      "card_ids": [
+        "EGT-QB-015"
+      ],
+      "coverage": "CPT领域语言建模流程、tokenizer兼容、与SFT区别、通用replay及遗忘和领域收益验证；并入T015。"
+    },
+    {
+      "id": "T019",
+      "topic": "大模型训练的 checkpoint 怎么管理？断点续训和故障恢复怎么做？",
+      "card_ids": [
+        "EGT-QB-019"
+      ],
+      "coverage": "训练checkpoint完整状态、分片原子提交、校验保留、断点恢复和变拓扑重分片边界。"
+    },
+    {
+      "id": "T020",
+      "topic": "如何处理长文本训练？长上下文窗口怎么扩展、位置编码怎么外推？",
+      "card_ids": [
+        "EGT-QB-020"
+      ],
+      "coverage": "长文本训练、位置外推、真实长依赖数据、内存与算力方案、长短任务及位置分桶评测。"
+    },
+    {
+      "id": "T021",
+      "topic": "大模型训练中如何监控和调试？关注哪些指标？loss 异常升降如何分析？",
+      "card_ids": [
+        "EGT-QB-021"
+      ],
+      "coverage": "训练/验证loss、梯度、scaler、吞吐等监控；loss异常升高和下降的竞争解释及排查顺序。"
+    },
+    {
+      "id": "T022",
+      "topic": "微调时 batch size、学习率、epoch 怎么设？如何防止过拟合？",
+      "card_ids": [
+        "EGT-QB-022"
+      ],
+      "coverage": "micro/effective batch、token预算、学习率扫描、epoch曝光、过拟合和按簇拆分/早停。"
+    },
+    {
+      "id": "T023",
+      "topic": "RAG 和微调有什么区别？什么场景选哪个？什么场景适合用 SFT？",
+      "card_ids": [
+        "EGT-QB-023"
+      ],
+      "coverage": "RAG与参数微调的差异、时效证据和行为适配场景、SFT适用条件、组合及oracle检索诊断。"
+    },
+    {
+      "id": "T024",
+      "topic": "请详细介绍RLHF的完整三阶段流程，包括每个阶段的目标、数据需求和关键设计选择。",
+      "card_ids": [
+        "EGT-QB-017"
+      ],
+      "coverage": "经典RLHF三阶段目标、示范/偏好/rollout数据、RM训练及actor/critic/ref/old边界；并入T017。"
+    },
+    {
+      "id": "T025",
+      "topic": "请详细解释PPO算法的原理，包括clip目标函数的设计动机、ratio约束机制，以及与TRPO的区别。",
+      "card_ids": [
+        "EGT-QB-025"
+      ],
+      "coverage": "PPO clip公式及正负优势分段、ratio非硬约束、总loss、与TRPO信赖域差别。"
+    },
+    {
+      "id": "T026",
+      "topic": "请推导DPO（Direct Preference Optimization）的损失函数，解释它如何从RLHF目标重新参数化得到。",
+      "card_ids": [
+        "EGT-QB-026"
+      ],
+      "coverage": "KL正则最优策略、奖励重参数化、Z抵消、BT偏好到DPO损失推导及token实现。"
+    },
+    {
+      "id": "T027",
+      "topic": "请对比DPO和PPO两种对齐方法，从奖励模型需求、训练稳定性、效果差异和适用场景等方面分析。",
+      "card_ids": [
+        "EGT-QB-027"
+      ],
+      "coverage": "DPO/PPO显式RM与critic需求、离线/在线数据、稳定性和效果边界、场景取舍；含GRPO。"
+    },
+    {
+      "id": "T028",
+      "topic": "请介绍GRPO（Group Relative Policy Optimization）算法的原理，它在DeepSeek-R1中是如何使用的？为什么不需要Critic网络？",
+      "card_ids": [
+        "EGT-QB-028"
+      ],
+      "coverage": "GRPO组优势、无critic基线、PPO式目标、R1/R1-Zero应用和多阶段路线。"
+    },
+    {
+      "id": "T029",
+      "topic": "奖励模型（Reward Model）是如何训练的？请解释Bradley-Terry偏好模型和损失函数的设计。",
+      "card_ids": [
+        "EGT-QB-029"
+      ],
+      "coverage": "RM训练、Bradley–Terry损失、平移不可识别、偏好数据与评测及critic职责区别。"
+    },
+    {
+      "id": "T030",
+      "topic": "KL散度惩罚在RLHF中起什么作用？为什么需要防止策略偏离参考模型？β系数如何选择？",
+      "card_ids": [
+        "EGT-QB-030"
+      ],
+      "coverage": "RLHF的KL方向、reference约束目的、采样估计、beta与奖励/长度尺度选择及限制。"
+    },
+    {
+      "id": "T031",
+      "topic": "什么是奖励黑客（Reward Hacking）问题？它是如何产生的？有哪些解决方案？",
+      "card_ids": [
+        "EGT-QB-031"
+      ],
+      "coverage": "reward hacking成因、具体漏洞例子、独立检测、修复奖励/数据及回归验证闭环。"
+    },
+    {
+      "id": "T032",
+      "topic": "GRPO为什么会出现reward崩溃？没有Critic网络带来了哪些稳定性问题？如何缓解？",
+      "card_ids": [
+        "EGT-QB-028"
+      ],
+      "coverage": "GRPO奖励崩溃的组方差/探索/信用分配/长度/陈旧rollout因素、有效组指标和缓解；不认定无critic必崩溃。"
+    },
+    {
+      "id": "T033",
+      "topic": "为什么SFT冷启动对RLHF如此重要？为什么不能直接从预训练模型开始做RL训练？",
+      "card_ids": [
+        "EGT-QB-033"
+      ],
+      "coverage": "SFT冷启动收益、直接基座RL的可行条件、成功组率例子和R1-Zero反例；纠正不能直接RL。"
+    },
+    {
+      "id": "T034",
+      "topic": "为什么 SFT 之后还需要 RLHF / 对齐？RLHF 的优缺点是什么？",
+      "card_ids": [
+        "EGT-QB-034"
+      ],
+      "coverage": "SFT后偏好对齐的额外信号、收益和代价、alignment tax、无需继续RL的条件及独立评测。"
+    },
+    {
+      "id": "T035",
+      "topic": "RLHF 和 RLAIF 的区别是什么？",
+      "card_ids": [
+        "EGT-QB-035"
+      ],
+      "coverage": "RLHF/RLAIF反馈来源区别、与PPO/DPO正交、Constitutional AI流程、人机标签偏差及校准。"
+    },
+    {
+      "id": "T036",
+      "topic": "PPO 的 loss 由哪几部分组成？Actor 和 Critic 分别是什么？",
+      "card_ids": [
+        "EGT-QB-025"
+      ],
+      "coverage": "PPO actor/value/entropy及可选KL总loss、Actor/Critic分工和detach边界；并入T025。"
+    },
+    {
+      "id": "T037",
+      "topic": "PPO 中的 GAE / 优势函数估计是怎么做的？",
+      "card_ids": [
+        "EGT-QB-037"
+      ],
+      "coverage": "GAE/优势函数、TD残差倒序递推、gamma/lambda偏差方差、return target及终止/截断mask。"
+    },
+    {
+      "id": "T038",
+      "topic": "强化学习 On-policy 和 Off-policy 的区别？Policy-based 和 Value-based 的区别？",
+      "card_ids": [
+        "EGT-QB-038"
+      ],
+      "coverage": "On/off-policy与policy/value-based两个分类轴、PPO/Q-learning/actor-critic例子及覆盖/复用限制。"
+    },
+    {
+      "id": "T039",
+      "topic": "为什么 RL 训练不稳定？怎么稳定 PPO 训练？训崩了 / 学歪了怎么处理？",
+      "card_ids": [
+        "EGT-QB-039"
+      ],
+      "coverage": "RL非平稳/奖励噪声/critic/数据陈旧等不稳定原因、PPO不变量诊断、稳定化及训崩回滚。"
+    },
+    {
+      "id": "T040",
+      "topic": "DPO 训练需要什么格式的数据？DPO 有哪些变种 / 改进算法（SimPO / IPO / KTO / ORPO）？",
+      "card_ids": [
+        "EGT-QB-040"
+      ],
+      "coverage": "DPO成对数据与多轮契约；SimPO/IPO/KTO/ORPO的参考模型、标签结构、长度和目标差异。"
+    },
+    {
+      "id": "T041",
+      "topic": "DPO 和 GRPO 的区别是什么？如何在 PPO / DPO / GRPO 之间选择？",
+      "card_ids": [
+        "EGT-QB-027"
+      ],
+      "coverage": "DPO与GRPO离线/在线及组采样成本区别，PPO/DPO/GRPO反馈形态、模型需求和场景选择；并入T027。"
+    },
+    {
+      "id": "T042",
+      "topic": "GRPO 的后续改进有哪些？DAPO 和 GSPO 各解决了 GRPO 的什么问题？",
+      "card_ids": [
+        "EGT-QB-042"
+      ],
+      "coverage": "DAPO四项技术、GSPO长度归一化序列ratio与clip、长回答/MoE稳定性及公平预算边界。"
+    },
+    {
+      "id": "T043",
+      "topic": "奖励模型坍缩 / 过优化问题如何解决？为什么有了 Reward Model 还需要 Critic？",
+      "card_ids": [
+        "EGT-QB-029"
+      ],
+      "coverage": "RM坍缩和代理过优化的区分及缓解；RM终局偏好评分与Critic前缀期望回报的非等价性。"
+    },
+    {
+      "id": "T044",
+      "topic": "RL 训练中的训推不一致（train-inference mismatch）问题是什么？怎么解决？",
+      "card_ids": [
+        "EGT-QB-044"
+      ],
+      "coverage": "训推权重/数值/kernel/模板/采样分布不一致、真实行为logprob、同步和校正支持条件。"
+    },
+    {
+      "id": "T045",
+      "topic": "RLVR 训练能否认为是一种 SFT？本质区别是什么？",
+      "card_ids": [
+        "EGT-QB-045"
+      ],
+      "coverage": "RLVR与SFT数据和梯度本质区别、正负优势、可验证奖励限制、拒绝采样SFT关系。"
+    },
+    {
+      "id": "T046",
+      "topic": "GPT 和 BERT 的架构有什么区别？各自适用于什么场景？",
+      "card_ids": [
+        "EGT-QB-046"
+      ],
+      "coverage": "GPT因果decoder与BERT双向encoder的mask、目标和任务场景；与T050/T051架构比较合并。"
+    },
+    {
+      "id": "T047",
+      "topic": "详细介绍 Transformer 架构的核心组件：Multi-Head Attention、FFN、残差连接与层归一化",
+      "card_ids": [
+        "EGT-QB-047"
+      ],
+      "coverage": "Transformer的MHA/FFN/残差/Norm组件、逐shape数据流和职责。"
+    },
+    {
+      "id": "T048",
+      "topic": "注意力机制中为什么要除以 根号下dk​​？请从数学角度推导",
+      "card_ids": [
+        "EGT-QB-048"
+      ],
+      "coverage": "独立零均值单位方差假设下点积方差dk、sqrt(dk)缩放、softmax Jacobian和假设边界。"
+    },
+    {
+      "id": "T049",
+      "topic": "Pre-LN 和 Post-LN 有什么区别？为什么现代大模型普遍使用 Pre-LN？",
+      "card_ids": [
+        "EGT-QB-049"
+      ],
+      "coverage": "Pre-LN/Post-LN公式及Jacobian、初始化梯度/warmup动机、final norm和非普适优势。"
+    },
+    {
+      "id": "T050",
+      "topic": "为什么大语言模型普遍采用 Decoder-only 架构？",
+      "card_ids": [
+        "EGT-QB-046"
+      ],
+      "coverage": "Decoder-only统一训练/参数共享/生成cache与工程理由，以及任务和架构比较的边界；并入T046。"
+    },
+    {
+      "id": "T051",
+      "topic": "Prefix Decoder、Causal Decoder 和 Encoder-Decoder 三种架构有什么区别？",
+      "card_ids": [
+        "EGT-QB-046"
+      ],
+      "coverage": "Prefix Decoder、Causal Decoder、Encoder-Decoder输入/目标可见性与cross-attention四token例子；并入T046。"
+    },
+    {
+      "id": "T052",
+      "topic": "LayerNorm 和 BatchNorm 有什么区别？为什么 Transformer 使用 LayerNorm？",
+      "card_ids": [
+        "EGT-QB-052"
+      ],
+      "coverage": "LN/BN归约轴、train/eval统计、Transformer自回归/变长与padding适配；含RMS对照。"
+    },
+    {
+      "id": "T053",
+      "topic": "什么是大语言模型的涌现能力？如何理解这种现象？",
+      "card_ids": [
+        "EGT-QB-053"
+      ],
+      "coverage": "涌现操作定义、连续能力经离散指标产生门槛的p^k例子、主源不同观点和验证设计。"
+    },
+    {
+      "id": "T054",
+      "topic": "多头注意力机制的作用是什么？为什么要使用多个注意力头？",
+      "card_ids": [
+        "EGT-QB-047"
+      ],
+      "coverage": "多头不同Q/K/V子空间的作用、固定总维度取舍、头冗余和不能固定解释头语义；并入T047。"
+    },
+    {
+      "id": "T055",
+      "topic": "大语言模型的训练目标是什么？因果语言模型和 Next Token Prediction 的关系是什么？",
+      "card_ids": [
+        "EGT-QB-055"
+      ],
+      "coverage": "序列概率链式分解、因果LM与NTP关系、teacher forcing、并行训练/逐步生成及目标局限。"
+    },
+    {
+      "id": "T056",
+      "topic": "RMSNorm 的原理是什么？为什么比 LayerNorm 更适合大模型？",
+      "card_ids": [
+        "EGT-QB-052"
+      ],
+      "coverage": "RMSNorm公式、取消均值中心化、计算及平移不变性区别、为何常用于大模型及性能边界；并入T052。"
+    },
+    {
+      "id": "T057",
+      "topic": "对比 Sinusoidal、RoPE 和 ALiBi 三种位置编码的原理与外推能力",
+      "card_ids": [
+        "EGT-QB-057"
+      ],
+      "coverage": "Sinusoidal/RoPE/ALiBi注入位置、公式和外推能力边界；含RoPE完整推导。"
+    },
+    {
+      "id": "T058",
+      "topic": "请解释GQA（Grouped-Query Attention）分组查询注意力的原理，它如何减少KV头数来节省显存？与MHA和MQA对比如何？",
+      "card_ids": [
+        "EGT-QB-058"
+      ],
+      "coverage": "GQA头映射及KV缓存缩减，与MHA/MQA端点、质量/速度及物理复制风险。"
+    },
+    {
+      "id": "T059",
+      "topic": "请详细解释DeepSeek-V2提出的MLA（Multi-head Latent Attention）多头潜在注意力机制，其低秩KV压缩原理及与MHA的推理速度对比。",
+      "card_ids": [
+        "EGT-QB-059"
+      ],
+      "coverage": "DeepSeek-V2 MLA低秩联合KV、上投影吸收、解耦RoPE、与MHA/GQA/MQA及推理速度公平比较。"
+    },
+    {
+      "id": "T060",
+      "topic": "请解释RoPE（旋转位置编码）的数学原理，包括旋转矩阵的构造、相对位置性质的推导及其长度外推能力。",
+      "card_ids": [
+        "EGT-QB-057"
+      ],
+      "coverage": "RoPE二维旋转矩阵、R(m)^T R(n)=R(n-m)相对位置推导、布局/offset和长度外推限制；并入T057。"
+    },
+    {
+      "id": "T061",
+      "topic": "请详细解释MoE（混合专家模型）的原理，包括稀疏激活机制、Top-K路由、负载均衡Loss，以及DeepSeek-MoE的改进。",
+      "card_ids": [
+        "EGT-QB-061"
+      ],
+      "coverage": "MoE稀疏Top-K dispatch/combine、负载均衡loss、capacity及DeepSeek细粒度/共享专家。"
+    },
+    {
+      "id": "T062",
+      "topic": "请详细解释FlashAttention v1/v2的原理，包括分块tiling策略、在线softmax算法，以及IO复杂度如何从O(N²)优化到O(N)。",
+      "card_ids": [
+        "EGT-QB-004"
+      ],
+      "coverage": "FlashAttention v1/v2 tiling和在线softmax、v2工作划分、HBM IO的M相关界；纠正无条件O(N)IO前提，并入T004。"
+    },
+    {
+      "id": "T063",
+      "topic": "请详细解释Mamba（选择性状态空间模型）的原理，包括SSM基础、选择性机制如何实现，以及与Transformer在效率和能力上的对比。",
+      "card_ids": [
+        "EGT-QB-063"
+      ],
+      "coverage": "Mamba连续SSM与离散递推、输入相关B/C/Delta选择、parallel scan、复杂度和有限状态能力取舍。"
+    },
+    {
+      "id": "T064",
+      "topic": "请解释投机采样（Speculative Decoding）的工作原理，包括小模型起草、大模型验证的流程，接受率计算及加速效果分析。",
+      "card_ids": [
+        "EGT-QB-064"
+      ],
+      "coverage": "投机草拟与目标验证、min(1,p/q)接受、max(p-q,0)拒绝残差、预期产出与速度/cache分析。"
+    },
+    {
+      "id": "T065",
+      "topic": "请梳理LLaMA系列模型的架构演进（LLaMA-1到LLaMA-3），分析RMSNorm、RoPE、GQA、SwiGLU等关键架构选择。",
+      "card_ids": [
+        "EGT-QB-065"
+      ],
+      "coverage": "LLaMA1到首发3共同骨干及按版本/尺寸演进、RMSNorm/RoPE/GQA/SwiGLU选择与预算。"
+    },
+    {
+      "id": "T066",
+      "topic": "请全面分析DeepSeek系列模型的架构创新，包括MLA+MoE组合、FP8训练、Loss-Free负载均衡等技术突破。",
+      "card_ids": [
+        "EGT-QB-066"
+      ],
+      "coverage": "DeepSeekMoE/V2/V3/R1创新归属、MLA+MoE、FP8混合精度、bias主均衡与补充序列aux loss。"
+    },
+    {
+      "id": "T067",
+      "topic": "请解释NTK-aware RoPE外推方法和YaRN，对比线性插值与NTK插值在长上下文扩展中的效果差异。",
+      "card_ids": [
+        "EGT-QB-067"
+      ],
+      "coverage": "PI均匀缩频、NTK-aware base公式、YaRN分频段及温度校正、长短效果与动态cache一致性。"
+    },
+    {
+      "id": "T068",
+      "topic": "LoRA 的原理是什么？请详细解释低秩分解、参数量计算、初始化策略和推理时的合并",
+      "card_ids": [
+        "EGT-QB-068"
+      ],
+      "coverage": "LoRA低秩分解、参数量、零增量初始化及首步梯度、目标层、alpha/r和推理合并。"
+    },
+    {
+      "id": "T069",
+      "topic": "全参数微调和 LoRA 微调有什么区别？在显存、效果和适用场景上如何对比？",
+      "card_ids": [
+        "EGT-QB-069"
+      ],
+      "coverage": "全参数与LoRA显存/状态/激活/效果/部署取舍及适用场景；并与其他PEFT比较。"
+    },
+    {
+      "id": "T070",
+      "topic": "LoRA 的 rank 如何选择？过低或过高有什么影响？",
+      "card_ids": [
+        "EGT-QB-070"
+      ],
+      "coverage": "LoRA rank高低的容量和成本、alpha/r混杂、目标层分配、同预算扫描与过拟合诊断。"
+    },
+    {
+      "id": "T071",
+      "topic": "P-tuning 的原理是什么？它和传统微调有什么区别？",
+      "card_ids": [
+        "EGT-QB-071"
+      ],
+      "coverage": "P-tuning连续输入提示及编码器、与传统全参微调差异、冻结/非冻结配置和v2区别。"
+    },
+    {
+      "id": "T072",
+      "topic": "QLoRA 的原理是什么？NF4 量化和 Double Quantization 是怎么工作的？",
+      "card_ids": [
+        "EGT-QB-072"
+      ],
+      "coverage": "QLoRA冻结量化基座与LoRA反向、NF4码本、Double Quantization尺度及paged optimizer。"
+    },
+    {
+      "id": "T073",
+      "topic": "Prefix Tuning 的工作原理是什么？它和 P-tuning 有什么区别？",
+      "card_ids": [
+        "EGT-QB-071"
+      ],
+      "coverage": "Prefix Tuning各层虚拟KV和重参数化，比较P-tuning v1输入提示及v2深提示、参数/缓存成本；并入T071。"
+    },
+    {
+      "id": "T074",
+      "topic": "对比 LoRA、Adapter、Prefix Tuning 和 P-tuning 这几种 PEFT 方法的优缺点和适用场景",
+      "card_ids": [
+        "EGT-QB-069"
+      ],
+      "coverage": "LoRA/Adapter/Prefix/P-tuning更新位置、可合并性、训练与推理成本、优势限制和场景；并入T069。"
+    },
+    {
+      "id": "T075",
+      "topic": "LoRA 中为什么 B 初始化为零矩阵，A 用正态分布初始化？",
+      "card_ids": [
+        "EGT-QB-068"
+      ],
+      "coverage": "LoRA B零A随机的零增量与梯度推导、双零停滞、A不必唯一正态分布的实现澄清；并入T068。"
+    },
+    {
+      "id": "T076",
+      "topic": "AdaLoRA 是什么？它如何自适应地调整不同层的秩？",
+      "card_ids": [
+        "EGT-QB-076"
+      ],
+      "coverage": "AdaLoRA PΛQ参数化、正交正则、重要性评分、全局预算调度及非均匀秩；不每步完整SVD。"
+    },
+    {
+      "id": "T077",
+      "topic": "LoRA 应该加在哪些层？为什么 Q/V 最常见？alpha 与 rank 的比值怎么理解？",
+      "card_ids": [
+        "EGT-QB-068"
+      ],
+      "coverage": "LoRA Q/V动机、K/O/FFN目标模块与等预算消融、alpha/r的更新尺度及rank混杂；并入T068。"
+    },
+    {
+      "id": "T078",
+      "topic": "请详细介绍预训练数据的质量过滤流程，包括去重、质量评分、语言检测和有害内容过滤。",
+      "card_ids": [
+        "EGT-QB-078"
+      ],
+      "coverage": "预训练数据质量流程中的解析/语言识别、精确与近重复、质量评分、有害/PII过滤及误杀审计。"
+    },
+    {
+      "id": "T079",
+      "topic": "SFT数据构造有哪些最佳实践？如何在指令多样性和数据质量之间取得平衡？",
+      "card_ids": [
+        "EGT-QB-079"
+      ],
+      "coverage": "SFT数据覆盖矩阵、示范与合成来源、事实/格式验证、多样性质量取舍、去重及分桶评测。"
+    },
+    {
+      "id": "T080",
+      "topic": "如何构造高质量的多轮对话数据？请从上下文一致性、轮次设计和数据格式等方面详细说明。",
+      "card_ids": [
+        "EGT-QB-079"
+      ],
+      "coverage": "多轮上下文依赖、纠错/澄清/约束轮次、messages角色/工具格式、模板mask、完整对话拆分与反事实一致性检查；并入T079。"
+    },
+    {
+      "id": "T081",
+      "topic": "预训练数据的配比策略是什么？不同领域（代码、数学、中文、英文）的数据应该如何配比？",
+      "card_ids": [
+        "EGT-QB-010"
+      ],
+      "coverage": "跨区合并T010：预训练数据配比策略，代码/数学/中文/英文的质量、语言与领域覆盖、token采样比例、去重/重复暴露和等预算消融；A作者已确认完整承接。"
+    },
+    {
+      "id": "T082",
+      "topic": "请比较BPE、WordPiece和Unigram三种Tokenizer算法，以及在中文场景下的分词策略和词表大小选择。",
+      "card_ids": [
+        "EGT-QB-082"
+      ],
+      "coverage": "三种训练与编码策略；中文规范化与词表大小；BPE 合并示例和 OOV 条件；训练/编码复杂度与输出成本"
+    },
+    {
+      "id": "T083",
+      "topic": "请详细介绍数据去重的方法，包括MinHash、SimHash、精确去重和N-gram去重。",
+      "card_ids": [
+        "EGT-QB-083"
+      ],
+      "coverage": "规范化后精确哈希；MinHash/Jaccard/LSH；SimHash/Hamming；N-gram局部匹配与簇级划分"
+    },
+    {
+      "id": "T084",
+      "topic": "请介绍合成数据的主要方法，包括Self-Instruct、WizardLM进化指令、Magpie等，以及如何进行质量验证。",
+      "card_ids": [
+        "EGT-QB-084"
+      ],
+      "coverage": "三种生成机制；可解性与正确性分层过滤；谱系、去重和数据污染；等预算下游消融"
+    },
+    {
+      "id": "T085",
+      "topic": "什么是预训练数据Packing？请解释序列拼接、跨序列注意力mask以及如何提升GPU利用率。",
+      "card_ids": [
+        "EGT-QB-085"
+      ],
+      "coverage": "拼接与有效利用率；跨序列attention隔离；shifted loss/position边界；kernel支持与等价性验证"
+    },
+    {
+      "id": "T086",
+      "topic": "请解释困惑度（Perplexity/PPL）的定义、数学推导、实际意义和局限性。",
+      "card_ids": [
+        "EGT-QB-086"
+      ],
+      "coverage": "概率分解到PPL推导；几何平均与实例；tokenizer/数据可比性；滑窗和有效token归约"
+    },
+    {
+      "id": "T087",
+      "topic": "请介绍主流LLM评测基准（MMLU、GSM8K、HumanEval、MATH、HellaSwag），说明各自测试的能力维度和评测方式。",
+      "card_ids": [
+        "EGT-QB-087"
+      ],
+      "coverage": "五项能力与任务格式；各自计分与解析；采样/提示/工具预算；切片与污染限制"
+    },
+    {
+      "id": "T088",
+      "topic": "请解释LLM-as-a-Judge评估方法，包括MT-Bench的设计、position bias问题及其优劣势分析。",
+      "card_ids": [
+        "EGT-QB-088"
+      ],
+      "coverage": "MT-Bench两轮八类设计；评分量表与证据；位置/长度等偏差控制；人工校准和版本冻结"
+    },
+    {
+      "id": "T089",
+      "topic": "什么是大模型幻觉（Hallucination）？请分类解释factual和faithfulness幻觉的成因、检测方法和缓解策略。",
+      "card_ids": [
+        "EGT-QB-089"
+      ],
+      "coverage": "事实性/忠实性参照系；数据、检索、推理成因；断言级证据核验；按瓶颈缓解与拒答"
+    },
+    {
+      "id": "T090",
+      "topic": "请对比ORM（结果奖励模型）和PRM（过程奖励模型），分析它们在数学推理等任务中的优劣。",
+      "card_ids": [
+        "EGT-QB-090"
+      ],
+      "coverage": "整答与步骤监督；训练/搜索用途；聚合和标签成本；错误推导反例与公平评测"
+    },
+    {
+      "id": "T091",
+      "topic": "如何评估LLM的指令跟随能力？请介绍IFEval基准及多维度评估方法。",
+      "card_ids": [
+        "EGT-QB-091"
+      ],
+      "coverage": "IFEval可验证指令；instruction/prompt级口径；strict/loose与规则边界；语义/多轮等互补维度"
+    },
+    {
+      "id": "T092",
+      "topic": "什么是Benchmark数据污染（Data Contamination）问题？如何检测和应对？动态Benchmark有何优势？",
+      "card_ids": [
+        "EGT-QB-092"
+      ],
+      "coverage": "污染通道与影响；多层检测与证据限制；簇/时间/来源隔离；动态benchmark优势与漂移"
+    },
+    {
+      "id": "T093",
+      "topic": "分析BLEU和ROUGE指标的局限性，为什么它们与人类判断相关性差？在什么场景下它们仍然适用？",
+      "card_ids": [
+        "EGT-QB-093"
+      ],
+      "coverage": "BLEU公式与BP；ROUGE-N/L及口径；实体/否定/改写反例；固定参考场景与互补指标"
+    },
+    {
+      "id": "T094",
+      "topic": "Chatbot Arena 的评测原理是什么？ELO 评分机制是怎么算的？",
+      "card_ids": [
+        "EGT-QB-094"
+      ],
+      "coverage": "匿名成对偏好流程；Elo公式与计算；BT全局估计与尺度；偏差、平局和不确定性"
+    },
+    {
+      "id": "T095",
+      "topic": "pass@k 指标的含义和计算方法是什么？为什么用无偏估计？",
+      "card_ids": [
+        "EGT-QB-095"
+      ],
+      "coverage": "至少一次成功定义；组合数推导与无偏前提；数值边界和逐题聚合；候选预算与实际选择器"
+    },
+    {
+      "id": "T096",
+      "topic": "准确率、召回率、F1 的含义与计算？数据不均衡有什么影响？loss 降但 F1 不涨如何排查？",
+      "card_ids": [
+        "EGT-QB-096"
+      ],
+      "coverage": "混淆矩阵四指标；不均衡与macro/micro；loss-F1分离机制；验证阈值和标签排查"
+    },
+    {
+      "id": "T097",
+      "topic": "Recall、MRR、Precision 等检索指标的含义？如何评价检索结果的好坏？",
+      "card_ids": [
+        "EGT-QB-097"
+      ],
+      "coverage": "三个指标定义与示例；MRR对多证据的盲点；NDCG与分级标注；分阶段/语料/预算控制"
+    },
+    {
+      "id": "T098",
+      "topic": "RAG 系统如何评测？若 Answer Relevance 偏低，如何区分检索质量与生成能力？",
+      "card_ids": [
+        "EGT-QB-098"
+      ],
+      "coverage": "检索/组装/生成分层指标；oracle上下文替换；固定证据的模型消融；证据链与端到端验收"
+    },
+    {
+      "id": "T099",
+      "topic": "Agent 的评测流程是怎样的？评价指标如何定义和获取？",
+      "card_ids": [
+        "EGT-QB-099"
+      ],
+      "coverage": "环境初态/成功断言；trace与终态分离；成功、安全、成本指标；重复可靠性与可复位评测"
+    },
+    {
+      "id": "T100",
+      "topic": "多模态模型 / VLM 怎么评估效果与幻觉？怎么判断是 encoder 还是 LLM 推理的问题？",
+      "card_ids": [
+        "EGT-QB-100"
+      ],
+      "coverage": "感知/推理/幻觉能力矩阵；POPE及断言核验；oracle文字对照；encoder/projector/预处理消融"
+    },
+    {
+      "id": "T101",
+      "topic": "Reward Model 如何评估？reward hacking 的原因和解决方法？",
+      "card_ids": [
+        "EGT-QB-101"
+      ],
+      "coverage": "偏好排序与切片；长度捷径和校准；优化强度下独立效用；reward hacking缓解"
+    },
+    {
+      "id": "T102",
+      "topic": "大模型评测体系怎么搭建？离在线效果差异如何解决、指标怎么对齐？",
+      "card_ids": [
+        "EGT-QB-102"
+      ],
+      "coverage": "任务分层与版本冻结；质量/系统/安全指标；离在线差异重放；受控实验与反馈隔离"
+    },
+    {
+      "id": "T103",
+      "topic": "如何评估微调后模型的效果？和基座模型如何对比？如何做 train/test 去重？",
+      "card_ids": [
+        "EGT-QB-103"
+      ],
+      "coverage": "公平基座与推理预算；train/test簇级去重；目标收益和通用回退；valid选型/test终验"
+    },
+    {
+      "id": "T104",
+      "topic": "请解释Scaling Law的核心内容，特别是Chinchilla法则中参数量与数据量的关系，以及compute-optimal训练策略。",
+      "card_ids": [
+        "EGT-QB-104"
+      ],
+      "coverage": "N/D损失幂律；C≈6ND与边际平衡推导；Chinchilla经验范围；训练最优与部署成本"
+    },
+    {
+      "id": "T105",
+      "topic": "什么是Chain-of-Thought（CoT）提示？它为什么有效？请同时介绍Zero-shot CoT和Self-Consistency方法。",
+      "card_ids": [
+        "EGT-QB-105"
+      ],
+      "coverage": "few-shot与zero-shot提示；多路径最终答案聚合；可能机制及非保证性；等预算验证与成本"
+    },
+    {
+      "id": "T106",
+      "topic": "请介绍DeepSeek-R1的技术路线，包括GRPO强化推理方法、从R1-Zero到R1的演进，以及其主要技术贡献。",
+      "card_ids": [
+        "EGT-QB-106"
+      ],
+      "coverage": "固定原始版本与V3-Base；GRPO组相对优势；R1的四阶段链；推理样本蒸馏与贡献限制"
+    },
+    {
+      "id": "T107",
+      "topic": "请介绍多模态大模型的核心技术，包括CLIP的对比学习、LLaVA的两阶段训练方法，以及视觉编码器的选择。",
+      "card_ids": [
+        "EGT-QB-149",
+        "EGT-QB-157",
+        "EGT-QB-159"
+      ],
+      "coverage": "综合题按核心技术分解：T149含CLIP双编码器、双向对比学习公式与zero-shot；T157含原始LLaVA两阶段、冻结策略、条件CE和视觉连接；T159含视觉encoder选择、预训练目标与视觉/语言参数和token预算。"
+    },
+    {
+      "id": "T108",
+      "topic": "请介绍Agent框架的核心设计，包括ReAct的思维-行动循环、工具调用机制，以及LangChain和LlamaIndex等框架。",
+      "card_ids": [
+        "EGT-QB-135",
+        "EGT-QB-136",
+        "EGT-QB-145",
+        "EGT-QB-137"
+      ],
+      "coverage": "综合题映射：T135含Agent完整架构与LangChain/LlamaIndex定位；T136含ReAct决策-行动-观察循环；T137含工具schema、调用、宿主执行和结果回传；T145含LangChain/LangGraph和状态编排。"
+    },
+    {
+      "id": "T109",
+      "topic": "请介绍长上下文技术的核心方法，包括YaRN、LongRoPE等位置编码扩展方法，RAG与长上下文的对比，以及lost in the middle问题。",
+      "card_ids": [
+        "EGT-QB-109"
+      ],
+      "coverage": "RoPE长度适配问题；YaRN与LongRoPE差别；RAG和长窗口成本取舍；中间遗忘与位置消融"
+    },
+    {
+      "id": "T110",
+      "topic": "为什么强化学习在大模型上很难做？请从输出分布集中、奖励黑客和训练不稳定等角度分析。",
+      "card_ids": [
+        "EGT-QB-110"
+      ],
+      "coverage": "动作空间、稀疏奖励与熵；reward hacking；陈旧rollout和数值动态；监控分流与干预"
+    },
+    {
+      "id": "T111",
+      "topic": "请介绍大模型安全对齐的核心方法，包括Constitutional AI、红队测试、越狱攻击和RLHF的局限性。",
+      "card_ids": [
+        "EGT-QB-111"
+      ],
+      "coverage": "原则批评/修订与AI反馈；红队/越狱威胁类别；RLHF局限和执行边界；安全与误拒的双向评测"
+    },
+    {
+      "id": "T112",
+      "topic": "请详细介绍模型量化技术，包括PTQ与QAT的区别、INT8/INT4量化方法，以及GPTQ和AWQ算法的原理。",
+      "card_ids": [
+        "EGT-QB-112"
+      ],
+      "coverage": "INT8/INT4量化公式与粒度；PTQ/QAT训练语义；GPTQ二阶补偿/AWQ缩放；校准、kernel与质量性能"
+    },
+    {
+      "id": "T113",
+      "topic": "请详细解释KV Cache的显存占用计算公式，以及PagedAttention、GQA和MLA等优化方法如何减少KV Cache开销。",
+      "card_ids": [
+        "EGT-QB-113"
+      ],
+      "coverage": "传统KV公式与单位；MHA/MQA/GQA头数；MLA潜变量加位置键；分页浪费与结构压缩区别"
+    },
+    {
+      "id": "T114",
+      "topic": "什么是Continuous Batching？它与静态批处理有什么区别？请解释Orca论文的核心思想及其对吞吐量的提升。",
+      "card_ids": [
+        "EGT-QB-114"
+      ],
+      "coverage": "静态与迭代级生命周期；Orca选择性批处理；prefill/decode和KV预算；吞吐/延迟/公平性"
+    },
+    {
+      "id": "T115",
+      "topic": "请解释投机采样（Speculative Decoding）的原理，包括draft model生成、target model验证、接受条件和加速比分析。",
+      "card_ids": [
+        "EGT-QB-064"
+      ],
+      "coverage": "跨区合并T064：draft多token起草、target并行验证、min(1,p/q)接受条件、拒绝后残差分布、分布保持与接受率/成本/加速比条件；A作者已确认完整承接。"
+    },
+    {
+      "id": "T116",
+      "topic": "请解释张量并行推理的原理，包括列并行和行并行的切分方式、通信原语和All-Reduce开销。",
+      "card_ids": [
+        "EGT-QB-116"
+      ],
+      "coverage": "列并行shape；行并行部分和；attention与布局契约；All-Reduce开销和decode瓶颈"
+    },
+    {
+      "id": "T117",
+      "topic": "请对比权重量化和激活量化的挑战，并介绍混合精度策略在推理中的应用。",
+      "card_ids": [
+        "EGT-QB-117"
+      ],
+      "coverage": "固定权重与动态激活；离群值与校准；等价缩放和混合精度；分层误差与工作负载"
+    },
+    {
+      "id": "T118",
+      "topic": "请详细解释vLLM中PagedAttention的工作原理，包括虚拟内存管理思想、碎片消除机制和对并发请求数的提升。",
+      "card_ids": [
+        "EGT-QB-012"
+      ],
+      "coverage": "跨区合并T012：vLLM PagedAttention的逻辑/物理块映射、按需分配、引用计数/COW、外部碎片/块尾浪费与并发提升，并包含continuous batching关系；A作者已确认完整承接。"
+    },
+    {
+      "id": "T119",
+      "topic": "请对比LLM推理中Prefill和Decode两个阶段的计算特性差异，并解释分离部署和Chunked Prefill策略。",
+      "card_ids": [
+        "EGT-QB-119"
+      ],
+      "coverage": "阶段算术强度与KV访问；分块prefill连续性；分离部署与KV传输；SLO/goodput和负载比例"
+    },
+    {
+      "id": "T120",
+      "topic": "请介绍知识蒸馏技术在大模型中的应用，包括Task-specific蒸馏、黑盒/白盒蒸馏方法，以及TinyBERT和MiniLM等代表性工作。",
+      "card_ids": [
+        "EGT-QB-120"
+      ],
+      "coverage": "黑盒/白盒及任务特定；温度KL公式与梯度；TinyBERT和MiniLM机制；容量、词表与公平比较"
+    },
+    {
+      "id": "T121",
+      "topic": "请详细解释BPE（字节对编码）分词算法的原理，包括合并规则的学习过程和处理未登录词的机制。",
+      "card_ids": [
+        "EGT-QB-082"
+      ],
+      "coverage": "区内合并T082：BPE训练统计相邻pair并按顺序合并，编码按merge ranks；给合并计数示例、字符级OOV与完整byte/byte-fallback条件，以及朴素训练O(KM)/编码O(n²)的实现前提。"
+    },
+    {
+      "id": "T122",
+      "topic": "Flash Attention v1 / v2 / v3 各代的改进是什么？为什么一代比一代快？",
+      "card_ids": [
+        "EGT-QB-122"
+      ],
+      "coverage": "v1分块与显存/IO区别；在线softmax重标定；v2并行与分工；v3硬件特性与比较边界"
+    },
+    {
+      "id": "T123",
+      "topic": "vLLM 和 SGLang 的核心机制与区别？PagedAttention 与 RadixAttention 分别解决什么？",
+      "card_ids": [
+        "EGT-QB-123"
+      ],
+      "coverage": "vLLM原始分页机制；SGLang结构化运行时与radix；分配/计算两类收益；版本化公平比较"
+    },
+    {
+      "id": "T124",
+      "topic": "AllReduce 与 Ring-AllReduce 的原理？Parameter Server 架构与 AllReduce 架构的区别？",
+      "card_ids": [
+        "EGT-QB-124"
+      ],
+      "coverage": "AllReduce语义与全局平均；reduce-scatter/all-gather；Ring通信成本；PS同步异步与热点"
+    },
+    {
+      "id": "T125",
+      "topic": "Megatron 张量并行的行/列切分是怎么做的？3D 并行（DP + TP + PP）如何组合？",
+      "card_ids": [
+        "EGT-QB-125"
+      ],
+      "coverage": "Megatron行列互补切分；DP/TP/PP三维职责；32GPU分组与global batch；拓扑、气泡和checkpoint"
+    },
+    {
+      "id": "T126",
+      "topic": "FSDP 的原理是什么？它和 ZeRO 是什么关系？",
+      "card_ids": [
+        "EGT-QB-126"
+      ],
+      "coverage": "all-gather/reshard/reduce-scatter；ZeRO三个阶段对应；常驻与峰值显存；粒度、版本和恢复"
+    },
+    {
+      "id": "T127",
+      "topic": "序列并行（Sequence Parallel）的原理？它和张量并行（Tensor Parallel）的关系？",
+      "card_ids": [
+        "EGT-QB-127"
+      ],
+      "coverage": "TP中的复制激活；沿S分片与collective衔接；SP与context parallel区别；随机性、mask和显存核算"
+    },
+    {
+      "id": "T128",
+      "topic": "专家并行（Expert Parallel）的原理？MoE 训练和推理有哪些挑战？",
+      "card_ids": [
+        "EGT-QB-128"
+      ],
+      "coverage": "router/dispatch/expert/combine；all-to-all与逆置换；容量和负载不均；训练/推理小batch与拓扑"
+    },
+    {
+      "id": "T129",
+      "topic": "MLA（Multi-head Latent Attention）的原理？和 MQA / GQA 有什么区别？",
+      "card_ids": [
+        "EGT-QB-059"
+      ],
+      "coverage": "跨区合并T059：MLA联合低秩KV、投影吸收、解耦RoPE及潜变量缓存，与MQA/GQA共享头方式的差别和推理收益条件；A作者已确认完整承接。"
+    },
+    {
+      "id": "T130",
+      "topic": "DeepSeek MoE 的架构是什么？细粒度专家和共享专家分别起什么作用？",
+      "card_ids": [
+        "EGT-QB-130"
+      ],
+      "coverage": "原始版本与细粒度拆分；共享专家/专门专家职责；稀疏输出表达；等预算质量和系统代价"
+    },
+    {
+      "id": "T131",
+      "topic": "Prefix Caching 的原理是什么？它如何降低首 token 延迟（TTFT）？",
+      "card_ids": [
+        "EGT-QB-131"
+      ],
+      "coverage": "因果前缀不变性；最长前缀与缓存键；共享/回收/隔离；TTFT收益及TPOT边界"
+    },
+    {
+      "id": "T132",
+      "topic": "CUDA Kernel 有哪些优化方法？算子融合（Kernel Fusion）的原理和例子？",
+      "card_ids": [
+        "EGT-QB-132"
+      ],
+      "coverage": "profile与roofline；bias/GELU融合访存账本；tiling/访存/并行方法；寄存器代价和验证"
+    },
+    {
+      "id": "T133",
+      "topic": "分布式训练的通信优化有哪些方法？NVLink 和 RDMA 的作用是什么？",
+      "card_ids": [
+        "EGT-QB-133"
+      ],
+      "coverage": "通信trace与瓶颈分类；分桶/重叠/层次collective；NVLink/RDMA/GPUDirect区别；收敛与端到端收益"
+    },
+    {
+      "id": "T134",
+      "topic": "流水线并行的 bubble 是什么？1F1B 和 zero-bubble 调度如何优化它？",
+      "card_ids": [
+        "EGT-QB-134"
+      ],
+      "coverage": "依赖与理想bubble估计；GPipe/1F1B激活生命周期；dX/dW拆分填空；资源、同步与公平比较"
+    },
+    {
+      "id": "T135",
+      "topic": "一个完整的 Agent 智能体架构一般包括哪些部分？",
+      "card_ids": [
+        "EGT-QB-135"
+      ],
+      "coverage": "输入到动作/观察/验证的数据流；状态、记忆与预算；ReAct和三类框架定位；trace、终态与可靠性"
+    },
+    {
+      "id": "T136",
+      "topic": "ReAct 范式是什么？Thought / Action / Observation 的循环逻辑与优缺点？",
+      "card_ids": [
+        "EGT-QB-136"
+      ],
+      "coverage": "Thought/Action/Observation职责；依观察更新决策；适应性收益与成本；重复检测和停止验证"
+    },
+    {
+      "id": "T137",
+      "topic": "Function Call 的流程是怎样的？模型如何知道该调用哪个工具？",
+      "card_ids": [
+        "EGT-QB-137"
+      ],
+      "coverage": "工具schema与模型选择；调用解析/授权/执行；call ID结果回传；选择可靠性和语义限制"
+    },
+    {
+      "id": "T138",
+      "topic": "Function Call 返回的 JSON 不标准、工具超时或返回空、模型捏造参数，分别怎么处理？",
+      "card_ids": [
+        "EGT-QB-138"
+      ],
+      "coverage": "JSON/schema可恢复错误；超时的不确定副作用；空结果语义；参数实体校验与预算"
+    },
+    {
+      "id": "T139",
+      "topic": "Function Calling、MCP、Tool Use、Skill 这几个概念是什么关系？",
+      "card_ids": [
+        "EGT-QB-139"
+      ],
+      "coverage": "能力/接口/协议/资源包四层；MCP角色及tools/resources/prompts；Skill按需加载；组合实例与权限"
+    },
+    {
+      "id": "T140",
+      "topic": "怎么设计 Agent 的记忆系统？短期与长期记忆怎么存、怎么管理上下文、怎么做记忆衰减？",
+      "card_ids": [
+        "EGT-QB-140"
+      ],
+      "coverage": "短期状态与模型上下文；长期记忆类型和来源；写入/冲突/权限生命周期；相关度与时间衰减"
+    },
+    {
+      "id": "T141",
+      "topic": "多 Agent 协作有哪些常见模式？什么时候用单 Agent、什么时候用多 Agent？上下文怎么传递共享？",
+      "card_ids": [
+        "EGT-QB-141"
+      ],
+      "coverage": "常见协作拓扑；单/多选择与关键路径；上下文/产物契约；共享状态冲突和相关错误"
+    },
+    {
+      "id": "T142",
+      "topic": "Agent 的多步任务规划与分解如何实现？怎么保证拆解步骤合理、用哪种 Prompt 策略？",
+      "card_ids": [
+        "EGT-QB-142"
+      ],
+      "coverage": "目标与成功断言；输入/产物/依赖拆分；计划执行和局部重规划；预算、权限与进度证据"
+    },
+    {
+      "id": "T143",
+      "topic": "为什么 Agent 经常出现幻觉或乱调工具？怎么缓解？RAG 生成阶段如何设边界？",
+      "card_ids": [
+        "EGT-QB-143"
+      ],
+      "coverage": "证据/指令/先验错误来源；参数来源与宿主校验；RAG断言及引用边界；无证据、冲突和注入回归"
+    },
+    {
+      "id": "T144",
+      "topic": "Agent 在任务执行失败时，怎么做错误重试和反思？具体实现逻辑是什么？",
+      "card_ids": [
+        "EGT-QB-144"
+      ],
+      "coverage": "失败类型到动作分流；幂等与跨层预算；证据驱动反思；经验验证和停止"
+    },
+    {
+      "id": "T145",
+      "topic": "LangChain 和 LangGraph 分别提供什么功能？区别和各自优势是什么？状态快照机制怎么实现？",
+      "card_ids": [
+        "EGT-QB-145"
+      ],
+      "coverage": "LangChain/LangGraph层次；图状态和检查点；checkpointer/store与后端；恢复时外部副作用"
+    },
+    {
+      "id": "T146",
+      "topic": "如何构造 Agent 的 SFT 训练数据？为什么用强化学习做 Agent 对齐？",
+      "card_ids": [
+        "EGT-QB-146"
+      ],
+      "coverage": "真实交互轨迹与消息格式；assistant监督和失败数据；SFT分布偏移/RL终态目标；环境、信用和独立评测"
+    },
+    {
+      "id": "T147",
+      "topic": "工程级 Coding Agent 在处理项目上下文、生成代码时有哪些核心挑战？上下文等于记忆吗？",
+      "card_ids": [
+        "EGT-QB-147"
+      ],
+      "coverage": "相关上下文与调用契约；跨模块/环境/已有修改；上下文与版本化记忆；执行测试与diff验证"
+    },
+    {
+      "id": "T148",
+      "topic": "Agent 和 Workflow 有什么区别？什么时候用哪个？",
+      "card_ids": [
+        "EGT-QB-148"
+      ],
+      "coverage": "控制路径归属；任务条件与选型；确定流程中的有限Agent分支；成本、异常和验收"
+    },
+    {
+      "id": "T149",
+      "topic": "介绍一下 CLIP 的原理和结构？zero-shot 能力是如何实现的？",
+      "card_ids": [
+        "EGT-QB-149"
+      ],
+      "coverage": "双编码器与投影归一化；温度/双向InfoNCE公式；类别文本原型与zero-shot；架构选择和细粒度限制"
+    },
+    {
+      "id": "T150",
+      "topic": "ViT 一般怎么预训练？如何优化 CLIP 提取细粒度特征？",
+      "card_ids": [
+        "EGT-QB-150"
+      ],
+      "coverage": "ViT多种预训练目标；全局/局部特征差异；分辨率与局部对齐方法；数据标签一致及消融"
+    },
+    {
+      "id": "T151",
+      "topic": "CLIP 训练中一个 batch 混入了相同图片（正样本被当负样本），怎么解决？",
+      "card_ids": [
+        "EGT-QB-151"
+      ],
+      "coverage": "对角线假设及冲突；图像/语义簇采样；多正例公式或mask；跨卡ID和双向一致"
+    },
+    {
+      "id": "T152",
+      "topic": "为什么 CLIP 的嵌入效果不好？BGE/E5 在 MTEB 上大幅领先 CLIP 的原因是什么？",
+      "card_ids": [
+        "EGT-QB-152"
+      ],
+      "coverage": "质疑未限定的排行榜命题；MTEB文本任务范围；CLIP/BGE/E5训练目标；输入协议与分任务比较"
+    },
+    {
+      "id": "T153",
+      "topic": "多模态大模型的主流架构有哪些？大致结构是什么？连接器如何设计？",
+      "card_ids": [
+        "EGT-QB-153"
+      ],
+      "coverage": "双塔检索与生成VLM区别；直接projector；query压缩与cross-attention；连接器shape/梯度/信息瓶颈"
+    },
+    {
+      "id": "T154",
+      "topic": "BLIP2 的结构是什么？两阶段怎么训练的？有哪些损失？",
+      "card_ids": [
+        "EGT-QB-154"
+      ],
+      "coverage": "冻结视觉与可学习query；ITC/ITM/ITG及mask；第二阶段模块/投影/梯度；decoder与encoder-decoder目标"
+    },
+    {
+      "id": "T155",
+      "topic": "Qwen-VL 的训练流程是怎样的？三个阶段各有什么作用？相比 LLaVA、DeepSeek-VL 有什么区别？",
+      "card_ids": [
+        "EGT-QB-155"
+      ],
+      "coverage": "Qwen-VL两次预训练；对话SFT与监督mask；LLaVA两阶段对照；DeepSeek-VL混合视觉和冻结例外"
+    },
+    {
+      "id": "T156",
+      "topic": "多模态模型如何将文本和图像映射到同一向量空间？会遇到什么问题（模态鸿沟）？不在同一空间时如何对齐？",
+      "card_ids": [
+        "EGT-QB-156"
+      ],
+      "coverage": "共享空间的相似度语义；模态鸿沟的信息/统计原因；projector/query/cross-attention条件对齐；任务与反事实评测"
+    },
+    {
+      "id": "T157",
+      "topic": "LLaVA 的损失函数是什么？数据怎样清洗？Adapter / 连接器的作用是什么？",
+      "card_ids": [
+        "EGT-QB-157"
+      ],
+      "coverage": "视觉encoder→projector→LLM；两阶段冻结与作用；assistant条件CE/shift；原始数据来源与工程清洗"
+    },
+    {
+      "id": "T158",
+      "topic": "多模态大模型幻觉的原因是什么？如何缓解？",
+      "card_ids": [
+        "EGT-QB-158"
+      ],
+      "coverage": "多层成因；对象到关系的评测；数据/感知/生成干预；反事实及拒答权衡"
+    },
+    {
+      "id": "T159",
+      "topic": "多模态中了解哪些视觉编码器？视觉和文本编码器的参数量有什么配比逻辑？",
+      "card_ids": [
+        "EGT-QB-159"
+      ],
+      "coverage": "视觉骨干与预训练路线；双塔text encoder/生成LLM区别；参数、分辨率与token账本；瓶颈诊断和配比消融"
+    },
+    {
+      "id": "T160",
+      "topic": "Video-LLaMA 等视频多模态模型的结构是什么？多模态检索方案有哪些？",
+      "card_ids": [
+        "EGT-QB-160"
+      ],
+      "coverage": "逐帧视觉到video Q-Former；ImageBind/audio Q-Former；全局/分段/多路检索；时序、同步与指标"
+    }
+  ]
+}

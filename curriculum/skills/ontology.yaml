@@ -77,7 +77,7 @@ skills:
     description: 解释向量、投影和张量形状；按背景选一个机制深入，如 PCA 中心化与 SVD 符号不唯一、K-means 空簇与初始化、KNN 距离和并列策略。用不变量核实，而不是只背库名。
     levels: *levels
     evidence: [coding, oral, design]
-    related_problems: [NNL-001, ATT-002, TML-004, CV-002, TML-007, TML-008, TML-009]
+    related_problems: [NNL-001, ATT-002, TML-004, CV-002, TML-007, TML-008, TML-009, TNS-018]
   - id: skill.machine_learning_math.probability
     title: Probability and Information
     domain: machine_learning_math
@@ -113,21 +113,21 @@ skills:
     description: 追踪计算图和梯度边界；能从 Softmax VJP、两层 MLP 手写反传或共享父节点的标量 DAG 中解释梯度累加、detach 和重复 backward，并用独立数值差分定位错误。
     levels: *levels
     evidence: [coding, debugging, oral]
-    related_problems: [TNS-007, TNS-008, TNS-013, CAP-LOSS-001, CAP-TRN-001, LOSS-016, TML-006, TML-001, NNL-017, TNS-017, PT-003, PT-022, LOSS-004, LOSS-006, TNS-014, NNL-014]
+    related_problems: [TNS-007, TNS-008, TNS-013, CAP-LOSS-001, CAP-TRN-001, LOSS-016, TML-006, TML-001, NNL-017, TNS-017, PT-003, PT-022, LOSS-004, LOSS-006, TNS-014, NNL-014, NNL-018, NNL-019]
   - id: skill.deep_learning.neural_layers
     title: Neural Network Layers
     domain: deep_learning
     description: 实现并验证基础层；辨别最后一维 LayerNorm、RMSNorm、BatchNorm 训练与推理统计、inverted Dropout、卷积互相关的差异。先核实形状和状态，再追问小 batch、边界或梯度，而非堆叠定义。
     levels: *levels
     evidence: [coding, debugging]
-    related_problems: [NNL-001, NNL-002, NNL-008, CAP-LOSS-001, CAP-TRN-001, NNL-006, INF-013, NNL-005, NNL-016, NNL-009, REC-009]
+    related_problems: [NNL-001, NNL-002, NNL-008, CAP-LOSS-001, CAP-TRN-001, NNL-006, INF-013, NNL-005, NNL-016, NNL-009, REC-009, NNL-018, NNL-019, VLM-015]
   - id: skill.deep_learning.losses
     title: Stable Loss Functions
     domain: deep_learning
     description: 明确目标函数的数值稳定、mask 与归约分母；可从 token CE 对齐、前向 KL 的方向、温度缩放或双向 InfoNCE 正样本关系逐层追问。能用全 mask、单 token 或常数偏移区分错误实现。
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [LOSS-007, LOSS-008, LOSS-013, LOSS-014, LOSS-002, CAP-LOSS-001, CAP-TRN-001, PT-003, PT-022, LOSS-004, LOSS-006, PT-009]
+    related_problems: [LOSS-007, LOSS-008, LOSS-013, LOSS-014, LOSS-002, CAP-LOSS-001, CAP-TRN-001, PT-003, PT-022, LOSS-004, LOSS-006, PT-009, LOSS-017]
   - id: skill.deep_learning.optimizers
     title: Stateful Optimizers
     domain: deep_learning
@@ -149,7 +149,7 @@ skills:
     description: 从实际实现核实 Q/K/V 投影、头布局、缩放和 mask 含义；逐层追问全屏蔽行、GQA 分组、增量 cache 的位置偏移、RoPE 配对约定或在线 Softmax。给定变化的形状后能推导，而非只背 MHA/MQA/GQA 定义。
     levels: *levels
     evidence: [coding, oral, debugging]
-    related_problems: [ATT-002, ATT-003, ATT-004, ATT-005, ATT-006, ATT-019, ATT-020, ATT-021, ATT-015, REC-009]
+    related_problems: [ATT-002, ATT-003, ATT-004, ATT-005, ATT-006, ATT-019, ATT-020, ATT-021, ATT-015, REC-009, ATT-023, ATT-024]
     aliases: [Attention]
   - id: skill.llm_vlm.transformer
     title: Transformer Architecture
@@ -157,7 +157,7 @@ skills:
     description: 串起 embedding、归一化、Attention 与 FFN；核实 Pre-Norm 残差、SwiGLU 双分支、完整 Decoder 与增量 cache 一致性。MoE 先区分路由、权重归一化和专家容量；不把无容量丢弃的教学实现称作完整生产 MoE。
     levels: *levels
     evidence: [coding, oral, design]
-    related_problems: [ATT-007, ATT-008, ATT-012, ATT-019, ATT-020, ATT-021, NNL-014, NNL-005]
+    related_problems: [ATT-007, ATT-008, ATT-012, ATT-019, ATT-020, ATT-021, NNL-014, NNL-005, ATT-001, ATT-024, VLM-015]
   - id: skill.llm_vlm.multimodal_data
     title: Multimodal Data Flow
     domain: llm_vlm
@@ -171,7 +171,7 @@ skills:
     description: 解释视觉编码器、连接层和语言融合；从本人经历选择 Patch 展平与线性投影、双向对比目标、视觉端冻结策略或跨模态对齐深入，明确像素、token 和配对关系，不强加候选人未做过的模块。
     levels: *levels
     evidence: [oral, coding, design]
-    related_problems: [VLM-001, VLM-002, VLM-003, CV-002, LOSS-006, NNL-009]
+    related_problems: [VLM-001, VLM-002, VLM-003, CV-002, LOSS-006, NNL-009, LOSS-017, VLM-015]
   - id: skill.llm_vlm.generation
     title: Generation and Sampling
     domain: llm_vlm
@@ -409,7 +409,7 @@ skills:
     description: 推导 KV cache 的形状、显存与增量行为；核实 GQA 的 kv-head 布局、追加轴、RoPE 绝对位置和 prefix 偏移下的因果可见性，用逐步解码对照整段计算定位串位。
     levels: *levels
     evidence: [coding, design, debugging]
-    related_problems: [ATT-009, INF-002, ATT-020, ATT-008]
+    related_problems: [ATT-009, INF-002, ATT-020, ATT-008, ATT-023, ATT-024]
   - id: skill.inference_systems.serving
     title: Model Serving
     domain: inference_systems

@@ -64,6 +64,7 @@ from .workspace import (
     profile_id_for_display_name,
     profile_paths,
     ensure_profile_path_is_safe,
+    ensure_profile_is_ignored,
     retention_due_at,
     start_problem,
     start_retention,
@@ -433,6 +434,33 @@ class ApplicationService:
         """Compatibility alias for :meth:`knowledge_card_view`."""
 
         return self.knowledge_card_view(card_id, **kwargs)
+
+    def _knowledge_answer_path(self, profile_id: str, card_id: str) -> Path:
+        card = self.knowledge_card(card_id)
+        paths = profile_paths(self.repo_root, profile_id)
+        load_profile(paths, self.repo_root)
+        path = paths.root / "knowledge_practice" / f"{card.id}.txt"
+        ensure_profile_path_is_safe(self.repo_root, profile_id, path)
+        return path
+
+    def knowledge_answer(self, profile_id: str, card_id: str) -> str:
+        """Read only this card's local answer, never an AI or mastery record."""
+        path = self._knowledge_answer_path(profile_id, card_id)
+        return path.read_text(encoding="utf-8") if path.exists() else ""
+
+    def save_knowledge_answer(self, profile_id: str, card_id: str, answer: str) -> None:
+        """Keep a learner-authored oral draft in their existing ignored Profile."""
+        if not isinstance(answer, str) or len(answer) > 50_000:
+            raise ApplicationError("回答最多保存 50000 个字符，请缩短后重试。")
+        path = self._knowledge_answer_path(profile_id, card_id)
+        ensure_profile_is_ignored(self.repo_root, profile_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+        try:
+            temporary.write_text(answer, encoding="utf-8")
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
 
     def initialize_profile(
         self,
@@ -986,6 +1014,11 @@ class ApplicationService:
 
     def problem_cards(self, profile_id: str) -> list[dict[str, Any]]:
         _, profile, state = self._state(profile_id)
+        unfinished = {
+            attempt.problem_id for attempt in state.attempts.values()
+            if attempt.retention_stage is None
+            and state.problem_status(attempt.problem_id) in {"in_progress", "implemented"}
+        }
         tracks = set(profile["target_roles"])
         role_preferences = profile.get("role_preferences", {})
         role = self.roles.roles.get(role_preferences.get("primary_role"))
@@ -1020,6 +1053,10 @@ class ApplicationService:
                     "recommended_rank": recommended_order.get(problem.id, -1),
                     **environment,
                     "locked": not set(problem.prerequisites).issubset(state.mastered),
+                    "start_blocked_reason": (
+                        "请先完成当前练习与复盘：" + "、".join(sorted(unfinished - {problem.id}))
+                        if unfinished - {problem.id} else ""
+                    ),
                     "prerequisites": list(problem.prerequisites),
                     "retention": bool(
                         problem.ready

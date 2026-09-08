@@ -12,6 +12,7 @@ from .base import ContextPart, ContextPreview
 from ..catalog import Catalog, load_catalog
 from ..interview_flow import CODING_REVIEW_DIRECTIVE, DIFFICULTY_DIRECTIVES, ROLE_PROBE_FOCUS, STAGES, dialogue_instruction, next_stages, question_stage, stage_minimums
 from ..events import read_events, reduce_events
+from ..knowledge import KnowledgeCatalog, load_knowledge
 from ..materials import MaterialError, get_material, resolve_material_text_path
 from ..role_interviews import (
     current_role_question,
@@ -386,6 +387,7 @@ def build_role_interview_context_preview(
     now: datetime | None = None,
     catalog: Catalog | None = None,
     role_catalog: RoleCatalog | None = None,
+    knowledge: KnowledgeCatalog | None = None,
 ) -> ContextPreview:
     """Build one current-question interview context from frozen, consented facts."""
 
@@ -520,4 +522,33 @@ def build_role_interview_context_preview(
                 sensitive=True,
             )
         )
+    if session.get("delivery_mode") == "dynamic_ai" and "theory" in frozen_contract["allowed_next_stages"]:
+        # The real dynamic path (both Codex and ordinary APIs) gets reviewed
+        # questions, not merely a count or a link to the knowledge browser.
+        # Reuse the GUI's lazy catalog when provided; direct API/CLI callers
+        # load the same source. No new material access is performed. Send this
+        # only when theory is allowed, not on every introduction/project turn.
+        knowledge = knowledge or load_knowledge(repo_root, curriculum=catalog)
+        role = role_catalog.resolve_role(session["role_id"])
+        relevant_context = "\n".join(p.content for p in parts if p.sensitive)
+        pool = knowledge.interview_candidates(
+            skills=set(role.skill_weights), tracks=set(role.required_tracks),
+            seniority=session["seniority"], context=relevant_context,
+            current_answer=candidate_answer or "",
+            asked_questions=tuple(q["prompt"] for q in session["questions"]),
+        )
+        parts.append(_part(
+            "knowledge_candidates", "本轮岗位原理候选与追问（非固定题单，不含答案）",
+            json.dumps({
+                "instruction": "这些是本轮按岗位、已授权背景与回答匹配的公开原理题，不是预先冻结的未来题单。"
+                "进入 theory 阶段时优先从尚未考察的相关主题选一个，结合候选人的实际经历自然提问；"
+                "需要深挖时用 follow_ups 改写一个追问。不要照抄整张卡或一次问完多个主题，"
+                "更不能把相关主题当成候选人确实做过的经历。难度按本场策略体现在推导和条件变化上。"
+                "本轮仍只输出一个 follow_up 和实际考察的 next_skill_ids。",
+                "cards": [{"id": card.id, "title": card.title, "prompt": card.prompt,
+                           "skills": [skill for skill in card.skills if skill in role.skill_weights],
+                           "follow_ups": list(card.follow_ups),
+                           "related_problems": list(card.related_problems)} for card in pool],
+            }, ensure_ascii=False),
+        ))
     return ContextPreview("interviewer", profile_id, tuple(parts))

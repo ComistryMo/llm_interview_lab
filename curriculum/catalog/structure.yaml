@@ -55,7 +55,7 @@ quests:
     description: Reason from collective shapes through parallelism and sharded checkpoints.
   - id: ai_handwriting_transformer
     title: AI 手撕 · Transformer 完整链路
-    problem_ids: [TOK-001, LOSS-016, PT-003, NNL-006, NNL-008, ATT-019, ATT-021, NNL-005, INF-013, OPT-005, ATT-008]
+    problem_ids: [TOK-001, NNL-019, NNL-018, LOSS-016, PT-003, NNL-006, NNL-008, ATT-001, ATT-019, ATT-021, NNL-005, INF-013, OPT-005, ATT-008, ATT-024]
     description: 从分词、稳定梯度和损失走到完整投影、位置、FFN、适配器与可增量运行的 Decoder；推荐顺序不替代各题硬前置。
   - id: ai_handwriting_post_training
     title: AI 手撕 · 后训练与归约边界
@@ -63,15 +63,15 @@ quests:
     description: 核实回答对齐、样本隔离、策略比、优势估计、参考惩罚和 token 加权；区分相似公式背后的不同约定。
   - id: ai_handwriting_inference
     title: AI 手撕 · 解码与推理
-    problem_ids: [ATT-019, ATT-020, ATT-021, ATT-011, ATT-022, ATT-015, NNL-014, INF-008]
+    problem_ids: [ATT-019, ATT-020, ATT-021, ATT-023, ATT-011, ATT-022, ATT-015, NNL-014, INF-008]
     description: 用真实小输入验证 GQA cache、采样、EOS beam、在线 Softmax、MoE 路由和量化误差，不将教学实现包装成生产加速内核。
   - id: ai_handwriting_ml_recs
     title: AI 手撕 · 数学基础与推荐评测
-    problem_ids: [LOSS-016, TML-001, NNL-017, TML-006, TML-004, TML-009, TML-007, TML-008, LOSS-010, REC-007, REC-008, REC-009, TNS-017]
+    problem_ids: [NNL-018, NNL-019, TNS-018, LOSS-016, TML-001, NNL-017, TML-006, TML-004, TML-009, TML-007, TML-008, LOSS-010, REC-007, REC-008, REC-009, TNS-017]
     description: 从 NumPy 手写梯度、聚类和降维到排序指标、兴趣建模与自动微分；检查并列、空组、状态和共享计算图。
   - id: ai_handwriting_vision
     title: AI 手撕 · 视觉与多模态
-    problem_ids: [NNL-009, VLM-001, NNL-016, CV-002, LOSS-006, ATT-019]
+    problem_ids: [NNL-009, VLM-001, NNL-016, CV-002, LOSS-006, LOSS-017, ATT-019, VLM-015]
     description: 对照互相关、Patch 展平、归一化统计、框坐标与双向对比目标，贯通形状和实现语义。
 capstones:
   - {id: toy_classifier_trainer, title: Toy Classifier Trainer, status: planned, tracks: [ai_foundation], prerequisites: [OPT-012, LOSS-010], description: "Train and resume a small classifier with deterministic metrics."}

@@ -14,6 +14,7 @@ import copy
 import json
 import os
 from pathlib import Path
+import re
 import stat
 from typing import Any, Mapping, TYPE_CHECKING
 
@@ -307,6 +308,64 @@ class KnowledgeCatalog:
         """Compatibility alias used by lightweight clients."""
 
         return self.search(query, **filters)
+
+    def interview_candidates(
+        self,
+        *,
+        skills: set[str],
+        tracks: set[str],
+        seniority: str,
+        context: str = "",
+        current_answer: str = "",
+        asked_questions: tuple[str, ...] = (),
+        limit: int = 8,
+    ) -> tuple[KnowledgeCard, ...]:
+        """Select a small public question pool, not a frozen future plan.
+
+        Only caller-supplied, consented context is used. No Profile files or
+        remote index are accessed here. Exact topic mentions outrank broad
+        role matches; already-asked prompts lose priority, not eligibility for
+        a deeper follow-up. Skill diversity breaks otherwise equal matches.
+        """
+        def terms(text: str) -> set[str]:
+            tokens = set(re.findall(r"[a-z][a-z0-9+.-]*", text.casefold()))
+            for run in re.findall(r"[\u4e00-\u9fff]+", text):
+                tokens.update(run[i:i + 2] for i in range(len(run) - 1))
+            return tokens
+
+        query = context.casefold()
+        query_terms = terms(context)
+        answer_terms = terms(current_answer)
+
+        def explicit_topic(card: KnowledgeCard) -> bool:
+            named = set(re.findall(r"[a-z][a-z0-9+.-]{2,}", card.title.casefold()))
+            return card.title.casefold() in query or bool(named & answer_terms)
+
+        eligible = [card for card in self.cards.values()
+                    if card.kind == "eight_stock" and (seniority in card.seniority or explicit_topic(card))
+                    and skills.intersection(card.skills) and tracks.intersection(card.tracks)]
+
+        def score(card: KnowledgeCard) -> tuple[float, str]:
+            topic = terms(card.title + " " + card.prompt)
+            relevance = len(query_terms & topic) / max(1, len(topic))
+            # A junior candidate may actually have used an advanced method;
+            # their answer can unlock that topic without changing score bars.
+            relevance += 2 * len(answer_terms & topic) / max(1, len(answer_terms))
+            exact = 2 if card.title.casefold() in query else 0
+            repeated = 3 if any(card.prompt == question for question in asked_questions) else 0
+            return (relevance + exact - repeated, card.id)
+
+        ranked = sorted(eligible, key=lambda card: (-score(card)[0], card.id))
+        # Prefer distinct topics for ties while keeping strong exact matches.
+        selected: list[KnowledgeCard] = []
+        covered: set[str] = set()
+        while ranked and len(selected) < limit:
+            chosen = max(ranked, key=lambda card: score(card)[0] +
+                         (0.1 if set(card.skills) - covered else 0))
+            selected.append(chosen)
+            covered.update(chosen.skills)
+            ranked.remove(chosen)
+        return tuple(selected)
 
     def as_dict(self) -> dict[str, Any]:
         """Return the complete catalog detached from loader-owned mappings."""

@@ -1608,6 +1608,8 @@ class AppController(QObject):
 
     def _load_profile_state(self) -> None:
         self._cancel_coach_stream_for_reload()
+        if self._knowledge_detail.get("profile_id") != self._profile_id:
+            self._knowledge_detail = {}
         # AI assessments are bound to a specific Profile/interview question.
         # Clear the in-memory candidate before loading another snapshot so a
         # pending follow-up can never be consumed by the next Profile.
@@ -1916,7 +1918,7 @@ class AppController(QObject):
             # ``include_answers=False`` keeps the list compact; full answer
             # layers are fetched only when a learner selects one card.
             self._knowledge_cards = self.service.knowledge_cards(
-                limit=200, include_answers=False
+                include_answers=False
             )
             self._knowledge_detail = {}
             self._knowledge_loaded = True
@@ -1932,7 +1934,7 @@ class AppController(QObject):
 
         try:
             self._knowledge_cards = self.service.knowledge_cards(
-                query=(query or None), limit=200, include_answers=False
+                query=(query or None), include_answers=False
             )
             self._knowledge_loaded = True
             self.stateChanged.emit()
@@ -1943,11 +1945,30 @@ class AppController(QObject):
 
     @Slot(str, result=bool)
     def openKnowledgeCard(self, card_id: str) -> bool:
-        """Resolve one card for read-only display in the knowledge browser."""
+        """Resolve one public card plus this Profile's private practice draft."""
 
         try:
-            self._knowledge_detail = self.service.knowledge_card_view(card_id)
+            detail = self.service.knowledge_card_view(card_id)
+            detail["profile_id"] = self._profile_id
+            detail["draft_answer"] = self.service.knowledge_answer(self._profile_id, card_id)
+            self._knowledge_detail = detail
             self.stateChanged.emit()
+            return True
+        except Exception as error:
+            self._show_error(error)
+            return False
+
+    @Slot(str, str, str, result=bool)
+    def saveKnowledgeAnswer(self, profile_id: str, card_id: str, answer: str) -> bool:
+        if (
+            profile_id != self._profile_id
+            or profile_id != self._knowledge_detail.get("profile_id")
+            or card_id != self._knowledge_detail.get("id")
+        ):
+            return False
+        try:
+            self.service.save_knowledge_answer(profile_id, card_id, answer)
+            self._knowledge_detail["draft_answer"] = answer
             return True
         except Exception as error:
             self._show_error(error)
@@ -2553,6 +2574,7 @@ class AppController(QObject):
         self._test_operation_id = ""
         self._test_identity = (problem_id, current["attempt_id"], self._profile_id)
         self._test_output = "可以开始：完成本次作答后运行公开测试。"
+        self._problems = self.service.problem_cards(self._profile_id)
         self._page = "exercise"
         self.stateChanged.emit()
         self.pageChanged.emit()
@@ -3262,6 +3284,7 @@ class AppController(QObject):
                 self.repo_root, self._profile_id, self._interview["interview_id"],
                 candidate_answer=answer, include_materials=include_materials,
                 catalog=self.service.catalog, role_catalog=self.service.roles,
+                knowledge=self.service.knowledge_catalog(),
             )
             if self._interview_context_confirmation != self._interview_context_identity(preview, include_materials):
                 raise RuntimeError("本轮上下文尚未确认或已发生变化；请重新预览后再发送。回答已保留。")
@@ -3295,6 +3318,7 @@ class AppController(QObject):
                 self.repo_root, self._profile_id, self._interview["interview_id"],
                 candidate_answer=submitted, include_materials=include_materials,
                 catalog=self.service.catalog, role_catalog=self.service.roles,
+                knowledge=self.service.knowledge_catalog(),
             )
             key, scope = self._interview_conversation_consent(connection_id, include_materials)
             if self._settings.value(key, "") != scope:
@@ -4443,6 +4467,7 @@ class AppController(QObject):
                 candidate_answer=answer,
                 include_materials=include_materials,
                 catalog=self.service.catalog, role_catalog=self.service.roles,
+                knowledge=self.service.knowledge_catalog(),
             )
             self._interview_context_confirmation = self._interview_context_identity(preview, include_materials)
             return {
@@ -4472,6 +4497,7 @@ class AppController(QObject):
             self.repo_root, self._profile_id, self._interview["interview_id"],
             candidate_answer=self._interview["answer_text"], include_materials=include_materials,
             catalog=self.service.catalog, role_catalog=self.service.roles,
+            knowledge=self.service.knowledge_catalog(),
         )
         if self._interview.get("delivery_mode") == "dynamic_ai" and self._interview_context_confirmation != self._interview_context_identity(preview, include_materials):
             raise RuntimeError("本轮上下文尚未确认或已发生变化；请重新预览后再发送。回答已保留。")
