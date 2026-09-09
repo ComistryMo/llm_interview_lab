@@ -1,5 +1,15 @@
 # 桌面版发布与旧开发版整理
 
+## 本次发布结果（2026-09-09）
+
+- [v1.0.0 · 首次正式发布](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)已公开，非 Draft、非预发布，也是 GitHub Latest；Release 列表现仅保留这一版。
+- Windows ZIP、macOS APP ZIP／DMG 及三份 SHA 清单均已上传。三个包的公开 SHA 与[固定清单](../.github/release-manifest.json)完全一致；两平台包内产品版本均为 1.0.0。
+- [发布工作流](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34313638291)全部成功，版本标签指向 `325693ad4c63d1f646a06f510363ed216a8abea5`；应用构建源与测试来源仍是下文的 `8fe697c`。
+- 七个旧开发版 Release 页面及附件已移除。原始说明和全部附件先备份、核对 SHA，再完成删除；[备份 Artifact](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34313638291/artifacts/10089292480)约 1.82 GB，保留至 **2026-12-08**，到期后自动过期。
+- 旧 Git 标签和提交历史完整保留。用户现存未提交文件、真实档案、材料、Key、录音与语音权重没有被清理或上传。
+
+本机已通过 Actions 下载两平台原始 Artifact，并逐包核对 SHA 和包内版本。发布后的 GitHub 元数据也确认六份资源均为 uploaded，三个包的 digest 与本地文件一致。但本机对三个公开下载地址的直连 HEAD 检查遇到连接重置／30 秒超时，因此不宣称本机公网直连下载成功；这与构建或上传失败不是同一项检查。
+
 ## 版本约定
 
 产品从 **v1.0.0** 开始正式发布。源码版本为 `1.0.0`，Git 标签为 `v1.0.0`，GitHub Release 不标记为预发布。
@@ -22,7 +32,7 @@
 - macOS 15 arm64 CI：960 passed，8 skipped；APP 启动、ad-hoc 签名、ZIP 和挂载 DMG 检查通过。
 - Ubuntu／Windows 的 Python 3.10、3.11、3.12 核心检查、CPU PyTorch 专项、中文文档作业均通过。
 - 本地文档／版本／截图复用定向检查：23 passed；发布晋级检查：14 passed；旧 CLI 文档链接检查：1 passed；页面布局等待修正：1 passed；中文与链接检查：2 passed。这些是分别执行的目标检查，不包装成额外一轮全量回归。
-- 本次没有新增真实模型付费测试、麦克风识别测试、macOS 用户实机验收或全新 Windows 虚拟机验收；没有重拍 UI 截图。README 使用的正式页面图片保留原来源信息。
+- 本次没有新增真实模型付费测试、麦克风识别测试、macOS 用户实机验收或全新 Windows 虚拟机验收；没有重拍 UI 截图。README 使用的正式页面图片保留原来源信息。GitHub 页面的浏览器视觉复核因浏览器工具启动失败未执行；已完成 Markdown 链接与结构检查。
 
 ## 发布顺序
 
