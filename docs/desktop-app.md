@@ -1,6 +1,6 @@
 # 桌面应用指南
 
-适用版本：**[v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)**。Windows x64 / macOS 14+ Apple Silicon 包已发布；文件、SHA 与验收范围见[发布说明](release-notes-v1.0.0.md)和[候选技术报告](desktop-candidate-20260909-report.zh.md)。发布不等于真实 AI、麦克风或 macOS 用户实机全部通过。
+当前以 **`1.0.1a1` 源码预发布版**迭代，推荐[从源码运行](#源码运行)，本轮不打包。已有 **[v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)** Windows/macOS 下载保留，但不包含本轮改动；历史产物和 SHA 见[发布说明](release-notes-v1.0.0.md)。源码、截图与自动化测试不等于真实 AI、麦克风或 macOS 用户实机全部通过。
 
 历史 Alpha 截图（不代表本轮完成度）：[首页](images/desktop-home.png)、[首次使用](images/desktop-onboarding.png)、[答题](images/desktop-exercise.png)、[模拟面试](images/desktop-interview.png)、[连接](images/desktop-connections.png)。本轮正式页面证据另附候选验收报告，不覆盖这些历史文件。
 七个代表页面的深浅主题 Before/After、四尺寸检查和已知限制见 [UI 统一设计与验收](design/product-v1-visual-directions.zh.md#2026-09-08-正式-ui-统一基线-6a1fd20)。这些历史截图的来源不回写；v1.0.0 正式页面见[本版截图](design/desktop-candidate-20260909.zh.md)。
@@ -190,29 +190,51 @@ v1.0.0 可直接选择 **DeepSeek**，模型与推理强度位于表单首屏，
 
 ## 源码运行
 
-Windows 已有 `.venv` 时，在**当前仓库根目录**打开 PowerShell：
+无需编译 exe 或 `.app`。推荐 **Python 3.11**；下载源码或克隆仓库后，在仓库根目录操作。
+
+### Windows
+
+首次准备（新机器或依赖变化时执行一次）：
 
 ```powershell
-$env:PYTHONPATH = Join-Path (Get-Location) "src"
-$env:QT_QPA_PLATFORM = "windows"
-$env:LLM_LAB_DESKTOP_DATA_ROOT = Join-Path (Get-Location) "workspace\maintainer\manual-uat"
-.\.venv\Scripts\python.exe -m llm_interview_lab.desktop.main
+py -3.11 scripts/run_desktop.py --setup
 ```
 
-这会使用当前工作区的源码，不依赖可能指向旧 Worktree 的 `llm-lab-gui` 可编辑安装。这里的 `manual-uat` 是独立验收数据目录，第一次使用需创建学习档案；以后重复以上命令会继续使用同一目录，不会重置数据。不使用 `--smoke-test` 或 `--screenshot`，以免进入合成演示。若要继续先前验收的档案，将数据目录指向先前的同一目录，不需要搬运或删除旧数据。
+以后启动（已有本项目 `.venv` 可直接用）：
 
-旧源码环境如缺少本地语音组件，先执行 `.\.venv\Scripts\python.exe -m pip install -e ".[desktop]"` 更新依赖。首次使用语音时根据应用提示下载本地模型；模型权重不随便携包分发，也不意味着每台用户机器已经准备好。
+```powershell
+.\.venv\Scripts\python.exe scripts/run_desktop.py
+```
 
-仅在新机器尚未安装依赖时，先创建虚拟环境并安装：
+不需要 `Activate.ps1`、更改 PowerShell 执行策略或设置 `PYTHONPATH`。没有 `py` 但已安装 Python 3.11 时，可用 `python scripts/run_desktop.py --setup`。
+
+### macOS / Linux
 
 ```bash
-python -m venv .venv
-# 激活环境
-python -m pip install -e ".[desktop,ai,dev]"
-llm-lab-gui
+python3.11 scripts/run_desktop.py --setup
+.venv/bin/python scripts/run_desktop.py
 ```
 
-当前源码版本为 `1.0.0`，产品对外统一为 v1 首次正式发布。此前 `0.x / Alpha` 是开发期编号；旧截图和验证记录保留其真实日期与来源，不改写成 v1 新测试。下载与限制见[发布说明](release-notes-v1.0.0.md)。
+`--setup` 只创建缺失的 `.venv` 并安装 `.[desktop,ai,dev]` 可编辑依赖，不启动应用、不打包、不下载语音权重。macOS 首次录音需授予运行 Python 的程序麦克风权限；本轮未进行 macOS 实机验证。
+
+### 日常修改与数据
+
+- **改 Python / QML：** 保存文件，关闭应用，再运行上述启动命令；不需要编译或重新安装依赖，不提供热重载。
+- **改依赖：** 再执行一次 `--setup`；普通启动不会运行 pip，也不会自动拉取 Git 或覆盖代码。
+- **测试数据：** 未指定覆盖时固定使用 `workspace/maintainer/manual-uat`，与此前手动 UAT 命令一致；重启继续使用，不自动清空。首次新目录需自己创建档案，不生成演示档案。
+- **换数据目录：** 启动命令后追加 `--data-root "绝对路径"`；已有 `LLM_LAB_DESKTOP_DATA_ROOT` 仍受尊重，显式参数优先。目录隔离不等于隔离系统密钥环，API Key 仍由系统管理。
+- **PyTorch 题：** 按需用 `.venv` 的 Python 执行 `-m pip install -e ".[torch,dev]"`；默认不强制安装 PyTorch。
+- **语音：** 在应用内下载本地权重后使用；正常启动不反复下载。
+
+脚本始终从当前仓库 `src` 加载代码，避免旧 Worktree 的可编辑安装影响测试。原来的 `python -m llm_interview_lab.desktop.main` 与环境变量启动方式仍可使用。不要用 `--smoke-test` 或 `--screenshot` 做人工验收，它们使用合成状态。
+
+### 源码新增：连接诊断与应用内更新
+
+AI 连接失败时，字段附近显示错误阶段、编号与下一步；点击「复制脱敏诊断」即可反馈维护者，不需要发送 Key、整个日志或个人材料。401、证书、DNS、代理、超时与本地密钥环故障分别处理。
+
+「设置 → 应用更新 → 检查更新 → 下载增量更新 → 安装并重启」已加入源码，**但尚未打包验证或发布**。以后恢复发布时，旧 v1.0.0 才需一次性安装过渡包；不要求现在下载新包。新更新器复用未变化文件/数据块，只下载变化块或小文件组，实际下载量取决于改动。
+
+请先结束录音/面试；确认后保存当前草稿，退出再替换程序。下载及校验失败保持当前版本，启动失败保留或恢复旧程序。档案、Key、材料、答案和本地语音权重不搬动。程序目录必须可写，mac 应用不能直接在只读 DMG 中更新。**源码模式不会自动覆盖 Git 工作区**；具体限制及验证范围见[预发布说明](release-notes-v1.0.1-alpha.1.md)。
 
 离屏 Smoke：
 

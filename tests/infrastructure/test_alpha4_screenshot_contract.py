@@ -62,13 +62,13 @@ def test_screenshot_source_commit_is_resolvable_history_evidence() -> None:
     # separate, stricter input-fingerprint contract below.
 
 
-def test_current_candidate_captures_match_production_source_and_pixels() -> None:
+def test_v1_candidate_captures_match_their_recorded_source_and_pixels() -> None:
     from llm_interview_lab import __version__
     import struct
 
     path = REPO_ROOT / "docs/images/candidate-20260909/manifest.json"
     manifest = json.loads(path.read_text(encoding="utf-8"))
-    assert __version__ in [manifest["version"], *manifest.get("compatible_versions", [])]
+    compatible = __version__ in [manifest["version"], *manifest.get("compatible_versions", [])]
     assert manifest["synthetic"] is True and manifest["language"] == "zh-CN"
     assert manifest["logical_size"] == [1280, 800]
     assert "production AppController" in manifest["renderer"]
@@ -95,7 +95,7 @@ def test_current_candidate_captures_match_production_source_and_pixels() -> None
         for relative, digest in inputs.items():
             original = subprocess.check_output(["git", "show", f"{commit}:{relative}"], cwd=REPO_ROOT)
             assert hashlib.sha256(original).hexdigest() == digest
-            if name == "after":
+            if name == "after" and compatible:
                 # Compare bytes, including uncommitted changes; never stamp
                 # today's SHA onto an old image to silence freshness checks.
                 current_path = REPO_ROOT / relative
@@ -110,11 +110,32 @@ def test_current_candidate_captures_match_production_source_and_pixels() -> None
                         f'__version__ = "{manifest["version"]}"'.encode(),
                     )
                 assert hashlib.sha256(current).hexdigest() == digest, relative
-        if name == "after":
+        if name == "after" and compatible:
             current_names = _git("ls-files", "--", "src/llm_interview_lab/desktop",
                                  "src/llm_interview_lab/application.py", "src/llm_interview_lab/roles.py",
                                  "src/llm_interview_lab/__init__.py", "curriculum/roles").stdout.splitlines()
             assert set(current_names) == set(inputs)
+
+
+def test_connection_update_evidence_matches_source_and_pixels() -> None:
+    from llm_interview_lab import __version__
+    import struct
+
+    manifest = json.loads((REPO_ROOT / "docs/images/source-alpha1/manifest.json").read_text("utf-8"))
+    assert manifest["version"] == "1.0.1a1"
+    assert manifest["synthetic"] is True
+    assert "production AppController" in manifest["renderer"]
+    commit = manifest["source_commit"]
+    assert _git("merge-base", "--is-ancestor", commit, "HEAD").returncode == 0
+    assert len(manifest["screenshots"]) == 2
+    for entry in manifest["screenshots"]:
+        _assert_real_asset(entry, commit)
+        assert list(struct.unpack(">II", (REPO_ROOT / entry["path"]).read_bytes()[16:24])) == entry["pixel_size"]
+    for relative, digest in manifest["source_inputs"].items():
+        original = subprocess.check_output(["git", "show", f"{commit}:{relative}"], cwd=REPO_ROOT)
+        assert hashlib.sha256(original).hexdigest() == digest
+        if __version__ == manifest["version"]:
+            assert hashlib.sha256((REPO_ROOT / relative).read_bytes().replace(b"\r\n", b"\n")).hexdigest() == digest
 
 
 def test_screenshot_coverage_and_assets_match_the_manifest() -> None:

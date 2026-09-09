@@ -12,13 +12,15 @@ LLM Interview Lab 是面向 AI 求职者的桌面练习工具。你可以独立�
 
 [下载应用](#下载) · [第一次使用](#第一次使用) · [使用指南](docs/desktop-app.md) · [反馈问题](https://github.com/ComistryMo/llm_interview_lab/issues)
 
+**目前处于早期预发布迭代，推荐[从源码运行](#从源码运行)。** 本轮源码为 `1.0.1a1`，尚未打包或发布；已有 v1.0.0 下载不包含最新改动。[本轮变化与验证范围](docs/release-notes-v1.0.1-alpha.1.md)
+
 ![LLM Interview Lab 中文桌面首页](docs/images/candidate-20260909/after/home-dark.png)
 
 <sub>正式应用界面，使用演示资料。支持深浅主题与可收起侧栏。[查看更多界面](docs/design/desktop-candidate-20260909.zh.md)</sub>
 
 ## 下载
 
-**v1.0.0 · 首个正式版**
+**v1.0.0 · 已发布的历史安装包**（最新预发布改动请使用下方源码入口）
 
 | 系统 | 下载与安装 |
 |---|---|
@@ -90,47 +92,35 @@ LLM Interview Lab 是面向 AI 求职者的桌面练习工具。你可以独立�
 
 ## 从源码运行
 
-普通用户直接下载桌面版即可。开发者推荐使用 **Python 3.11**：
-
-<details>
-<summary>展开安装与启动命令</summary>
-
-先克隆项目并创建虚拟环境：
+推荐 **Python 3.11**。源码运行不需要构建 exe / mac 应用，适合快速测试与修改。先获取仓库（已有代码可跳过）：
 
 ~~~bash
 git clone https://github.com/ComistryMo/llm_interview_lab.git
 cd llm_interview_lab
-python -m venv .venv
 ~~~
 
-激活环境，按系统选择一条：
+Windows PowerShell：
 
 ~~~powershell
-# Windows PowerShell
-.venv\Scripts\Activate.ps1
+# 首次准备环境；只有依赖变化时才需要再执行
+py -3.11 scripts/run_desktop.py --setup
+
+# 以后直接启动
+.\.venv\Scripts\python.exe scripts/run_desktop.py
 ~~~
+
+macOS / Linux：
 
 ~~~bash
-# macOS / Linux
-. .venv/bin/activate
+python3.11 scripts/run_desktop.py --setup
+.venv/bin/python scripts/run_desktop.py
 ~~~
 
-安装并启动：
+**改代码 → 保存 → 关闭并重新启动应用**，无需重新打包。不需要激活环境或手动设置环境变量；普通启动不会重复安装依赖。数据固定保留在 `workspace/maintainer/manual-uat`，重启不会清空；已有环境变量指定的数据目录继续有效。
 
-~~~bash
-python -m pip install -e ".[desktop,ai,dev]"
-llm-lab-gui
-~~~
+需要 PyTorch 时，用 `.venv` 的 Python 安装 `-e ".[torch,dev]"`；语音模型在应用内按需下载。源码模式不使用安装包更新器覆盖工作区。
 
-需要练习 PyTorch 题目时，再安装：
-
-~~~bash
-python -m pip install -e ".[torch,dev]"
-~~~
-
-[指定数据目录、排查启动问题](docs/desktop-app.md#源码运行) · [当前 main 源码](https://github.com/ComistryMo/llm_interview_lab/tree/main)
-
-</details>
+[指定数据目录、首次安装与排错](docs/desktop-app.md#源码运行) · [当前 main 源码](https://github.com/ComistryMo/llm_interview_lab/tree/main)
 
 ## 文档与反馈
 

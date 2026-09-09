@@ -42,6 +42,12 @@ class KeyringCredentialStore:
             self._backend.set_password(SERVICE_NAME, reference, secret.strip())
         except Exception as error:
             raise CredentialError("system keyring rejected the API key") from error
+        try:
+            stored = self._backend.get_password(SERVICE_NAME, reference)
+        except Exception as error:
+            raise CredentialError("system keyring could not read the API key") from error
+        if stored != secret.strip():
+            raise CredentialError("system keyring read-back failed; API key was not persisted")
         return reference
 
     def load(self, reference: str) -> str:

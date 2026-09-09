@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import re
 from urllib.parse import unquote
 
@@ -130,12 +131,12 @@ def test_published_version_links_and_release_workflow_are_consistent() -> None:
     changelog = _read("CHANGELOG.md")
     workflow = _read(".github/workflows/ci.yml")
     documents = (readme, english, windows, macos, changelog)
-    tag = release_metadata()["tag"]
+    # Download links describe the last accepted publication, not an unpublished
+    # source prerelease. Do not require links to nonexistent installers.
+    tag = json.loads(_read(".github/release-manifest.json"))["tag"]
 
     for text in documents:
         assert tag in text
-        assert "未发布源码候选" not in text
-        assert "unreleased source candidate" not in text
 
     assert f"/releases/tag/{tag}" in readme
     assert f"/releases/download/{tag}/SHA256SUMS.txt" in readme

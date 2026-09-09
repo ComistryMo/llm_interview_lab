@@ -1,6 +1,6 @@
 # 中文文档索引
 
-适用公开版本：**[v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)**（2026-09-09）。本索引优先指向当前用户指南；旧版报告及原型保留为历史证据，不应当作当前操作说明。
+当前以 **`1.0.1a1` 源码预发布版**迭代，推荐[快速源码启动](desktop-app.md#源码运行)。本轮不构建安装包，变化见[预发布说明](release-notes-v1.0.1-alpha.1.md)。已有 **[v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)** 下载和旧报告保留为历史事实，不包含本轮改动。
 
 ## 下载与开始
 

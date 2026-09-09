@@ -38,6 +38,49 @@ def test_release_order_channels_and_distinct_empty_states():
     assert updates.select_release(rows, "0.4.0rc1", "preview", "windows-x64")["status"] == "up_to_date"
 
 
+def test_incremental_release_never_falls_back_to_full_installer():
+    row = release("v1.0.2")
+    state = updates.select_release([row], "1.0.1a1", "stable", "windows-x64", incremental=True)
+    assert state["status"] == "no_incremental" and "asset_url" not in state
+    name = updates.MANIFEST_NAMES["windows-x64"]
+    row["assets"].append({"name": name, "size": 30,
+                          "browser_download_url": f"{updates.RELEASES_URL}/download/v1.0.2/{name}"})
+    state = updates.select_release([row], "1.0.1a1", "stable", "windows-x64", incremental=True)
+    assert state["status"] == "unverified_asset" and "缺少 SHA-256" in state["message"]
+    row["assets"][-1]["digest"] = "sha256:" + "a" * 64
+    state = updates.select_release([row], "1.0.1a1", "stable", "windows-x64", incremental=True)
+    assert state["status"] == "available" and state["asset_name"] == name
+
+
+@pytest.mark.parametrize("cancelled", [True, False])
+def test_failed_incremental_preparation_cleans_only_its_own_staging(tmp_path, monkeypatch, cancelled):
+    from tests.infrastructure.test_incremental_updates import make_feed
+    manifest, _, _ = make_feed(tmp_path, {"LLMInterviewLab.exe": b"new binary"})
+    raw = json.dumps(manifest).encode()
+    old = tmp_path / "installed"
+    old.mkdir()
+    (old / "LLMInterviewLab.exe").write_bytes(b"keep old binary")
+    saved_backup = tmp_path / ".llm-update-existing-backup"
+    saved_backup.mkdir()
+    stop = threading.Event()
+    name = updates.MANIFEST_NAMES["windows-x64"]
+    release_state = {"asset_url": f"{updates.RELEASES_URL}/download/v1.0.2/{name}",
+                     "asset_name": name, "release_version": "v1.0.2",
+                     "size": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+    def failed_rebuild(manifest, installed, staging, fetch, cancel, progress):
+        staging.mkdir()
+        (staging / "partial-file").write_bytes(b"partial")
+        if cancelled:
+            stop.set()
+        raise updates.PayloadError("合成取消或校验失败")
+    monkeypatch.setattr(updates, "reconstruct", failed_rebuild)
+    with pytest.raises(updates.UpdateCancelled if cancelled else updates.PayloadError):
+        updates.prepare_incremental(release_state, old, "windows-x64", stop, lambda n: None,
+                                    opener=lambda url: io.BytesIO(raw))
+    assert (old / "LLMInterviewLab.exe").read_bytes() == b"keep old binary"
+    assert list(tmp_path.glob(".llm-update-*")) == [saved_backup]
+
+
 def test_public_sources_and_json_contract():
     visited = []
     def opener(url):
@@ -128,10 +171,11 @@ def test_download_failures_cancel_and_preserve_other_files(tmp_path, monkeypatch
 def test_real_qt_manager_busy_retry_cancel_channel_and_open_folder(qapp, tmp_path, monkeypatch):
     settings = QSettings(str(tmp_path / "update.ini"), QSettings.IniFormat)
     manager = updates.UpdateManager(settings, directory=tmp_path / "downloads", current="0.4.0a3", target="windows-x64")
+    manager._installed = tmp_path / "installed"
     assert manager.state["status"] == "idle"  # No automatic network.
     ready, proceed = threading.Event(), threading.Event()
     calls = []
-    def check(*args):
+    def check(*args, **kwargs):
         calls.append(args)
         ready.set()
         assert proceed.wait(5)
@@ -144,30 +188,38 @@ def test_real_qt_manager_busy_retry_cancel_channel_and_open_folder(qapp, tmp_pat
     assert manager.state["channel"] == "preview" and len(calls) == 1
     proceed.set()
     assert _wait_for_asr(lambda: manager.state["status"] == "available")
-    actual_download = updates.download_release
-    monkeypatch.setattr(updates, "download_release", lambda state, directory, cancel, progress:
-        actual_download(state, directory, cancel, progress, opener=lambda url: io.BytesIO(b"synthetic portable archive")))
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    handoff = tmp_path / "handoff.json"
+    monkeypatch.setattr(updates, "prepare_incremental", lambda *args:
+        {"downloaded_bytes": 12, "reused_bytes": 4000, "handoff": str(handoff), "file_path": str(candidate)})
     manager.download()
-    assert _wait_for_asr(lambda: manager.state["status"] == "downloaded")
-    assert Path(manager.state["file_path"]).read_bytes() == b"synthetic portable archive"
-    opened = []
-    monkeypatch.setattr(updates.QDesktopServices, "openUrl", lambda url: opened.append(url))
-    manager.openDownloadLocation()
-    assert opened[0].toLocalFile() == str(Path(manager.state["file_path"]).parent).replace("\\", "/")
+    assert _wait_for_asr(lambda: manager.state["status"] == "prepared")
+    restarted = []
+    manager.restartRequested.connect(lambda: restarted.append(True))
+    manager.install()
+    assert restarted == [True] and manager.state["status"] == "install_pending"
+    manager.cancelInstallClose()
+    assert manager.state["status"] == "prepared"
+    launched = []
+    monkeypatch.setattr(updates, "launch_handoff", lambda path: launched.append(path))
+    manager.install()
+    assert manager.launchInstaller() and launched == [handoff]
+    assert settings.value("updates/lastHandoff") == str(handoff)
     manager.setChannel("stable")
     other = updates.UpdateManager(settings, directory=tmp_path, current="0.4.0a3")
     assert other.state["channel"] == "stable" and not other.state.get("asset_url")
-    monkeypatch.setattr(updates, "check_releases", lambda *args: (_ for _ in ()).throw(updates.UpdateError("合成限流，请重试")))
+    monkeypatch.setattr(updates, "check_releases", lambda *args, **kwargs: (_ for _ in ()).throw(updates.UpdateError("合成限流，请重试")))
     manager.check()
     assert _wait_for_asr(lambda: manager.state["status"] == "error")
     assert "重试" in manager.state["message"] and not manager.state.get("file_path")
-    monkeypatch.setattr(updates, "check_releases", lambda *args: selected())
+    monkeypatch.setattr(updates, "check_releases", lambda *args, **kwargs: selected())
     manager.check()
     assert _wait_for_asr(lambda: manager.state["status"] == "available")
-    def wait_cancel(state, directory, cancel, progress):
+    def wait_cancel(state, directory, target, cancel, progress):
         assert cancel.wait(5)
         raise updates.UpdateCancelled("合成取消")
-    monkeypatch.setattr(updates, "download_release", wait_cancel)
+    monkeypatch.setattr(updates, "prepare_incremental", wait_cancel)
     manager.download()
     manager.cancel()
     assert _wait_for_asr(lambda: manager.state["status"] == "cancelled")

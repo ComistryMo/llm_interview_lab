@@ -206,7 +206,15 @@ ApplicationWindow {
     onClosing: function(close) {
         Qt.inputMethod.commit()
         close.accepted = interviewPage.flushDraft() && learnPage.flushDraft() && exercisePage.flushDraft()
+        if (backend.updateManager.state.status === "install_pending") {
+            close.accepted = close.accepted && !backend.busy && backend.updateManager.launchInstaller()
+            if (!close.accepted) backend.updateManager.cancelInstallClose()
+        }
         if (close.accepted) backend.shutdown()
+    }
+    Connections {
+        target: backend.updateManager
+        function onRestartRequested() { window.close() }
     }
 
     RowLayout {

@@ -1,6 +1,12 @@
 # 桌面版发布与旧开发版整理
 
-## 本次发布结果（2026-09-09）
+## 当前：源码预发布迭代，暂停打包
+
+用户最新决定将本轮保持为 `1.0.1a1` 源码预发布版。只提交源码与定向验证，使用 `[skip ci]`，不构建 Windows/macOS、不创建 Tag 或 Release。日常迭代使用[源码启动入口](desktop-app.md#源码运行)，不能把下面的历史 v1.0.0 包当成本轮产物。
+
+增量更新清单、安装/回退脚本与发布门禁已写入源码，但平台包验收尚未执行。以后恢复发布时，必须用包含新更新器的两平台包通过 `check_packaged_connections.py` 的隔离 Keyring/HTTP 检查，并执行 `build_update_feed.py` 生成两平台清单和重建比对；缺少增量资源不能发布。旧 v1.0.0 不具备该安装能力，届时需要一次性过渡安装。
+
+## v1.0.0 历史发布结果（2026-09-09）
 
 - [v1.0.0 · 首次正式发布](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)已公开，非 Draft、非预发布，也是 GitHub Latest；Release 列表现仅保留这一版。
 - Windows ZIP、macOS APP ZIP／DMG 及三份 SHA 清单均已上传。三个包的公开 SHA 与[固定清单](../.github/release-manifest.json)完全一致；两平台包内产品版本均为 1.0.0。

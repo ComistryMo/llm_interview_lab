@@ -11,6 +11,7 @@ import time
 from typing import Any, AsyncIterator, Awaitable, Callable, Sequence
 
 from .base import ChatEvent, ConnectionResult, ModelInfo
+from .connection_diagnostics import connection_diagnostic
 
 
 class ProviderError(RuntimeError):
@@ -122,7 +123,7 @@ class AnyLLMChatProvider:
             )
         except Exception as error:
             safe = _safe_error(error)
-            return ConnectionResult(False, str(safe), round((time.perf_counter() - started) * 1000))
+            return ConnectionResult(False, str(safe), round((time.perf_counter() - started) * 1000), connection_diagnostic(error))
         return ConnectionResult(True, "Connection succeeded", round((time.perf_counter() - started) * 1000))
 
     async def stream_chat(
@@ -211,8 +212,11 @@ class OpenAICompatibleChatProvider:
 
     async def test_connection(self) -> ConnectionResult:
         started = time.perf_counter()
-        client = self._client()
+        client = None
+        stage = "init_client"
         try:
+            client = self._client()
+            stage = "request"
             payload: dict[str, Any] = {
                 "model": self.config.model,
                 "messages": [{"role": "user", "content": "Reply with OK."}],
@@ -236,9 +240,11 @@ class OpenAICompatibleChatProvider:
                 False,
                 str(safe),
                 round((time.perf_counter() - started) * 1000),
+                connection_diagnostic(error, stage),
             )
         finally:
-            await self._close(client)
+            if client is not None:
+                await self._close(client)
         return ConnectionResult(
             True,
             "Connection succeeded",

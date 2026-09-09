@@ -279,6 +279,13 @@ Flickable {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
         }
+        LabButton {
+            objectName: "copyConnectionDiagnostic"
+            theme: root.theme; variant: "ghost"
+            visible: !connectionForm.visible && !!(app.connectionDiagnostic || {}).code
+            text: "复制脱敏诊断"
+            onClicked: app.copyConnectionDiagnostic()
+        }
 
         LabCard {
             id: connectionForm
@@ -478,6 +485,13 @@ Flickable {
                 font.pixelSize: root.theme.scaledPx(12)
                 wrapMode: Text.Wrap
                 width: parent.width
+            }
+            LabButton {
+                objectName: "copyConnectionFormDiagnostic"
+                theme: root.theme; variant: "ghost"
+                visible: !!(app.connectionDiagnostic || {}).code
+                text: "复制脱敏诊断"
+                onClicked: app.copyConnectionDiagnostic()
             }
             GridLayout {
                 visible: root.advanced

@@ -302,6 +302,8 @@ def problem_brief(problem_id: str, fallback: str = "", language: str = "zh-CN") 
 def friendly_error(error: BaseException | str) -> str:
     raw = str(error).strip()
     message = raw.lower()
+    if "authentication failed" in message or "unauthorized" in message:
+        return "服务拒绝了 API Key（401）。请核对所选服务与 Key 是否匹配，或检查 Key 是否已撤销。"
     if any(token in raw for token in ("推理选项", "DeepSeek", "思考模式", "服务账户余额", "模型或推理参数", "回复未完整")):
         return raw[:400]
     # Audio and transcription errors are already sanitized by the local

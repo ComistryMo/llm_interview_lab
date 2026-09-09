@@ -18,7 +18,7 @@ The [Chinese README](README.md) is the canonical version. The application defaul
 
 ## Download
 
-**v1.0.0 · First official release**
+**v1.0.0 · Previous published installers** — for current prerelease changes, [run from source](#run-from-source).
 
 | System | Download |
 |---|---|
@@ -81,33 +81,32 @@ Text appears while you speak and is corrected after pauses. Finish recording, ch
 
 ## Run from source
 
-For developers, Python **3.11** is recommended. Desktop users can use the downloads above.
-
-<details>
-<summary>Installation commands</summary>
+**Active development is an early source prerelease (`1.0.1a1`), not a stable release.** No new installers are built this round. The existing v1.0.0 downloads do not include these changes. See [prerelease notes](docs/release-notes-v1.0.1-alpha.1.md). Python **3.11** is recommended.
 
 ~~~bash
 git clone https://github.com/ComistryMo/llm_interview_lab.git
 cd llm_interview_lab
-python -m venv .venv
 ~~~
 
-Activate the environment: `.venv\Scripts\Activate.ps1` in Windows PowerShell, or `. .venv/bin/activate` on macOS/Linux.
+Windows PowerShell (prepare once, then run):
+
+~~~powershell
+py -3.11 scripts/run_desktop.py --setup
+.\.venv\Scripts\python.exe scripts/run_desktop.py
+~~~
+
+macOS/Linux:
 
 ~~~bash
-python -m pip install -e ".[desktop,ai,dev]"
-llm-lab-gui
+python3.11 scripts/run_desktop.py --setup
+.venv/bin/python scripts/run_desktop.py
 ~~~
 
-For PyTorch exercises:
+After Python/QML edits, save and restart. No executable compilation, environment activation or manual `PYTHONPATH` is needed. Run `--setup` again only when dependencies change. The default data directory is `workspace/maintainer/manual-uat`; existing data and explicit environment overrides are preserved. Use `--data-root` for another directory. Normal launches do not install dependencies or modify Git sources.
 
-~~~bash
-python -m pip install -e ".[torch,dev]"
-~~~
+For PyTorch exercises, install `-e ".[torch,dev]"` with the virtual environment's Python. Speech weights remain an optional in-app download.
 
 [Source launch and data directory options](docs/desktop-app.md#源码运行)
-
-</details>
 
 ## Documentation and feedback
 

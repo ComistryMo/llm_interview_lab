@@ -11,6 +11,7 @@ class ConnectionResult:
     ok: bool
     message: str
     latency_ms: int | None = None
+    diagnostic: dict | None = None
 
 
 @dataclass(frozen=True)

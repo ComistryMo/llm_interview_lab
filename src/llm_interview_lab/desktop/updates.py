@@ -1,7 +1,7 @@
 """User-initiated updates from this project's public GitHub Releases.
 
-Downloads are verified files, never an installer or an in-place application
-replacement. This module never opens Profiles, credentials or model caches.
+Incremental reconstruction and explicit restart use a native install handoff.
+This module never opens Profiles, credentials or model caches.
 """
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import shutil
 import tempfile
 import threading
 from urllib.error import HTTPError, URLError
@@ -22,10 +23,12 @@ from PySide6.QtGui import QDesktopServices
 
 from .. import __version__
 from ..release_version import VERSION_PATTERN as _VERSION, version_key
+from .update_payload import MANIFEST_NAMES, PayloadError, reconstruct, validate_manifest
+from .update_install import installation_root, prepare_handoff, validate_staged_app, launch_handoff
 
 REPOSITORY = "ComistryMo/llm_interview_lab"
 RELEASES_URL = f"https://github.com/{REPOSITORY}/releases"
-API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases?per_page=100"
+API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases?per_page=10"
 ASSET_NAMES = {
     "windows-x64": "LLMInterviewLab-Windows-x64-portable.zip",
     "macos-arm64": "LLMInterviewLab-macOS-arm64.dmg",
@@ -107,7 +110,7 @@ def _read_small(url: str, limit: int, opener=open_public) -> bytes:
     return data
 
 
-def select_release(releases: list[dict], current: str, channel: str, target: str) -> dict:
+def select_release(releases: list[dict], current: str, channel: str, target: str, *, incremental=False) -> dict:
     current_key = version_key(current)
     available = []
     current_published = False
@@ -128,13 +131,15 @@ def select_release(releases: list[dict], current: str, channel: str, target: str
                 "message": "此渠道没有更新版本。" if current_published else "当前版本未出现在最近的公开发布列表中，可能是本地候选版；未发现更高版本。"}
     _, release = max(newer, key=lambda item: item[0])
     tag = release["tag_name"]
-    asset_name = ASSET_NAMES.get(target)
+    asset_name = (MANIFEST_NAMES if incremental else ASSET_NAMES).get(target)
     asset = next((item for item in release.get("assets", []) if item.get("name") == asset_name), None)
     checksum = next((item for item in release.get("assets", []) if item.get("name") == "SHA256SUMS.txt"), None)
     state = {"release_version": tag, "notes": str(release.get("body") or "发布者未填写更新说明。")[:16000],
              "release_url": f"{RELEASES_URL}/tag/{quote(tag, safe='')}",
              "status": "available" if asset else "no_asset",
              "message": "发现新版，可下载并校验。" if asset else "已发现新版，但尚无匹配当前平台的安装包。"}
+    if incremental and not asset:
+        state.update(status="no_incremental", message="新版缺少匹配平台的增量更新资源，发布不完整。请反馈维护者；不会改为下载全量安装包。")
     if asset:
         expected_url = f"{RELEASES_URL}/download/{quote(tag, safe='')}/{asset_name}"
         if asset.get("browser_download_url") != expected_url or type(asset.get("size")) is not int or asset["size"] <= 0:
@@ -148,17 +153,59 @@ def select_release(releases: list[dict], current: str, channel: str, target: str
                      checksum_url=checksum_url if checksum else "")
         if not digest and not checksum:
             state.update(status="unverified_asset", message="发布包缺少 SHA-256，暂不提供应用内下载；请查看发布说明。")
+    if incremental:
+        state["incremental"] = True
+        if state["status"] == "available":
+            state["message"] = "发现新版。将复用本机已有文件，仅拉取变化的数据块和小文件组，无需重新安装。"
     return state
 
 
-def check_releases(current: str, channel: str, target: str, *, opener=open_public) -> dict:
+def check_releases(current: str, channel: str, target: str, *, opener=open_public, incremental=False) -> dict:
     try:
-        releases = json.loads(_read_small(API_URL, 4 * 1024 * 1024, opener))
+        releases = json.loads(_read_small(API_URL, 16 * 1024 * 1024, opener))
     except (ValueError, UnicodeDecodeError):
         raise UpdateError("GitHub 返回的发布信息无法解析，请稍后重试。") from None
     if not isinstance(releases, list) or any(not isinstance(item, dict) for item in releases):
         raise UpdateError("GitHub 未返回有效的发布列表，请稍后重试。")
-    return select_release(releases, current, channel, target)
+    return select_release(releases, current, channel, target, incremental=incremental)
+
+
+def prepare_incremental(release: dict, installed: Path, target: str, cancel, progress, *, opener=open_public) -> dict:
+    raw = _read_small(release["asset_url"], 8 * 1024 * 1024, opener)
+    expected = release.get("sha256")
+    if not expected and release.get("checksum_url"):
+        lines = _read_small(release["checksum_url"], 256 * 1024, opener).decode("utf-8-sig").splitlines()
+        hashes = [line.split()[0] for line in lines if len(line.split()) == 2 and line.split()[1] == release["asset_name"]]
+        if len(hashes) == 1:
+            expected = hashes[0]
+    if len(raw) != release["size"] or hashlib.sha256(raw).hexdigest() != expected:
+        raise UpdateError("更新清单校验失败，未修改当前应用。")
+    try:
+        manifest = json.loads(raw)
+        validate_manifest(manifest, target, release["release_version"])
+    except (ValueError, KeyError, TypeError) as error:
+        raise UpdateError("更新清单无法解析，未修改当前应用。") from error
+    handoff = prepare_handoff(installed, target, manifest["version"])
+    base_url = release["asset_url"].rsplit("/", 1)[0] + "/"
+    def fetch(name, spec):
+        if cancel.is_set():
+            raise UpdateCancelled("已取消更新，当前应用未改变。")
+        return _read_small(base_url + name, spec["size"], opener)
+    try:
+        result = reconstruct(manifest, installed, Path(handoff["staging"]), fetch, cancel, progress)
+        if cancel.is_set():
+            raise UpdateCancelled("已取消更新，当前应用未改变。")
+        validate_staged_app(handoff)
+    except Exception:
+        # Only remove the directory just allocated by prepare_handoff, never
+        # the installed app or a previously completed update's rollback copy.
+        temporary = Path(handoff["handoff"]).parent.resolve()
+        if temporary.parent == installed.resolve().parent and temporary.name.startswith(".llm-update-"):
+            shutil.rmtree(temporary)
+        if cancel.is_set():
+            raise UpdateCancelled("已取消更新，当前应用未改变。") from None
+        raise
+    return {**result, "handoff": handoff["handoff"], "file_path": handoff["staging"]}
 
 
 def download_release(release: dict, directory: Path, cancel: threading.Event, progress, *, opener=open_public) -> dict:
@@ -249,7 +296,7 @@ class _UpdateWorker(QRunnable):
             self.signals.completed.emit(self.operation(self.signals.progress.emit))
         except UpdateCancelled as error:
             self.signals.failed.emit(str(error), True)
-        except UpdateError as error:
+        except (UpdateError, PayloadError) as error:
             self.signals.failed.emit(str(error), False)
         except OSError:
             self.signals.failed.emit("无法保存下载文件；请检查磁盘空间和下载目录权限后重试。", False)
@@ -259,6 +306,7 @@ class _UpdateWorker(QRunnable):
 
 class UpdateManager(QObject):
     changed = Signal()
+    restartRequested = Signal()
 
     def __init__(self, settings, *, directory: Path | None = None, current=__version__, target=None, parent=None):
         super().__init__(parent)
@@ -266,12 +314,25 @@ class UpdateManager(QObject):
         self._directory = directory or Path(QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)) / "LLMInterviewLab"
         self._current = current
         self._target = target or platform_key()
+        self._installed = installation_root(target=self._target)
         channel = str(settings.value("updates/channel", "preview" if version_key(current)[3] < 3 else "stable"))
         self._state = {"current_version": current, "channel": channel if channel in {"stable", "preview"} else "preview",
                        "status": "idle", "message": "仅在你点击时检查更新，不会自动下载或安装。", "progress": 0}
         self._worker = None
         self._cancel = threading.Event()
         self._closed = False
+        receipt = str(settings.value("updates/lastHandoff", ""))
+        if receipt:
+            try:
+                status = (Path(receipt).parent / "status").read_text("ascii")
+                messages = {"installed": "上次应用内更新已完成。旧版保留在本次更新目录中。",
+                            "rolled_back": "新版启动失败，已恢复旧版。可重试更新或反馈维护者，用户数据未移动。",
+                            "install_failed": "上次安装未完成，旧版未被替换。请检查目录权限或占用后重试。",
+                            "unconfirmed": "上次更新未收到启动确认，已保留旧版。请复制本页状态反馈维护者。"}
+                if status in messages:
+                    self._state["message"] = messages[status]
+            except OSError:
+                pass
 
     @Property("QVariantMap", notify=changed)
     def state(self):
@@ -321,19 +382,46 @@ class UpdateManager(QObject):
                        "status": "checking", "message": "正在检查官方发布…", "progress": 0}
         self.changed.emit()
         channel = self._state["channel"]
-        self._start(lambda progress: check_releases(self._current, channel, self._target), lambda result: self._change(**result))
+        self._start(lambda progress: check_releases(self._current, channel, self._target, incremental=True), lambda result: self._change(**result))
 
     @Slot()
     def download(self):
         if self._worker or self._closed or not self._state.get("asset_url") or self._state["status"] == "unverified_asset":
             return
+        if not self._installed:
+            self._change(status="source_install", message="当前为源码启动或无法识别安装目录。应用内安装适用于正式桌面包；源码工作区不会被更新覆盖。")
+            return
         release = dict(self._state)
-        self._change(status="downloading", progress=0, message="正在下载；校验完成前不会作为安装包保留。")
-        self._start(lambda progress: download_release(release, self._directory, self._cancel, progress),
-                    lambda result: self._change(**result, status="downloaded", progress=100,
-                        message=("下载完成，SHA-256 校验通过。退出旧应用后打开 DMG，将新版复制到应用目录；保留原数据目录。"
-                                 if self._target == "macos-arm64" else
-                                 "下载完成，SHA-256 校验通过。解压到新目录；退出旧应用后再启动新版，保留原数据目录。")))
+        self._change(status="downloading", progress=0, message="正在校验本机文件、拉取变化内容并准备新版；不会覆盖正在运行的应用。")
+        self._start(lambda progress: prepare_incremental(release, self._installed, self._target, self._cancel, progress),
+                    lambda result: self._change(**result, status="prepared", progress=100,
+                        message=f"更新已准备好：下载 {result['downloaded_bytes'] / 1048576:.1f} MB，复用 {result['reused_bytes'] / 1048576:.1f} MB。点击安装并重启后生效。"))
+
+    @Slot()
+    def install(self):
+        if self._worker or self._closed or self._state["status"] != "prepared":
+            return
+        self._change(status="install_pending", message="正在保存当前内容并退出应用以安装更新…")
+        self.restartRequested.emit()
+
+    @Slot(result=bool)
+    def launchInstaller(self):
+        if self._state["status"] != "install_pending":
+            return True
+        try:
+            path = Path(self._state["handoff"])
+            launch_handoff(path)
+            self._settings.setValue("updates/lastHandoff", str(path))
+            self._settings.sync()
+            return True
+        except (OSError, ValueError, KeyError, PayloadError):
+            self._change(status="prepared", message="无法启动更新安装程序，当前应用未退出。请检查目录权限后重试。")
+            return False
+
+    @Slot()
+    def cancelInstallClose(self):
+        if self._state["status"] == "install_pending":
+            self._change(status="prepared", message="尚有内容未能保存或操作正在进行，未退出应用。请处理后再次安装。")
 
     @Slot()
     def cancel(self):

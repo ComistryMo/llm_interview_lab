@@ -7,7 +7,7 @@ ColumnLayout {
     required property var manager
     required property var theme
     readonly property var update: manager.state
-    readonly property bool busy: ["checking", "downloading", "cancelling"].indexOf(update.status) >= 0
+    readonly property bool busy: ["checking", "downloading", "cancelling", "install_pending"].indexOf(update.status) >= 0
     spacing: 12
 
     LabText { theme: root.theme; text: "应用更新"; variant: "section"; strong: true }
@@ -78,7 +78,7 @@ ColumnLayout {
             objectName: "downloadDesktopUpdate"; theme: root.theme; variant: "primary"
             visible: Boolean(root.update.asset_url) && ["available", "error", "cancelled"].indexOf(root.update.status) >= 0
             enabled: !root.busy
-            text: root.update.status === "available" ? "下载新版" : "重试下载"
+            text: root.update.status === "available" ? "下载增量更新" : "重试更新"
             onClicked: root.manager.download()
         }
         LabButton {
@@ -88,9 +88,9 @@ ColumnLayout {
             onClicked: root.manager.cancel()
         }
         LabButton {
-            objectName: "openUpdateDownload"; theme: root.theme; variant: "primary"
-            visible: root.update.status === "downloaded"; text: "打开下载位置"
-            onClicked: root.manager.openDownloadLocation()
+            objectName: "installDesktopUpdate"; theme: root.theme; variant: "primary"
+            visible: root.update.status === "prepared"; text: "安装并重启"
+            onClicked: installConfirmation.open()
         }
         LabButton {
             objectName: "openOfficialReleases"; theme: root.theme; variant: "ghost"
@@ -99,6 +99,16 @@ ColumnLayout {
     }
     LabText {
         theme: root.theme; Layout.fillWidth: true; wrapMode: Text.Wrap; variant: "caption"; tone: "muted"
-        text: "仅下载并校验，不执行安装、不覆盖运行中的应用。Windows 请解压到新目录；macOS 请退出旧版后再替换应用。学习档案、连接和本地语音模型仍使用原数据位置。"
+        text: "仅在你点击时更新。复用未变化的文件与数据块，确认后退出并替换程序，新版启动失败时保留或恢复旧版。学习档案、连接和语音权重仍在原数据目录；不会改为下载全量安装包。"
+    }
+    LabDialog {
+        id: installConfirmation
+        theme: root.theme
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        title: "安装更新并重启？"
+        primaryText: "安装并重启"
+        onAccepted: root.manager.install()
+        message: "应用将先保存当前草稿并关闭，再启动新版。正在进行的面试或录音请先结束。不会移动学习档案、API Key 或本地语音权重。"
     }
 }

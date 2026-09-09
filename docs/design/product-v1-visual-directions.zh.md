@@ -175,3 +175,11 @@ Before 加载只读 `6a1fd20` 工作树的正式 QML；After 加载本轮正式 
 三个实现批次均已完成。修改仅涉及 QML、公共样式、两个结构图标、Markdown 显示字号、目标测试及文档证据；未改 Provider、面试协议／Prompt、评分／计时、材料授权、语音模型、Catalog 或 Mastery。
 
 保留原有私人 UAT 目录、未跟踪反馈和原始附件；不纳入本轮提交。源码提交使用 `[skip ci]`，仅推送 `main`，不创建 Tag／Release。下一步是用户对当前源码页面进行人工视觉验收；本轮停止于此，不扩展业务功能。
+
+## 2026-09-09 · 源码预发布补充
+
+本轮不是全面 UI 改版。只在原连接表单增加分阶段错误和「复制脱敏诊断」，在原设置页增加增量更新的安装确认；继续使用已有公共组件。当前为 `1.0.1a1` 源码预发布，用户选择暂不打包，日常用[源码启动入口](../desktop-app.md#源码运行)测试。
+
+正式 QML 的 1080×680 Windows 点击证据：[连接错误与复制诊断](../images/source-alpha1/connection-diagnostic-1080.png)、[设置中的安装确认](../images/source-alpha1/update-install-confirmation-1080.png)，[清单](../images/source-alpha1/manifest.json)记录实际源提交与图片 SHA。错误、Profile 和已准备更新状态均为隔离合成测试数据；确认弹窗截图不证明安装包已完成真实更新。没有访问真实 Key 或调用付费模型。
+
+原 `candidate-20260909` 截图仍保留 v1.0.0 时的源码与图片校验，不回写成当前截图。本轮未验证 macOS 实机、原生安装包、全尺寸 UI 或真实系统密钥环；这些边界与早期发布记录分开。

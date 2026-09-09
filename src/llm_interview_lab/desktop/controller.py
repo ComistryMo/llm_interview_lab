@@ -31,6 +31,8 @@ from ..ai.context_builder import (
     build_role_interview_context_preview,
 )
 from ..ai.credentials import KeyringCredentialStore
+from ..ai.base import ConnectionResult
+from ..ai.connection_diagnostics import connection_diagnostic
 from ..ai.interview_planner import decode_dynamic_question, decode_personalized_questions
 from ..ai.providers import create_chat_provider
 from ..ai.transcription import OpenAICompatibleTranscriber, TRANSCRIPTION_PROVIDERS
@@ -1155,6 +1157,30 @@ class AppController(QObject):
         """Last actionable connection error for the Connections page."""
 
         return self._connection_error
+
+    @Property("QVariantMap", notify=stateChanged)
+    def connectionDiagnostic(self) -> dict:
+        diagnostic = getattr(self, "_connection_diagnostic", {})
+        operation_id = diagnostic.get("operation_id")
+        return dict(diagnostic) if operation_id and operation_id in self._connection_error else {}
+
+    def _set_connection_failure(self, diagnostic: dict) -> None:
+        self._connection_diagnostic = dict(diagnostic)
+        self._connection_error = (diagnostic["stage_label"] + "：" + diagnostic["message"]
+                                  + "（" + diagnostic["code"] + " · " + diagnostic["operation_id"] + "）")
+        logging.getLogger("llm_interview_lab.desktop").warning(
+            "connection_failed %s", json.dumps(diagnostic, ensure_ascii=False))
+        self.stateChanged.emit()
+
+    @Slot(result=bool)
+    def copyConnectionDiagnostic(self) -> bool:
+        diagnostic = self.connectionDiagnostic
+        clipboard = QGuiApplication.clipboard()
+        if not diagnostic or clipboard is None:
+            return False
+        clipboard.setText(json.dumps(diagnostic, ensure_ascii=False, indent=2))
+        self.toast.emit("已复制脱敏诊断，不含 API Key、材料或请求正文。")
+        return True
 
     @Property("QVariantList", constant=True)
     def providerOptions(self) -> list[str]:
@@ -4630,6 +4656,7 @@ class AppController(QObject):
             self.toast.emit("合成演示不会保存真实 AI 连接；No-AI 始终可用。")
             return False
         self._connection_error = ""
+        stage = "save_config"
         try:
             save_connection(
                 self.repo_root,
@@ -4647,6 +4674,7 @@ class AppController(QObject):
             for item in self._connections:
                 if item["connection_id"] == connection_id:
                     item["ready"] = False
+            stage = "refresh_config"
             self.refresh()
             self.toast.emit("连接已保存；API Key 仅存入系统密钥环。")
             return True
@@ -4655,12 +4683,8 @@ class AppController(QObject):
             # provider/keyring validators. Keep the form values in QML and
             # expose one actionable error instead of leaking an exception out
             # of a synchronous button handler.
-            self._connection_error = (
-                friendly_error(error)
-                + " 请检查连接字段和本地权限后重试；也可以继续使用 No-AI。"
-            )
-            self.stateChanged.emit()
-            self._show_error(error)
+            self._set_connection_failure(connection_diagnostic(error, stage))
+            self.toast.emit(self._connection_error)
             return False
 
     @Slot()
@@ -4745,26 +4769,20 @@ class AppController(QObject):
         )
 
         def operation():
-            config = next(
-                (
-                    item
-                    for item in list_connections(self.repo_root, profile_id)
-                    if item.connection_id == connection_id
-                ),
-                None,
-            )
-            if config is None:
-                raise RuntimeError(
-                    "找不到这条连接配置。请重新保存并测试，或继续使用 No-AI。"
-                )
-            key = (
-                KeyringCredentialStore().load(config.key_reference)
-                if config.key_reference
-                else None
-            )
-            return asyncio.run(
-                create_chat_provider(config, api_key=key).test_connection()
-            )
+            stage = "read_config"
+            try:
+                config = next((item for item in list_connections(self.repo_root, profile_id)
+                               if item.connection_id == connection_id), None)
+                if config is None:
+                    raise ValueError("connection configuration not found")
+                stage = "read_key"
+                key = (KeyringCredentialStore().load(config.key_reference)
+                       if config.key_reference else None)
+                stage = "request"
+                return asyncio.run(create_chat_provider(config, api_key=key).test_connection())
+            except Exception as error:
+                diagnostic = connection_diagnostic(error, stage)
+                return ConnectionResult(False, diagnostic["message"], diagnostic=diagnostic)
 
         def complete(result) -> None:
             if generation != self._background_generation or profile_id != self._profile_id:
@@ -4791,10 +4809,13 @@ class AppController(QObject):
                 if item["connection_id"] == connection_id:
                     item["ready"] = bool(result.ok)
                     item["status"] = "已连接" if result.ok else "连接失败"
-            self._connection_error = "" if result.ok else friendly_error(result.message)
+            if not result.ok and result.diagnostic:
+                self._set_connection_failure(result.diagnostic)
+            else:
+                self._connection_error = "" if result.ok else friendly_error(result.message)
             self.stateChanged.emit()
             if not automatic:
-                self.toast.emit("连接成功。" if result.ok else friendly_error(result.message))
+                self.toast.emit("连接成功。" if result.ok else self._connection_error)
 
         def failed(message: str) -> None:
             if generation != self._background_generation or profile_id != self._profile_id:

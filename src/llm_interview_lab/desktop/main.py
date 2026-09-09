@@ -383,6 +383,8 @@ def main(argv: list[str] | None = None) -> int:
         controller.shutdown()
         return 2
     window = engine.rootObjects()[0]
+    from llm_interview_lab.desktop.update_install import acknowledge_startup
+    QTimer.singleShot(150, acknowledge_startup)
     if args.screenshot or args.smoke_test:
         # These are presentation-only overrides for deterministic evidence.
         # They never pass through AppController or QSettings.

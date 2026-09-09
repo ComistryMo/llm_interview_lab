@@ -126,6 +126,8 @@ jobs:
           --bundle-root dist/release/LLMInterviewLab
           --report dist/release/desktop-nuitka-report.xml
           --archive dist/release/LLMInterviewLab-Windows-x64-portable.zip
+      - name: Verify packaged native credentials and HTTP without a real API key
+        run: python scripts/check_packaged_connections.py dist/release/LLMInterviewLab/LLMInterviewLab.exe
       - name: Upload Windows portable artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -172,6 +174,16 @@ jobs:
           python scripts/check_macos_artifact.py
           dist/release-macos/LLMInterviewLab-macOS-arm64.app.zip
           dist/release-macos/LLMInterviewLab-macOS-arm64.dmg
+      - name: Verify packaged macOS Keychain and HTTP without a real API key
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe_keychain="$RUNNER_TEMP/llm-connection-probe.keychain-db"
+          security create-keychain -p synthetic-build-only "$probe_keychain"
+          security default-keychain -s "$probe_keychain"
+          security unlock-keychain -p synthetic-build-only "$probe_keychain"
+          trap 'security delete-keychain "$probe_keychain"' EXIT
+          python scripts/check_packaged_connections.py dist/desktop-macos/LLMInterviewLab.app/Contents/MacOS/main
       - name: Upload macOS Apple Silicon artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -231,6 +243,7 @@ jobs:
             echo "Release already exists. No assets were changed."
             exit 1
           fi
+          python scripts/build_update_feed.py --release dist/release --version "$RELEASE_TAG"
           options=()
           if [[ "$IS_PRERELEASE" == "true" ]]; then options+=(--prerelease); fi
           gh release create "$RELEASE_TAG" --verify-tag \
@@ -241,4 +254,5 @@ jobs:
             dist/release/LLMInterviewLab-macOS-arm64.dmg \
             dist/release/SHA256SUMS.txt \
             dist/release/SHA256SUMS-Windows.txt \
-            dist/release/SHA256SUMS-macOS.txt
+            dist/release/SHA256SUMS-macOS.txt \
+            dist/release/update-*
