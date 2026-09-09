@@ -1,8 +1,10 @@
 # v0.4.0-alpha.4 · 中文桌面版
 
+> 开发期历史记录，不作为当前下载入口。产品从 [v1.0.0](release-notes-v1.0.0.md) 开始正式发布；以下版本号、日期和测试结果保留原始记录。
+
 发布日期：2026-09-09。此版本公开发布 Windows x64 与 macOS Apple Silicon 应用，仍标为 **Alpha 预发布**，不是 Beta 或稳定版。
 
-[下载 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4) · [Windows 安装](https://github.com/ComistryMo/llm_interview_lab/blob/v0.4.0-alpha.4/docs/windows.md) · [macOS 安装](https://github.com/ComistryMo/llm_interview_lab/blob/v0.4.0-alpha.4/docs/macos.md) · [完整中文文档](https://github.com/ComistryMo/llm_interview_lab/blob/v0.4.0-alpha.4/docs/README.md)
+[开发期源码快照](https://github.com/ComistryMo/llm_interview_lab/tree/v0.4.0-alpha.4) · [Windows 安装](https://github.com/ComistryMo/llm_interview_lab/blob/v0.4.0-alpha.4/docs/windows.md) · [macOS 安装](https://github.com/ComistryMo/llm_interview_lab/blob/v0.4.0-alpha.4/docs/macos.md) · [完整中文文档](https://github.com/ComistryMo/llm_interview_lab/blob/v0.4.0-alpha.4/docs/README.md)
 
 ## 相对 Alpha.3 的主要变化
 

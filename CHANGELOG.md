@@ -133,4 +133,4 @@
 [0.3.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.2.0-alpha.2...v0.3.0-alpha.1
 [0.2.0-alpha.2]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.2.0-alpha.1...v0.2.0-alpha.2
 [0.2.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.1.0...v0.2.0-alpha.1
-[0.1.0]: https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.1.0
+[0.1.0]: https://github.com/ComistryMo/llm_interview_lab/tree/v0.1.0

@@ -38,4 +38,4 @@ curriculum/catalog + skills + roles + interviews
 
 ## 明确不做
 
-当前 Alpha 不引入数据库、Web UI、本地 HTTP 服务、账号、云同步、多 Agent Runtime、插件市场或在线排行榜。本地 Grader 不是恶意代码沙箱。
+当前版本不引入数据库、Web UI、本地 HTTP 服务、账号、云同步、多 Agent Runtime、插件市场或在线排行榜。本地 Grader 不是恶意代码沙箱。

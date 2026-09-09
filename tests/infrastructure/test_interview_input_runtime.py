@@ -2474,7 +2474,10 @@ def test_interview_removes_details_and_reconfigure_preserves_results(scene):
     previous_id = controller.interview["interview_id"]
     assert _find(window, "interviewConversation").isVisible()
     _click(window, _find(window, "configureAnotherInterview"))
+    # The new page must finish QML layout before its next mouse target is used.
+    QTest.qWait(100)
     _click(window, _find(window, "interviewEditSettings"))
+    QTest.qWait(100)
     assert _find(window, "interviewRoleSelector").isVisible()
     back = next(item for item in _items(window.contentItem()) if item.isVisible() and item.property("text") == "返回上一场结果" and hasattr(item, "clicked"))
     back.clicked.emit()

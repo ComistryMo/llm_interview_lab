@@ -30,11 +30,11 @@
 ## 工程与验收
 
 - [架构说明](architecture.md) · [计划入口](../plans/README.md)
-- [v1.0.0 构建与原生验收记录](desktop-candidate-20260909-report.zh.md)
+- [开发期构建与原生验收记录（历史）](desktop-candidate-20260909-report.zh.md)
 - [本版七页 Before/After](design/desktop-candidate-20260909.zh.md) · [视觉决策与历史原型](design/product-v1-visual-directions.zh.md)
 - [同机性能实测](performance/desktop-candidate-20260909.zh.md)
 - [本地语音两阶段验证](local-stt-two-pass-validation.zh.md) · [模型比较实验](local-stt-comparison.zh.md)
-- [已验收产物发布说明](release-process.zh.md)
+- [v1.0.0 构建、发布与旧版整理](release-process.zh.md)
 
 ## 历史与目录约定
 

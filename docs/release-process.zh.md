@@ -8,9 +8,11 @@
 
 ## 本次构建
 
-本次版本修改触及包内显示及构建元数据，因此从 `c01a569287dee4097a9d985eb5110493656159e4` 重新构建 Windows x64、macOS arm64，不能改名复用旧包。
+本次版本修改触及包内显示及构建元数据，因此从 `8fe697cb8f0d25cac7e963fc466d6703526be610` 重新构建 Windows x64、macOS arm64，不能改名复用旧包。
 
-[本次构建与验证](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34304312455)使用现有 CI，包含核心检查、中文文档、PyTorch 专项、双平台构建与产物检查。后续仅文档和发布清单的提交使用 `[skip ci]`，不重复打包。
+[本次构建与验证](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34305123396)使用现有 CI，包含核心检查、中文文档、PyTorch 专项、双平台构建与产物检查。首次构建尝试因一条旧测试强制 README 包含 CLI 长命令而失败；已把命令示例保留在面试指南，测试核对相应链接与指南，未改变应用或 CLI 行为。当前链接为修正后的构建，后续仅文档和发布清单的提交使用 `[skip ci]`，不重复打包。
+
+本次还发现一项 GUI 自动化时序问题：测试在切换页面后立即执行第二次坐标点击，可能早于 QML 完成布局。仅在该测试的两次页面变化后各等待 100 ms，保留原点击与断言；应用代码未变。该定向测试在 Windows 离屏环境通过（1 passed，94 deselected）。远端 macOS 检查仍须通过后才发布，不以本地测试替代平台门禁。
 
 发布前将实际构建源、Artifact ID 和三个包的 SHA 固定在 [release-manifest.json](../.github/release-manifest.json)。工作流失败时不标记为已完成；实际发布状态和剩余限制以本版说明为准。
 
