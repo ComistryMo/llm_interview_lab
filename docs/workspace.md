@@ -12,7 +12,7 @@
 workspace/profiles/<profile_id>/
 ```
 
-这样 clone 一个仓库即可完成课程、提交、复测和 AI 教练交互。真实 Profile 被 `.gitignore` 排除，公共仓库只跟踪 Schema、模板、`.gitkeep` 与完全虚构的 Demo。
+这样 clone 一个仓库即可完成课程、提交、复测与模拟面试；旧 CLI 教练协议保留兼容，桌面 AI 只用于面试。真实 Profile 被 `.gitignore` 排除，公共仓库只跟踪 Schema、模板、`.gitkeep` 与完全虚构的 Demo。
 
 ### 打包桌面模式
 

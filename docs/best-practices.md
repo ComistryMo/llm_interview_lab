@@ -149,7 +149,7 @@ Do not grant mastery yourself.
 
 ## 7. 进行模拟面试
 
-面试前确定岗位、求职阶段、难度、时长与 focus。除非确实需要个性化追问，否则先使用不读取材料的 catalog 面试。
+Alpha.4 桌面面试选择岗位、难度、时长与可选授权材料，不再按求职阶段分档。一次提交保存并生成下一问，结束后按证据评分；详细操作见[当前面试指南](interviews.md)。历史 CLI 的 catalog 面试和旧参数保留兼容，不应套到新桌面流程。
 
 Active 阶段：
 
@@ -170,7 +170,7 @@ Provider 失败时先确认：服务是否启动、Endpoint、模型 ID、网络
 
 ## 9. 连接 Codex
 
-Coach / Reviewer / Interviewer 模式默认只读。仓库维护才使用 Repository Agent，并逐项核对审批卡片的范围、命令、文件与 Diff。不要批准超出当前任务或当前 Profile 的读取与写入。
+桌面只提供 Codex 面试官，不提供 AI 教练或仓库代理页，不替候选人写答案。旧 CLI 的 Coach / Reviewer / Interviewer 规则保留兼容；Repository Agent 属于维护者工作，不是普通用户面试步骤。不要批准超出当前任务或当前 Profile 的读取与写入。
 
 macOS Finder 启动找不到 Codex 时，在设置选择可执行文件；不要通过抓取交互式终端文本实现连接。
 

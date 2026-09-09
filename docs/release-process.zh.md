@@ -2,6 +2,18 @@
 
 本流程用于将**已经完成候选验收的原始包**公开发布，不修改应用、不反复打包，也不以文档 CI 替代应用验证。
 
+## 本次公开结果（2026-09-09）
+
+**`RELEASE_PUBLISHED`**。[Alpha.4 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4) 于 `2026-09-09T02:01:18Z` 公开；GitHub API 已确认 `draft=false`、`prerelease=true`。保留 Alpha 身份，不改称稳定版。
+
+- 发布标签与首次 main 合并提交：`e777eaa780fd8a281ba76bfae79a11416256294a`；采用 fast-forward，无历史重写，仅推送 main 与版本标签。
+- [发布工作流 34301479199](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34301479199) 全部成功：来源 CI、精确 Artifact、原始清单、固定 SHA、上传与公开。
+- Release 共六份资源：Windows ZIP、macOS APP ZIP、DMG，以及综合与双平台 SHA 清单。公开 API 的三个包大小及 SHA 与验收清单完全一致；综合校验文件已从正式下载链接获取并逐项核对。
+- 本轮直接验证为 45 个文档／README／截图契约／版本与发布检查：首次 44 passed、1 个新索引链接错误，修复后单独复验通过；另检查 370 份 Markdown 相对链接，无断链，工作流 YAML 和 `git diff --check` 通过。
+- 没有再次运行全量 pytest 或 Windows/macOS 构建；发布复用已通过完整门禁的三份原始包，不修改其构建元数据。
+- 归档根目录旧报告 2 份、被替代计划 6 份，增加中文文档与计划索引。历史正文、失败、原截图和 SHA 保留；未删除私人材料、反馈、旧 UAT 数据、临时探针或用户原始图标。
+- 本次整理没有修改应用、课程、Schema、Prompt、Provider、评分或语音实现。真实模型、麦克风、macOS 用户实机等剩余边界仍按发布说明保留。
+
 ## Alpha.4 来源
 
 - 原始构建源：`4f939695ce0d411356f6121ea46e5569018366a2`。
