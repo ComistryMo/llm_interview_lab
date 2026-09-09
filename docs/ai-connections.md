@@ -10,7 +10,7 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 | 普通 LLM API | 桌面中的个性化面试、逐轮追问及证据评价 | 视服务而定 |
 | Codex | 桌面中的逐问个性化面试与证据评价 | 需要 Codex 可用并完成相应认证 |
 
-首次启动默认选择 No-AI。任何连接故障都不应阻塞本地训练。
+适用版本：v0.4.0-alpha.4。首次默认 No-AI；后续启动恢复已保存连接与配置。探测不会发送个人材料，但普通 API 探测可能按服务商规则计费。连接故障不应阻塞本地训练。
 
 ## 普通 LLM API
 
@@ -27,7 +27,7 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 
 2026-09-07 Windows 源码真实验证使用 `deepseek-v4-flash`、关闭思考、合成简历/JD：连续 9 次提交均进入下一问（单轮约 5.45–7.53 秒），随后进入本地中文代码题。代码没有作答，报告如实为未完成；不把这项验证称为完整面试通过。布局和提示词收尾后又验证两轮，分别为 4.52 秒、6.81 秒。这些是该设备和连接的样本，不是服务耗时保证。
 
-本轮未重建 Windows/macOS 下载包，不能据此认为旧 Release 已包含 DeepSeek。DeepSeek 不作为当前语音转录服务。
+Alpha.4 Windows/macOS 包已包含 DeepSeek 接入；下列真实测试属于注明日期的历史证据，本次发布不将其扩展成所有模型与强度均已验收。DeepSeek 聊天接口不作为语音转录服务。
 
 #### 当前真实传输边界（2026-09-08）
 
@@ -66,7 +66,7 @@ AI 是确定性本地核心之外的可选能力。Catalog、DAG、Grader、事�
 - OpenAI-compatible；
 - Ollama `/v1`。
 
-源码安装的统一 Provider 层还支持 Anthropic 与 Gemini。语音默认使用 [Zipformer 本地流式转录](local-stt.md)，录音期间实时显示文字，SenseVoice 已移除。可选远程转录仍在停录后走 OpenAI / OpenAI-compatible 的 `/audio/transcriptions` 接口，需单次授权；语音只是回答草稿工具，不会自动提交或评分。Embedding、图像生成、RAG、MCP Runtime 与 Tool Marketplace 不在本版本范围内。
+源码安装的统一 Provider 层还支持 Anthropic 与 Gemini。语音默认使用 [Zipformer 本地流式预览，Qwen3-ASR 0.6B 停句校准](local-stt.md)，权重单独下载后在本机运行，SenseVoice 已移除。可选远程转录仍在停录后走 OpenAI / OpenAI-compatible 的 `/audio/transcriptions` 接口，需单次授权；语音只是回答草稿工具，不会自动提交或评分。Embedding、图像生成、RAG、MCP Runtime 与 Tool Marketplace 不在本版本范围内。
 
 ### 安装
 
@@ -170,9 +170,9 @@ Finder 启动的 `.app` 不保证继承登录 Shell 的 PATH。应用依次检�
 
 设置中只保存非敏感可执行文件路径。未检测到或未登录时，No-AI 和普通 API 继续可用。
 
-### 操作审批
+### 历史协议能力：操作审批
 
-涉及命令或文件改动时，GUI 显示：
+App Server 适配层保留下列审批表达，用于旧协议兼容；当前桌面只提供面试官，不将其作为仓库代理功能宣传，也不允许面试官替用户写答案：
 
 ```text
 操作

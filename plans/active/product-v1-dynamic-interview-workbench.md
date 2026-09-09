@@ -1428,7 +1428,7 @@ Practice 与 Interview 使用同一个 Workbench，不允许复制两套实现�
 
 后续执行 Prompt 必须明确告诉 Codex：
 
-- 先读本 Plan，再读现有 `REAL_USER_ITERATION_FINAL_ZH.md`。
+- 先读本 Plan，再读现有 `docs/archive/REAL_USER_ITERATION_FINAL_ZH.md`。
 - 不得把当前“预生成个性化计划”当作最终需求。
 - 不得删除已有 PDF/DOCX、录音、远程转录和隔离机制；应重用并重构。
 - 不得先做全量大重构。

@@ -6,6 +6,25 @@
 
 暂无未发布变更。
 
+## [0.4.0-alpha.4] - 2026-09-09
+
+### 桌面、面试与内容
+
+- 公开发布中文 Windows x64 便携包与 macOS 14+ Apple Silicon DMG / APP ZIP；保留 Alpha 标记，不宣称稳定版或 Apple 公证。
+- 统一深浅主题与输入控件、可收起侧栏、宽屏布局、完整中文题面；首页围绕面试、练习与复盘，独立 AI 辅助入口移除。
+- 新动态面试取消求职阶段分档；岗位与授权经历决定方向，难度决定深度和广度。提交后逐问生成，AI 等待不扣候选时间，结束后台证据评分。
+- 共享代码编辑器、自写样例运行与公开测试分开；非法手撕 ID 拒绝，未评分或未运行不冒充成功。
+- 96 道 ready（84 Oracle、12 契约级）、158 planned、24 retention-ready、255 知识卡及 258 去重来源；便携包未内置 PyTorch，27 道已验证代码题具备运行环境。
+- PDF/DOCX 文本快照、Profile 与上次配置恢复、材料 SHA 授权校验、回答草稿恢复；AI 连接与 Key 复用、模型／推理强度设置。
+- 本地流式语音预览与可选 Qwen3-ASR 0.6B 停句校准；权重另行下载，默认不发送音频。高推理与实机语音限制仍明确保留。
+- 设置新增官方更新检查、下载及 SHA 校验，不自动安装；修正打包 worker、测试插件和缺少可选依赖时的启动。
+
+### 发布与文档
+
+- 原样发布构建源 `4f93969` 的已验收双平台包；标签包含后续中文文档与归档，不改写包来源。
+- 中文下载、系统要求、当前面试流程、连接与语音指南同步；根目录旧报告和已被替代的计划移入历史目录，保留失败及未验收事实。
+- [发布说明、校验值及限制](docs/release-notes-v0.4.0-alpha.4.md) · [验收证据](docs/desktop-candidate-20260909-report.zh.md)。
+
 ## [0.4.0-alpha.3] - 2026-08-31
 
 ### 新增
@@ -91,7 +110,8 @@
 
 - Stage 00 训练原型、Python 环境检查、限定 pytest 入口、隐私交接导出和初始开源治理。
 
-[未发布]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.3...HEAD
+[未发布]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.4...HEAD
+[0.4.0-alpha.4]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.3...v0.4.0-alpha.4
 [0.4.0-alpha.3]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.2...v0.4.0-alpha.3
 [0.4.0-alpha.2]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.1...v0.4.0-alpha.2
 [0.4.0-alpha.1]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.3.0-alpha.1...v0.4.0-alpha.1

@@ -1,5 +1,7 @@
 # 首次使用阻断 Hotfix Checklist
 
+> 历史归档（2026-09-09）。以下状态是当时记录；当前版本见[计划索引](../README.md)。
+
 目标：只恢复“打开应用 → 明确选择岗位 → No-AI → 点击一次开始训练 → 进入首题或首页；失败时给出可操作原因”的最短链路。基线为 `main@5e83f8f`；用户提供的未跟踪评审文件仅作为证据，不修改、不提交。
 
 ## 复现
@@ -35,6 +37,6 @@
 
 ## 发布文档
 
-- [x] 更新 README、Windows/桌面指南、截图和 `HOTFIX_FINAL_ZH.md`；不自动发布 Release。
+- [x] 更新 README、Windows/桌面指南、截图和 `docs/archive/HOTFIX_FINAL_ZH.md`；不自动发布 Release。
 
 回退：按独立小提交逐项 revert。停止条件：可能丢失真实 Profile/Submission/Key、需要重写历史、无法兼容公开 CLI，或必须扩大到冻结范围之外。

@@ -266,9 +266,9 @@ def test_readme_is_a_concise_product_page_with_required_section_order() -> None:
     assert 250 <= len(readme.splitlines()) <= 450
 
     groups = (
+        ("start in 5 minutes", "下载与三分钟开始"),
         ("why this project", "这是什么项目"),
         ("choose a track", "适合哪些 AI 岗位"),
-        ("start in 5 minutes", "下载与三分钟开始"),
         ("gui", "GUI 使用流程"),
         ("learning loop", "如何开始训练"),
         ("interview", "如何进行模拟面试"),
@@ -282,7 +282,7 @@ def test_readme_is_a_concise_product_page_with_required_section_order() -> None:
     positions = [_heading_position(readme, aliases) for aliases in groups]
     assert positions == sorted(positions)
 
-    for entry in ("Start in 5 Minutes", "Browse Curriculum", "Use with AI"):
+    for entry in ("下载桌面应用", "浏览课程", "连接 AI"):
         assert entry in readme
 
 

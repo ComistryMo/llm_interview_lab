@@ -1,33 +1,31 @@
 # macOS 使用指南
 
-> 发布状态：当前公开桌面版为 [v0.4.0-alpha.3](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3)，提供经过 Apple Silicon CI 构建、启动和隐私检查的 DMG 与 APP ZIP。
+> 发布状态：当前公开桌面版为 [v0.4.0-alpha.4](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4)，提供经过 Apple Silicon CI 构建、启动和隐私检查的 DMG 与 APP ZIP。
 
-Alpha.3 构建在固定 GitHub Apple Silicon Runner 上生成、检查架构并执行离屏启动验证。
-
-当前 Alpha.4 候选尚未发布。实际构建使用 PySide6 6.11.2 的 `macosx_13_0` wheel，以及 NumPy 2.4.6 / SciPy 1.17.1 的 `macosx_14_0` Accelerate wheel；完整包最低系统为 **macOS 14**，不能只按 Qt 的要求写 13，更不是旧版的 12。平台验收与候选包见[本轮报告](desktop-candidate-20260909-report.zh.md)。
+Alpha.4 在 macOS 15 Apple Silicon CI 上构建，完成启动、代码/测试 worker、ZIP 和 DMG 挂载检查；未做 macOS 用户实机或麦克风验收。[完整证据](desktop-candidate-20260909-report.zh.md)。
 
 ## 系统要求
 
 - Apple Silicon（M1、M2、M3、M4 或更新）；
-- 当前候选需要 macOS 14 或更新；旧 Alpha.3 的要求为 macOS 12；
+- **macOS 14 或更新**（完整 Qt / NumPy / SciPy 运行时要求）；
 - 不要求 Python；
-- AI 连接可选，无网络也能使用本地课程；候选版个性化模拟面试需要 AI，No-AI 下显示连接说明，不创建假面试。
+- AI 连接可选，无网络也能使用本地课程；个性化模拟面试需要 AI，No-AI 下显示连接说明，不创建假面试。
 
-候选构建参数和 `LSMinimumSystemVersion=14.0` 与 CI 实际安装的最高 wheel 平台要求一致。[Qt 6.11](https://doc.qt.io/qt-6/supported-platforms.html#macos) 自身要求 13，[NumPy 的 Accelerate wheel](https://numpy.org/doc/2.0/release/2.0.0-notes.html#macos-accelerate-support-including-the-ilp64) 则区分 14+。旧 Alpha.3 元数据不回写；项目不宣称已实测全部 macOS 版本。
+构建参数和 `LSMinimumSystemVersion=14.0` 与 CI 实际安装的最高 wheel 平台要求一致。[Qt 6.11](https://doc.qt.io/qt-6/supported-platforms.html#macos) 自身要求 13，[NumPy 的 Accelerate wheel](https://numpy.org/doc/2.0/release/2.0.0-notes.html#macos-accelerate-support-including-the-ilp64) 则区分 14+。旧 Alpha.3 元数据不回写；项目不宣称已实测全部 macOS 版本。
 
 ## 下载哪个文件
 
 | 文件 | 适合场景 |
 |---|---|
-| `LLMInterviewLab-macOS-arm64.dmg` | 普通用户安装 |
-| `LLMInterviewLab-macOS-arm64.app.zip` | 直接解压、自动化验证或 DMG 有问题时 |
-| `SHA256SUMS.txt` | 校验下载完整性 |
+| [LLMInterviewLab-macOS-arm64.dmg](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.dmg) | 普通用户安装 |
+| [LLMInterviewLab-macOS-arm64.app.zip](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.app.zip) | 直接解压、自动化验证或 DMG 有问题时 |
+| [SHA256SUMS.txt](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/SHA256SUMS.txt) | 校验下载完整性 |
 
-Alpha.3 不提供 Intel x86_64 或 Universal2 Artifact。没有通过真实架构与启动验证的包不会仅靠重命名发布。
+Alpha.4 不提供 Intel x86_64 或 Universal2 Artifact。没有通过真实架构与启动验证的包不会仅靠重命名发布。
 
 ## DMG 安装
 
-发布后：
+安装步骤：
 
 1. 下载 DMG 与 `SHA256SUMS.txt`；
 2. 校验 SHA-256；
@@ -51,7 +49,7 @@ cat SHA256SUMS.txt
 
 ## 签名与公证
 
-Alpha.3 发布构建使用 ad-hoc signing：
+Alpha.4 发布构建使用 ad-hoc signing：
 
 - 未使用 Apple Developer ID；
 - 未经过 Apple Notarization；
@@ -98,12 +96,12 @@ Codex 使用官方 App Server，不解析交互式终端输出。
 - `Command + Enter`：答题页执行主安全动作（运行测试）；
 - `Command + Q`：退出。
 
-应用使用原生菜单、Retina / High DPI、深色主题、中文输入法和包含空格 / 中文的路径。最小窗口尺寸避免主要控件重叠。
+应用提供原生菜单、High DPI、深浅主题和中文输入；跨平台自动化覆盖了窗口布局和中文路径，不代表每种 macOS 实机和输入法都已验收。
 
 ## 常见问题
 
 - **“无法验证开发者”：** 本版未公证。先核对 SHA-256，再从隐私与安全页面确认；不要用来路不明的绕过命令。
-- **App 无法打开：** 确认是 Apple Silicon；当前候选需要 macOS 14+，旧 Alpha.3 为 macOS 12+。查看对应版本的已知限制。
+- **App 无法打开：** 确认是 Apple Silicon；本版需要 macOS 14+。查看对应版本的已知限制。
 - **Codex 未检测到：** 在设置选择可执行文件。
 - **Ollama 连接失败：** 先启动 Ollama，再测试本地地址。
 - **Keychain 拒绝访问：** 不会保存明文 Key；先用 No-AI。
@@ -125,3 +123,9 @@ python scripts/build_macos_desktop.py
 ```
 
 该脚本生成原创 `.icns`、调用 `pyside6-deploy`、配置 Info.plist、ad-hoc sign、运行内部 `--version / --smoke-test`、创建 APP ZIP / DMG 与 SHA-256。构建必须在 arm64 macOS 主机执行。
+
+## 更新与可选依赖
+
+先退出旧应用，再替换 Applications 中的应用；不要删除数据目录。设置可打开实际路径，保留数据备份和旧包便于回退。语音模型权重单独下载，不随包提供；PyTorch 未内置，需要相应题目时使用源码环境。缺依赖不等于题面缺失。
+
+[本地语音指南](local-stt.md) · [返回中文文档](README.md)

@@ -15,71 +15,38 @@
 [![Status](https://img.shields.io/badge/status-alpha-orange)](#项目状态)
 
 [**下载桌面应用**](#下载与三分钟开始) ·
-[**三分钟开始（Start in 5 Minutes）**](#下载与三分钟开始) ·
-[**浏览课程（Browse Curriculum）**](#如何开始训练) ·
-[**连接 AI（Use with AI）**](#如何接入-ai)
+[**浏览课程**](#如何开始训练) ·
+[**连接 AI**](#如何接入-ai)
 
-![当前候选：面试优先的中文首页](docs/images/candidate-20260909/after/home-dark.png)
+![Alpha.4：面试优先的中文首页](docs/images/candidate-20260909/after/home-dark.png)
 
-当前候选的正式页面，使用隔离合成档案；[七页深浅主题 Before/After](docs/design/desktop-candidate-20260909.zh.md)及[候选验收与限制](docs/desktop-candidate-20260909-report.zh.md)。侧栏可收起、中文题面完整展示、口述草稿本地恢复；新面试取消求职阶段分档，提交后优先逐问生成、结束再评分。旧安装包可参考[历史首页截图](docs/images/desktop-home.png)，未随候选分支自动发布。
+**[v0.4.0-alpha.4 已公开发布](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4)**。以上为正式页面、隔离合成档案；[七页深浅主题 Before/After](docs/design/desktop-candidate-20260909.zh.md)及[双平台验收与限制](docs/desktop-candidate-20260909-report.zh.md)。侧栏可收起、中文题面完整展示、口述草稿本地恢复；新面试取消求职阶段分档，逐问生成、结束评分。[全部中文文档](docs/README.md)。
 
 **岗位路线 · 经过测试的练习 · AI 模拟面试 · 证据复盘 · 间隔复测**
 
 这不是随机题单，不是一次测试通过就宣布掌握，也不是让 AI 代写答案。
 你可以只刷题，也可以结合自己的脱敏求职材料进行针对性模拟面试；不用连接 AI 也能完整使用确定性的本地功能。
 
-## 这是什么项目
-
-LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）：
-
-- **求职材料：** 保存简历、求职意向、项目、论文、比赛、岗位 JD 与真实面试问题；只有逐场明确授权的材料才可进入 AI 上下文。
-- **刷题训练：** 固定题目按硬依赖组成 DAG，闯关路线（Quest）提供推荐顺序，综合关卡（Capstone）验证组合能力。
-- **模拟面试：** 岗位决定方向，获准简历/JD决定切入点，简单/标准/困难决定深度与广度，不按实习、校招或年限分档。自我介绍后逐问深挖、原理、手撕；下一问流式显示，结束后台评分并将缺口链接到实际练习。
-
-核心设计：
-
-- 硬依赖、测试、计时、解锁和掌握状态由确定性代码计算。
-- 公开测试通过只是实现证据；契约审查、口述答辩和 D+2 / D+7 间隔复测共同组成掌握条件。
-- 已移除独立 AI 辅助页面。桌面 AI 只用于面试追问与证据评价，一次只生成下一问，不直接修改候选人答案、不自行授予“已掌握”；旧 CLI 教练协议保留兼容。
-- 真实答案、材料、面试记录和连接配置默认保存在本机，并被 Git 忽略。
-
-## 适合哪些 AI 岗位
-
-第一版提供八类公共岗位画像。岗位 Alias 复用同一技能图谱，不复制课程：
-
-| 岗位 | 典型面试重点 |
-|---|---|
-| AI 产品经理 | 问题定义、指标、评测、安全、成本与交付 |
-| AI 应用工程师 | LLM API、RAG、Tool Calling、可靠性与评测 |
-| AI Agent 工程师 | Tool、Parser、Executor、State、Trajectory 与恢复 |
-| AI 算法 / 研究工程师 | 数学、PyTorch、Transformer / VLM 与实验设计 |
-| 大模型后训练工程师 | SFT、Preference、Reward、DPO、PPO / GRPO |
-| AI Infra / ML 平台工程师 | 数据与训练平台、分布式、Checkpoint 与可观测性 |
-| AI 推理 / 系统工程师 | KV Cache、Serving、量化、Kernel 与性能分析 |
-| AI 评测 / 数据 / 安全工程师 | 数据质量、Rubric、污染检测、安全与统计分析 |
-
-详见[岗位画像与面试蓝图](docs/role-profiles.md)。
-
 ## 下载与三分钟开始
 
-当前候选分支为 `candidate/desktop-release-20260909`，源码版本 `0.4.0a4`，对应 `v0.4.0-alpha.4`（**未发布**）。Windows/macOS 候选包及技术门禁已完成，文件、SHA 和实机验收限制见[候选报告](docs/desktop-candidate-20260909-report.zh.md)，等待用户审阅发布。下方 [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) 属于既有发布，不包含候选升级；当前发布状态以官方 Release 页面为准。
+当前公开版本为 **v0.4.0-alpha.4**（源码 `0.4.0a4`），2026-09-09 发布。Windows/macOS 使用同一次已通过技术门禁的原始构建，下载清单与限制见[发布说明](docs/release-notes-v0.4.0-alpha.4.md)。这是 Alpha 预发布，不是稳定版。
 
-候选包完整携带 96 道 ready 题资产；未内置 PyTorch 的 Windows 包中，27 道已验证代码题具备运行环境，不能按开发机的 84 道宣传全题可运行。详见[覆盖口径](docs/content/release-candidate-coverage-20260909.zh.md)及[同机性能数据](docs/performance/desktop-candidate-20260909.zh.md)。
+发布包完整携带 96 道 ready 题资产；未内置可选 PyTorch，27 道已验证代码题具备包内运行环境，不能按开发机的 84 道宣传全题可运行。需要 PyTorch 题时使用源码安装。详见[覆盖口径](docs/content/release-candidate-coverage-20260909.zh.md)及[同机性能数据](docs/performance/desktop-candidate-20260909.zh.md)。
 
-Alpha.4 macOS 候选的完整 Qt / NumPy / SciPy 运行时要求 Apple Silicon / macOS 14+；不沿用旧 Alpha.3 的 macOS 12 声明。实测平台状态见[候选报告](docs/desktop-candidate-20260909-report.zh.md)。
+Alpha.4 macOS 完整运行时要求 **Apple Silicon / macOS 14+**；未使用 Apple Developer ID、未经过 Notarization，不沿用旧版 macOS 12 要求。实测范围见[验收报告](docs/desktop-candidate-20260909-report.zh.md)。
 
 | 你使用的环境 | 推荐方式 |
 |---|---|
-| Windows 10 / 11 x64 | 下载 `LLMInterviewLab-Windows-x64-portable.zip`，完整解压后运行 |
-| Apple Silicon Mac（M1 及更新） | 下载 `LLMInterviewLab-macOS-arm64.dmg` |
-| 需要直接解压验证的 Apple Silicon Mac | 下载 `LLMInterviewLab-macOS-arm64.app.zip` |
+| Windows 10 / 11 x64 | [LLMInterviewLab-Windows-x64-portable.zip](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-Windows-x64-portable.zip)，完整解压后运行 `LLMInterviewLab.exe` |
+| Apple Silicon Mac（macOS 14+） | [LLMInterviewLab-macOS-arm64.dmg](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.dmg) |
+| 需要直接解压验证的 Apple Silicon Mac | [LLMInterviewLab-macOS-arm64.app.zip](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.app.zip) |
 | Intel Mac | 本版没有经过验证的 x86_64 包 |
 | 开发者或贡献者 | 源码安装 |
 | 不希望连接 AI | 首次启动选择“暂不连接 AI” |
 
-[下载 Alpha.3 桌面版](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) · [浏览当前 `main` 源码](https://github.com/ComistryMo/llm_interview_lab/tree/main) · [校验 SHA-256](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.3/SHA256SUMS.txt)
+[下载 Alpha.4 桌面版](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4) · [浏览当前 `main` 源码](https://github.com/ComistryMo/llm_interview_lab/tree/main) · [校验 SHA-256](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/SHA256SUMS.txt)
 
-Alpha.3 的首次启动流程如下：
+首次启动流程如下：
 
 ```text
 打开应用
@@ -89,7 +56,7 @@ Alpha.3 的首次启动流程如下：
 → 点击“开始训练”
 ```
 
-普通桌面用户不需要打开终端、编辑 YAML、记 Problem ID 或理解事件 Schema。
+普通桌面用户不需要安装 Python、打开终端、编辑 YAML 或记 Problem ID。Windows 需保留整个解压目录，不能只复制 exe。更新时先退出旧应用，解压到新目录启动；不要删除应用数据目录。设置提供检查更新、下载与 SHA 校验，不会静默安装。
 Windows 细节见 [Windows 指南](docs/windows.md)，macOS 细节见 [macOS 指南](docs/macos.md)。
 
 ### 源码安装
@@ -145,13 +112,45 @@ python -m pip install -e ".[torch,dev]"
 llm-lab quickstart
 ```
 
+## 这是什么项目
+
+LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）：
+
+- **求职材料：** 保存简历、求职意向、项目、论文、比赛、岗位 JD 与真实面试问题；只有逐场明确授权的材料才可进入 AI 上下文。
+- **刷题训练：** 固定题目按硬依赖组成 DAG，闯关路线（Quest）提供推荐顺序，综合关卡（Capstone）验证组合能力。
+- **模拟面试：** 岗位决定方向，获准简历/JD决定切入点，简单/标准/困难决定深度与广度，不按实习、校招或年限分档。自我介绍后逐问深挖、原理、手撕；下一问流式显示，结束后台评分并将缺口链接到实际练习。
+
+核心设计：
+
+- 硬依赖、测试、计时、解锁和掌握状态由确定性代码计算。
+- 公开测试通过只是实现证据；契约审查、口述答辩和 D+2 / D+7 间隔复测共同组成掌握条件。
+- 已移除独立 AI 辅助页面。桌面 AI 只用于面试追问与证据评价，一次只生成下一问，不直接修改候选人答案、不自行授予“已掌握”；旧 CLI 教练协议保留兼容。
+- 真实答案、材料、面试记录和连接配置默认保存在本机，并被 Git 忽略。
+
+## 适合哪些 AI 岗位
+
+第一版提供八类公共岗位画像。岗位 Alias 复用同一技能图谱，不复制课程：
+
+| 岗位 | 典型面试重点 |
+|---|---|
+| AI 产品经理 | 问题定义、指标、评测、安全、成本与交付 |
+| AI 应用工程师 | LLM API、RAG、Tool Calling、可靠性与评测 |
+| AI Agent 工程师 | Tool、Parser、Executor、State、Trajectory 与恢复 |
+| AI 算法 / 研究工程师 | 数学、PyTorch、Transformer / VLM 与实验设计 |
+| 大模型后训练工程师 | SFT、Preference、Reward、DPO、PPO / GRPO |
+| AI Infra / ML 平台工程师 | 数据与训练平台、分布式、Checkpoint 与可观测性 |
+| AI 推理 / 系统工程师 | KV Cache、Serving、量化、Kernel 与性能分析 |
+| AI 评测 / 数据 / 安全工程师 | 数据质量、Rubric、污染检测、安全与统计分析 |
+
+详见[岗位画像与面试蓝图](docs/role-profiles.md)。
+
 ## GUI 使用流程
 
 首次启动只需两步：创建学习档案、选择岗位。应用默认 **No-AI**；能力自评和 AI 连接可以稍后补充。无需填写求职阶段，本地刷题不依赖 AI。
 
 ![两步首次启动](docs/images/desktop-onboarding.png)
 
-当前源码首页突出“继续面试 / 开始面试”，下方展示当前练习、最近记录和复盘建议。准备页记住上次岗位、难度、时长和 AI 配置；材料仍需逐场授权。此布局尚未打包到旧 Release。
+首页突出“继续面试 / 开始面试”，下方展示当前练习、最近记录和复盘建议。准备页恢复上次岗位、难度、时长、AI 配置及有效材料选择；同 SHA 的材料偏好可复用，开始前仍确认本场发送范围，变更或撤权不继承旧许可。
 
 <details>
 <summary>查看答题、面试和 AI 连接界面</summary>
@@ -162,15 +161,15 @@ llm-lab quickstart
 
 当前 Practice/Interview 共用原生轻量编辑器：行号、Python 高亮、缩进、撤销重做与保存状态。宽屏题面/代码并排，小窗口切换不丢代码。运行自己的 Python 样例与公开测试是不同动作。独立 AI 辅助页和常驻答题工作区导航已移除，真实作答仍从训练、当前任务或报告进入。
 
-![当前手撕作答区；合成未提交代码](docs/images/unified-interview-20260908/coding-light.png)
+![Alpha.4 手撕区；合成代码](docs/images/candidate-20260909/after/coding-light.png)
 
 模拟面试一次生成一问，可回看已发生的问答。计时包含阅读和作答，排除 AI 等待；结束先看优势、覆盖缺口与练习动作，再看评分。16 张原理卡深化追问路径，12 道现有手撕补充中文说明、边界和核心逻辑评价，不修改固定测试制造通过。
 
-![当前复盘；未评分不制造高分](docs/images/unified-interview-20260908/report-dark.png)
+![Alpha.4 复盘；未评分不制造高分](docs/images/candidate-20260909/after/report-dark.png)
 
-AI 连接页面默认强调无需 AI 的本地模式。远程服务发送前必须经过上下文预览；Codex 写操作显示审批卡片与 Diff。
+AI 连接页面保留无需 AI 的本地模式。启动自动恢复已有连接，探测不发送个人材料；普通 API 探测可能产生少量服务商计费。Codex 仅作为面试官，不提供仓库代理入口。
 
-![AI 连接](docs/images/desktop-connections.png)
+![Alpha.4 AI 连接](docs/images/candidate-20260909/after/connections-dark.png)
 
 </details>
 
@@ -222,7 +221,7 @@ llm-lab graph --quest tensor_and_autograd
 | [ATT-003 · 因果与填充掩码](curriculum/problems/ATT-003-causal-padding-mask/task.md) | MHA 可见性、绝对位置、增量解码和 padding |
 | [PT-019 · GSPO 序列比率](curriculum/problems/PT-019-gspo-sequence-ratio/task.md) | 几何比率、序列级裁剪、长短回答权重 |
 
-四题均有中文完整题面、公开测试、口述追问和独立数值验证，需要 PyTorch。按已掌握的前置解锁；新模拟面试另按岗位、所选难度及环境选题。**四题自身尚无 D+2/D+7，因此可以实现、测试和复盘，但不能宣称已掌握。** 不代表旧安装包已有这些内容。
+四题均有中文完整题面、公开测试、口述追问和独立数值验证，需要 PyTorch。按已掌握的前置解锁；新模拟面试另按岗位、所选难度及环境选题。**四题自身尚无 D+2/D+7，因此可以实现、测试和复盘，但不能宣称已掌握。** 题面资产已随 Alpha.4 交付，运行依赖仍需满足。
 
 ## 如何进行模拟面试
 
@@ -241,7 +240,7 @@ llm-lab graph --quest tensor_and_autograd
 
 在桌面「刷题训练 → 知识库」可以先独立作答，再展开公式、例子、追问和自查要点。回答保存在当前本地档案，不发送 AI，也不计入掌握度；可从卡片进入真实关联代码题，未解锁或缺少环境的题会说明原因。公开知识卡保持只读，CLI 仍可直接检索。
 
-[题目集完整对照](docs/content/question-bank-coverage.zh.md) 将 40 项手撕、160 项八股逐条映射到可练习内容；补齐 8 个手撕缺口，八股合并为 135 张完整题卡，差异契约明确说明。动态模拟面试在进入原理环节时，会按岗位、实际回答和已授权背景匹配少量原理题与追问，供 Codex 或普通 API 逐轮选择，不预生成整场题单。这些是当前源码的内容更新，不代表已发布新的桌面安装包。
+[题目集完整对照](docs/content/question-bank-coverage.zh.md) 将 40 项手撕、160 项八股逐条映射到可练习内容；补齐 8 个手撕缺口，八股合并为 135 张完整题卡，差异契约明确说明。动态面试进入原理环节时，按岗位、实际回答和授权背景匹配少量原理题与追问，供 Codex 或普通 API 逐轮选择，不预生成题单。这些公共资产已随 Alpha.4 交付。
 
 ```bash
 # 按优先级浏览（默认只列摘要）
@@ -289,20 +288,22 @@ CI 只使用 Fake Provider、Fake Codex 与 Mock Keyring，不调用真实付费
 流程被收敛为：选择服务 → 填写 Key 或本地地址 → 选择模型和推理强度 → 保存并测试。
 高级 Endpoint 和连接 ID 放在折叠区域。API Key 只进入系统密钥环：Windows 使用 Credential Manager，macOS 使用 Keychain；密钥环不可用时不会降级为明文文件。
 
-**当前源码新增 DeepSeek 快捷接入**：官方地址无需手填，可选模型及关闭思考／低／高／最高推理强度。已用合成简历/JD 验证 Windows 上的真实逐轮面试；不代表旧 Release 安装包已更新。配置和实测范围见 [AI 连接指南](docs/ai-connections.md#deepseek当前源码)。
+**DeepSeek 快捷接入**：官方地址无需手填，模型与推理强度可选，Key 保存后可复用、修改或删除。历史合成逐轮测试有成功样本，但**高推理仍有空正文／传输失败记录，不能宣称全部强度可用**。本次发布未重新做真实付费 AI 验收；配置和历史证据见 [AI 连接指南](docs/ai-connections.md#deepseek当前源码)。
 
 ### Codex
 
 Codex 与聊天 API 不是同一个接口。桌面应用使用官方 App Server 的 Thread、Turn、流式事件、Cancel、Retry、Diff 和 Approval。
 macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Homebrew 与常见用户目录，也允许在设置中手动选择 Codex 可执行文件。
 
-任何写文件或高风险命令都会显示：操作、范围、文件、命令、原因、风险以及 Diff。应用不会自动批准全部写操作。
+面试只发送已确认的岗位、背景和问答上下文；保持同场模型与授权不变时复用 Thread。连接成功不保证上游模型的时延或可用性。
 
 ### 面试中的 AI
 
 自我介绍之后，先围绕一段相关经历展开，再根据你的实际回答由浅入深地追问；回答不上来时可以换角度。岗位、JD 和明确授权的材料决定关注重点，简单 / 标准 / 高压决定提问强度。一次只生成下一问，不在开始时生成整场题单。
 
-手撕只使用当前可运行的本地验证题。AI 建议了不存在的题号时，系统按本场技能改选真实候选并说明原因；没有可用题时明确留下未完成环节，不编造题目或测试结果。
+手撕只使用当前可运行的本地验证题。新动态流程拒绝不存在的题号并保留重试入口，不静默改题；没有可用题时留下覆盖缺口，不编造测试结果。
+
+语音默认在本地运行：流式预览 + Qwen3-ASR 0.6B 停句校准，不需要语音 API Key。权重不随便携包提供，首次需下载，速度与准确率取决于本机硬件和音频；本次发布未重新做麦克风验收。转录是可编辑草稿，仍需检查后提交。详见[本地语音](docs/local-stt.md)。
 
 不上传整个 `workspace/profiles/` 或任何公司内部材料。旧 CLI 的受约束教练命令为兼容保留，见 [使用规范](docs/best-practices.md)，不再作为桌面功能入口。
 
@@ -311,7 +312,7 @@ macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Home
 ## Codex 与普通 API 的区别
 
 - 普通 API 只处理你在上下文预览中确认发送的文本；它不能自行读取本地文件或运行命令。
-- Codex 是仓库感知 Agent，可在审批与 Sandbox 约束下读取获准文件、运行测试并提出 Diff。
+- Codex 通过本地 App Server 的 Thread / Turn 协议进行面试，而普通 API 通过聊天接口接收获准上下文。
 - 桌面端只提供面试官，不提供练习教练或仓库代理页面；面试 AI 不直接修改候选人答案。
 - 两者都不能依据一次测试通过授予 `mastered`。
 
@@ -324,8 +325,8 @@ macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Home
 | 只看测试是否通过 | 代码、边界、解释、调试和迁移证据 |
 | AI 直接给答案 | 面试逐轮取证，不代写答案 |
 | 个人代码混入公共仓库 | Git 忽略的本地学习档案 |
-| 所有用户相同顺序 | 岗位画像 + 目标阶段 + 前置依赖 + 个人证据 |
-| 面试反馈是自由聊天 | 冻结蓝图、计时、Rubric、证据和本地报告 |
+| 所有用户相同顺序 | 岗位画像 + 难度 + 前置依赖 + 个人证据 |
+| 面试反馈无从核实 | 已展示问题、计时、Rubric、证据和本地报告 |
 | 临时生成题直接入库 | 固定公共课程与私人 AI 变式分离 |
 
 ## 个人数据与隐私
@@ -343,7 +344,7 @@ macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Home
 
 ## 项目状态
 
-下列数字来自当前源码的 Catalog 与公共模型；源码版本号仍为 `v0.4.0-alpha.3`，不代表旧 Release 的题量已经更新：
+下列数字来自 Alpha.4 的公共 Catalog。发布包源自 [4f93969 的完整 CI](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34288557804)，标签额外包含中文文档与归档整理；应用和构建输入保持一致，二进制保留实际构建 SHA。
 
 | 指标 | 当前状态 |
 |---|---:|
@@ -356,6 +357,10 @@ macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Home
 | Role Profiles | 8 |
 | Interview Blueprints | 24 |
 | Fixed non-coding interview Items | 26 |
+| 研究知识卡 | 255 |
+| 去重来源记录 | 258 |
+
+其中 24 个静态蓝图与 26 个固定非代码 Item 是历史兼容资产，不再用求职阶段限制新动态面试。待审 AUTHOR 资产不计入已验证数量。
 
 这是 **Alpha**，不是 Beta 或 Stable。Windows 与 macOS 桌面、真实 Provider 和跨岗位面试内容仍需要真实用户验证；当前 field runs 诚实保持 0。
 `ready` 不自动等于完成数值 Oracle 验证，公开测试也不是隐藏的防作弊测试。
@@ -364,7 +369,7 @@ macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Home
 
 ### 不连接 AI 能用吗？
 
-可以。课程、DAG、公开测试、Review、D+2 / D+7、进度计算和手动模拟面试均可本地使用。
+可以。课程、DAG、公开测试、Review、D+2 / D+7 与进度均可本地使用。桌面个性化模拟面试需要 AI，No-AI 下显示连接入口；历史 CLI 静态面试仍保留，不代表 GUI 有假面试模式。
 
 ### API Key 保存在哪里？
 
@@ -376,11 +381,11 @@ macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Home
 
 ### macOS 为什么会显示 Gatekeeper 提示？
 
-macOS Alpha.3 构建使用 ad-hoc 签名，未使用 Apple Developer ID，也未经过 Notarization。首次打开前请核对 `SHA256SUMS.txt`，再从系统“隐私与安全”页面确认打开。不要运行校验值不一致的文件。
+macOS Alpha.4 使用 ad-hoc 签名，未使用 Apple Developer ID，也未经过 Notarization。先确认下载来源及 `SHA256SUMS.txt`，再从系统“隐私与安全”页面确认打开。不要运行校验值不一致的文件，也不要全局关闭保护。
 
 ### Intel Mac 可以用吗？
 
-Alpha.3 只发布在固定 Apple Silicon Runner 上真实构建并启动验证的 arm64 包，不提供未经验证的 Intel / Universal 包，也不把交叉编译或重命名当作兼容性证明。Intel 用户可以尝试源码运行，但不属于本版桌面 Artifact 承诺。
+Alpha.4 只发布经 macOS 15 Apple Silicon CI 构建、启动与挂载检查的 arm64 包，不提供未经验证的 Intel / Universal 包。用户实机与 macOS 14 尚未实际验收；Intel 源码运行也不属于本版桌面 Artifact 承诺。
 
 ## 参与贡献
 
@@ -399,7 +404,7 @@ Alpha.3 只发布在固定 Apple Silicon Runner 上真实构建并启动验证�
 2. 建设连续的 Transformer 与 Post-Training 闯关路线；
 3. 在不削弱确定性 mastery 的前提下增加经过审查的私人 AI 变式。
 
-自动更新、云同步、Web UI、账号系统和多 Agent Runtime 不属于当前 Alpha。
+已有检查更新、下载与 SHA 校验；静默自动安装、云同步、Web UI、账号系统和多 Agent Runtime 不属于本版范围。当前计划与历史决策见[计划索引](plans/README.md)。
 
 ## License
 

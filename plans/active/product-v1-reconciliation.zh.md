@@ -4,7 +4,7 @@
 
 ## 读取范围与判断方法
 
-已读取产品总 Plan、`REAL_USER_ITERATION_FINAL_ZH.md`、`AGENTS.md`、`PLANS.md`、`docs/architecture.md`，并核对当前分支相对 `origin/main` 的真实差异（63 个已跟踪文件，主要是 Slice D 材料、个性化计划、语音和桌面体验）。每项只使用一个裁决：`KEEP`、`KEEP_WITH_SMALL_FIX`、`ADAPT`、`REPLACE`、`REMOVE` 或 `NOT_STARTED`。
+已读取产品总 Plan、`docs/archive/REAL_USER_ITERATION_FINAL_ZH.md`、`AGENTS.md`、`PLANS.md`、`docs/architecture.md`，并核对当前分支相对 `origin/main` 的真实差异（63 个已跟踪文件，主要是 Slice D 材料、个性化计划、语音和桌面体验）。每项只使用一个裁决：`KEEP`、`KEEP_WITH_SMALL_FIX`、`ADAPT`、`REPLACE`、`REMOVE` 或 `NOT_STARTED`。
 
 ## 逐项对齐
 
@@ -202,7 +202,7 @@
 
 - **Plan 要求：** Windows/macOS 真实平台验收、Artifact 隐私、一次最终全量和一次 RC CI 后才发布。
 - **当前实现：** `.github/workflows/ci.yml` 已有 Windows standalone、macOS arm64、CPU/文档 Job；`scripts/build_macos_desktop.py`、`check_*_artifact.py` 和现有截图/隐私契约存在。历史报告明确尚缺真实 Windows Explorer 双击、macOS 包/Keychain/麦克风实机和新的 RC CI。
-- **精确证据：** `.github/workflows/ci.yml::desktop-windows`、`desktop-macos-arm64`；`scripts/build_macos_desktop.py`、`scripts/check_macos_artifact.py`、`scripts/check_desktop_artifact.py`；`REAL_USER_ITERATION_FINAL_ZH.md`“实机验收/Artifact”。
+- **精确证据：** `.github/workflows/ci.yml::desktop-windows`、`desktop-macos-arm64`；`scripts/build_macos_desktop.py`、`scripts/check_macos_artifact.py`、`scripts/check_desktop_artifact.py`；`docs/archive/REAL_USER_ITERATION_FINAL_ZH.md`“实机验收/Artifact”。
 - **可复用资产：** 固定 runner、artifact privacy checks、release workflow。
 - **冲突/风险：** 不能把 CI offscreen 或历史 `507 passed` 当作本轮发布证据，也不能在本 Phase 触发打包。
 - **最小迁移：** 先保留现有门禁，后续只补缺失的动态面试/语音与真实平台证据。

@@ -1,0 +1,14 @@
+{
+  "tag": "v0.4.0-alpha.4",
+  "source_commit": "4f939695ce0d411356f6121ea46e5569018366a2",
+  "run_id": 34288557804,
+  "artifacts": {
+    "10082008977": "LLMInterviewLab-Windows-x64",
+    "10081946619": "LLMInterviewLab-macOS-arm64"
+  },
+  "assets": {
+    "LLMInterviewLab-Windows-x64-portable.zip": "a162c20dfe281c6f24f2915b9df4439ca7fcfd3ebc1245a72ddc0f29abed0178",
+    "LLMInterviewLab-macOS-arm64.app.zip": "1d01879fb1e72973d9cfd45a96b22fcc11becd0b6f60532b2ec25e2d62845090",
+    "LLMInterviewLab-macOS-arm64.dmg": "e03bfc10fa280f84cc680548bda113b139ce14a817650503d5ede9bc18e694e2"
+  }
+}

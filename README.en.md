@@ -2,154 +2,75 @@
 
 [简体中文（规范版本）](README.md) | English
 
-> English translation of the current candidate documentation. The Chinese documentation is canonical when wording differs. Candidate changes are not part of the published Alpha.3 release.
+The Chinese README is the canonical product description. This is the translation for **v0.4.0-alpha.4**, published on 2026-09-09.
 
-A local-first, role-aware, AI-assisted interview workbench. It combines role skill maps, structured mock interviews, tested coding exercises, oral review, and spaced retention so that “I understand it” can become “I can implement and explain it independently.”
-
-[![CI](https://github.com/ComistryMo/llm_interview_lab/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ComistryMo/llm_interview_lab/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/ComistryMo/llm_interview_lab?include_prereleases)](https://github.com/ComistryMo/llm_interview_lab/releases)
-[![Python](https://img.shields.io/badge/Python-3.10--3.12-3776AB?logo=python&logoColor=white)](pyproject.toml)
-[![License](https://img.shields.io/github/license/ComistryMo/llm_interview_lab)](LICENSE)
-[![Status](https://img.shields.io/badge/status-alpha-orange)](#status)
-
-[Download](#download) · [CLI quick start](#cli-quick-start) · [Connect AI](#optional-ai-connections)
-
-![Candidate desktop home with synthetic data](docs/images/candidate-20260909/after/home-dark.png)
-
-**Role-aware paths · Tested exercises · AI interviews · Evidence review · Retention**
-
-Current source has an interview-first home, a collapsible sidebar, complete Chinese task statements and local oral-draft recovery. New dynamic interviews use role, authorized background and difficulty, not intern/new-grad/experience tiers. Answers are saved before streaming the next question; grading happens after the interview. Invalid coding IDs are rejected, not silently replaced. The shared native editor separates running a script from public tests. See the [candidate evidence and live-test limits](docs/desktop-candidate-20260909-report.zh.md) and [production Before/After screenshots](docs/design/desktop-candidate-20260909.zh.md). Older release screenshots remain historical; public downloads were not replaced.
-
-This is not a random question list, a one-pass mastery badge, or a way for AI to silently write a learner's answer. Local practice requires no AI connection; personalized interviews do.
-
-## What it includes
-
-- A private local Profile for career materials, submissions, interview records, and progress.
-- Eight public Role Profiles for product, applied AI, agents, algorithms, post-training, infrastructure, inference, and evaluation/safety.
-- A deterministic curriculum DAG, recommended Quests, and integration Capstones.
-- Timed, structured mock interviews with evidence-backed scorecards.
-- Public tests, contract review, oral defense, and D+2 / D+7 retention.
-- Optional OpenAI-compatible, Ollama, and Codex connections with Context Preview and system-keyring credentials.
+A local-first desktop workspace for AI interview practice: Chinese coding problems, one-question-at-a-time interviews, authorized résumé/JD context, and evidence-based review.
 
 ## Download
 
-The isolated `candidate/desktop-release-20260909` branch uses source version `0.4.0a4`; `v0.4.0-alpha.4` is **not published**. Windows/macOS candidate packages and technical gates have passed; artifacts, checksums and the remaining live-device limitations are documented in the report above. Publication awaits user review. `main` and existing releases have not been overwritten. The existing [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) does not include these candidate changes.
+[Release and notes](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4) · [SHA-256 checksums](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/SHA256SUMS.txt)
 
-All 96 ready problem assets are included. The Windows candidate without PyTorch has 27 runtime-eligible validated coding problems, not the development environment's 84. Planned nodes and missing dependencies are not counted as runnable practice. See the [coverage definitions](docs/content/release-candidate-coverage-20260909.zh.md) and [same-host performance measurements](docs/performance/desktop-candidate-20260909.zh.md).
-
-The Alpha.4 macOS candidate's complete Qt / NumPy / SciPy runtime requires Apple Silicon / macOS 14+, unlike the published Alpha.3 requirement below. Platform validation is tracked separately in the candidate report.
-
-| User | Artifact |
+| Platform | Asset |
 |---|---|
-| Windows 10/11 x64 | `LLMInterviewLab-Windows-x64-portable.zip` |
-| Apple Silicon Mac, macOS 12+ | `LLMInterviewLab-macOS-arm64.dmg` |
-| Apple Silicon automation/direct extraction | `LLMInterviewLab-macOS-arm64.app.zip` |
-| Intel Mac | No verified x86_64 artifact |
-| Developer or contributor | Source installation below |
+| Windows 10/11 x64 | [LLMInterviewLab-Windows-x64-portable.zip](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-Windows-x64-portable.zip) |
+| macOS 14+, Apple Silicon | [LLMInterviewLab-macOS-arm64.dmg](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.dmg) |
+| macOS 14+, Apple Silicon, ZIP | [LLMInterviewLab-macOS-arm64.app.zip](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.app.zip) |
 
-The Alpha.3 macOS build is ad-hoc signed, not signed with an Apple Developer ID, and not notarized. Verify `SHA256SUMS.txt`; see the canonical [macOS guide](docs/macos.md). The Windows build is also unsigned; see the [Windows guide](docs/windows.md).
+Extract the **entire** Windows archive and run LLMInterviewLab.exe; do not move the exe alone. Python is bundled. On macOS, drag the app into Applications.
+This is an Alpha, not a stable release. macOS uses ad-hoc signing, without Apple Developer ID or notarization. No Intel/Universal2 package is provided. Verify origin and checksums before following the [Windows](docs/windows.md) or [macOS](docs/macos.md) guide.
 
-The Alpha.3 desktop release uses the following first-launch flow:
+## Start
 
-```text
-Open the app
-→ Create a Profile
-→ Select a target role
-→ Keep No AI, or connect AI
-→ Start training
-```
+Create a local profile, choose a role, and start practicing. AI is optional for local coding, tests and progress; personalized desktop interviews require your own AI connection.
 
-## CLI quick start
+![Chinese desktop, synthetic profile](docs/images/candidate-20260909/after/home-dark.png)
 
-```bash
+[Current screenshots](docs/design/desktop-candidate-20260909.zh.md) · [Verification and limits](docs/desktop-candidate-20260909-report.zh.md)
+
+## Interviews and practice
+
+- Eight roles share a skill graph. Role and authorized background determine focus; easy/standard/hard determines depth and pressure, not grading leniency. New interviews do not divide candidates by internship, graduate or experienced status.
+- Introduction → experience deep dive → role fundamentals → coding → evidence review. Only the next question is generated; no full future question list is frozen at startup.
+- Submit once to save and continue. AI waiting does not consume candidate time. Detailed scoring happens after finishing, with retry of failed items only.
+- Coding IDs must resolve to verified, runnable local problems. Running a custom Python example is separate from public tests and AI code evaluation.
+- Chinese problems contain full requirements with an English toggle. A native editor provides line numbers, highlighting, indentation, undo/redo and save status.
+- Passing public tests does not mean mastery. Review, oral explanation and verified D+2/D+7 variants remain separate requirements.
+
+## AI and speech
+
+Use your own DeepSeek/OpenAI-compatible API, local Ollama or installed Codex. Models and reasoning settings are configurable; keys are stored in the OS keyring and can be updated or deleted. Connections restore on startup. API probes may incur a small provider charge; the project supplies no cloud quota.
+
+Speech defaults to **local streaming preview with Qwen3-ASR 0.6B endpoint correction**. Model weights download separately; no speech API key is required. Performance and accuracy depend on hardware and input. Optional remote transcription requires explicit selection and consent.
+
+Known issue: historical DeepSeek high-reasoning transport/empty-body failures remain unverified as resolved. This publication did not run new paid-model or microphone acceptance tests.
+
+## Privacy and evidence
+
+Profiles, materials, answers, recordings and interviews remain local and excluded from release assets. Material preferences can restore when SHA matches, but new sessions still confirm the sending scope; changed or revoked material is not silently reused. Never include employer-confidential information.
+
+The local grader is not a hostile-code security sandbox. AI assessments do not grant Practice mastery or claim an unrun program passed tests.
+
+The catalog has **96 ready nodes (84 Oracle-validated, 12 contract-only), 158 planned nodes, 24 retention-ready problems, 255 knowledge cards and 258 source records**; field-tested runs remain 0. Optional PyTorch is not bundled: **27 verified coding problems are runnable in the portable runtime**, not all ready problems.
+
+Artifacts come unchanged from [verified CI source 4f93969](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34288557804). The release tag also includes documentation and archive organization, with unchanged application/build inputs. Windows native synthetic UAT passed; macOS 15 arm64 CI passed build, launch, worker and mounted-package checks. These are not physical-macOS, fresh-Windows-VM or live-microphone acceptance claims.
+
+## Source installation
+
+Python 3.11 is recommended; core CLI supports 3.10–3.12.
+
+~~~bash
 git clone https://github.com/ComistryMo/llm_interview_lab.git
 cd llm_interview_lab
 python -m venv .venv
-```
+~~~
 
-Activate `.venv` (`.venv\Scripts\Activate.ps1` on PowerShell or `. .venv/bin/activate` on macOS/Linux), then:
+Activate the virtual environment (PowerShell: .venv\Scripts\Activate.ps1; macOS/Linux: . .venv/bin/activate), then:
 
-```bash
-python -m pip install -e ".[dev]"
-llm-lab init --profile default --track ai_foundation
-llm-lab doctor
-llm-lab next --profile default
-llm-lab start FND-001 --profile default
-llm-lab test FND-001 --profile default
-```
+~~~bash
+python -m pip install -e ".[desktop,ai,dev]"
+llm-lab-gui
+~~~
 
-The public starter is expected to fail until you implement it. PyTorch exercises use `python -m pip install -e ".[torch,dev]"`; the full desktop source build uses `.[desktop,ai,dev]`.
+For PyTorch problems, install the torch,dev extras. Keep application data when upgrading; the app can download and verify updates but will not silently install them.
 
-## Learning and interviews
-
-```mermaid
-flowchart LR
-    A[Select role or track] --> B[Practice a fixed exercise]
-    B --> C[Public evidence]
-    C --> D[Review]
-    D --> E[D+2]
-    E --> F[D+7]
-    F --> G[Mastered]
-    G --> H[Unlock / Capstone]
-```
-
-**Public tests passed does not mean mastered.** AI cannot create objective test results or grant mastery. Mock-interview scores remain separate from Practice evidence.
-
-### Research-backed interview knowledge
-
-The repository also ships a read-only knowledge layer. `eight_stock` cards
-contain equations, shapes, debugging prompts, and follow-ups;
-`experience_pattern` cards are scoped, confidence-labelled observations from
-public reports; and `coding_prompt` cards are original implementation
-contracts linked to Catalog problems (ready problems are runnable, while
-planned links are explicit future-practice pointers). They do not change the Grader,
-Practice events, or mastery state.
-
-```bash
-llm-lab knowledge list --kind eight_stock --priority P0 --limit 20
-llm-lab knowledge search "GRPO reward" --track post_training
-llm-lab knowledge show COD-PT-001
-llm-lab knowledge validate --with-catalog
-llm-lab doctor --knowledge
-```
-
-The bundle follows a clean-room link-and-paraphrase policy: papers and
-official documentation support technical claims, while public interview
-reports provide scoped question-pattern signals only. See the
-[source registry](references/interview-sources.json) and
-[research/refresh policy](docs/interview-content-research.md).
-
-## Optional AI connections
-
-Choose one of three modes:
-
-- **No AI:** local curriculum, grader and retention remain available; the desktop personalized interview page requires an AI connection.
-- **Chat provider:** OpenAI, OpenAI-compatible endpoints, and Ollama are the packaged Alpha path. The source package also includes native Anthropic and Gemini adapters.
-- **Codex:** official App Server integration for repository context, test execution, streamed events, diffs, and explicit approvals. It does not scrape terminal ANSI output.
-
-Only fields selected in Context Preview are sent. API keys are stored in Windows Credential Manager or macOS Keychain and are never written to Profile YAML or events. Do not upload an entire Profile or confidential employer material.
-
-## Data and privacy
-
-- Source/CLI mode uses repository-local `workspace/profiles/<id>/`, ignored by Git.
-- Packaged Windows uses `%LOCALAPPDATA%\LLM Interview Lab\`.
-- Packaged macOS uses `~/Library/Application Support/LLM Interview Lab/`.
-- The project has no account, cloud sync, or automatic telemetry.
-- The local grader executes code you trust; it is not a hostile-code security sandbox.
-
-## Status
-
-See the canonical [Chinese README](README.md#项目状态) for current Catalog counts. The version marker remains `v0.4.0-alpha.3`; the existing desktop downloads have not been rebuilt with these source changes. This iteration deepens 16 knowledge cards and 12 existing coding exercises, without presenting automated validation as human field testing.
-
-New original exercises cover Nesterov SGD, label-smoothed cross entropy, causal/padding masks, and GSPO sequence ratios. They require PyTorch and have Chinese task descriptions, public tests, and independent numerical validation. Their own D+2/D+7 variants are not available yet, so passing these exercises cannot grant mastery. See the [Chinese source README](README.md#ai-手撕题当前源码) for details.
-
-This is an Alpha prerelease. Provider behavior varies by upstream service, Apple Developer ID signing/notarization is not configured, and no real Field Run is claimed.
-
-## Contributing and support
-
-- Start with [CONTRIBUTING.md](CONTRIBUTING.md).
-- Report reproducible bugs through [GitHub Issues](https://github.com/ComistryMo/llm_interview_lab/issues).
-- Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
-- Detailed user documentation is Chinese-first under [`docs/`](docs/desktop-app.md).
-
-The project is licensed under [Apache License 2.0](LICENSE).
+[Chinese documentation](docs/README.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Plans and history](plans/README.md)

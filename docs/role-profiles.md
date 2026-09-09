@@ -1,11 +1,13 @@
 # 岗位画像、技能与面试蓝图
 
-岗位感知训练使用三个公共对象，不复制固定课程：
+适用版本：v0.4.0-alpha.4。新桌面面试不再区分实习／校招／有经验，岗位决定范围，授权背景决定切入点，难度决定深度和压力；同样证据使用同样评分锚点。
+
+岗位感知训练复用公共对象，不复制固定课程：
 
 ```text
 Problem / Interview Item → 教授或评估 → Skill
-Skill → 按求职阶段加权 → RoleProfile
-RoleProfile → 选择 → InterviewBlueprint
+Skill → 定义技能范围 → RoleProfile
+RoleProfile + 难度 + 授权背景 + 已发生问答 → 动态下一问
 ```
 
 学习路径仍由 Track、Quest 与 Capstone 表达。岗位画像只引用这些对象，不维护第二份题目列表。
@@ -60,9 +62,9 @@ RoleProfile → 选择 → InterviewBlueprint
 
 Alias 只映射到这些公共画像，例如 AI Application Engineer → AI 应用工程师、ML Systems Engineer → AI Infra，不复制 Skill 或 Blueprint。
 
-## 面试蓝图
+## 历史静态面试蓝图（兼容资产）
 
-每个蓝图冻结：岗位、求职阶段、总时长、轮次、权重、技能和题目选择规则。当前支持 `intern`、`new_grad` 与 `mid`。
+24 个旧蓝图保留岗位、求职阶段、轮次、权重和选题规则，以恢复历史会话与兼容静态 CLI；包含 `intern`、`new_grad` 与 `mid`。**新动态面试不按这些字段选蓝图、时长、候选题或评分要求**，也不将旧 Profile 分档偷偷转换为默认值。
 
 典型结构：
 
@@ -93,14 +95,14 @@ Coding 题只选择 Catalog 中 `ready` 且 validation 为 `oracle / field / sta
 
 报告不是 Offer 概率，也不修改 Practice mastery。
 
-## 贡献新岗位或蓝图
+## 维护岗位与兼容蓝图
 
 新增前先回答：
 
 1. 是否能用现有 Role Alias 表达；
 2. 所有 Skill ID 是否已存在；
 3. 是否复用了现有 Track / Quest，而不是复制题目；
-4. 权重与 target level 是否有招聘依据；
+4. 是否避免向新动态流程引入求职阶段分档；旧权重变动是否会影响历史协议；
 5. Blueprint 的轮次、时间和评分能否完成一次 E2E；
 6. 固定 Item 是否原创、有 Rubric、经过 Maintainer Review 和模拟面试。
 
@@ -108,5 +110,5 @@ Coding 题只选择 Catalog 中 `ready` 且 validation 为 `oracle / field / sta
 
 ```bash
 python -m pytest tests/infrastructure/test_role_interviews.py -q
-python -m pytest -q
+python -m pytest tests/infrastructure/test_unified_interview.py -q
 ```

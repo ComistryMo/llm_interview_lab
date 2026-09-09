@@ -1,10 +1,10 @@
-# 本地流式语音输入（当前源码）
+# 本地流式语音输入（Alpha.4）
 
 > 2026-09-09：**流式预览 + 本地 Qwen3-ASR 0.6B 停句校准已接入正式面试页面。** 前期依据保留在[单模型对照](local-stt-comparison.zh.md)与[双阶段组合验证](local-stt-two-pass-validation.zh.md)；下面单独记录正式应用验证，不混用实验成绩。
 
 模拟面试默认使用 **Zipformer 实时预览 + Silero 人声停顿检测 + Qwen3-ASR 0.6B int8 本地校准**。录音期间即可看到文字；每次停顿约 0.8 秒后，后台根据该段原音频校准预览，下一段可以继续说。SenseVoice 保持移除，没有隐藏回退。
 
-不需要 API Key、PyTorch、服务器或新增桌面依赖。语音在 CPU 上本地识别，文字面试官仍可使用 DeepSeek、Codex 等；本次只更新源码，不代表旧 Windows/macOS 下载包已更新。
+不需要语音 API Key、PyTorch 或服务器。Alpha.4 已包含本地识别运行时，权重单独下载；语音在 CPU 上处理，文字面试官仍可使用 DeepSeek、Codex 等。本次发布未重新验收真实麦克风，下方实验成绩不能当作所有设备的准确率和时延保证。
 
 ## 使用
 
@@ -24,13 +24,13 @@
 models/stt/zipformer-bilingual-streaming-int8/
 ```
 
-按[源码运行说明](desktop-app.md#源码运行)启动时，本机已经下载并逐文件验证：
+按[源码运行说明](desktop-app.md#源码运行)指定隔离数据根时，模型目录示例为：
 
 ```text
 workspace/maintainer/manual-uat/models/stt/zipformer-bilingual-streaming-int8/
 ```
 
-关闭旧源码进程，再按原命令启动即可使用，不需重新创建 Profile。换成其他数据根目录时需在对应目录下载模型。旧版本保存的本地转录选项恢复为新的本地流式选项，不会意外切到远程服务。
+此路径只是源码示例，不代表你的机器已下载模型。应用显示完整组合就绪后即可使用，不需重新创建 Profile。换成其他数据根时需在对应目录下载；桌面包使用设置中显示的应用数据目录。旧本地选项恢复为新的本地流式选项，不会意外切到远程服务。
 
 旧的 SenseVoice 模型缓存没有擅自删除，但当前代码不读取、不加载它。Profile、简历、回答和既有录音没有迁移或清空；模型、录音和截图均不进入源代码提交。
 

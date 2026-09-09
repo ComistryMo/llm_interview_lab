@@ -1,5 +1,7 @@
 # 2026-09-09 桌面候选验收报告
 
+> 发布补记：候选完成后，用户另行明确授权发布 Alpha.4。公开包沿用下文最后一次 `4f93969` CI 原始产物，应用源码未变；后续只整理中文文档、历史目录与发布门禁。当前下载与限制见[Alpha.4 发布说明](release-notes-v0.4.0-alpha.4.md)。下文“尚未发布”保留为候选结束时事实，不抹掉当时的失败与未验收项。
+
 状态：**候选技术门禁已通过，等待用户审阅发布**（`CANDIDATE_TECHNICAL_GATES_PASSED / WAITING_FOR_MAINTAINER_RELEASE_REVIEW`）。Windows 已有本地及 CI 实际包验证；macOS arm64 的最终 CI 构建、启动与 ZIP/DMG 检查通过。没有推送 main、创建 Tag、覆盖旧 Release 或正式发布；真实模型、麦克风和 macOS 用户实机仍未验收。
 
 ## 1. 范围、源码与数据边界

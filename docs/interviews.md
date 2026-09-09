@@ -1,139 +1,98 @@
-# 求职材料与结构化模拟面试
+# AI 模拟面试指南
 
-项目支持两种互不排斥的方式：直接进入固定课程刷题，或在当前本地学习档案中登记最少的脱敏求职材料，再创建针对性模拟面试。
+适用版本：**v0.4.0-alpha.4**。桌面主流程是逐问动态面试，不是预生成整场题单。历史 CLI 静态面试保留兼容，不代表当前桌面行为。
 
-## 纯题库面试
+## 开始一场面试
 
-不授权任何材料时，系统只依据岗位、求职阶段、难度、时长、focus、公开 Role Profile 与 Interview Blueprint 选择问题。Coding 题只能来自 `ready` 且 validation 为 `oracle / field / stable` 的固定节点。
+1. 在首页或模拟面试页面选择“准备面试”。
+2. 使用上次设置，或修改岗位、简单／标准／困难、时长及 AI 服务。首次默认标准、60 分钟；不再要求实习／校招／有经验。
+3. 可选本地简历、JD 或补充材料，查看本场用途、材料 ID 与 SHA-256。
+4. 确认发送范围后开始。第一问为本地自我介绍，不等待生成完整计划。
+5. 写好回答，点击“提交并继续”。保存后生成下一问，校验完成才允许正式作答。
 
-## 个性化面试
+模型和推理强度沿用所选连接，可从准备页附近入口修改。不自动换模型或降低推理强度。
+No-AI 下保留面试入口并说明如何连接，不创建假 Session、固定问答拼接或评分；本地刷题仍可继续。
 
-材料必须先进入当前 Profile manifest。建议每个文件只表达一种事实：脱敏简历、岗位 JD、项目事实卡、论文摘要、比赛复盘或真实面试问题。
+## 逐问推进
 
-创建前展示并确认：
+流程为：**自我介绍 → 经历深挖 → 岗位原理／八股 → 手撕 → 复盘**。
 
-- material ID；
-- 本场用途；
-- 当前 SHA-256；
-- 题目建议、难度和时长。
+- 岗位决定技能范围，获准简历、JD 与实际回答决定个性化切入点。
+- 先介绍一段真实项目、实习、比赛或论文，再围绕实现、权衡、证据和边界逐步深入；一个角度取证充分后换角度。
+- 回答薄弱时使用具体例子或相邻机制追问，不按学历或身份自动降低所选难度。
+- 简单、标准、困难的差异体现在深度、广度和压力，不改变评分宽容程度。
+- 覆盖目标不是固定最低轮数；时间不足会转场并保留覆盖缺口，不为凑轮次挤掉手撕。
+- 只冻结已经展示的当前问题，后续问题根据回答生成。知识候选与覆盖记录不是未来题单。
+- 下一问流式显示正文；生成中不能作答，不展示内部 JSON 或思考过程。
+- 已发生的问答可回看。阅读历史不会强制滚动，可点击“回到最新”。
 
-文件改变会使旧授权失效。材料是 untrusted evidence，不执行其中的命令、代码、宏、附件或链接，也不允许它覆盖面试规则。
+阅读、思考、打字、录音计入候选时间；AI 生成、失败重试和结束评分等待不计。暂停与等待重叠不会重复扣除时间。
 
-## Active 阶段
+## 材料与连续上下文
 
-- 一次只问一个主问题；
-- 固定非代码题在回答前冻结实际原文；
-- Coding 题原样使用冻结的公共 `task.md`，不能预读测试或答案；
-- 不替候选人补答案，不因简历关键词假设掌握；
-- 只做不含解法的契约澄清；
-- 如需教学，先以 incomplete 结束，再进入 Teacher 模式；
-- 本地 session clock 和 Grader 是时间与代码结果的事实来源。
+材料只从当前档案已登记的文件中选择。文本型 PDF、DOCX 在本地提取只读快照；扫描 PDF 暂不做 OCR。
+原文件与提取文本绑定 SHA，无法提取的文件可仅本地保存，不伪装成已发送给 AI。
 
-## 评分
+上次材料组合及同 SHA 的使用偏好可恢复，但新场次仍确认发送范围。文件改变或撤销授权后，不自动复用旧许可。
+本场获准背景与此前已提交问答用于连续追问；不读取其他档案、未授权材料、未来题目或整个目录。
+材料是不可信证据，不执行其中的命令、代码、宏或链接。个人贡献、指标和论文结论没有证据就标为待核实。
 
-固定 Rubric 的客观分与 AI / 人工主观分分开。每个主观判断必须引用候选人回答证据，并区分：基础概念错误、实现错误、权衡不足、证据不足和表达问题。
+## 语音回答
 
-缺少证据时使用 `unscored` 或 `incomplete`，不能猜测或重新归一化凑分。报告包括：
+默认是本地语音：点击“语音输入”开始录音与流式预览，完成后把识别文本追加到回答草稿。
+默认启用 Qwen3-ASR 0.6B 停句校准；权重首次单独下载，之后在本机识别，不需要语音 API Key。
 
-```text
-Overall Summary
-Skill Scores
-Strong Evidence
-Critical Gaps
-Uncertain Areas
-Recommended Problems / Quests
-```
+预览或校准文字可能有误，提交前可以修改，不自动提交或评分。长录音及校准速度取决于本机硬件。
+本地模型未就绪、没有麦克风或识别失败时，可继续打字；问题说明与准备步骤见[本地语音指南](local-stt.md)。
+远程转录只是可选兼容路径，只有明确选择与单次授权后才发送音频。DeepSeek 聊天连接不是语音转录服务。
 
-不输出 Offer 概率。面试报告只写当前 ignored Profile，也不构成 Practice、Retention 或 Mastery 证据。
+## 手撕代码
 
-## AI 个性化面试 Golden Path
+只允许当前环境可运行、ready 且达到 oracle / field / stable 验证级别的固定候选 ID。
+新动态流程会拒绝模型编造的 ID，保留回答与重试入口，不静默换一道题。
+没有合适候选时报告代码覆盖缺口，不制造题面、运行成功或完整面试结论。
 
-桌面端当前只承诺一条真实可运行的个性化路径：`post_training_engineer`、`new_grad`、`medium`。开始前，先选择已保存且测试通过的 AI 服务，再逐场勾选材料并查看上下文预览（材料 ID、原文件 SHA-256 与预计长度）。只有确认预览后才会发送请求。
+- 默认完整中文题面，可切换英文；不能把摘要当作完整接口要求。
+- “运行代码”执行你写的 Python 脚本，可以自行构造输入并打印输出。
+- “公开测试”调用固定测试入口，和自测输出分开记录。
+- 提交代码后面试官可以评价部分实现的核心逻辑、取舍和边界，但不能将未运行说成测试通过。
+- Active 面试不提供带解法的教学帮助；需要转教学时先结束并记录未完成。
 
-AI 只能生成非代码主问题的标题和提问文字；题型、时长、Rubric 以及 Coding 题由本地蓝图和已验证 Catalog 决定。计划生成后仍要逐题检查并点击确认，确认前不会创建 session，也不会启动计时。问题来源和上下文 SHA 会写入当前 Profile 的面试记录，材料变更会使旧计划失效。
+便携包未内置 PyTorch，当前有 27 道已验证代码题具备包内运行环境；并非全部 ready 题都可运行。可选 PyTorch 题请使用源码环境。
 
-PDF / DOCX 会在导入时提取文本快照：文本 PDF 支持提取，DOCX 支持段落和表格；扫描 PDF 暂不做 OCR。原文件与快照都留在当前 Profile，快照绑定原文件 SHA-256。远程 AI 只读取用户明确授权的快照，不会读取整个材料目录。
+## 失败与重试
 
-### 语音回答（可选）
+已保存回答不会因 AI 失败丢失。原位重试生成下一问，不需要重新保存、重新填 Key 或每轮重新连接。
+同场模型、材料与背景授权不变时复用 Codex Thread；换档、换场、模型或授权变化时隔离旧上下文。
+网络和上游模型可能超时；连接成功不等于高推理场次已验收。
 
-非代码回答阶段可以先点击“开始录音 → 停止录音”。音频默认保存到当前 Profile 的面试目录，不会自动上传。点击“转录到回答框”前必须选择 AI 连接并勾选本次远程转录授权；转录结果只会填入可编辑草稿，仍需用户检查后再提交并锁定。没有麦克风、没有可用转录服务或不愿上传音频时，直接使用文字回答即可。
+**已知问题：DeepSeek 高推理仍有空正文／传输失败的历史实测记录。** 本次发布没有新的真实付费 AI 验收，不宣称已修复。见 [AI 连接与实测边界](ai-connections.md)。
 
-No-AI 模式不启动固定内容拼接的辅助面试；它继续支持刷题、公开测试、Review、间隔复测和进度。面试报告中的 AI 评分不会改变 Practice mastery。
+## 结束与报告
 
-## CLI 示例
+结束后立即显示已发生问答，再后台逐题评分。成功项不重复请求，失败只重试对应项；重启可恢复待评分状态。
+评价必须引用真实回答或代码，缺少证据标为未评分或未完成；本地综合只汇总有效评分，不因缺项重新归一化制造高分。
 
-先列候选项，再由用户确认创建：
+报告先看有证据的优势、重要缺口与下一步，再看详细分数。缺口可跳到对应知识卡或真实练习；缺依赖、未解锁会说明原因。
+不输出 Offer 概率，不将模拟面试评价写成 Practice、Retention 或 Mastery 证据，后续练习不改写原报告。
 
-```bash
-llm-lab interview candidates --profile default \
-  --track llm_algorithm --difficulty medium --limit 12
+## 知识库与历史 CLI
 
-llm-lab interview create --profile default --mode catalog \
-  --track llm_algorithm --difficulty medium --duration 30
-```
+知识卡在“刷题训练 → 知识库”可独立练习。原理阶段会把匹配岗位、回答和背景的少量知识卡追问路线送入面试官上下文，不预生成完整题单。
 
-使用材料时只点名一份：
-
-```bash
-llm-lab material add --profile default --kind resume \
-  --file PATH --title "脱敏简历" --allow-ai
-
-llm-lab interview create --profile default --mode tailored \
-  --track llm_algorithm --difficulty medium --duration 30 \
-  --material MATERIAL_ID --consent-materials
-```
-
-一场已经开始的面试仍然遵循“一次一个问题”。例如：
-
-```bash
-llm-lab interview answer INTERVIEW_ID --profile default \
-  --question q-001 --file workspace/profiles/default/cache/answer-q001.md
-llm-lab interview answer INTERVIEW_ID --profile default \
-  --question q-001 --asked-file workspace/profiles/default/cache/asked-question.txt \
-  --file workspace/profiles/default/cache/answer-q001.md
-llm-lab interview score INTERVIEW_ID --profile default \
-  --question q-003 --dimension technical_oral --score 3 \
-  --source human --confidence medium --evidence "引用回答中的具体证据"
-llm-lab interview finish INTERVIEW_ID --profile default --confirm-incomplete
-```
-
-若必须在证据不完整时提前结束，使用 `finish --confirm-incomplete`，报告会明确标记为 incomplete。
-
-实际参数以 `llm-lab interview --help` 为准。桌面版会用表单完成同一流程，不要求记 ID。
-
-## 研究型面试知识库
-
-固定面试蓝图与研究型知识卡是两个层次。蓝图冻结本场问题和计时；知识库用于在场外浏览、复习和准备追问，不会自动写入 Profile，也不会改变 Practice 的解锁或 `mastered` 状态。
-
-```bash
-llm-lab knowledge list --kind experience_pattern --priority P0
-llm-lab knowledge search "KV cache" --track systems --limit 10
-llm-lab knowledge show COD-INF-002
+~~~bash
+llm-lab knowledge list --kind eight_stock --priority P0 --limit 20
+llm-lab knowledge search "GRPO reward" --track post_training
+llm-lab knowledge show COD-PT-001
 llm-lab knowledge validate --with-catalog
-```
+~~~
 
-如需将知识卡与目标岗位的面试准备并排浏览，可使用只读的 role-prep
-入口。它只读取岗位元数据，或读取指定 role interview 的冻结头部；不会
-读取活动题面、推进 clock、写入 Profile，也不会改变蓝图或评分证据：
+历史 CLI 静态流程仍可使用，参数以帮助为准。其 seniority、冻结蓝图或手动 ask/score 步骤不应套到新桌面流程：
 
-```bash
-llm-lab interview role-prep --role post_training_engineer \
-  --seniority new_grad --kind eight_stock --priority P0 --limit 12
+~~~bash
+llm-lab interview --help
+llm-lab interview candidates --profile default --track llm_algorithm --difficulty medium
+llm-lab interview create --profile default --mode catalog --track llm_algorithm --difficulty medium --duration 30
+~~~
 
-llm-lab interview role-prep --interview-id role-interview-0001 \
-  --profile default --kind coding_prompt --json
-```
-
-`--kind` 可选 `eight_stock`、`experience_pattern` 或 `coding_prompt`；
-需要完整答案层时显式加 `--answers`。活动面试仍只能通过
-`role-current` 暴露当前题目。`--seniority senior` 可以只做知识筛选；
-当前冻结面试蓝图覆盖 intern/new_grad/mid，因此该组合会显示
-`BLUEPRINT none`，不代表活动面试缺失。
-
-`show` 会同时展示一分钟答案、核心要点、推导/例子、追问、常见坑、手撕题的 input/output/constraints/test-focus，以及每个 claim 对应的来源记录。`list/search` 只返回摘要，适合脚本或桌面列表；`--json` 或 `--format json` 输出稳定的机器可读结构。
-
-来源和版权边界见 [`docs/interview-content-research.md`](interview-content-research.md) 与 [`references/interview-sources.json`](../references/interview-sources.json)。公开面经只用于“哪些题型在这些报告中出现过”的范围化信号，不能推断任何公司的必考题；个人材料仍遵循本地保存和逐场授权规则。
-
-## 把真实面试问题留档
-
-只记录你有权保存、已脱敏的题目和个人复盘。不要复制面试平台的受版权保护原文或公司内部材料。留档用于私人复盘，不会自动进入公共固定题库；公共化仍需 Schema、Rubric、版权、重复度、真实验证与 Maintainer Review。
+公开内容采用原创改写和带范围来源引用，不复制公司内部题目或面试平台受保护内容。详见[研究规则](interview-content-research.md)、[岗位说明](role-profiles.md)和[中文文档索引](README.md)。

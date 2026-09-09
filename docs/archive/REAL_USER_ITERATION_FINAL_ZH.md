@@ -1,5 +1,7 @@
 # 真实用户迭代最终报告
 
+> 历史归档，保留原始实现、失败和验证事实。后续动态流程与公开版本以[当前面试指南](../interviews.md)和[发布说明](../release-notes-v0.4.0-alpha.4.md)为准；归档不表示原计划所有目标均已完成。
+
 ## 基线
 
 - 代码集成提交：`79db3fc301128ce509384b66fc2bade4f4147e51`；最终交接时的 HEAD 以 `git rev-parse HEAD` 为准，分支为 `feature/real-user-iteration-20260831`，工作树应保持干净；基线提交 `d52238f646aee5aa7cc85ce2ba740b272aaa9c5a`。

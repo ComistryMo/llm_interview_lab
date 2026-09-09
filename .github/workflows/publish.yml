@@ -1,0 +1,79 @@
+name: Publish accepted desktop release
+
+# Creating one version tag is the explicit release action. `create` also allows
+# documentation-only [skip ci] commits to promote an already-tested build.
+on:
+  create:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event.ref_type == 'tag' && startsWith(github.event.ref, 'v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    env:
+      PYTHONPATH: src
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event.ref }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.11"
+      - name: Verify main ancestry, source CI, version and publication manifest
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor HEAD origin/main
+          python scripts/release_metadata.py --tag "$RELEASE_TAG" --github-output "$GITHUB_OUTPUT"
+          python scripts/verify_release_promotion.py --tag "$RELEASE_TAG" --check-ci
+          echo "run_id=$(jq -r .run_id .github/release-manifest.json)" >> "$GITHUB_OUTPUT"
+          echo "artifact_ids=$(jq -r '.artifacts | keys | join(",")' .github/release-manifest.json)" >> "$GITHUB_OUTPUT"
+      - name: Download the exact accepted platform artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.version.outputs.run_id }}
+          artifact-ids: ${{ steps.version.outputs.artifact_ids }}
+          path: dist/downloads
+          merge-multiple: false
+      - name: Verify original checksums and accepted asset hashes
+        run: |
+          python scripts/release_metadata.py --downloads dist/downloads --output dist/release
+          python scripts/verify_release_promotion.py --tag "$RELEASE_TAG" --assets dist/release
+      - name: Publish only after every asset has uploaded
+        env:
+          RELEASE_NOTES: ${{ steps.version.outputs.notes }}
+          IS_PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists. No assets were changed."
+            exit 1
+          fi
+          options=()
+          if [[ "$IS_PRERELEASE" == "true" ]]; then options+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" --draft --verify-tag \
+            --repo "$GITHUB_REPOSITORY" --title "$RELEASE_TAG · 中文桌面版" \
+            --notes-file "$RELEASE_NOTES" "${options[@]}" \
+            dist/release/LLMInterviewLab-Windows-x64-portable.zip \
+            dist/release/LLMInterviewLab-macOS-arm64.app.zip \
+            dist/release/LLMInterviewLab-macOS-arm64.dmg \
+            dist/release/SHA256SUMS.txt \
+            dist/release/SHA256SUMS-Windows.txt \
+            dist/release/SHA256SUMS-macOS.txt
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false

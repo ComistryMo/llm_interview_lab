@@ -9,6 +9,7 @@ from urllib.parse import unquote
 import pytest
 
 from llm_interview_lab.catalog import load_catalog
+from llm_interview_lab.release_version import release_metadata
 
 
 pytestmark = pytest.mark.infrastructure
@@ -22,6 +23,9 @@ USER_DOCUMENTS = (
     "CODE_OF_CONDUCT.md",
     "CHANGELOG.md",
     "docs/desktop-app.md",
+    "docs/README.md",
+    "docs/release-process.zh.md",
+    "plans/README.md",
     "docs/ai-connections.md",
     "docs/role-profiles.md",
     "docs/workspace.md",
@@ -86,7 +90,7 @@ def test_user_surface_is_chinese_first_and_english_is_a_translation() -> None:
 
 
 def test_all_readme_relative_links_exist_with_case() -> None:
-    for document in ("README.md", "README.en.md"):
+    for document in USER_DOCUMENTS + ("README.en.md",):
         source = REPO_ROOT / document
         for raw_target in MARKDOWN_LINK.findall(source.read_text(encoding="utf-8")):
             target = unquote(raw_target.strip().split(maxsplit=1)[0].strip("<>"))
@@ -118,7 +122,7 @@ def test_download_names_and_platform_job_are_consistent() -> None:
     assert "macOS-x86_64" not in readme
 
 
-def test_published_alpha3_links_and_release_workflow_are_consistent() -> None:
+def test_published_version_links_and_release_workflow_are_consistent() -> None:
     readme = _read("README.md")
     english = _read("README.en.md")
     windows = _read("docs/windows.md")
@@ -126,15 +130,16 @@ def test_published_alpha3_links_and_release_workflow_are_consistent() -> None:
     changelog = _read("CHANGELOG.md")
     workflow = _read(".github/workflows/ci.yml")
     documents = (readme, english, windows, macos, changelog)
+    tag = release_metadata()["tag"]
 
     for text in documents:
-        assert "v0.4.0-alpha.3" in text
+        assert tag in text
         assert "未发布源码候选" not in text
         assert "unreleased source candidate" not in text
 
-    assert "/releases/tag/v0.4.0-alpha.3" in readme
-    assert "/releases/download/v0.4.0-alpha.3/SHA256SUMS.txt" in readme
-    assert "/releases/tag/v0.4.0-alpha.3" in english
+    assert f"/releases/tag/{tag}" in readme
+    assert f"/releases/download/{tag}/SHA256SUMS.txt" in readme
+    assert f"/releases/tag/{tag}" in english
     assert "/tree/main" in readme
     assert "LLMInterviewLab-Windows-x64.exe" not in readme
     assert "LLMInterviewLab-Windows-x64.exe" not in english
@@ -267,6 +272,6 @@ def test_community_templates_are_chinese_and_preserve_privacy_fields() -> None:
 
 def test_macos_document_matches_supported_release_boundary() -> None:
     document = _read("docs/macos.md")
-    for term in ("Apple Silicon", "macOS 12", ".app.zip", ".dmg", "Keychain", "未公证"):
+    for term in ("Apple Silicon", "macOS 14", ".app.zip", ".dmg", "Keychain", "未公证"):
         assert term in document
     assert "Intel" in document and "不提供" in document
