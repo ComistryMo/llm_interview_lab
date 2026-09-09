@@ -2762,6 +2762,17 @@ Item {
                     wrapMode: Text.Wrap
                     font.pixelSize: root.theme.scaledPx(12)
                 }
+                LabButton {
+                    objectName: "copyInterviewDiagnostic"
+                    theme: root.theme
+                    variant: "ghost"
+                    text: "复制脱敏诊断"
+                    visible: app.interview.ai_assessment_state === "error"
+                             && !!app.interview.ai_error
+                             && !!app.interview.ai_diagnostic
+                             && !!app.interview.ai_diagnostic.operation_id
+                    onClicked: app.copyInterviewDiagnostic()
+                }
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.minimumHeight: 40

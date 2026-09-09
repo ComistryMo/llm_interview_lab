@@ -3878,7 +3878,9 @@ class AppController(QObject):
             self._interview_request_failed(error, "submit")
             return False
 
-    def _interview_request_failed(self, error: BaseException | str, stage: str, operation_id: str = "") -> None:
+    def _interview_request_failed(
+        self, error: BaseException | str, stage: str, operation_id: str = "", *, diagnostic: dict | None = None,
+    ) -> None:
         """Keep interview failures local and actionable; never log answer bodies."""
         raw = str(error)
         if self._interview.get("interaction_version") == 2 and self._interview.get("interview_id"):
@@ -3902,12 +3904,34 @@ class AppController(QObject):
             detail = raw if raw.startswith(("AI scorecard", "AI interviewer", "AI rubric", "AI follow-up")) else "invalid response"
             logging.getLogger("llm_interview_lab.desktop").warning("interview_response_validation reason=%s", detail[:200])
         operation_id = operation_id or uuid4().hex
-        self._interview.update(ai_assessment_state="error", ai_error=f"{message}（{code} · {operation_id[:8]}）")
+        details = dict(diagnostic or {})
+        code = details.get("code") or code
+        if details:
+            details.update(code=code, stage=stage, operation_id=operation_id)
+            logging.getLogger("llm_interview_lab.desktop").warning(
+                "interview_provider_failure %s", json.dumps(details, ensure_ascii=False),
+            )
+        self._interview.update(
+            ai_assessment_state="error", ai_error=f"{message}（{code} · {operation_id[:8]}）",
+            ai_diagnostic=details,
+        )
         logging.getLogger("llm_interview_lab.desktop").error(
             "interview_request_failed stage=%s code=%s error_type=%s operation_id=%s",
             stage, code, type(error).__name__, operation_id,
         )
         self.stateChanged.emit()
+
+    @Slot(result=bool)
+    def copyInterviewDiagnostic(self) -> bool:
+        diagnostic = self._interview.get("ai_diagnostic") or {}
+        operation_id = diagnostic.get("operation_id", "")
+        clipboard = QGuiApplication.clipboard()
+        if (not operation_id or operation_id[:8] not in self._interview.get("ai_error", "")
+                or clipboard is None):
+            return False
+        clipboard.setText(json.dumps(diagnostic, ensure_ascii=False, indent=2))
+        self.toast.emit("已复制脱敏诊断，不含 API Key、材料、回答或思考正文。")
+        return True
 
     @Slot(result=bool)
     def startInterviewRecording(self) -> bool:
@@ -4500,8 +4524,10 @@ class AppController(QObject):
             self._interview_provider_operation_id = operation_id
             self._interview["ai_assessment_state"] = "streaming"
             self._interview["ai_error"] = ""
+            self._interview["ai_diagnostic"] = {}
             self._interview["next_question_preview"] = ""
         self.stateChanged.emit()
+        request_diagnostic: dict[str, Any] = {}
 
         def operation(emit, cancel) -> dict[str, Any]:
             if _grading_question:
@@ -4574,6 +4600,7 @@ class AppController(QObject):
                     # A whole-turn deadline also releases the UI for retry.
                     return await asyncio.wait_for(collect(), self._PROVIDER_INTERVIEW_TIMEOUT_SECONDS)
                 except asyncio.TimeoutError as error:
+                    request_diagnostic.update(code="AI_REQUEST_TIMEOUT", timeout_kind="turn_deadline")
                     raise RuntimeError("AI 本轮等待超时。请重试或选择较低推理强度；回答已保留，当前设置未自动改变。") from error
                 except asyncio.CancelledError as error:
                     raise RuntimeError("已停止本次请求，回答已保存；可以重试。") from error
@@ -4584,6 +4611,11 @@ class AppController(QObject):
                     response, dimensions, fatal_issues, dynamic=session.get("delivery_mode") == "dynamic_ai" and not _grading_question,
                     quote_required=bool(_grading_question))
             finally:
+                # Worker errors cross Qt as strings. Retain only the adapter's
+                # allowlisted metadata in this operation-local closure.
+                request_diagnostic.update({
+                    **getattr(provider, "last_diagnostic", {}), **request_diagnostic,
+                })
                 self._provider_interview_tasks.pop(operation_id, None)
 
         def release() -> None:
@@ -4693,12 +4725,20 @@ class AppController(QObject):
             if not operation_current:
                 return
             if _grading_question:
+                if request_diagnostic:
+                    logging.getLogger("llm_interview_lab.desktop").warning(
+                        "interview_provider_failure %s", json.dumps({
+                            **request_diagnostic, "stage": "grading", "operation_id": operation_id,
+                        }, ensure_ascii=False),
+                    )
                 self._complete_interview_grading(
                     question_id, error=message, profile_id=profile_id,
                     interview_id=interview_id, operation_id=operation_id,
                 )
             else:
-                self._interview_request_failed(message, "provider_response", operation_id)
+                self._interview_request_failed(
+                    message, "provider_response", operation_id, diagnostic=request_diagnostic,
+                )
             release()
             self.stateChanged.emit()
             if _grading_question:

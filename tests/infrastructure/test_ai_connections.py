@@ -208,6 +208,9 @@ class FakeHTTPResponse:
     def __init__(self, *, lines: list[str] | None = None, value: dict | None = None) -> None:
         self.lines = lines or []
         self.value = value or {}
+        self.status_code = 200
+        self.headers = {}
+        self.is_error = False
 
     def raise_for_status(self) -> None:
         return None

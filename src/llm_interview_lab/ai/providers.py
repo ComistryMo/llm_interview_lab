@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from importlib import import_module
 import inspect
 import json
+import re
 import time
 from typing import Any, AsyncIterator, Awaitable, Callable, Sequence
 
@@ -61,6 +62,16 @@ def _delta_text(chunk: Any) -> str:
         else:
             value = ""
     return value or ""
+
+
+def _response_id(value: Any) -> str | None:
+    """Keep recognizable transport IDs, never arbitrary header/body strings."""
+    if isinstance(value, str) and re.fullmatch(
+        r"(?:[a-fA-F0-9]{16,64}|[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}"
+        r"|(?:chatcmpl-|req_)[A-Za-z0-9_-]{8,96})", value,
+    ) and "sk-" not in value.lower():
+        return value
+    return None
 
 
 class AnyLLMChatProvider:
@@ -168,6 +179,7 @@ class OpenAICompatibleChatProvider:
         self.config = config
         self._api_key = api_key
         self._client_factory = client_factory
+        self.last_diagnostic: dict[str, Any] = {}
 
     def _client(self) -> Any:
         factory = self._client_factory
@@ -254,8 +266,24 @@ class OpenAICompatibleChatProvider:
     async def stream_chat(
         self, messages: Sequence[dict[str, str]], *, json_mode: bool = False
     ) -> AsyncIterator[ChatEvent]:
-        client = self._client()
+        started = time.perf_counter()
+        client = None
+        # Only counts, known enums and transport IDs leave this adapter. In
+        # particular, do not attach messages, exception bodies or reasoning.
+        diagnostic: dict[str, Any] = {
+            "provider": self.config.provider_id,
+            "model": self.config.model if self.config.provider_id == "deepseek"
+            and self.config.model in {"deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner"} else "custom",
+            "reasoning_effort": self.config.reasoning_effort
+            if self.config.reasoning_effort in {"none", "low", "medium", "high", "xhigh", "max"} else "default",
+            "json_mode": json_mode, "max_tokens": "provider_default",
+            "http_status": None, "request_id": None, "response_id": None,
+            "finish_reason": None, "done_marker": False,
+            "content_chars": 0, "reasoning_chars": 0,
+            "first_content_ms": None, "usage": {}, "code": "AI_TRANSPORT_FAILED",
+        }
         try:
+            client = self._client()
             payload: dict[str, Any] = {
                 "model": self.config.model,
                 "messages": list(messages),
@@ -275,12 +303,17 @@ class OpenAICompatibleChatProvider:
                 "chat/completions",
                 json=payload,
             ) as response:
+                diagnostic["http_status"] = response.status_code
+                diagnostic["request_id"] = _response_id(response.headers.get("x-request-id"))
+                if response.is_error:
+                    diagnostic["code"] = "AI_HTTP_ERROR"
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if not line.startswith("data:"):
                         continue
                     data = line[5:].strip()
                     if data == "[DONE]":
+                        diagnostic["done_marker"] = True
                         stream_finished = True
                         break
                     if not data:
@@ -288,9 +321,22 @@ class OpenAICompatibleChatProvider:
                     try:
                         chunk = json.loads(data)
                     except (ValueError, TypeError) as error:
+                        diagnostic["code"] = "AI_RESPONSE_FORMAT"
                         raise ProviderError("provider returned malformed streaming JSON") from error
                     if not isinstance(chunk, dict):
+                        diagnostic["code"] = "AI_RESPONSE_FORMAT"
                         raise ProviderError("AI 返回的流格式不正确。请重试；回答已保留。")
+                    if diagnostic["response_id"] is None:
+                        diagnostic["response_id"] = _response_id(chunk.get("id"))
+                    usage = chunk.get("usage")
+                    if isinstance(usage, dict):
+                        for key in ("prompt_tokens", "completion_tokens", "total_tokens",
+                                    "prompt_cache_hit_tokens", "prompt_cache_miss_tokens"):
+                            if type(usage.get(key)) is int and usage[key] >= 0:
+                                diagnostic["usage"][key] = usage[key]
+                        details = usage.get("completion_tokens_details")
+                        if isinstance(details, dict) and type(details.get("reasoning_tokens")) is int and details["reasoning_tokens"] >= 0:
+                            diagnostic["usage"]["reasoning_tokens"] = details["reasoning_tokens"]
                     if "error" in chunk:
                         # The raw service message may echo the request or Key.
                         # Surface only known codes, never its message/body.
@@ -300,39 +346,69 @@ class OpenAICompatibleChatProvider:
                                  "402": "账户余额不足", "429": "请求限流，请稍后重试",
                                  "500": "服务暂时异常", "503": "服务繁忙，请稍后重试"}
                         detail = f"（{code}）：{hints[code]}" if code in hints else ""
+                        diagnostic["code"] = "AI_PROVIDER_ERROR"
+                        diagnostic["service_error_code"] = code if code in hints else "other"
                         raise ProviderError(f"AI 响应流返回服务端错误{detail}。请重试；回答已保留。")
                     text = _delta_text(chunk)
                     if not isinstance(text, str):
+                        diagnostic["code"] = "AI_RESPONSE_FORMAT"
                         raise ProviderError("AI 正文不是文本格式。请重试；回答已保留。")
                     if text:
                         received_text = received_text or bool(text.strip())
+                        diagnostic["content_chars"] += len(text)
+                        if text.strip() and diagnostic["first_content_ms"] is None:
+                            diagnostic["first_content_ms"] = round((time.perf_counter() - started) * 1000)
                         yield ChatEvent("text_delta", text)
                     # DeepSeek sends reasoning_content separately. Only final
                     # content is an answer; never parse its thinking as a score.
                     choices = chunk.get("choices", [])
                     finish = choices[0].get("finish_reason") if choices else None
-                    if choices and choices[0].get("delta", {}).get("reasoning_content"):
+                    reasoning = choices[0].get("delta", {}).get("reasoning_content") if choices else None
+                    if isinstance(reasoning, str) and reasoning:
                         received_reasoning = True
+                        diagnostic["reasoning_chars"] += len(reasoning)
+                    if finish is not None:
+                        diagnostic["finish_reason"] = finish if finish in {
+                            "stop", "length", "content_filter", "insufficient_system_resource", "tool_calls",
+                        } else "other"
                     if finish == "stop":
                         stream_finished = True
                     elif finish == "length":
-                        raise ProviderError("AI 回复未完整生成：输出预算已用完（包含思考消耗）。请降低推理强度后重试；回答已保留。")
+                        diagnostic["code"] = "AI_RESPONSE_TRUNCATED"
+                        raise ProviderError("AI 回复未完整生成：输出预算已用完（包含思考消耗）。回答已保留，请重试或复制脱敏诊断；原模型与推理强度未改变。")
                     elif finish in {"content_filter", "insufficient_system_resource"}:
+                        diagnostic["code"] = "AI_RESPONSE_FILTERED" if finish == "content_filter" else "AI_RESPONSE_RESOURCE"
                         reason = "服务内容过滤" if finish == "content_filter" else "服务算力暂时不足"
                         raise ProviderError(f"AI 回复未完整生成（{reason}）。请重试；回答已保留。")
+                    elif finish is not None:
+                        diagnostic["code"] = "AI_RESPONSE_UNEXPECTED_FINISH"
+                        raise ProviderError("AI 以非预期原因结束，未确认回答完整。请重试或复制脱敏诊断；回答已保留。")
             if self.config.provider_id == "deepseek" and not stream_finished:
+                diagnostic["code"] = "AI_RESPONSE_INTERRUPTED"
                 raise ProviderError("AI 响应流在完成前中断，未收到结束标记。请重试；不会保存半截题目或评分，回答已保留。")
             if not received_text:
+                diagnostic["code"] = "AI_RESPONSE_REASONING_ONLY" if received_reasoning else "AI_RESPONSE_EMPTY"
                 reason = "服务仅返回思考，未返回回答正文" if received_reasoning else "服务返回空白，未返回回答正文"
                 raise ProviderError(f"{reason}。请重试；不会把思考内容当作题目，原模型与推理强度未改变。")
+            diagnostic["code"] = ""
             yield ChatEvent("completed")
         except asyncio.CancelledError:
+            diagnostic["code"] = "AI_REQUEST_CANCELLED"
             yield ChatEvent("cancelled")
             raise
         except Exception as error:
+            if "timeout" in type(error).__name__.lower():
+                diagnostic["code"] = "AI_REQUEST_TIMEOUT"
+                diagnostic["timeout_kind"] = {
+                    "ReadTimeout": "read", "ConnectTimeout": "connect",
+                    "WriteTimeout": "write", "PoolTimeout": "pool",
+                }.get(type(error).__name__, "transport")
             raise _safe_error(error) from error
         finally:
-            await self._close(client)
+            diagnostic["elapsed_ms"] = round((time.perf_counter() - started) * 1000)
+            self.last_diagnostic = diagnostic
+            if client is not None:
+                await self._close(client)
 
     async def list_models(self) -> list[ModelInfo]:
         client = self._client()

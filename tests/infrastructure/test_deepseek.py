@@ -122,6 +122,154 @@ def test_stream_failure_is_actionable_and_cannot_become_completed(chunks, expect
     assert all(c.is_closed for c in clients)
 
 
+@pytest.mark.parametrize(("finish", "code"), [
+    ("stop", "AI_RESPONSE_REASONING_ONLY"),
+    ("length", "AI_RESPONSE_TRUNCATED"),
+    ("content_filter", "AI_RESPONSE_FILTERED"),
+    ("insufficient_system_resource", "AI_RESPONSE_RESOURCE"),
+    ("tool_calls", "AI_RESPONSE_UNEXPECTED_FINISH"),
+])
+def test_stream_diagnostic_distinguishes_finish_and_keeps_only_metadata(finish, code):
+    requests = []
+    private = "synthetic-private-answer-and-reasoning"
+    request_id = "12345678-1234-1234-1234-123456789abc"
+    response_id = "chatcmpl-1234567890abcdef"
+
+    def handle(request):
+        requests.append(json.loads(request.content))
+        chunk = {
+            "id": response_id, "model": private, "unknown": private,
+            "choices": [{"delta": {"reasoning_content": private}, "finish_reason": finish}],
+            "usage": {"prompt_tokens": 40, "completion_tokens": 100, "total_tokens": 140,
+                      "completion_tokens_details": {"reasoning_tokens": 100, "secret": private},
+                      "secret": private},
+        }
+        return httpx.Response(200, headers={"x-request-id": request_id, "authorization": private},
+                              text="data: " + json.dumps(chunk) + "\n\ndata: [DONE]\n\n")
+
+    provider = OpenAICompatibleChatProvider(
+        ProviderConfig("test", "deepseek", "deepseek-v4-flash", "DeepSeek", reasoning_effort="high"),
+        api_key="sk-synthetic-secret", client_factory=lambda **kw: httpx.AsyncClient(transport=httpx.MockTransport(handle), **kw))
+
+    async def run():
+        with pytest.raises(ProviderError):
+            _ = [e async for e in provider.stream_chat([{"role": "user", "content": private}], json_mode=True)]
+
+    asyncio.run(run())
+    diagnostic = provider.last_diagnostic
+    assert diagnostic["code"] == code
+    assert diagnostic["finish_reason"] == finish
+    assert diagnostic["request_id"] == request_id and diagnostic["response_id"] == response_id
+    assert diagnostic["http_status"] == 200
+    assert diagnostic["usage"] == {"prompt_tokens": 40, "completion_tokens": 100, "total_tokens": 140, "reasoning_tokens": 100}
+    assert diagnostic["content_chars"] == 0 and diagnostic["reasoning_chars"] == len(private)
+    assert diagnostic["first_content_ms"] is None and diagnostic["elapsed_ms"] >= 0
+    assert diagnostic["max_tokens"] == "provider_default"
+    assert private not in json.dumps(diagnostic) and "sk-synthetic-secret" not in json.dumps(diagnostic)
+    assert len(requests) == 1 and requests[0]["reasoning_effort"] == "high"
+    assert requests[0]["response_format"] == {"type": "json_object"}
+
+
+@pytest.mark.parametrize(("ending", "code", "finish"), [
+    ("", "AI_RESPONSE_INTERRUPTED", None),
+    ("data: [DONE]\n\n", "AI_RESPONSE_REASONING_ONLY", None),
+    ('data: {"choices":[{"delta":{},"finish_reason":"untrusted-secret"}]}\n\n', "AI_RESPONSE_UNEXPECTED_FINISH", "other"),
+])
+def test_stream_diagnostic_does_not_invent_finish_or_token_usage(ending, code, finish):
+    chunk = {"id": "sk-synthetic-secret", "choices": [{"delta": {"reasoning_content": "synthetic private reasoning"}}],
+             "usage": {"completion_tokens": "synthetic secret", "total_tokens": True}}
+    provider = OpenAICompatibleChatProvider(
+        ProviderConfig("test", "deepseek", "deepseek-v4-flash", "DeepSeek"), api_key="fake",
+        client_factory=lambda **kw: httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(
+            200, headers={"x-request-id": "sk-synthetic-secret"}, text="data: " + json.dumps(chunk) + "\n\n" + ending)), **kw))
+
+    async def run():
+        with pytest.raises(ProviderError):
+            _ = [e async for e in provider.stream_chat([{"role": "user", "content": "synthetic"}])]
+
+    asyncio.run(run())
+    diagnostic = provider.last_diagnostic
+    assert diagnostic["code"] == code and diagnostic["finish_reason"] == finish
+    assert diagnostic["done_marker"] is ("[DONE]" in ending)
+    assert diagnostic["usage"] == {}  # Missing usage is unknown, not zero cost.
+    assert diagnostic["request_id"] is None and diagnostic["response_id"] is None
+    assert "secret" not in json.dumps(diagnostic) and "private" not in json.dumps(diagnostic)
+
+
+def test_read_timeout_retains_partial_counts_not_private_text():
+    class Stream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield b'data: {"choices":[{"delta":{"reasoning_content":"private"}}]}\n\n'
+            raise httpx.ReadTimeout("private request and key")
+
+    provider = OpenAICompatibleChatProvider(
+        ProviderConfig("test", "deepseek", "deepseek-v4-flash", "DeepSeek"), api_key="fake",
+        client_factory=lambda **kw: httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(200, stream=Stream())), **kw))
+
+    async def run():
+        with pytest.raises(ProviderError, match="timed out"):
+            _ = [e async for e in provider.stream_chat([{"role": "user", "content": "synthetic"}])]
+
+    asyncio.run(run())
+    assert provider.last_diagnostic["code"] == "AI_REQUEST_TIMEOUT"
+    assert provider.last_diagnostic["timeout_kind"] == "read"
+    assert provider.last_diagnostic["reasoning_chars"] == 7
+    assert provider.last_diagnostic["finish_reason"] is None
+    assert "private" not in json.dumps(provider.last_diagnostic)
+
+
+@pytest.mark.parametrize("status", [401, 429, 503])
+def test_http_failure_diagnostic_discards_service_body(status):
+    private = "sk-synthetic-private-key-and-request"
+    provider = OpenAICompatibleChatProvider(
+        ProviderConfig("test", "deepseek", "deepseek-private-model", "DeepSeek"), api_key=private,
+        client_factory=lambda **kw: httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(
+            status, json={"error": {"message": private}}, headers={"x-request-id": private})), **kw))
+
+    async def run():
+        with pytest.raises(ProviderError) as failure:
+            _ = [e async for e in provider.stream_chat([{"role": "user", "content": private}])]
+        assert private not in str(failure.value)
+
+    asyncio.run(run())
+    assert provider.last_diagnostic["code"] == "AI_HTTP_ERROR"
+    assert provider.last_diagnostic["http_status"] == status
+    assert provider.last_diagnostic["request_id"] is None
+    assert provider.last_diagnostic["usage"] == {}
+    assert provider.last_diagnostic["model"] == "custom"
+    assert "deepseek-private-model" not in json.dumps(provider.last_diagnostic)
+    assert private not in json.dumps(provider.last_diagnostic)
+
+
+def test_stream_diagnostic_resets_between_requests_without_reconnecting():
+    calls = []
+
+    def handle(request):
+        calls.append(request)
+        text = " \n" if len(calls) == 1 else '{"follow_up":"合成追问"}'
+        chunk = {"choices": [{"delta": {"content": text}, "finish_reason": "stop"}]}
+        return httpx.Response(200, text="data: " + json.dumps(chunk) + "\n\ndata: [DONE]\n\n")
+
+    provider = OpenAICompatibleChatProvider(
+        ProviderConfig("test", "deepseek", "deepseek-v4-flash", "DeepSeek", reasoning_effort="high"), api_key="fake",
+        client_factory=lambda **kw: httpx.AsyncClient(transport=httpx.MockTransport(handle), **kw))
+
+    async def run():
+        with pytest.raises(ProviderError, match="空白"):
+            _ = [e async for e in provider.stream_chat([{"role": "user", "content": "synthetic"}], json_mode=True)]
+        assert provider.last_diagnostic["code"] == "AI_RESPONSE_EMPTY"
+        assert provider.last_diagnostic["first_content_ms"] is None
+        events = [e async for e in provider.stream_chat([{"role": "user", "content": "synthetic"}], json_mode=True)]
+        assert events[-1].kind == "completed"
+
+    asyncio.run(run())
+    assert provider.last_diagnostic["code"] == ""
+    assert provider.last_diagnostic["first_content_ms"] is not None
+    assert provider.last_diagnostic["done_marker"] and provider.last_diagnostic["finish_reason"] == "stop"
+    assert provider.last_diagnostic["reasoning_chars"] == 0
+    assert len(calls) == 2 and all(json.loads(r.content)["stream"] for r in calls)
+
+
 def test_current_chinese_statements_match_frozen_sources_and_keep_interfaces():
     import re
     root = Path(__file__).resolve().parents[2] / "curriculum/problems"

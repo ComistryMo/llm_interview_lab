@@ -2205,7 +2205,8 @@ def test_material_toggle_alignment_and_per_turn_context(scene, tmp_path, theme, 
     _capture(window, f"material-choice-{theme}-{scale}")
 
 
-def test_deepseek_high_real_adapter_ui_retries_then_advances(scene, monkeypatch):
+@pytest.mark.parametrize("size,theme,scale", [((900, 620), "dark", 1.25), ((1280, 800), "light", 1.0)])
+def test_deepseek_high_real_adapter_ui_retries_then_advances(scene, monkeypatch, caplog, size, theme, scale):
     """Production QML/controller/HTTP parser; SSE and Keyring are isolated doubles."""
     import httpx
     from llm_interview_lab.ai.credentials import KeyringCredentialStore
@@ -2223,8 +2224,14 @@ def test_deepseek_high_real_adapter_ui_retries_then_advances(scene, monkeypatch)
     controller.finishInterview()
     preview = controller.dynamicInterviewContextPreview("post_training_engineer", "intern", "hard", "", False)
     controller.startDynamicPersonalizedInterview("post_training_engineer", "intern", "hard", "deepseek-high", "", False, preview["context_sha256"])
-    window.resize(1080, 680)
-    controller.setTheme("dark")
+    window.resize(*size)
+    controller.setTheme(theme)
+    controller.setFontScale(scale)
+    copied = []
+    class Clipboard:
+        def setText(self, text): copied.append(text)
+    monkeypatch.setattr(QGuiApplication, "clipboard", lambda: Clipboard())
+    assert not controller.copyInterviewDiagnostic()
     reply = {}
 
     def respond(request):
@@ -2234,9 +2241,11 @@ def test_deepseek_high_real_adapter_ui_retries_then_advances(scene, monkeypatch)
         assert payload["thinking"] == {"type": "enabled"} and payload["response_format"] == {"type": "json_object"}
         assert "JSON" in payload["messages"][-1]["content"]
         content = "" if len(requests) == 1 else json.dumps(reply, ensure_ascii=False)
-        chunks = [{"choices": [{"delta": {"reasoning_content": "synthetic reasoning, not an answer"}}]},
-                  {"choices": [{"delta": {"content": content}, "finish_reason": "stop"}]}]
-        return httpx.Response(200, text="\n\n".join("data: " + json.dumps(c) for c in chunks) + "\n\ndata: [DONE]\n\n")
+        chunks = [{"id": "chatcmpl-1234567890abcdef", "choices": [{"delta": {"reasoning_content": "synthetic reasoning, not an answer"}}]},
+                  {"choices": [{"delta": {"content": content}, "finish_reason": "stop"}],
+                   "usage": {"completion_tokens": 80, "completion_tokens_details": {"reasoning_tokens": 80}}}]
+        return httpx.Response(200, headers={"x-request-id": "12345678-1234-1234-1234-123456789abc"},
+                              text="\n\n".join("data: " + json.dumps(c) for c in chunks) + "\n\ndata: [DONE]\n\n")
 
     def client(**kw):
         value = httpx.AsyncClient(transport=httpx.MockTransport(respond), **kw)
@@ -2255,17 +2264,38 @@ def test_deepseek_high_real_adapter_ui_retries_then_advances(scene, monkeypatch)
         QTest.qWait(20)
         time.sleep(0.005)
     assert "仅返回思考" in controller.interview.get("ai_error", "")
+    diagnostic = controller.interview["ai_diagnostic"]
+    assert diagnostic["code"] == "AI_RESPONSE_REASONING_ONLY"
+    assert diagnostic["finish_reason"] == "stop" and diagnostic["done_marker"]
+    assert diagnostic["usage"]["reasoning_tokens"] == 80
+    assert diagnostic["operation_id"][:8] in controller.interview["ai_error"]
     assert controller.interview["answer_locked"] and answer.property("text") == draft
     assert submit.isEnabled() and "重试" in submit.property("text")
     assert not any(item.isVisible() and "完成测试，再返回" in str(item.property("text") or "")
                    for item in _items(window.contentItem()))
     assert not controller.service.interview_session(controller.profileId, controller.interview["interview_id"])["assessments"]
-    _capture(window, "deepseek-high-empty-retry")
+    copy_button = _find(window, "copyInterviewDiagnostic")
+    assert copy_button.isVisible() and copy_button.isEnabled()
+    viewport = _find(window, "interviewQuestionScroll").property("contentItem")
+    viewport.setProperty("contentY", max(0, viewport.property("contentHeight") - viewport.height()))
+    QTest.qWait(100)
+    assert _within_window(window, copy_button)
+    QTest.qWait(3700)  # The existing entry toast expires naturally before capture.
+    _capture(window, f"deepseek-diagnostic-{theme}-{size[0]}")
+    _click(window, copy_button)
+    assert len(copied) == 1 and json.loads(copied[0]) == diagnostic
+    assert draft not in copied[0] and "test-only-key" not in copied[0] and "synthetic reasoning" not in copied[0]
+    record = next(r for r in caplog.records if r.message.startswith("interview_provider_failure "))
+    assert diagnostic["operation_id"] in record.message and draft not in record.message
+    assert "test-only-key" not in record.message and "synthetic reasoning" not in record.message
+    assert len(requests) == 1, "Diagnosing/copying must not send a paid retry"
     for index in (2, 3):
         reply.clear()
         reply.update(_next_reply(controller, f"第 {index} 问：你怎样验证按用户划分没有数据泄漏？"))
         if index == 3:
             answer.setProperty("text", "合成补充：我对分组划分做了重复度检查，保留独立测试集。")
+        viewport.setProperty("contentY", max(0, submit.mapToItem(viewport, QPointF()).y() + viewport.property("contentY") - viewport.height() / 2))
+        QTest.qWait(80)
         _click(window, submit)
         deadline = time.monotonic() + 8
         while controller.busy and time.monotonic() < deadline:
@@ -2274,12 +2304,19 @@ def test_deepseek_high_real_adapter_ui_retries_then_advances(scene, monkeypatch)
         QTest.qWait(80)  # Let the production Qt.callLater editor reset reach the next frame.
         assert controller.interview["question"]["question_id"] == f"q-{index:03d}", controller.interview.get("ai_error")
         assert not controller.interview.get("ai_error") and answer.property("text") == ""
+        assert not copy_button.isVisible() and not controller.copyInterviewDiagnostic()
         final = controller.service.interview_session(controller.profileId, controller.interview["interview_id"])
         assert len(final["answers"]) == index - 1
         assert not final["assessments"] and len(final["turn_decisions"]) == index - 1
     assert len(requests) == 3 and all(c.is_closed for c in clients)
-    assert requests[0]["messages"] == requests[1]["messages"], "Retry reuses the saved answer/context"
-    _capture(window, "deepseek-high-next-question")
+    # Reading/copying diagnostics takes real candidate time. Only the existing
+    # remaining-time snapshot may change; the locked answer and context may not.
+    import re
+    def without_clock(messages):
+        return [{**m, "content": re.sub(r'("remaining_seconds_at_turn_start"\s*:\s*)\d+(?:\.\d+)?',
+                                       r'\1<CLOCK>', m["content"])} for m in messages]
+    assert without_clock(requests[0]["messages"]) == without_clock(requests[1]["messages"]), "Retry reuses the saved answer/context"
+    _capture(window, f"deepseek-next-question-{theme}-{size[0]}")
 
 
 def test_provider_deadline_releases_retry_and_keeps_locked_answer(controller, monkeypatch):
@@ -2309,6 +2346,8 @@ def test_provider_deadline_releases_retry_and_keeps_locked_answer(controller, mo
     assert not controller.busy and closed.is_set()
     assert not controller._interview_provider_operation_id
     assert "等待超时" in controller.interview.get("ai_error", "")
+    assert controller.interview["ai_diagnostic"]["code"] == "AI_REQUEST_TIMEOUT"
+    assert controller.interview["ai_diagnostic"]["timeout_kind"] == "turn_deadline"
     assert controller.interview["answer_locked"] and controller.interview["question"]["question_id"] == "q-001"
     assert not controller.service.interview_session(controller.profileId, controller.interview["interview_id"])["assessments"]
 
