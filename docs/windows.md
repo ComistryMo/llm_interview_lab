@@ -2,7 +2,7 @@
 
 ## 系统要求与下载
 
-> 发布状态：当前公开桌面版为 [v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)，Windows x64 standalone 包已通过构建、启动和隐私检查。
+> 发布状态：当前公开桌面版为 [v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)，Windows x64 便携包的下载与验证状态见[v1 发布说明](release-notes-v1.0.0.md)。
 
 - Windows 10 / 11 x64；
 - v1.0.0 产物为 `LLMInterviewLab-Windows-x64-portable.zip`；
@@ -60,7 +60,7 @@ llm-lab-gui
 
 ## 本版验收与升级
 
-Windows 原生已完成合成档案的建档、中文题面、脚本/公开测试、保存、重启与数据保留；最终 CI 下载包也在当前 Windows 上启动恢复。实际主机有开发工具，不冒称全新 VM、麦克风或真实 AI 已验收。详见[构建与 UAT 报告](desktop-candidate-20260909-report.zh.md)。
+开发期已完成 Windows 原生合成档案的建档、中文题面、脚本/公开测试、保存、重启与数据保留。这些记录随功能保留，不冒充 v1 重新进行的人工验收。实际主机有开发工具，不代表全新 VM、麦克风或真实 AI 已验收。详见[构建与 UAT 报告](desktop-candidate-20260909-report.zh.md)。
 
 升级：先退出旧版，解压到新目录启动，不要删除设置中显示的数据目录。保留旧包与数据备份便于回退。维护者后续原生验收关注：
 

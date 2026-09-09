@@ -77,3 +77,19 @@ def test_publish_requires_tag_main_ci_and_draft_upload_before_visibility():
     assert "artifact-ids:" in workflow and "--verify-tag" in workflow
     assert workflow.index("--draft --verify-tag") < workflow.index("--draft=false")
     assert "--clobber" not in workflow
+
+
+def test_v1_cleanup_is_after_publication_and_targets_only_reviewed_release_ids():
+    workflow = (ROOT / ".github/workflows/publish.yml").read_text("utf-8")
+    cleanup = workflow.split("      - name: Remove the seven superseded", 1)[1]
+    assert workflow.index("--draft=false") < workflow.index("--method DELETE")
+    assert "env.RELEASE_TAG == 'v1.0.0'" in cleanup
+    assert ".draft == false and .prerelease == false" in cleanup
+    assert "(.assets | length) == 6" in cleanup
+    assert 'test "$actual" = "$tag"' in cleanup
+    assert "385175802 v0.4.0-alpha.4" in workflow
+    assert "377603591 v0.2.0-alpha.1" in workflow
+    assert workflow.index("sha256sum --check backup-checksums.txt") < workflow.index("name: development-releases-before-v1")
+    assert workflow.index("name: development-releases-before-v1") < workflow.index("--method DELETE")
+    assert "retention-days: 90" in workflow
+    assert "--cleanup-tag" not in workflow

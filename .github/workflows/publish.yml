@@ -17,7 +17,7 @@ jobs:
   publish:
     if: github.event.ref_type == 'tag' && startsWith(github.event.ref, 'v')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       contents: write
       actions: read
@@ -77,3 +77,54 @@ jobs:
             dist/release/SHA256SUMS-Windows.txt \
             dist/release/SHA256SUMS-macOS.txt
           gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+      - name: Back up the seven development Releases before their removal
+        if: env.RELEASE_TAG == 'v1.0.0'
+        # Explicit user decision on 2026-09-09. Back up original notes/assets;
+        # deletion cannot run if downloading, verification or upload fails.
+        shell: bash
+        run: |
+          set -euo pipefail
+          while read -r id tag; do
+            directory="$GITHUB_WORKSPACE/dist/development-release-backup/$tag"
+            mkdir -p "$directory"
+            gh api "repos/$GITHUB_REPOSITORY/releases/$id" > "$directory/release.json"
+            test "$(jq -r .tag_name "$directory/release.json")" = "$tag"
+            if [[ "$(jq '.assets | length' "$directory/release.json")" -gt 0 ]]; then
+              gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir "$directory"
+              jq -r '.assets[] | "\(.digest | sub("^sha256:"; ""))  \(.name)"' \
+                "$directory/release.json" > "$directory/backup-checksums.txt"
+              (cd "$directory" && sha256sum --check backup-checksums.txt)
+            fi
+          done <<'RELEASES'
+          385175802 v0.4.0-alpha.4
+          379514678 v0.4.0-alpha.3
+          378312652 v0.4.0-alpha.2
+          378221781 v0.4.0-alpha.1
+          377676059 v0.3.0-alpha.1
+          377636078 v0.2.0-alpha.2
+          377603591 v0.2.0-alpha.1
+          RELEASES
+      - name: Retain the recoverable development-release archive for 90 days
+        if: env.RELEASE_TAG == 'v1.0.0'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: development-releases-before-v1
+          path: dist/development-release-backup/
+          retention-days: 90
+          compression-level: 0
+          if-no-files-found: error
+      - name: Remove the seven superseded development Releases after v1 is public
+        if: env.RELEASE_TAG == 'v1.0.0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/v1.0.0" \
+            --jq 'select(.draft == false and .prerelease == false and (.assets | length) == 6) | .tag_name' | grep -qx v1.0.0
+          for record in dist/development-release-backup/*/release.json; do
+            id=$(jq -r .id "$record")
+            tag=$(jq -r .tag_name "$record")
+            actual=$(gh api "repos/$GITHUB_REPOSITORY/releases/$id" --jq .tag_name)
+            test "$actual" = "$tag"
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+            echo "Removed superseded Release: $tag (Git tag retained)"
+          done

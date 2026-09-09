@@ -2,7 +2,7 @@
 
 ## 支持版本
 
-Alpha 阶段只支持 `main` 最新提交和最新 prerelease。旧 Alpha 可能不再获得修复。
+当前维护版本为 v1.0.0 及 `main` 最新提交。v1 之前的开发版不再单独提供安全修复，请升级到当前正式版。
 
 ## 私下报告
 
@@ -31,4 +31,4 @@ Alpha 阶段只支持 `main` 最新提交和最新 prerelease。旧 Alpha 可能
 
 Windows ZIP、macOS APP ZIP 与 DMG 在 CI 中解包检查，禁止包含真实 Profile、答案、Transcript、Key、Oracle、Private Tests、`.git`、`.env` 或本机绝对路径配置。
 
-macOS Alpha 若未使用 Developer ID 和 Notarization，会在 README 与 Release Notes 明确说明；ad-hoc signing 不是身份认证或 Apple 验证。
+macOS 发布包若未使用 Developer ID 和 Notarization，会在 README 与 Release Notes 明确说明；ad-hoc signing 不是身份认证或 Apple 验证。

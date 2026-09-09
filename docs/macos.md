@@ -1,8 +1,8 @@
 # macOS 使用指南
 
-> 发布状态：当前公开桌面版为 [v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)，提供经过 Apple Silicon CI 构建、启动和隐私检查的 DMG 与 APP ZIP。
+> 发布状态：当前公开桌面版为 [v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)，提供 Apple Silicon 的 DMG 与 APP ZIP，下载与验证状态见[v1 发布说明](release-notes-v1.0.0.md)。
 
-v1.0.0 在 macOS 15 Apple Silicon CI 上构建，完成启动、代码/测试 worker、ZIP 和 DMG 挂载检查；未做 macOS 用户实机或麦克风验收。[完整证据](desktop-candidate-20260909-report.zh.md)。
+构建目标为 macOS 15 Apple Silicon CI，包含启动、代码/测试 worker、ZIP 与 DMG 挂载检查。尚未做 macOS 用户实机或麦克风验收；[开发期证据](desktop-candidate-20260909-report.zh.md)保留原测试日期，不因 v1 更名算作重新验收。
 
 ## 系统要求
 
