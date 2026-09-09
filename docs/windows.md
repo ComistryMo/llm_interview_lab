@@ -2,12 +2,12 @@
 
 ## 系统要求与下载
 
-> 发布状态：当前公开桌面版为 [v0.4.0-alpha.4](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4)，Windows x64 standalone 包已通过构建、启动和隐私检查。
+> 发布状态：当前公开桌面版为 [v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)，Windows x64 standalone 包已通过构建、启动和隐私检查。
 
 - Windows 10 / 11 x64；
-- Alpha.4 产物为 `LLMInterviewLab-Windows-x64-portable.zip`；
-- [下载 Windows ZIP](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-Windows-x64-portable.zip)；
-- [SHA256SUMS-Windows.txt](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/SHA256SUMS-Windows.txt)。
+- v1.0.0 产物为 `LLMInterviewLab-Windows-x64-portable.zip`；
+- [下载 Windows ZIP](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/LLMInterviewLab-Windows-x64-portable.zip)；
+- [SHA256SUMS-Windows.txt](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/SHA256SUMS-Windows.txt)。
 
 Portable ZIP 是完整的 standalone 目录。请先完整解压，再双击
 `LLMInterviewLab\LLMInterviewLab.exe`；不要从压缩包预览器中运行，也不要只复制 EXE。
@@ -23,7 +23,7 @@ Get-FileHash .\LLMInterviewLab-Windows-x64-portable.zip -Algorithm SHA256
 
 ## 数据目录
 
-Alpha.4 打包应用使用 Qt `QStandardPaths.AppDataLocation` 对应的当前用户 App Data 位置。设置页显示实际路径并可直接打开。真实学习档案不会写入 EXE 或安装目录。
+v1.0.0 打包应用使用 Qt `QStandardPaths.AppDataLocation` 对应的当前用户 App Data 位置。设置页显示实际路径并可直接打开。真实学习档案不会写入 EXE 或安装目录。
 
 Alpha.1 旧目录 `%LOCALAPPDATA%\LLMInterviewLab` 只在用户确认后迁移。迁移先复制并验证 SHA-256，同时保留旧目录和新目录下的本地备份；不会静默覆盖已有 Profile。
 

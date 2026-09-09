@@ -1,8 +1,8 @@
 # macOS 使用指南
 
-> 发布状态：当前公开桌面版为 [v0.4.0-alpha.4](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4)，提供经过 Apple Silicon CI 构建、启动和隐私检查的 DMG 与 APP ZIP。
+> 发布状态：当前公开桌面版为 [v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)，提供经过 Apple Silicon CI 构建、启动和隐私检查的 DMG 与 APP ZIP。
 
-Alpha.4 在 macOS 15 Apple Silicon CI 上构建，完成启动、代码/测试 worker、ZIP 和 DMG 挂载检查；未做 macOS 用户实机或麦克风验收。[完整证据](desktop-candidate-20260909-report.zh.md)。
+v1.0.0 在 macOS 15 Apple Silicon CI 上构建，完成启动、代码/测试 worker、ZIP 和 DMG 挂载检查；未做 macOS 用户实机或麦克风验收。[完整证据](desktop-candidate-20260909-report.zh.md)。
 
 ## 系统要求
 
@@ -17,11 +17,11 @@ Alpha.4 在 macOS 15 Apple Silicon CI 上构建，完成启动、代码/测试 w
 
 | 文件 | 适合场景 |
 |---|---|
-| [LLMInterviewLab-macOS-arm64.dmg](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.dmg) | 普通用户安装 |
-| [LLMInterviewLab-macOS-arm64.app.zip](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.app.zip) | 直接解压、自动化验证或 DMG 有问题时 |
-| [SHA256SUMS.txt](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/SHA256SUMS.txt) | 校验下载完整性 |
+| [LLMInterviewLab-macOS-arm64.dmg](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/LLMInterviewLab-macOS-arm64.dmg) | 普通用户安装 |
+| [LLMInterviewLab-macOS-arm64.app.zip](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/LLMInterviewLab-macOS-arm64.app.zip) | 直接解压、自动化验证或 DMG 有问题时 |
+| [SHA256SUMS.txt](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/SHA256SUMS.txt) | 校验下载完整性 |
 
-Alpha.4 不提供 Intel x86_64 或 Universal2 Artifact。没有通过真实架构与启动验证的包不会仅靠重命名发布。
+v1.0.0 不提供 Intel x86_64 或 Universal2 Artifact。没有通过真实架构与启动验证的包不会仅靠重命名发布。
 
 ## DMG 安装
 
@@ -49,7 +49,7 @@ cat SHA256SUMS.txt
 
 ## 签名与公证
 
-Alpha.4 发布构建使用 ad-hoc signing：
+v1.0.0 发布构建使用 ad-hoc signing：
 
 - 未使用 Apple Developer ID；
 - 未经过 Apple Notarization；

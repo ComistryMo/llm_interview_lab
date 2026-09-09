@@ -1,17 +1,17 @@
 # 桌面应用指南
 
-适用版本：**[v0.4.0-alpha.4](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4)**。Windows x64 / macOS 14+ Apple Silicon 包已发布；文件、SHA 与验收范围见[发布说明](release-notes-v0.4.0-alpha.4.md)和[候选技术报告](desktop-candidate-20260909-report.zh.md)。发布不等于真实 AI、麦克风或 macOS 用户实机全部通过。
+适用版本：**[v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)**。Windows x64 / macOS 14+ Apple Silicon 包已发布；文件、SHA 与验收范围见[发布说明](release-notes-v1.0.0.md)和[候选技术报告](desktop-candidate-20260909-report.zh.md)。发布不等于真实 AI、麦克风或 macOS 用户实机全部通过。
 
 历史 Alpha 截图（不代表本轮完成度）：[首页](images/desktop-home.png)、[首次使用](images/desktop-onboarding.png)、[答题](images/desktop-exercise.png)、[模拟面试](images/desktop-interview.png)、[连接](images/desktop-connections.png)。本轮正式页面证据另附候选验收报告，不覆盖这些历史文件。
-七个代表页面的深浅主题 Before/After、四尺寸检查和已知限制见 [UI 统一设计与验收](design/product-v1-visual-directions.zh.md#2026-09-08-正式-ui-统一基线-6a1fd20)。这些历史截图的来源不回写；Alpha.4 正式页面见[本版截图](design/desktop-candidate-20260909.zh.md)。
+七个代表页面的深浅主题 Before/After、四尺寸检查和已知限制见 [UI 统一设计与验收](design/product-v1-visual-directions.zh.md#2026-09-08-正式-ui-统一基线-6a1fd20)。这些历史截图的来源不回写；v1.0.0 正式页面见[本版截图](design/desktop-candidate-20260909.zh.md)。
 
-## 统一难度工作台（Alpha.4）
+## 统一难度工作台（v1.0.0）
 
 新建动态面试不再区分实习、校招或有经验：选择目标岗位、简单/标准/困难与时长即可，默认标准、60 分钟，之后恢复本档案上次的选择。旧会话和已保存记录保留原协议，不批量改写。
 
 首页优先开始/继续面试，面试页可查看历史记录；当前练习仍可从首页或刷题训练进入。Practice 与手撕共用带行号、原生 Python 高亮、缩进和滚动的轻量编辑器。运行代码是执行自己的 Python 脚本，公开测试单独记录，两者不等同于掌握。
 
-提交后优先生成下一问，详细评分留到结束；AI 等待不扣候选人的时间。经历和原理按证据覆盖与可用时间推进，不设最低轮数。16 张知识卡加入深入、薄弱回答和反例分支，12 道手撕补充中文说明及核心逻辑评价点；报告链接到实际知识与练习入口。实际验收、性能与剩余失败见 [执行计划](../plans/active/unified-difficulty-interview-workbench.zh.md)，其中历史真实 DeepSeek 高推理失败仍未宣称解决；Alpha.4 包含该迭代的实现，不新增真实传输验收结论。
+提交后优先生成下一问，详细评分留到结束；AI 等待不扣候选人的时间。经历和原理按证据覆盖与可用时间推进，不设最低轮数。16 张知识卡加入深入、薄弱回答和反例分支，12 道手撕补充中文说明及核心逻辑评价点；报告链接到实际知识与练习入口。实际验收、性能与剩余失败见 [执行计划](../plans/active/unified-difficulty-interview-workbench.zh.md)，其中历史真实 DeepSeek 高推理失败仍未宣称解决；v1.0.0 包含该迭代的实现，不新增真实传输验收结论。
 
 桌面版是普通学习者的推荐入口。它使用 PySide6 + Qt Quick，并直接复用与 CLI 相同的 Catalog、Workspace、Planner、Grader、面试引擎与生命周期；普通业务不会调用 CLI 子进程，也不会解析终端输出。
 
@@ -121,7 +121,7 @@ AI 连接页优先显示当前档案的已保存连接。DeepSeek 等服务的 K
 
 源码模式使用 `LLM_LAB_DESKTOP_DATA_ROOT` 时，每次启动都会同步当前源码的公开课程、面试提示和 Schema，不清空其中的 Profile、材料或答案。同版本源码新增提示文件后，旧 UAT 目录也会更新；若资源仍缺失，错误显示在「开始面试」旁，并说明重启同步的处理方式，不再只出现通用 Toast。
 
-Alpha.4 可直接选择 **DeepSeek**，模型与推理强度位于表单首屏，地址无需手填；详见 [DeepSeek 接入与实测范围](ai-connections.md#deepseek当前源码)。历史高推理失败仍需如实区分，不因公开发布宣称解决。
+v1.0.0 可直接选择 **DeepSeek**，模型与推理强度位于表单首屏，地址无需手填；详见 [DeepSeek 接入与实测范围](ai-connections.md#deepseek当前源码)。历史高推理失败仍需如实区分，不因公开发布宣称解决。
 
 非代码面试支持“语音输入 → 流式预览、停句自动校准 → 完成录音 → 编辑 → 提交”。当前源码默认使用 **Zipformer 预览 + Qwen3-ASR 0.6B 本地停句校准**，SenseVoice 保持移除。无需 API Key、PyTorch 或服务器；完整组合约 1.19 GB，旧流式模型的完整文件会复用。校准根据原音频执行，期间可以继续说话、手打；完成后只追加一次到草稿，不自动提交。首次校准加载较慢，识别仍可能有术语误写，须检查后提交。首次使用需在本机数据目录下载模型；示例 UAT 路径不表示其他用户已准备好权重。详见[本地流式语音输入](local-stt.md)。
 
@@ -212,7 +212,7 @@ python -m pip install -e ".[desktop,ai,dev]"
 llm-lab-gui
 ```
 
-当前候选源码标记 `0.4.0a4`，公开下载仍以已发布的 GitHub Release 为准；候选 Commit 和本地打包不代表新版已公开发布。候选产物、已运行检查和限制见[本轮验收报告](desktop-candidate-20260909-report.zh.md)。
+当前源码版本为 `1.0.0`，产品对外统一为 v1 首次正式发布。此前 `0.x / Alpha` 是开发期编号；旧截图和验证记录保留其真实日期与来源，不改写成 v1 新测试。下载与限制见[发布说明](release-notes-v1.0.0.md)。
 
 离屏 Smoke：
 

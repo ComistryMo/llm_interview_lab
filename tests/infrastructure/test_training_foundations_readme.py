@@ -12,6 +12,7 @@ import pytest
 from llm_interview_lab.catalog import load_catalog
 from llm_interview_lab.events import append_event, read_events, reduce_events
 from llm_interview_lab.lifecycle import ReviewInput, record_review
+from llm_interview_lab.release_version import release_metadata
 from llm_interview_lab.workspace import event_schema_path, init_profile, profile_paths, start_problem
 
 
@@ -263,27 +264,21 @@ def _heading_position(readme: str, aliases: tuple[str, ...]) -> int:
 
 def test_readme_is_a_concise_product_page_with_required_section_order() -> None:
     readme = _readme()
-    assert 250 <= len(readme.splitlines()) <= 450
+    # A product page should not need filler to reach a minimum line count.
+    assert len(readme.splitlines()) <= 200
 
     groups = (
-        ("start in 5 minutes", "下载与三分钟开始"),
-        ("why this project", "这是什么项目"),
-        ("choose a track", "适合哪些 AI 岗位"),
-        ("gui", "GUI 使用流程"),
-        ("learning loop", "如何开始训练"),
-        ("interview", "如何进行模拟面试"),
-        ("use with ai", "如何接入 ai"),
-        ("what makes it different", "项目的差异化"),
-        ("workspace", "个人数据与隐私"),
-        ("project status", "项目状态"),
-        ("contributing", "参与贡献"),
-        ("roadmap",),
+        ("下载",),
+        ("能用它做什么", "功能"),
+        ("第一次使用", "开始使用"),
+        ("从源码运行", "源码安装"),
+        ("文档", "反馈"),
     )
     positions = [_heading_position(readme, aliases) for aliases in groups]
     assert positions == sorted(positions)
 
-    for entry in ("下载桌面应用", "浏览课程", "连接 AI"):
-        assert entry in readme
+    for guide in ("docs/desktop-app.md", "docs/interviews.md", "docs/local-stt.md"):
+        assert guide in readme
 
 
 def test_readme_quick_start_uses_real_clone_first_commands() -> None:
@@ -294,55 +289,30 @@ def test_readme_quick_start_uses_real_clone_first_commands() -> None:
         "python -m venv .venv",
         ".venv\\Scripts\\Activate.ps1",
         ". .venv/bin/activate",
-        'python -m pip install -e ".[dev]"',
-        "llm-lab init --profile default --track ai_foundation",
-        "llm-lab doctor",
-        "llm-lab next --profile default",
-        "llm-lab start FND-001 --profile default",
-        "llm-lab test FND-001 --profile default",
+        'python -m pip install -e ".[desktop,ai,dev]"',
+        "llm-lab-gui",
     )
     for command in commands:
         assert command in readme, command
 
-    assert re.search(r"(?i)(starter|起始代码).{0,80}(预期|expected).{0,30}(失败|fail)", readme)
     assert 'python -m pip install -e ".[torch,dev]"' in readme
 
 
 def test_readme_ai_is_interview_only_and_keeps_safety_boundaries() -> None:
     readme = _readme()
-    policy = (REPO_ROOT / "coach/POLICY.md").read_text(encoding="utf-8")
-    assert "已移除独立 AI 辅助页面" in readme
     assert "一次只生成下一问" in readme
-    assert "不直接修改候选人答案" in readme
     assert 'Act in COACH mode' not in readme
-    assert "mastered" in readme and "mastery" in policy
-    assert "workspace/profiles/<id>/" in readme
-    assert "Bring Your Own AI" in readme or "自带 AI" in readme
+    assert "确认" in readme and "上下文" in readme
+    assert "系统密钥环" in readme
+    assert "云端额度" in readme and "计费" in readme
+    assert "不连接 AI" in readme
 
 
-def test_readme_status_is_derived_from_the_current_catalog() -> None:
-    catalog = load_catalog(REPO_ROOT)
-    ready = [problem for problem in catalog.problems.values() if problem.ready]
-    statistics = {
-        "Ready": len(ready),
-        "Oracle-validated": sum(
-            problem.validation_level in {"oracle", "field", "stable"}
-            for problem in ready
-        ),
-        "Retention-ready": sum(
-            all(problem.retention_variant(REPO_ROOT, stage) for stage in ("d2", "d7"))
-            for problem in ready
-        ),
-        "Field-tested": sum(problem.field_runs for problem in ready),
-    }
+def test_readme_links_to_content_scope_and_explains_optional_dependencies() -> None:
     readme = _readme()
-
-    for label, value in statistics.items():
-        assert re.search(
-            rf"(?im){re.escape(label)}[^\n]*\b{value}\b", readme
-        ), f"README does not report {label}={value}"
-    version = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    assert statistics["Field-tested"] == 0
+    assert "docs/content/release-candidate-coverage-20260909.zh.md" in readme
+    assert "PyTorch" in readme and "未内置" in readme
+    assert "前置练习" in readme
 
 
 def _assert_exact_case(path: Path) -> None:
@@ -369,10 +339,12 @@ def _github_heading_anchors(markdown: str) -> set[str]:
     return anchors
 
 
-def test_readme_relative_links_and_anchors_resolve_with_exact_case() -> None:
-    source = REPO_ROOT / "README.md"
+@pytest.mark.parametrize("document", ["README.md", "README.en.md", "docs/README.md"])
+def test_readme_relative_links_and_anchors_resolve_with_exact_case(document) -> None:
+    source = REPO_ROOT / document
     readme = source.read_text(encoding="utf-8")
-    targets = re.findall(r"(?<!!)\[[^\]]+\]\(([^)]+)\)", readme)
+    targets = re.findall(r"!?\[[^\]]+\]\(([^)]+)\)", readme)
+    targets += re.findall(r'<img\s[^>]*src="([^"]+)"', readme)
     assert targets
 
     for raw_target in targets:
@@ -388,25 +360,20 @@ def test_readme_relative_links_and_anchors_resolve_with_exact_case() -> None:
             assert fragment in anchors, f"broken README anchor: {target}"
 
 
-def test_readme_mermaid_and_release_markers_are_github_compatible() -> None:
+def test_readme_diagrams_and_release_links_are_github_compatible() -> None:
     readme = _readme()
     diagrams = re.findall(r"```mermaid\s*\n(.*?)```", readme, flags=re.DOTALL)
     assert readme.count("```mermaid") == len(diagrams)
-    assert 1 <= len(diagrams) <= 2
     assert all(re.match(r"\s*flowchart\s+(LR|TD)\b", diagram) for diagram in diagrams)
-
-    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    match = re.search(r'(?m)^version = "(\d+\.\d+\.\d+)a(\d+)"$', pyproject)
-    assert match is not None
-    release = f"v{match.group(1)}-alpha.{match.group(2)}"
-    assert release in readme
-    assert "actions/workflows/ci.yml/badge.svg?branch=main" in readme
-    assert "img.shields.io/github/v/release/ComistryMo/llm_interview_lab" in readme
+    release = release_metadata()["tag"]
+    assert f"/releases/tag/{release}" in readme
+    assert f"/releases/download/{release}/SHA256SUMS.txt" in readme
 
 
-def test_readme_is_honest_about_field_evidence_tests_and_local_execution() -> None:
+def test_readme_distinguishes_practice_evidence_and_safe_local_execution() -> None:
     readme = _readme()
-    assert re.search(r"(?i)grader.{0,100}(not a hostile-code security sandbox|不构成恶意代码安全沙箱)", readme)
-    assert re.search(r"(?i)(field-tested runs|field runs|field-tested).{0,20}\b0\b|实际 field runs.{0,20}\b0\b", readme)
-    assert re.search(r"(?i)(public tests passed|公开测试).{0,40}(mastered|已掌握)", readme)
+    assert "只运行你信任的代码" in readme
+    assert "不提供恶意代码安全沙箱" in readme
+    assert re.search(r"公开测试.{0,40}不等于.{0,20}掌握", readme)
+    assert "AI" in readme and "实际跑通" in readme
     assert "workspace/profiles/maintainer" not in readme

@@ -1,14 +1,14 @@
 # 中文文档索引
 
-适用公开版本：**[v0.4.0-alpha.4](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4)**（2026-09-09）。本索引优先指向当前用户指南；旧版报告及原型保留为历史证据，不应当作当前操作说明。
+适用公开版本：**[v1.0.0](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0)**（2026-09-09）。本索引优先指向当前用户指南；旧版报告及原型保留为历史证据，不应当作当前操作说明。
 
 ## 下载与开始
 
-- [项目首页与下载](../README.md#下载与三分钟开始)
+- [项目首页与下载](../README.md#下载)
 - [Windows：完整解压后运行 exe](windows.md)
 - [macOS 14+ Apple Silicon：DMG / APP ZIP](macos.md)
 - [桌面页面、快捷键、源码启动](desktop-app.md)
-- [版本变化、SHA 和已知限制](release-notes-v0.4.0-alpha.4.md)
+- [版本变化、SHA 和已知限制](release-notes-v1.0.0.md)
 
 ## 日常使用
 
@@ -18,7 +18,7 @@
 - [材料、数据目录、备份与隐私](workspace.md)
 - [岗位与技能](role-profiles.md)
 - [训练建议与旧 CLI 教练规范](best-practices.md)
-- [课程与训练路径](../README.md#如何开始训练) · [术语](terminology.md)
+- [课程与训练路径](../README.md#亲手写代码把原理讲明白) · [术语](terminology.md)
 
 ## 内容与贡献
 
@@ -30,7 +30,7 @@
 ## 工程与验收
 
 - [架构说明](architecture.md) · [计划入口](../plans/README.md)
-- [Alpha.4 构建与原生验收记录](desktop-candidate-20260909-report.zh.md)
+- [v1.0.0 构建与原生验收记录](desktop-candidate-20260909-report.zh.md)
 - [本版七页 Before/After](design/desktop-candidate-20260909.zh.md) · [视觉决策与历史原型](design/product-v1-visual-directions.zh.md)
 - [同机性能实测](performance/desktop-candidate-20260909.zh.md)
 - [本地语音两阶段验证](local-stt-two-pass-validation.zh.md) · [模型比较实验](local-stt-comparison.zh.md)

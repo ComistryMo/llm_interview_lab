@@ -1,5 +1,7 @@
 {
   "version": "0.4.0a4",
+  "compatible_versions": ["1.0.0"],
+  "reuse_note": "v1 only changes release metadata and documentation; capture source versions and PNG hashes remain historical.",
   "language": "zh-CN",
   "synthetic": true,
   "renderer": "production AppController + Main.qml; Windows/software",

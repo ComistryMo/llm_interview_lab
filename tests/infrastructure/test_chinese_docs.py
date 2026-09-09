@@ -155,35 +155,35 @@ def test_published_version_links_and_release_workflow_are_consistent() -> None:
     assert "compare/v0.4.0-alpha.2...v0.4.0-alpha.3" in changelog
 
 
-def test_readme_statistics_are_derived_from_the_catalog() -> None:
+def test_readme_linked_coverage_is_derived_from_the_catalog() -> None:
     catalog = load_catalog(REPO_ROOT)
     ready = [problem for problem in catalog.problems.values() if problem.ready]
     values = {
-        "Ready Problems": len(ready),
-        "Planned Problems": len(catalog.problems) - len(ready),
-        "Oracle-validated Problems": sum(
-            problem.validation_level in {"oracle", "field", "stable"}
-            for problem in ready
-        ),
-        "Retention-ready Problems": sum(
-            all(problem.retention_variant(REPO_ROOT, stage) for stage in ("d2", "d7"))
-            for problem in ready
-        ),
-        "Field-tested runs": sum(problem.field_runs for problem in ready),
+        "ready": len(ready),
+        "planned": len(catalog.problems) - len(ready),
+        "oracle": sum(problem.validation_level == "oracle" for problem in ready),
+        "contract": sum(problem.validation_level == "contract" for problem in ready),
     }
-    readme = _read("README.md")
+    coverage_path = "docs/content/release-candidate-coverage-20260909.zh.md"
+    assert coverage_path in _read("README.md")
+    coverage = _read(coverage_path)
     for label, value in values.items():
-        assert re.search(rf"{re.escape(label)}[^\n]*\b{value}\b", readme), label
-    assert values["Field-tested runs"] == 0
-    assert "不是 Beta 或 Stable" in readme
-    assert "公开测试也不是隐藏的防作弊测试" in readme
+        assert f"'{label}': {value}" in coverage, label
+    retention_ready = sum(
+        all(problem.retention_variant(REPO_ROOT, stage) for stage in ("d2", "d7"))
+        for problem in ready
+    )
+    assert f"D+2/D+7 均验证的节点 {retention_ready}" in coverage
+    notes = _read(release_metadata()["notes"])
+    field_runs = sum(problem.field_runs for problem in ready)
+    assert f"Field-tested runs：{field_runs}" in notes
 
 
 def test_readme_is_honest_about_unsigned_macos_and_no_sandbox() -> None:
     readme = _read("README.md")
     assert "未使用 Apple Developer ID" in readme
-    assert "未经过 Notarization" in readme
-    assert "不构成恶意代码安全沙箱" in readme
+    assert "未公证" in readme or "未经过 Notarization" in readme
+    assert "不提供恶意代码安全沙箱" in readme
     assert "Intel Mac" in readme and "不提供" in readme
     assert "保证 Offer" not in readme
     assert "完全防作弊" not in readme

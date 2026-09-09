@@ -1,62 +1,90 @@
+<p align="center">
+  <img src="src/llm_interview_lab/desktop/resources/app-icon.png" width="80" height="80" alt="LLM Interview Lab">
+</p>
+
 # LLM Interview Lab
 
-[简体中文（规范版本）](README.md) | English
+[简体中文](README.md) | English
 
-The Chinese README is the canonical product description. This is the translation for **v0.4.0-alpha.4**, published on 2026-09-09.
+**Practice the code. Explain your projects. Rehearse the interview.**
 
-A local-first desktop workspace for AI interview practice: Chinese coding problems, one-question-at-a-time interviews, authorized résumé/JD context, and evidence-based review.
+LLM Interview Lab is a desktop practice tool for AI job candidates. Work through coding problems on your own, or bring your résumé and target role to an AI interview that follows your answers one question at a time.
+
+The [Chinese README](README.md) is the canonical version. The application defaults to Chinese, with English available in settings and problem statements.
+
+[Download](#download) · [Get started](#get-started) · [Documentation](docs/README.md) · [Feedback](https://github.com/ComistryMo/llm_interview_lab/issues)
+
+![Desktop home, using sample data](docs/images/candidate-20260909/after/home-dark.png)
 
 ## Download
 
-[Release and notes](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4) · [SHA-256 checksums](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/SHA256SUMS.txt)
+**v1.0.0 · First official release**
 
-| Platform | Asset |
+| System | Download |
 |---|---|
-| Windows 10/11 x64 | [LLMInterviewLab-Windows-x64-portable.zip](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-Windows-x64-portable.zip) |
-| macOS 14+, Apple Silicon | [LLMInterviewLab-macOS-arm64.dmg](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.dmg) |
-| macOS 14+, Apple Silicon, ZIP | [LLMInterviewLab-macOS-arm64.app.zip](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.app.zip) |
+| Windows 10 / 11, x64 | [Portable ZIP](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/LLMInterviewLab-Windows-x64-portable.zip) — extract the entire folder and run `LLMInterviewLab.exe` |
+| macOS 14+, Apple Silicon | [DMG](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/LLMInterviewLab-macOS-arm64.dmg) — open and drag the app into Applications |
 
-Extract the **entire** Windows archive and run LLMInterviewLab.exe; do not move the exe alone. Python is bundled. On macOS, drag the app into Applications.
-This is an Alpha, not a stable release. macOS uses ad-hoc signing, without Apple Developer ID or notarization. No Intel/Universal2 package is provided. Verify origin and checksums before following the [Windows](docs/windows.md) or [macOS](docs/macos.md) guide.
+Python is included. Do not move the Windows exe out of its folder. There is no Intel Mac build.
 
-## Start
+[Release notes](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0) · [Alternative macOS ZIP](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/LLMInterviewLab-macOS-arm64.app.zip) · [Checksums](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/SHA256SUMS.txt)
 
-Create a local profile, choose a role, and start practicing. AI is optional for local coding, tests and progress; personalized desktop interviews require your own AI connection.
+The packages do not have commercial code signing; the macOS app has no Apple Developer ID or notarization. Follow the [Windows](docs/windows.md) / [macOS](docs/macos.md) guide to verify the download before opening it.
 
-![Chinese desktop, synthetic profile](docs/images/candidate-20260909/after/home-dark.png)
+## What you can practice
 
-[Current screenshots](docs/design/desktop-candidate-20260909.zh.md) · [Verification and limits](docs/desktop-candidate-20260909-report.zh.md)
+### An interview grounded in your experience
 
-## Interviews and practice
+Introduction → experience deep dive → role fundamentals → coding → review.
 
-- Eight roles share a skill graph. Role and authorized background determine focus; easy/standard/hard determines depth and pressure, not grading leniency. New interviews do not divide candidates by internship, graduate or experienced status.
-- Introduction → experience deep dive → role fundamentals → coding → evidence review. Only the next question is generated; no full future question list is frozen at startup.
-- Submit once to save and continue. AI waiting does not consume candidate time. Detailed scoring happens after finishing, with retry of failed items only.
-- Coding IDs must resolve to verified, runnable local problems. Running a custom Python example is separate from public tests and AI code evaluation.
-- Chinese problems contain full requirements with an English toggle. A native editor provides line numbers, highlighting, indentation, undo/redo and save status.
-- Passing public tests does not mean mastery. Review, oral explanation and verified D+2/D+7 variants remain separate requirements.
+The interviewer uses your authorized résumé, JD and previous answers to generate only the next question. Submit once to save your answer and continue. Pause, resume and retry are supported; AI generation time is excluded from your answering time.
 
-## AI and speech
+Your role determines the focus. Easy, standard and hard change depth, breadth and pressure—not grading leniency. New interviews do not divide candidates into internship, graduate or experienced tiers.
 
-Use your own DeepSeek/OpenAI-compatible API, local Ollama or installed Codex. Models and reasoning settings are configurable; keys are stored in the OS keyring and can be updated or deleted. Connections restore on startup. API probes may incur a small provider charge; the project supplies no cloud quota.
+Connect your own DeepSeek or OpenAI-compatible API, local Ollama, or an installed and signed-in Codex. Choose the model and supported reasoning settings in AI Connections or Codex settings.
 
-Speech defaults to **local streaming preview with Qwen3-ASR 0.6B endpoint correction**. Model weights download separately; no speech API key is required. Performance and accuracy depend on hardware and input. Optional remote transcription requires explicit selection and consent.
+### Code and fundamentals, together
 
-Known issue: historical DeepSeek high-reasoning transport/empty-body failures remain unverified as resolved. This publication did not run new paid-model or microphone acceptance tests.
+Practice optimizers, stable losses, backpropagation, RMSNorm, MHA, RoPE, GQA, KV Cache, LoRA, SFT masking, DPO, GRPO and GAE. Knowledge cards connect concepts, derivations, common mistakes and follow-up questions to coding exercises.
 
-## Privacy and evidence
+Write your implementation and your own examples, then run them locally. Public tests are a separate action. AI feedback on your code does not mean an unexecuted program passed tests. Some exercises have prerequisites or need PyTorch; see the [content coverage](docs/content/release-candidate-coverage-20260909.zh.md).
 
-Profiles, materials, answers, recordings and interviews remain local and excluded from release assets. Material preferences can restore when SHA matches, but new sessions still confirm the sending scope; changed or revoked material is not silently reused. Never include employer-confidential information.
+### A useful next step after each attempt
 
-The local grader is not a hostile-code security sandbox. AI assessments do not grant Practice mastery or claim an unrun program passed tests.
+Review the interview transcript, strengths, gaps and suggested practice. Assessments reference your actual answers or code; missing evidence remains visible. Practice progress and interview scores are separate. Passing public tests alone does not establish mastery.
 
-The catalog has **96 ready nodes (84 Oracle-validated, 12 contract-only), 158 planned nodes, 24 retention-ready problems, 255 knowledge cards and 258 source records**; field-tested runs remain 0. Optional PyTorch is not bundled: **27 verified coding problems are runnable in the portable runtime**, not all ready problems.
+Eight role areas cover AI product, applications, agents, algorithm research, post-training, ML infrastructure, inference systems, and evaluation/data safety. [Role details](docs/role-profiles.md).
 
-Artifacts come unchanged from [verified CI source 4f93969](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34288557804). The release tag also includes documentation and archive organization, with unchanged application/build inputs. Windows native synthetic UAT passed; macOS 15 arm64 CI passed build, launch, worker and mounted-package checks. These are not physical-macOS, fresh-Windows-VM or live-microphone acceptance claims.
+## Get started
 
-## Source installation
+1. Create a local learning profile and choose a target role. You can practice without AI; the last profile is restored on startup.
+2. For mock interviews, save your AI connection and model. Optionally import a redacted résumé or JD in Materials. Text-based PDF, DOCX and text files are supported; scanned PDFs need prior text extraction.
+3. Choose difficulty and duration, confirm what this interview may send, and start answering. Settings and material selections are remembered, but a new interview still needs confirmation of its sending scope.
 
-Python 3.11 is recommended; core CLI supports 3.10–3.12.
+The first interview defaults to standard difficulty and 60 minutes. [Interview guide](docs/interviews.md).
+
+## Speak your answers
+
+Speech recognition runs locally, with no speech API key or cloud transcription charge.
+
+In the interview answer area, select voice input, open voice settings and choose **Download local models**. The app downloads, verifies and installs about **1.19 GB** of weights; no manual extraction or path configuration is needed. Recognition can then work offline.
+
+Text appears while you speak and is corrected after pauses. Finish recording, check the editable transcript, then submit. Initial loading can take longer; terminology, accents and noise can still cause errors. Downloads require access to the model sources. [Local speech guide](docs/local-stt.md).
+
+## Costs, privacy and limits
+
+- Local practice and speech recognition need no paid service. Cloud interview APIs use your own account and may incur provider charges; the project supplies no cloud quota. Ollama can run a local model.
+- Profiles, materials, answers and recordings are stored locally. Remote interviewers receive confirmed context and answers you submit; this does not automatically upload local audio.
+- API keys stay in the OS keyring and can be reused, changed or deleted. See [AI connections](docs/ai-connections.md) and [data management](docs/workspace.md). Do not import confidential employer materials.
+- Run only code you trust. Local execution is not a hostile-code security sandbox.
+- PyTorch is not bundled. DeepSeek high-reasoning requests have known empty-response or transport failures. Speech accuracy, latency and device compatibility vary. See [release limitations](docs/release-notes-v1.0.0.md).
+
+## Run from source
+
+For developers, Python **3.11** is recommended. Desktop users can use the downloads above.
+
+<details>
+<summary>Installation commands</summary>
 
 ~~~bash
 git clone https://github.com/ComistryMo/llm_interview_lab.git
@@ -64,13 +92,27 @@ cd llm_interview_lab
 python -m venv .venv
 ~~~
 
-Activate the virtual environment (PowerShell: .venv\Scripts\Activate.ps1; macOS/Linux: . .venv/bin/activate), then:
+Activate the environment: `.venv\Scripts\Activate.ps1` in Windows PowerShell, or `. .venv/bin/activate` on macOS/Linux.
 
 ~~~bash
 python -m pip install -e ".[desktop,ai,dev]"
 llm-lab-gui
 ~~~
 
-For PyTorch problems, install the torch,dev extras. Keep application data when upgrading; the app can download and verify updates but will not silently install them.
+For PyTorch exercises:
 
-[Chinese documentation](docs/README.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Plans and history](plans/README.md)
+~~~bash
+python -m pip install -e ".[torch,dev]"
+~~~
+
+[Source launch and data directory options](docs/desktop-app.md#源码运行)
+
+</details>
+
+## Documentation and feedback
+
+[User guides](docs/README.md) · [Changelog](CHANGELOG.md) · [Report a problem](https://github.com/ComistryMo/llm_interview_lab/issues) · [Contribute](CONTRIBUTING.md)
+
+Please redact screenshots and logs. Do not post API keys, complete résumés or private learning profiles.
+
+[Apache-2.0](LICENSE) · [Third-party notices](docs/third-party-notices.md)

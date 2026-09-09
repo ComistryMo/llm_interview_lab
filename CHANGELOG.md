@@ -1,10 +1,24 @@
 # 变更日志
 
-重要变更按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 记录。版本号遵循语义化版本；Alpha 是预发布版本，公开接口仍可能调整。
+产品从 **v1.0.0** 开始正式发布。此前的 `0.x / Alpha` 是开发期编号，保留记录用于追溯，不作为对外产品代际。
 
 ## [未发布]
 
 暂无未发布变更。
+
+## [1.0.0] - 2026-09-09
+
+### 首次正式发布
+
+- 统一产品、源码、桌面包与下载入口的版本为 v1.0.0。
+- 提供中文 Windows 与 macOS 桌面应用：逐问 AI 模拟面试、手撕与知识练习、材料管理、面试复盘和本地流式语音输入。
+- README 重写为面向使用者的产品首页，同步英文版、安装指南和语音下载说明。
+- 清理 GitHub 上的旧开发版 Release 页面与附件；保留 Git 提交与历史标签。清理前备份旧发布说明和文件。
+- 正式版编号不代表已解决全部已知问题；签名、PyTorch、语音和高推理限制见[发布说明](docs/release-notes-v1.0.0.md)。
+
+## 开发期记录
+
+以下是 v1 之前的开发与验证历史，不是当前下载说明。
 
 ## [0.4.0-alpha.4] - 2026-09-09
 
@@ -110,7 +124,8 @@
 
 - Stage 00 训练原型、Python 环境检查、限定 pytest 入口、隐私交接导出和初始开源治理。
 
-[未发布]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.4...HEAD
+[未发布]: https://github.com/ComistryMo/llm_interview_lab/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0
 [0.4.0-alpha.4]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.3...v0.4.0-alpha.4
 [0.4.0-alpha.3]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.2...v0.4.0-alpha.3
 [0.4.0-alpha.2]: https://github.com/ComistryMo/llm_interview_lab/compare/v0.4.0-alpha.1...v0.4.0-alpha.2

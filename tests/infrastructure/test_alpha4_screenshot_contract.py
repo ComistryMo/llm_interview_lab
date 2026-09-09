@@ -68,7 +68,7 @@ def test_current_candidate_captures_match_production_source_and_pixels() -> None
 
     path = REPO_ROOT / "docs/images/candidate-20260909/manifest.json"
     manifest = json.loads(path.read_text(encoding="utf-8"))
-    assert manifest["version"] == __version__
+    assert __version__ in [manifest["version"], *manifest.get("compatible_versions", [])]
     assert manifest["synthetic"] is True and manifest["language"] == "zh-CN"
     assert manifest["logical_size"] == [1280, 800]
     assert "production AppController" in manifest["renderer"]
@@ -102,6 +102,13 @@ def test_current_candidate_captures_match_production_source_and_pixels() -> None
                 current = current_path.read_bytes()
                 if current_path.suffix in {".py", ".qml", ".svg", ".md", ".yaml", ".yml", ".json", ".txt", ".qrc"} or current_path.name == "qmldir":
                     current = current.replace(b"\r\n", b"\n")
+                if relative == "src/llm_interview_lab/__init__.py":
+                    # Preserve the capture's actual version. Only the release
+                    # number may differ; all other source bytes still match.
+                    current = current.replace(
+                        f'__version__ = "{__version__}"'.encode(),
+                        f'__version__ = "{manifest["version"]}"'.encode(),
+                    )
                 assert hashlib.sha256(current).hexdigest() == digest, relative
         if name == "after":
             current_names = _git("ls-files", "--", "src/llm_interview_lab/desktop",

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-interview-lab"
-version = "0.4.0a4"
+version = "1.0.0"
 description = "A local-first, role-aware, AI-coached interview workbench for AI careers"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ license = "Apache-2.0"
 authors = [{ name = "ComistryMo" }]
 keywords = ["ai", "llm", "interview", "mock-interview", "pytorch", "post-training", "learning"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Education",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",

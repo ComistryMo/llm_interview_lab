@@ -1,411 +1,142 @@
 <p align="center">
-  <img src="src/llm_interview_lab/desktop/resources/app-icon.png" width="112" height="112" alt="LLM Interview Lab Quiet Forge 项目图标">
+  <img src="src/llm_interview_lab/desktop/resources/app-icon.png" width="80" height="80" alt="LLM Interview Lab">
 </p>
 
 # LLM Interview Lab
 
-[简体中文](README.md) | [English](README.en.md)
+简体中文 | [English](README.en.md)
 
-> 一个本地优先、岗位感知、AI 辅助的 AI 面试训练工作台：用岗位技能图谱、固定课程、结构化模拟面试、代码测试与间隔复测，把“看懂”变成“能独立实现和解释”。
+**练手撕，讲项目，把 AI 面试完整练一遍。**
 
-[![CI](https://github.com/ComistryMo/llm_interview_lab/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ComistryMo/llm_interview_lab/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/ComistryMo/llm_interview_lab?include_prereleases)](https://github.com/ComistryMo/llm_interview_lab/releases)
-[![Python](https://img.shields.io/badge/Python-3.10--3.12-3776AB?logo=python&logoColor=white)](pyproject.toml)
-[![License](https://img.shields.io/github/license/ComistryMo/llm_interview_lab)](LICENSE)
-[![Status](https://img.shields.io/badge/status-alpha-orange)](#项目状态)
+LLM Interview Lab 是面向 AI 求职者的桌面练习工具。你可以独立写代码、补基础，也可以带上简历和目标岗位，让 AI 围绕你的经历逐问追问，最后回看回答、代码和需要补强的地方。
 
-[**下载桌面应用**](#下载与三分钟开始) ·
-[**浏览课程**](#如何开始训练) ·
-[**连接 AI**](#如何接入-ai)
+[下载应用](#下载) · [第一次使用](#第一次使用) · [使用指南](docs/desktop-app.md) · [反馈问题](https://github.com/ComistryMo/llm_interview_lab/issues)
 
-![Alpha.4：面试优先的中文首页](docs/images/candidate-20260909/after/home-dark.png)
+![LLM Interview Lab 中文桌面首页](docs/images/candidate-20260909/after/home-dark.png)
 
-**[v0.4.0-alpha.4 已公开发布](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4)**。以上为正式页面、隔离合成档案；[七页深浅主题 Before/After](docs/design/desktop-candidate-20260909.zh.md)及[双平台验收与限制](docs/desktop-candidate-20260909-report.zh.md)。侧栏可收起、中文题面完整展示、口述草稿本地恢复；新面试取消求职阶段分档，逐问生成、结束评分。[全部中文文档](docs/README.md)。
+<sub>正式应用界面，使用演示资料。支持深浅主题与可收起侧栏。[查看更多界面](docs/design/desktop-candidate-20260909.zh.md)</sub>
 
-**岗位路线 · 经过测试的练习 · AI 模拟面试 · 证据复盘 · 间隔复测**
+## 下载
 
-这不是随机题单，不是一次测试通过就宣布掌握，也不是让 AI 代写答案。
-你可以只刷题，也可以结合自己的脱敏求职材料进行针对性模拟面试；不用连接 AI 也能完整使用确定性的本地功能。
+**v1.0.0 · 首个正式版**
 
-## 下载与三分钟开始
-
-当前公开版本为 **v0.4.0-alpha.4**（源码 `0.4.0a4`），2026-09-09 发布。Windows/macOS 使用同一次已通过技术门禁的原始构建，下载清单与限制见[发布说明](docs/release-notes-v0.4.0-alpha.4.md)。这是 Alpha 预发布，不是稳定版。
-
-发布包完整携带 96 道 ready 题资产；未内置可选 PyTorch，27 道已验证代码题具备包内运行环境，不能按开发机的 84 道宣传全题可运行。需要 PyTorch 题时使用源码安装。详见[覆盖口径](docs/content/release-candidate-coverage-20260909.zh.md)及[同机性能数据](docs/performance/desktop-candidate-20260909.zh.md)。
-
-Alpha.4 macOS 完整运行时要求 **Apple Silicon / macOS 14+**；未使用 Apple Developer ID、未经过 Notarization，不沿用旧版 macOS 12 要求。实测范围见[验收报告](docs/desktop-candidate-20260909-report.zh.md)。
-
-| 你使用的环境 | 推荐方式 |
+| 系统 | 下载与安装 |
 |---|---|
-| Windows 10 / 11 x64 | [LLMInterviewLab-Windows-x64-portable.zip](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-Windows-x64-portable.zip)，完整解压后运行 `LLMInterviewLab.exe` |
-| Apple Silicon Mac（macOS 14+） | [LLMInterviewLab-macOS-arm64.dmg](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.dmg) |
-| 需要直接解压验证的 Apple Silicon Mac | [LLMInterviewLab-macOS-arm64.app.zip](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/LLMInterviewLab-macOS-arm64.app.zip) |
-| Intel Mac | 本版没有经过验证的 x86_64 包 |
-| 开发者或贡献者 | 源码安装 |
-| 不希望连接 AI | 首次启动选择“暂不连接 AI” |
+| Windows 10 / 11，64 位 | [下载 Windows 便携版](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/LLMInterviewLab-Windows-x64-portable.zip)，完整解压后双击 `LLMInterviewLab.exe` |
+| macOS 14+，Apple Silicon | [下载 macOS 安装包](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/LLMInterviewLab-macOS-arm64.dmg)，打开后拖入「应用程序」 |
 
-[下载 Alpha.4 桌面版](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.4) · [浏览当前 `main` 源码](https://github.com/ComistryMo/llm_interview_lab/tree/main) · [校验 SHA-256](https://github.com/ComistryMo/llm_interview_lab/releases/download/v0.4.0-alpha.4/SHA256SUMS.txt)
+不需要安装 Python。Windows 请保留整个解压目录，不要单独移动 exe；本版不提供 Intel Mac 安装包。
 
-首次启动流程如下：
+[发布说明](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v1.0.0) · [macOS ZIP 备用下载](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/LLMInterviewLab-macOS-arm64.app.zip) · [文件校验值](https://github.com/ComistryMo/llm_interview_lab/releases/download/v1.0.0/SHA256SUMS.txt)
 
-```text
-打开应用
-→ 创建学习档案
-→ 选择目标岗位
-→ 直接开始（默认使用 No-AI；AI 可稍后在设置中连接）
-→ 点击“开始训练”
-```
+安装包目前没有商业代码签名，macOS 未使用 Apple Developer ID、未公证。首次打开遇到系统提示时，请按 [Windows](docs/windows.md) / [macOS](docs/macos.md) 指南核对来源后打开，不要关闭系统安全保护。
 
-普通桌面用户不需要安装 Python、打开终端、编辑 YAML 或记 Problem ID。Windows 需保留整个解压目录，不能只复制 exe。更新时先退出旧应用，解压到新目录启动；不要删除应用数据目录。设置提供检查更新、下载与 SHA 校验，不会静默安装。
-Windows 细节见 [Windows 指南](docs/windows.md)，macOS 细节见 [macOS 指南](docs/macos.md)。
+## 能用它做什么
 
-### 源码安装
+### 围绕自己的经历，练一场面试
 
-Python 3.11 是推荐版本；核心 CLI 支持 Python 3.10–3.12。
+面试按「自我介绍 → 经历深挖 → 岗位原理与八股 → 手撕 → 复盘」展开。AI 结合你授权的简历、JD 和已经说过的内容，一次只生成下一问；回答后点击「提交并继续」，不必自己再写一轮提示词。
 
-```bash
+岗位决定关注什么，简单／标准／困难决定追问的深度、广度和压力。例如准备后训练岗位，可以围绕 SFT、DPO、GRPO 等知识，再结合训练项目讨论实现、实验与取舍。求职者不按实习、校招或工作年限分档。
+
+面试支持暂停、恢复和失败重试；AI 生成期间不扣作答时间。你可以选择 DeepSeek、兼容 OpenAI 的 API、本地 Ollama，或把已安装并登录的 Codex 作为面试官。模型和推理强度在「AI 连接」或 Codex 设置中选择。
+
+### 亲手写代码，把原理讲明白
+
+在「刷题训练」中选择题目，阅读中文要求，在编辑器里实现、运行，再检查结果；需要时可切换英文题目。
+
+- **训练基础**：SGD、Momentum、AdamW、稳定交叉熵、反向传播。
+- **模型结构**：RMSNorm、MHA、RoPE、GQA、KV Cache、LoRA。
+- **后训练**：SFT Loss Mask、DPO、GRPO、GAE 与相关原理。
+- **知识练习**：概念、推导、常见错误和深入追问，与对应手撕题相互关联。
+
+你可以自己写样例并「运行代码」，也可以单独运行题目的「公开测试」。面试中的 AI 会评价代码思路和实现；这与程序有没有实际跑通是两回事。
+
+部分题目需要先完成前置练习；依赖 PyTorch 的题目需要[源码安装](#从源码运行)。完整的题目与可运行范围见[内容说明](docs/content/release-candidate-coverage-20260909.zh.md)。
+
+### 知道这次哪里没答好，下次练什么
+
+面试结束后回看问答记录、优势、主要缺口和后续练习建议。评分引用本次回答或代码；没有回答、没有运行的部分会保留相应说明。
+
+练习进度与面试评价分别保存。公开测试通过不等于已经掌握，还需要能解释做法、处理边界，并在之后独立完成复测。
+
+目前有八类岗位方向：**AI 产品、AI 应用、Agent、算法研究、后训练、ML 平台与 Infra、推理系统、评测与数据安全**。[查看各岗位重点](docs/role-profiles.md)。
+
+## 第一次使用
+
+1. **创建学习档案，选择目标岗位。** 只想刷题，可以先不连接 AI；下次启动会恢复上次档案。
+2. **准备模拟面试。** 在「AI 连接」保存自己的服务与模型；有需要时在「求职材料」导入脱敏简历或 JD，支持文本型 PDF、DOCX 和文本文件。
+3. **开始面试。** 选择难度与时长，确认本场发送给 AI 的内容，再开始回答。应用会记住上次配置与材料选择；新场次仍需确认发送范围。
+
+首次默认标准难度、60 分钟。材料不是必填项，扫描版 PDF 暂不支持文字识别。[详细操作](docs/interviews.md)。
+
+## 想用语音回答？
+
+可以，**语音识别在本机完成，不需要语音 API Key，也不产生云端转录费用**。
+
+首次使用：在面试回答区点「语音输入」，展开「语音设置」，点击「下载本地模型」。应用会下载、校验并安装约 **1.19 GB** 的模型文件，无需手动解压或配置路径；下载完成后可以离线识别。
+
+之后点击「语音输入」即可边说边看到文字，停句后自动校准。说完点「完成录音」，检查并修改转录文字，再「提交并继续」。
+
+首次加载可能较慢，专业术语、口音和噪声仍可能影响识别。下载需要能访问模型源，失败时可重试。[本地语音使用说明](docs/local-stt.md)。
+
+## 费用、隐私与使用限制
+
+- **费用**：本地刷题与语音识别不需要付费服务。AI 模拟面试使用你自己的连接；云端 API 按服务商规则计费，本项目不提供云端额度。Ollama 可使用本机模型。
+- **数据**：档案、材料、回答和录音保存在本机。使用远程面试官时，只发送本场确认的上下文与主动提交的回答；本地录音不会因此自动上传。请勿导入雇主机密。
+- **密钥**：API Key 保存在系统密钥环，可复用、修改或删除，不写入仓库。更多说明见 [AI 连接](docs/ai-connections.md)与[数据管理](docs/workspace.md)。
+- **代码执行**：只运行你信任的代码。本地执行不提供恶意代码安全沙箱。
+- **当前限制**：桌面包未内置 PyTorch；DeepSeek 高推理仍有空正文或请求失败的已知记录。语音准确率、模型响应速度和各设备兼容性仍需持续改进。详见[本版限制](docs/release-notes-v1.0.0.md)。
+
+## 从源码运行
+
+普通用户直接下载桌面版即可。开发者推荐使用 **Python 3.11**：
+
+<details>
+<summary>展开安装与启动命令</summary>
+
+先克隆项目并创建虚拟环境：
+
+~~~bash
 git clone https://github.com/ComistryMo/llm_interview_lab.git
 cd llm_interview_lab
 python -m venv .venv
-```
+~~~
 
-激活环境：
+激活环境，按系统选择一条：
 
-```powershell
+~~~powershell
 # Windows PowerShell
 .venv\Scripts\Activate.ps1
-```
+~~~
 
-```bash
+~~~bash
 # macOS / Linux
 . .venv/bin/activate
-```
+~~~
 
 安装并启动：
 
-```bash
+~~~bash
 python -m pip install -e ".[desktop,ai,dev]"
 llm-lab-gui
-```
+~~~
 
-只使用 CLI：
+需要练习 PyTorch 题目时，再安装：
 
-```bash
-python -m pip install -e ".[dev]"
-llm-lab init --profile default --track ai_foundation
-llm-lab doctor
-llm-lab next --profile default
-llm-lab start FND-001 --profile default
-llm-lab test FND-001 --profile default
-```
-
-公开 starter 预期会失败：它只定义接口，不包含答案。根据 `start` 输出编辑当前 `submission.py`，再运行同一条测试命令。
-PyTorch 题使用：
-
-```bash
+~~~bash
 python -m pip install -e ".[torch,dev]"
-```
+~~~
 
-也可以让 CLI 只询问最必要的首次选择：
-
-```bash
-llm-lab quickstart
-```
-
-## 这是什么项目
-
-LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）：
-
-- **求职材料：** 保存简历、求职意向、项目、论文、比赛、岗位 JD 与真实面试问题；只有逐场明确授权的材料才可进入 AI 上下文。
-- **刷题训练：** 固定题目按硬依赖组成 DAG，闯关路线（Quest）提供推荐顺序，综合关卡（Capstone）验证组合能力。
-- **模拟面试：** 岗位决定方向，获准简历/JD决定切入点，简单/标准/困难决定深度与广度，不按实习、校招或年限分档。自我介绍后逐问深挖、原理、手撕；下一问流式显示，结束后台评分并将缺口链接到实际练习。
-
-核心设计：
-
-- 硬依赖、测试、计时、解锁和掌握状态由确定性代码计算。
-- 公开测试通过只是实现证据；契约审查、口述答辩和 D+2 / D+7 间隔复测共同组成掌握条件。
-- 已移除独立 AI 辅助页面。桌面 AI 只用于面试追问与证据评价，一次只生成下一问，不直接修改候选人答案、不自行授予“已掌握”；旧 CLI 教练协议保留兼容。
-- 真实答案、材料、面试记录和连接配置默认保存在本机，并被 Git 忽略。
-
-## 适合哪些 AI 岗位
-
-第一版提供八类公共岗位画像。岗位 Alias 复用同一技能图谱，不复制课程：
-
-| 岗位 | 典型面试重点 |
-|---|---|
-| AI 产品经理 | 问题定义、指标、评测、安全、成本与交付 |
-| AI 应用工程师 | LLM API、RAG、Tool Calling、可靠性与评测 |
-| AI Agent 工程师 | Tool、Parser、Executor、State、Trajectory 与恢复 |
-| AI 算法 / 研究工程师 | 数学、PyTorch、Transformer / VLM 与实验设计 |
-| 大模型后训练工程师 | SFT、Preference、Reward、DPO、PPO / GRPO |
-| AI Infra / ML 平台工程师 | 数据与训练平台、分布式、Checkpoint 与可观测性 |
-| AI 推理 / 系统工程师 | KV Cache、Serving、量化、Kernel 与性能分析 |
-| AI 评测 / 数据 / 安全工程师 | 数据质量、Rubric、污染检测、安全与统计分析 |
-
-详见[岗位画像与面试蓝图](docs/role-profiles.md)。
-
-## GUI 使用流程
-
-首次启动只需两步：创建学习档案、选择岗位。应用默认 **No-AI**；能力自评和 AI 连接可以稍后补充。无需填写求职阶段，本地刷题不依赖 AI。
-
-![两步首次启动](docs/images/desktop-onboarding.png)
-
-首页突出“继续面试 / 开始面试”，下方展示当前练习、最近记录和复盘建议。准备页恢复上次岗位、难度、时长、AI 配置及有效材料选择；同 SHA 的材料偏好可复用，开始前仍确认本场发送范围，变更或撤权不继承旧许可。
-
-<details>
-<summary>查看答题、面试和 AI 连接界面</summary>
-
-训练页只保留真实有效的“推荐 / 已解锁待练 / 实验性 / 搜索”，并在进入题目前显示当前环境和进行中任务的阻断原因。
-
-![课程筛选](docs/images/desktop-learn.png)
-
-当前 Practice/Interview 共用原生轻量编辑器：行号、Python 高亮、缩进、撤销重做与保存状态。宽屏题面/代码并排，小窗口切换不丢代码。运行自己的 Python 样例与公开测试是不同动作。独立 AI 辅助页和常驻答题工作区导航已移除，真实作答仍从训练、当前任务或报告进入。
-
-![Alpha.4 手撕区；合成代码](docs/images/candidate-20260909/after/coding-light.png)
-
-模拟面试一次生成一问，可回看已发生的问答。计时包含阅读和作答，排除 AI 等待；结束先看优势、覆盖缺口与练习动作，再看评分。16 张原理卡深化追问路径，12 道现有手撕补充中文说明、边界和核心逻辑评价，不修改固定测试制造通过。
-
-![Alpha.4 复盘；未评分不制造高分](docs/images/candidate-20260909/after/report-dark.png)
-
-AI 连接页面保留无需 AI 的本地模式。启动自动恢复已有连接，探测不发送个人材料；普通 API 探测可能产生少量服务商计费。Codex 仅作为面试官，不提供仓库代理入口。
-
-![Alpha.4 AI 连接](docs/images/candidate-20260909/after/connections-dark.png)
+[指定数据目录、排查启动问题](docs/desktop-app.md#源码运行) · [当前 main 源码](https://github.com/ComistryMo/llm_interview_lab/tree/main)
 
 </details>
 
-## 如何开始训练
+## 文档与反馈
 
-```mermaid
-flowchart LR
-    A[选择岗位路线] --> B[独立作答]
-    B --> C[公开测试]
-    C --> D[契约审查与口述答辩]
-    D --> E[D+2 等价重写]
-    E --> F[D+7 调试或迁移]
-    F --> G[已掌握]
-    G --> H[解锁下一节点]
-    H --> I[综合关卡]
-```
+- [使用文档](docs/README.md)：桌面操作、连接、语音、材料与数据备份。
+- [更新记录](CHANGELOG.md)：版本内容与已知变化。
+- [报告问题或建议](https://github.com/ComistryMo/llm_interview_lab/issues)：请附复现步骤；截图与日志先脱敏，不要上传 Key 或完整简历。
+- [参与贡献](CONTRIBUTING.md)：欢迎改进交互、校对题面、补充经过验证的练习。
 
-> **公开测试通过 ≠ 已掌握。**
-
-刷题状态依次为 `not_started → in_progress → implemented → reviewed → retained_d2 → retained_d7 → mastered`。
-没有经过验证的复测资产时，系统会明确阻止进入 `mastered`，不会降低标准。
-
-默认 Planner 只推荐 `oracle`、`field` 或 `stable` 节点。仅达到 `contract` 的实验题仍可在完整 Catalog 中查看，但需要主动开启实验题。
-
-```bash
-llm-lab catalog
-llm-lab graph --track ai_foundation
-llm-lab graph --quest tensor_and_autograd
-```
-
-当前连续可走通的 Golden Quest：
-
-| 闯关路线 | 必修题 | 综合关卡 | 当前验证 |
-|---|---:|---|---|
-| Python Data Reliability | 6 | Hard Sample Data Pipeline | Oracle + D+2 / D+7 |
-| Tensor & Stable Loss | 9 | Masked Sequence Classification Loss | Oracle + D+2 / D+7 |
-| Optimizer & Training Loop | 6 | Tiny Sequence Classifier Trainer | Oracle + D+2 / D+7 |
-
-### AI 手撕题（当前源码）
-
-2026-09-08 的 [AI 算法手撕 40 项专项](docs/content/ai-handwriting-40.zh.md) 已接入当前源码：21 个规划节点补齐、18 个不同接口/进阶节点新增，AdamW 复用原题。包括完整 MHA/GQA Cache、RoPE、SFT/DPO/GRPO/PPO/GAE、LoRA、MoE、Decoder、手写反传、传统 ML、视觉与排序评测；配套 40 张技术卡、17 张注明证据范围的面经模式和五条推荐路线。新增节点通过公开及私有验证；尚无独立复测包的题不能标为 mastered。没有 PyTorch 时可选择符合当前环境的 NumPy/标准库题，不代表能运行全部专项。
-
-已有 [SGD](curriculum/problems/OPT-001-sgd/task.md)、[交叉熵](curriculum/problems/LOSS-014-cross-entropy/task.md)、[MHA](curriculum/problems/ATT-004-multi-head-attention/task.md)、[GRPO Clipped Loss](curriculum/problems/PT-015-grpo-loss/task.md)；前一轮补充的相邻能力仍保留原接口：
-
-| 新题 | 重点 |
-|---|---|
-| [OPT-003 · Nesterov SGD](curriculum/problems/OPT-003-nesterov-momentum/task.md) | 第一步、多步动量、状态归属与梯度边界 |
-| [LOSS-002 · 标签平滑交叉熵](curriculum/problems/LOSS-002-label-smoothing/task.md) | 稳定计算、ignore index、全忽略时的可导零 |
-| [ATT-003 · 因果与填充掩码](curriculum/problems/ATT-003-causal-padding-mask/task.md) | MHA 可见性、绝对位置、增量解码和 padding |
-| [PT-019 · GSPO 序列比率](curriculum/problems/PT-019-gspo-sequence-ratio/task.md) | 几何比率、序列级裁剪、长短回答权重 |
-
-四题均有中文完整题面、公开测试、口述追问和独立数值验证，需要 PyTorch。按已掌握的前置解锁；新模拟面试另按岗位、所选难度及环境选题。**四题自身尚无 D+2/D+7，因此可以实现、测试和复盘，但不能宣称已掌握。** 题面资产已随 Alpha.4 交付，运行依赖仍需满足。
-
-## 如何进行模拟面试
-
-1. 确认上次设置，或选择岗位、难度、时长和面试官；首次默认标准、60 分钟，无求职阶段分档。
-2. 可选已脱敏的简历和 JD / 补充材料；文本型 PDF / DOCX 在本地生成 SHA-绑定的只读文本快照，应用展示 material ID、用途和当前 SHA-256，并逐场请求同意（扫描 PDF 暂不做 OCR）。
-3. 从自我介绍开始；每次回答后才请求下一问，不预生成整场题单。代码题只从 `ready` 且达到 `oracle / field / stable` 的固定题库选择。
-4. 阅读、思考和作答计入候选时间，AI 等待不计；手撕可运行自己的样例，也可单独运行公开测试，事实由本地执行记录决定。
-5. 结束立即保留问答，后台逐题评分；先看有证据的表现、缺口和实际练习入口，再看详细分数。失败只重试对应题，不改写原回答。
-
-面试分数不会改变刷题训练、间隔复测或 `mastered`。项目不会生成虚假的 Offer 概率。
-缺少 PyTorch 不阻止非代码问答；若当前岗位/难度没有可运行手撕候选，结果保留代码覆盖缺口，不伪装成完整面试。
-连接普通 LLM API 或 Codex 后，先确认本场上下文，再进入本地自我介绍。后续读取回答逐问生成，不在开场生成整场计划；Coding 仍来自本地已验证题库。Codex 使用 `outputSchema` 和已选模型/推理强度，普通 API 沿用连接配置。语音可边录边看本地转文字，完成后编辑并提交；远程转录另需明确授权，失败可用文字回答。
-更多说明见[结构化模拟面试](docs/interviews.md)。
-
-### 面经、八股与手撕题知识库
-
-在桌面「刷题训练 → 知识库」可以先独立作答，再展开公式、例子、追问和自查要点。回答保存在当前本地档案，不发送 AI，也不计入掌握度；可从卡片进入真实关联代码题，未解锁或缺少环境的题会说明原因。公开知识卡保持只读，CLI 仍可直接检索。
-
-[题目集完整对照](docs/content/question-bank-coverage.zh.md) 将 40 项手撕、160 项八股逐条映射到可练习内容；补齐 8 个手撕缺口，八股合并为 135 张完整题卡，差异契约明确说明。动态面试进入原理环节时，按岗位、实际回答和授权背景匹配少量原理题与追问，供 Codex 或普通 API 逐轮选择，不预生成题单。这些公共资产已随 Alpha.4 交付。
-
-```bash
-# 按优先级浏览（默认只列摘要）
-llm-lab knowledge list --kind eight_stock --priority P0 --limit 20
-# 搜索中文或英文关键词；所有词都必须命中
-llm-lab knowledge search "GRPO reward" --track post_training
-# 查看完整答案层、手撕契约和来源记录
-llm-lab knowledge show COD-PT-001
-# 发布前验证 schema、来源和题库关联
-llm-lab knowledge validate --with-catalog
-llm-lab doctor --knowledge
-```
-
-内容采用 clean-room 链接+改写政策：论文/官方文档负责核验算法和 API，公开面经只作为带范围的题型信号，不复制原帖题面、答案、代码或个人信息。当前题卡及其逐条来源登记在 [`knowledge.yaml`](curriculum/interviews/knowledge.yaml)，历史研究快照见 [`references/interview-sources.json`](references/interview-sources.json)，研究与刷新规则见 [`docs/interview-content-research.md`](docs/interview-content-research.md)。
-
-本轮深度研究附录按方向拆分：[`VLM/多模态`](docs/research/vlm_interview_deep_dive.md)、[`后训练/RL`](docs/research/post_training_deep_dive.md)、[`Agent/RAG/推理服务`](docs/research/agent_inference_deep_dive.md)。附录是可复核底稿，卡片是可检索摘要；易变 API 和 benchmark 仍以检索日、版本和来源定位为准。
-
-开发者也可以直接使用同一套本地 CLI（不需要连接 AI）：
-
-```bash
-llm-lab material add --profile default --kind resume --file resume.md
-llm-lab material list --profile default
-llm-lab interview candidates --profile default --track llm_algorithm --difficulty medium
-llm-lab interview create --profile default --mode catalog --track llm_algorithm --difficulty medium --duration 30
-llm-lab interview create --profile default --mode tailored --track llm_algorithm --difficulty medium --duration 30 --material MATERIAL_ID --consent-materials
-```
-
-## 如何接入 AI
-
-这里采用 Bring Your Own AI（自带 AI）方式：你可以选择自己的服务，也可以完全不连接。
-
-AI 是可选能力。支持两种不同用途：
-
-| 方式 | 适合什么场景 | 能力边界 |
-|---|---|---|
-| 普通 LLM API | 面试中的经历深挖、逐轮追问、评估与可选语音转录 | 只收到上下文预览中确认的文本或明确授权的音频，不能操作仓库 |
-| Codex | 作为面试官逐步提问与评估 | 使用官方 App Server；每次只生成下一问，不改候选人代码 |
-| 无 AI | 固定课程、公开测试、复盘与复测 | 完全本地；当前桌面的个性化面试需要连接 AI |
-
-桌面便携包重点验证 OpenAI、OpenAI-compatible 与 Ollama 协议；Anthropic / Gemini 的统一 Provider 适配器保留在源码安装中。
-CI 只使用 Fake Provider、Fake Codex 与 Mock Keyring，不调用真实付费 API。
-
-### 普通 LLM API
-
-流程被收敛为：选择服务 → 填写 Key 或本地地址 → 选择模型和推理强度 → 保存并测试。
-高级 Endpoint 和连接 ID 放在折叠区域。API Key 只进入系统密钥环：Windows 使用 Credential Manager，macOS 使用 Keychain；密钥环不可用时不会降级为明文文件。
-
-**DeepSeek 快捷接入**：官方地址无需手填，模型与推理强度可选，Key 保存后可复用、修改或删除。历史合成逐轮测试有成功样本，但**高推理仍有空正文／传输失败记录，不能宣称全部强度可用**。本次发布未重新做真实付费 AI 验收；配置和历史证据见 [AI 连接指南](docs/ai-connections.md#deepseek当前源码)。
-
-### Codex
-
-Codex 与聊天 API 不是同一个接口。桌面应用使用官方 App Server 的 Thread、Turn、流式事件、Cancel、Retry、Diff 和 Approval。
-macOS 从 Finder 启动时可能没有完整 Shell `PATH`，应用会检查 Homebrew 与常见用户目录，也允许在设置中手动选择 Codex 可执行文件。
-
-面试只发送已确认的岗位、背景和问答上下文；保持同场模型与授权不变时复用 Thread。连接成功不保证上游模型的时延或可用性。
-
-### 面试中的 AI
-
-自我介绍之后，先围绕一段相关经历展开，再根据你的实际回答由浅入深地追问；回答不上来时可以换角度。岗位、JD 和明确授权的材料决定关注重点，简单 / 标准 / 高压决定提问强度。一次只生成下一问，不在开始时生成整场题单。
-
-手撕只使用当前可运行的本地验证题。新动态流程拒绝不存在的题号并保留重试入口，不静默改题；没有可用题时留下覆盖缺口，不编造测试结果。
-
-语音默认在本地运行：流式预览 + Qwen3-ASR 0.6B 停句校准，不需要语音 API Key。权重不随便携包提供，首次需下载，速度与准确率取决于本机硬件和音频；本次发布未重新做麦克风验收。转录是可编辑草稿，仍需检查后提交。详见[本地语音](docs/local-stt.md)。
-
-不上传整个 `workspace/profiles/` 或任何公司内部材料。旧 CLI 的受约束教练命令为兼容保留，见 [使用规范](docs/best-practices.md)，不再作为桌面功能入口。
-
-详见 [AI 连接与隐私](docs/ai-connections.md)。
-
-## Codex 与普通 API 的区别
-
-- 普通 API 只处理你在上下文预览中确认发送的文本；它不能自行读取本地文件或运行命令。
-- Codex 通过本地 App Server 的 Thread / Turn 协议进行面试，而普通 API 通过聊天接口接收获准上下文。
-- 桌面端只提供面试官，不提供练习教练或仓库代理页面；面试 AI 不直接修改候选人答案。
-- 两者都不能依据一次测试通过授予 `mastered`。
-
-## 项目的差异化
-
-| 常见学习方式 | LLM Interview Lab |
-|---|---|
-| 平铺随机题单 | 具有硬依赖的课程 DAG 与推荐闯关路线 |
-| 做完一次即结束 | 契约审查 + 口述答辩 + D+2 + D+7 |
-| 只看测试是否通过 | 代码、边界、解释、调试和迁移证据 |
-| AI 直接给答案 | 面试逐轮取证，不代写答案 |
-| 个人代码混入公共仓库 | Git 忽略的本地学习档案 |
-| 所有用户相同顺序 | 岗位画像 + 难度 + 前置依赖 + 个人证据 |
-| 面试反馈无从核实 | 已展示问题、计时、Rubric、证据和本地报告 |
-| 临时生成题直接入库 | 固定公共课程与私人 AI 变式分离 |
-
-## 个人数据与隐私
-
-源码模式使用仓库内 `workspace/profiles/<id>/`。打包桌面版使用操作系统应用数据目录：
-
-- Windows：当前用户的标准 App Data 位置；
-- macOS：`~/Library/Application Support/LLM Interview Lab/` 对应的 Qt `AppDataLocation`；
-- `.app` 内部、`/Applications/` 和公开仓库不会保存真实学习数据。
-
-真实学习档案、答案、求职材料、面试记录、AI 私人变式和连接元数据默认只保存在本机。Git ignore 只防止误提交，不是加密、备份或 Provider 隐私保证。
-
-本地 Grader 只执行用户本人信任的代码。路径检查用于避免误加载，不构成恶意代码安全沙箱。
-日志默认不上传，也不记录 API Key、Authorization Header、完整简历、完整答案、Oracle 或 Private Tests。
-
-## 项目状态
-
-下列数字来自 Alpha.4 的公共 Catalog。发布包源自 [4f93969 的完整 CI](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34288557804)，标签额外包含中文文档与归档整理；应用和构建输入保持一致，二进制保留实际构建 SHA。
-
-| 指标 | 当前状态 |
-|---|---:|
-| Ready Problems | 96 |
-| Planned Problems | 158 |
-| Oracle-validated Problems | 84 |
-| Retention-ready Problems | 24 |
-| Field-tested runs | 0 |
-| Canonical Skills | 70 |
-| Role Profiles | 8 |
-| Interview Blueprints | 24 |
-| Fixed non-coding interview Items | 26 |
-| 研究知识卡 | 255 |
-| 去重来源记录 | 258 |
-
-其中 24 个静态蓝图与 26 个固定非代码 Item 是历史兼容资产，不再用求职阶段限制新动态面试。待审 AUTHOR 资产不计入已验证数量。
-
-这是 **Alpha**，不是 Beta 或 Stable。Windows 与 macOS 桌面、真实 Provider 和跨岗位面试内容仍需要真实用户验证；当前 field runs 诚实保持 0。
-`ready` 不自动等于完成数值 Oracle 验证，公开测试也不是隐藏的防作弊测试。
-
-## 常见问题
-
-### 不连接 AI 能用吗？
-
-可以。课程、DAG、公开测试、Review、D+2 / D+7 与进度均可本地使用。桌面个性化模拟面试需要 AI，No-AI 下显示连接入口；历史 CLI 静态面试仍保留，不代表 GUI 有假面试模式。
-
-### API Key 保存在哪里？
-
-系统密钥环。普通配置只保存 Provider、模型、Endpoint 和非敏感 `key_reference`；密钥不会写入 Profile、events、日志或 Release Artifact。
-
-### 我的答案会被上传吗？
-
-不会自动上传。只有你在上下文预览中明确勾选并确认发送的内容才会进入远程请求。Codex 的文件访问还受到当前模式、read allowlist、Sandbox 和审批约束。
-
-### macOS 为什么会显示 Gatekeeper 提示？
-
-macOS Alpha.4 使用 ad-hoc 签名，未使用 Apple Developer ID，也未经过 Notarization。先确认下载来源及 `SHA256SUMS.txt`，再从系统“隐私与安全”页面确认打开。不要运行校验值不一致的文件，也不要全局关闭保护。
-
-### Intel Mac 可以用吗？
-
-Alpha.4 只发布经 macOS 15 Apple Silicon CI 构建、启动与挂载检查的 arm64 包，不提供未经验证的 Intel / Universal 包。用户实机与 macOS 14 尚未实际验收；Intel 源码运行也不属于本版桌面 Artifact 承诺。
-
-## 参与贡献
-
-- 契约不清或测试误导：[课程问题](https://github.com/ComistryMo/llm_interview_lab/issues/new?template=curriculum.yml)
-- 桌面、CLI、打包或隐私错误：[Bug 报告](https://github.com/ComistryMo/llm_interview_lab/issues/new?template=bug.yml)
-- 真实 Alpha 体验：[体验反馈](https://github.com/ComistryMo/llm_interview_lab/issues/new?template=beta.yml)
-- 贡献规范：[CONTRIBUTING.md](CONTRIBUTING.md) 与[课程编写指南](docs/curriculum-authoring.md)
-
-不要提交完整学习者答案、真实学习档案、雇主材料、来源不明的面试题或未经人工验证的 AI 内容。
-
-## Roadmap
-
-近期只保留三个方向：
-
-1. 真实验证 Windows / macOS 桌面和八类岗位面试蓝图；
-2. 建设连续的 Transformer 与 Post-Training 闯关路线；
-3. 在不削弱确定性 mastery 的前提下增加经过审查的私人 AI 变式。
-
-已有检查更新、下载与 SHA 校验；静默自动安装、云同步、Web UI、账号系统和多 Agent Runtime 不属于本版范围。当前计划与历史决策见[计划索引](plans/README.md)。
-
-## License
-
-[Apache-2.0](LICENSE)。`LICENSE` 英文原文具有法律效力；课程和面试内容采用原创 clean-room 设计，来源记录在公共元数据中。桌面包同时提供[第三方软件声明](docs/third-party-notices.md)。
+[Apache-2.0 许可证](LICENSE) · [第三方软件与模型声明](docs/third-party-notices.md)
