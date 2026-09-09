@@ -713,6 +713,8 @@ def test_cli_help_readme_and_interview_guide_share_one_command_contract(
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     guide = (REPO_ROOT / "docs/interviews.md").read_text(encoding="utf-8")
     policy = (REPO_ROOT / "coach/POLICY.md").read_text(encoding="utf-8")
+    # README is the product entry point; command details live in its linked guide.
+    assert "docs/interviews.md" in readme
 
     for command in (
         "llm-lab material add --profile default --kind resume",
@@ -720,7 +722,7 @@ def test_cli_help_readme_and_interview_guide_share_one_command_contract(
         "llm-lab interview create --profile default --mode catalog",
         "--material MATERIAL_ID --consent-materials",
     ):
-        assert command in re.sub(r"\\\s*\n\s*", "", readme), command
+        assert command in re.sub(r"\\\s*\n\s*", "", guide), command
 
     normalized_guide = re.sub(r"\\\s*\n\s*", "", guide)
     assert re.search(

@@ -95,4 +95,28 @@ llm-lab interview candidates --profile default --track llm_algorithm --difficult
 llm-lab interview create --profile default --mode catalog --track llm_algorithm --difficulty medium --duration 30
 ~~~
 
+<details>
+<summary>展开历史 CLI 的材料、回答与评分示例</summary>
+
+以下命令用于兼容的静态 CLI 流程，不是桌面逐问面试的操作步骤。`default`、`MATERIAL_ID`、`INTERVIEW_ID` 和文件路径均为占位示例，使用时替换为自己的已确认档案、材料和场次。材料授权需要先核对用途与当前 SHA。
+
+~~~bash
+llm-lab material add --profile default --kind resume --file PATH --title "脱敏简历" --allow-ai
+llm-lab material list --profile default
+llm-lab interview create --profile default --mode tailored --track llm_algorithm --difficulty medium --duration 30 --material MATERIAL_ID --consent-materials
+~~~
+
+`--allow-ai` 不代表永久发送授权。创建前仍须确认本场材料；只处理自己明确授权的内容。
+
+~~~bash
+llm-lab interview answer INTERVIEW_ID --profile default --question q-001 --file workspace/profiles/default/cache/answer-q001.md
+llm-lab interview answer INTERVIEW_ID --profile default --question q-001 --asked-file workspace/profiles/default/cache/asked-question.txt --file workspace/profiles/default/cache/answer-q001.md
+llm-lab interview score INTERVIEW_ID --profile default --question q-003 --dimension technical_oral --score 3 --source human --confidence medium --evidence "引用回答中的具体证据"
+llm-lab interview finish INTERVIEW_ID --profile default --confirm-incomplete
+~~~
+
+上面两条 `answer` 是不同输入方式的示例，不应重复执行。评分须引用实际已完成回答；示例分数不是预设结果。若提前结束且证据不完整，使用 `finish --confirm-incomplete`，报告保留未完成状态。
+
+</details>
+
 公开内容采用原创改写和带范围来源引用，不复制公司内部题目或面试平台受保护内容。详见[研究规则](interview-content-research.md)、[岗位说明](role-profiles.md)和[中文文档索引](README.md)。
