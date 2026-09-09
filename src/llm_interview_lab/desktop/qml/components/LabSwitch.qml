@@ -15,7 +15,8 @@ Basic.Switch {
     indicator: Rectangle {
         width: 40
         height: 24
-        y: control.topPadding + Math.max(0, (metrics.height - height) / 2)
+        y: Math.round(control.contentItem.y + control.contentItem.baselineOffset
+                      - metrics.ascent + (metrics.height - height) / 2)
         radius: 12
         color: control.checked ? (control.theme ? control.theme.accent : "#3c638e")
                                : control.theme ? control.theme.controlBorder : "#8d8d89"
@@ -36,6 +37,7 @@ Basic.Switch {
         font: control.font
         color: control.theme ? (control.enabled ? control.theme.textStrong : control.theme.subtle) : "#202020"
         wrapMode: Text.Wrap
-        lineHeight: 1.45
+        verticalAlignment: Text.AlignVCenter
+        lineHeight: lineCount > 1 ? 1.45 : 1.0
     }
 }

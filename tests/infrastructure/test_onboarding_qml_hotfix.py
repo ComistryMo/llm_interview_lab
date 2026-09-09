@@ -142,6 +142,31 @@ def test_onboarding_uses_explicit_grid_geometry_and_no_index_default() -> None:
     assert "Layout.preferredWidth: root.step >= 1 ? 144 : 112" in source
 
 
+@pytest.mark.parametrize("theme,scale", [("light", 1.0), ("dark", 1.25)])
+def test_welcome_check_icons_are_centered_without_font_leading(onboarding_scene, theme, scale):
+    _, window, page, controller = onboarding_scene
+    window.resize(1280, 800)
+    window.setProperty("displayFontScaleOverride", scale)
+    controller.setTheme(theme)
+    page.setProperty("step", 0)
+    QTest.qWait(100)
+    items = {item.objectName(): item for item in _descendants(page)}
+    for index in range(3):
+        mark = items[f"onboardingBenefitMark-{index}"]
+        check = items[f"onboardingBenefitCheck-{index}"]
+        assert mark.isVisible() and check.isVisible()
+        assert check.property("source").toString().endswith("icons/check.svg")
+        center = check.mapToItem(mark, QPointF(check.width() / 2, check.height() / 2))
+        assert center.x() == pytest.approx(mark.width() / 2, abs=0.5)
+        assert center.y() == pytest.approx(mark.height() / 2, abs=0.5)
+        assert check.width() < mark.width() and check.height() < mark.height()
+    directory = os.environ.get("LLM_LAB_UI_EVIDENCE_DIR")
+    if directory:
+        destination = Path(directory)
+        destination.mkdir(parents=True, exist_ok=True)
+        assert window.grabWindow().save(str(destination / f"welcome-checks-{theme}-{scale}.png"))
+
+
 def test_role_cards_have_positive_non_overlapping_geometry(onboarding_scene) -> None:
     _, _, page, _ = onboarding_scene
     grid = page.findChild(QQuickItem, "onboardingRoleGrid")

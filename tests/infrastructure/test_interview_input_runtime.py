@@ -1913,7 +1913,7 @@ def test_question_switch_clears_drafts_without_touching_saved_answer(scene):
     assert controller.service.interview_answer_text(controller.profileId, interview_id, "q-001") == draft
 
 
-@pytest.mark.parametrize("size", [(900, 620), (1280, 800)])
+@pytest.mark.parametrize("size", [(900, 620), (1080, 680), (1280, 800), (1440, 900)])
 def test_ui_single_submit_codex_response_enters_next_question(scene, size):
     window, controller = scene
     window.resize(*size)
@@ -1941,8 +1941,15 @@ def test_ui_single_submit_codex_response_enters_next_question(scene, size):
     controller.aiStateChanged.emit()
     controller.setTheme("dark")
     answer = _find(window, "interviewAnswerEditor")
-    draft = "合成回答：我先测量失败率，再在独立验证集上核对改动效果。"
+    draft = "合成回答：我先测量失败率，再在独立验证集上核对改动效果。\n" * 24
     answer.setProperty("text", draft)
+    page = _find(window, "interviewPhaseGuidance")
+    while not page.metaObject().className().startswith("InterviewPage_QML"):
+        page = page.parentItem()
+    # Reading history disables follow mode. A new explicit submission must
+    # nevertheless reveal the next question, not leave us at the old answer.
+    page.setProperty("followLatest", False)
+    QTest.qWait(80)
     _click(window, _find(window, "lockInterviewAnswer"))
     dialog = window.findChild(QObject, "lockInterviewAnswerDialog")
     assert not dialog.property("visible"), "Submitting a dynamic answer must not require a second click"
@@ -1968,7 +1975,7 @@ def test_ui_single_submit_codex_response_enters_next_question(scene, size):
     assert draft in backend.calls[0][0][1]
     assert backend.calls[0][1]["output_schema"]["properties"]["next_stage"]["enum"] == ["experience"]
     result = {
-        "follow_up": "你怎样选择验证集，并排除训练数据泄漏？",
+        "follow_up": ("你怎样选择验证集，并排除训练数据泄漏？\n\n" * 10).strip(),
         "next_stage": "experience", "coding_problem_id": "",
         "next_skill_ids": [next(iter(controller.service.roles.roles["post_training_engineer"].skill_weights))],
         "coverage": {"experience": "独立验证集", "angle": "数据泄漏", "topic": "",
@@ -1986,7 +1993,20 @@ def test_ui_single_submit_codex_response_enters_next_question(scene, size):
     assert controller.interview["question"]["prompt"] == result["follow_up"]
     assert answer.property("text") == ""
     assert controller.busy is False
-    _capture(window, "dynamic-second-question-dark")
+    title = _find(window, "interviewQuestionTitle")
+    title_y = title.mapToItem(viewport, QPointF()).y()
+    _capture(window, f"dynamic-second-question-{size[0]}-dark")
+    assert 0 <= title_y <= 2, "Reveal the beginning of the new question, not the end of a long prompt"
+    assert page.property("followLatest")
+    # A later state refresh must not interrupt a learner reading older turns.
+    page.setProperty("followLatest", False)
+    viewport.property("contentItem").setProperty("contentY", 0)
+    controller.interviewChanged.emit()
+    QTest.qWait(40)
+    assert viewport.property("contentItem").property("contentY") == 0
+    _click(window, _find(window, "interviewReturnToLatest"))
+    QTest.qWait(80)
+    assert 0 <= title.mapToItem(viewport, QPointF()).y() <= 2
 
 
 def test_single_submit_retries_saved_answer_after_malformed_response(controller):
@@ -2146,6 +2166,43 @@ def test_single_submit_rejects_revoked_material_and_retains_scene_consent(contro
     assert not controller.submitInterviewAnswer("我负责 DPO 数据清洗和独立验证。", "codex", True)
     assert "MATERIAL_CONSENT_CHANGED" in controller.interview["ai_error"]
     assert not controller.interview["answer_locked"] and not sent
+
+
+@pytest.mark.parametrize("theme,scale", [("light", 1.0), ("dark", 1.25)])
+def test_material_toggle_alignment_and_per_turn_context(scene, tmp_path, theme, scale):
+    window, controller = scene
+    window.resize(1080, 680)
+    window.setProperty("displayFontScaleOverride", scale)
+    controller.setTheme(theme)
+    assert controller.saveConnection("local", "ollama", "synthetic", "本地测试服务", "http://127.0.0.1:11434", "", "low")
+    material = tmp_path / "synthetic-resume.txt"
+    material.write_text("合成简历：负责 GRPO 偏好数据清洗与独立验证集。", encoding="utf-8")
+    assert controller.addMaterial(str(material), "resume", "合成简历", True)
+    mid = controller.materials[0]["id"]
+    controller.finishInterview()
+    preview = controller.previewInterviewSettings("post_training_engineer", "medium", mid, True)
+    controller.startConfiguredInterview("post_training_engineer", "medium", "local", mid, True, preview["context_sha256"])
+    QTest.qWait(100)
+    choice = _find(window, "includeInterviewMaterialsToggle")
+    connection = _find(window, "interviewActiveProvider")
+    assert choice.isVisible() and connection.isVisible()
+    assert choice.property("text") == "每轮附带已授权的简历 / JD"
+    indicator = choice.property("indicator")
+    center = indicator.mapToScene(QPointF(0, indicator.height() / 2)).y()
+    assert center == pytest.approx(connection.mapToScene(QPointF(0, connection.height() / 2)).y(), abs=1)
+    assert _within_window(window, choice)
+    for _ in range(2):
+        answer = controller.interviewContextPreview("合成回答", choice.property("checked"))
+        assert any(part["id"] == "material:" + mid for part in answer["parts"])
+    _click(window, choice)
+    assert not choice.property("checked")
+    without = controller.interviewContextPreview("合成回答", choice.property("checked"))
+    assert not any(part["id"].startswith("material:") for part in without["parts"])
+    choice.forceActiveFocus()
+    QTest.keyClick(window, Qt.Key_Space)
+    assert choice.property("checked")
+    QTest.mouseMove(window, QPoint(4, 4))
+    _capture(window, f"material-choice-{theme}-{scale}")
 
 
 def test_deepseek_high_real_adapter_ui_retries_then_advances(scene, monkeypatch):

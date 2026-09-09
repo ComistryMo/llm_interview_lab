@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.impl
 import QtQuick.Layouts
 import "../components"
 
@@ -246,19 +247,22 @@ Rectangle {
                         ]
                         RowLayout {
                             required property string modelData
+                            required property int index
                             spacing: 9
                             Rectangle {
-                                Layout.preferredWidth: 18
-                                Layout.preferredHeight: 18
-                                radius: 9
+                                objectName: "onboardingBenefitMark-" + index
+                                Layout.preferredWidth: root.scaledPx(18)
+                                Layout.preferredHeight: root.scaledPx(18)
+                                radius: width / 2
                                 color: root.theme ? root.theme.accentSoft
                                                   : Qt.rgba(0.32, 0.39, 0.85, 0.12)
-                                LabText { theme: root.theme;
+                                ColorImage {
+                                    objectName: "onboardingBenefitCheck-" + index
                                     anchors.centerIn: parent
-                                    text: "✓"
+                                    width: root.scaledPx(12)
+                                    height: width
+                                    source: "../../resources/icons/check.svg"
                                     color: root.colors.accent
-                                    font.pixelSize: root.scaledPx(12)
-                                    strong: true
                                 }
                             }
                             LabText { theme: root.theme;
@@ -552,15 +556,13 @@ Rectangle {
                                                 wrapMode: Text.WordWrap
                                                 elide: Text.ElideRight
                                             }
-                                            LabText { theme: root.theme;
+                                            ColorImage {
                                                 objectName: "onboardingRoleSelected-" + modelData.id
-                                                Layout.preferredWidth: 22
-                                                text: "✓"
+                                                Layout.preferredWidth: root.scaledPx(18)
+                                                Layout.preferredHeight: root.scaledPx(18)
+                                                source: "../../resources/icons/check.svg"
                                                 visible: root.selectedRole === modelData.id
                                                 color: root.colors.accent
-                                                font.pixelSize: root.scaledPx(17)
-                                                strong: true
-                                                horizontalAlignment: Text.AlignRight
                                             }
                                         }
 

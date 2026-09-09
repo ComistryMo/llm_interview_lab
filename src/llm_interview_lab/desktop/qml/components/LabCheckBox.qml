@@ -19,7 +19,10 @@ Basic.CheckBox {
 
     indicator: Rectangle {
         x: 0
-        y: control.topPadding + Math.max(0, (metrics.height - height) / 2)
+        // Follow the actual first text baseline, including centered short
+        // labels and wrapped consent text at accessibility font sizes.
+        y: Math.round(control.contentItem.y + control.contentItem.baselineOffset
+                      - metrics.ascent + (metrics.height - height) / 2)
         width: 20
         height: 20
         radius: 4
@@ -51,6 +54,7 @@ Basic.CheckBox {
         font: control.font
         color: control.theme ? (control.enabled ? control.theme.textStrong : control.theme.subtle) : "#202020"
         wrapMode: Text.Wrap
-        lineHeight: 1.45
+        verticalAlignment: Text.AlignVCenter
+        lineHeight: lineCount > 1 ? 1.45 : 1.0
     }
 }

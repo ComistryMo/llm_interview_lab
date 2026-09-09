@@ -144,8 +144,9 @@ Item {
         if (app.interview.status === "active")
             root.configuringNewInterview = false
         Qt.callLater(root.resetQuestionEditors)
-        if (root.followLatest)
-            Qt.callLater(root.scrollToLatest)
+        // A newly frozen question is a new reading target, even if the
+        // learner had scrolled up while composing the previous answer.
+        Qt.callLater(root.scrollToLatest)
     }
     onAnswerLockedChanged: Qt.callLater(root.syncQuestionEditors)
     onVisibleChanged: {
@@ -407,6 +408,8 @@ Item {
         var submitted = root.codingQuestion
             ? app.submitInterviewCode(codingEditor.text, connectionId || "", includeInterviewMaterials.checked)
             : app.submitInterviewAnswer(answer.text, connectionId || "", includeInterviewMaterials.checked)
+        if (submitted)
+            root.followLatest = true
         if (!submitted
                 && app.interview.ai_assessment_state === "consent_required")
             root.previewAI("submit", connectionId)
@@ -825,8 +828,19 @@ Item {
 
 
     function scrollToLatest() {
-        questionScroll.contentItem.contentY = Math.max(0, questionScroll.contentHeight - questionScroll.height)
         root.followLatest = true
+        Qt.callLater(root.positionLatestQuestion)
+    }
+
+    function positionLatestQuestion() {
+        if (!root.followLatest)
+            return
+        questionContent.forceLayout()
+        var target = streamingQuestion.visible ? streamingQuestion : questionTitle
+        // Start at the question, not the bottom of its (potentially long)
+        // body. Reposition after the transcript/layout has caught up.
+        questionScroll.contentItem.contentY = Math.max(0, Math.min(target.y,
+            questionScroll.contentHeight - questionScroll.availableHeight))
     }
 
     ScrollView {
@@ -1469,6 +1483,8 @@ Item {
                 // the TextArea's implicit width, leaving the editor as a narrow
                 // strip and making the phase controls collide on small screens.
                 contentWidth: availableWidth
+                onContentHeightChanged: if (root.conversationalAnswer && root.followLatest) Qt.callLater(root.positionLatestQuestion)
+                onHeightChanged: if (root.conversationalAnswer && root.followLatest) Qt.callLater(root.positionLatestQuestion)
                 Connections {
                     target: questionScroll.contentItem
                     function onMovementEnded() { root.followLatest = questionScroll.contentItem.atYEnd }
@@ -1533,12 +1549,14 @@ Item {
                         wrapMode: Text.Wrap
                     }
                     Column {
+                        id: streamingQuestion
                         width: parent.width; spacing: 8
                         visible: !!app.interview.next_question_preview && app.interview.ai_assessment_state === "streaming"
                         LabText { theme: root.theme; text: "正在生成下一问 · 完成校验后可回答"; variant: "caption"; tone: "muted" }
                         LabText { objectName: "interviewStreamingQuestion"; theme: root.theme; width: parent.width; text: app.interview.next_question_preview || ""; wrapMode: Text.Wrap; font.pixelSize: root.theme.fontBodyLarge }
                     }
                     LabText {
+                        id: questionTitle
                         objectName: "interviewQuestionTitle"
                         visible: true
                         width: parent.width
@@ -2532,7 +2550,7 @@ Item {
                                 id: includeInterviewMaterials
                                 objectName: "includeInterviewMaterialsToggle"
                                 width: Math.min(implicitWidth, parent.width)
-                                height: root.theme.controlHeightCompact
+                                height: Math.max(root.theme.controlHeightCompact, implicitHeight)
                                 font.pixelSize: root.theme.fontCaption
                                 font.family: root.theme.uiFontFamily
                                 visible: !!activeQuestion && (root.answerLocked || root.dynamicInterview) && !app.interview.answer_corrupted
@@ -2541,7 +2559,11 @@ Item {
                                          && (app.interview.material_refs || []).length > 0
                                 checked: true
                                 enabled: !app.busy
-                                text: "包含本场授权的简历 / JD"
+                                text: "每轮附带已授权的简历 / JD"
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                ToolTip.text: "每次提交附带材料文本，不重新上传原文件。\n取消勾选可停止附带；已发送内容无法收回。"
+                                Accessible.description: "每次提交附带授权材料的提取文本，发送范围未变时无需重复确认。取消后新请求不再附带材料全文，已经发送的内容无法收回。"
                             }
                         }
                         LabText { theme: root.theme;
