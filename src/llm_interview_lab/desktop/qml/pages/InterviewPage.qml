@@ -2098,7 +2098,37 @@ Item {
                             width: parent.width; spacing: 8
                             visible: app.interview.interaction_version === 2
                             LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; text: "问答已保存。详细评分在后台逐题完成；没有证据的项目保持未评分。" }
-                            LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; tone: "muted"; text: app.interview.grading_message || ("待评分 " + (app.interview.unscored_questions || 0) + " 题 · 已评分题目不会重复请求") }
+                            LabText {
+                                objectName: "interviewGradingStatus"
+                                theme: root.theme
+                                width: parent.width
+                                wrapMode: Text.Wrap
+                                tone: "muted"
+                                text: app.interviewGrading.message || app.interview.grading_message
+                                      || ("待评分 " + (app.interview.unscored_questions || 0) + " 题 · 已评分题目不会重复请求")
+                            }
+                            RowLayout {
+                                width: parent.width
+                                spacing: 8
+                                LabButton {
+                                    objectName: "stopInterviewGrading"
+                                    theme: root.theme
+                                    text: "停止评分"
+                                    variant: "ghost"
+                                    visible: app.interviewGrading.active === true
+                                    enabled: visible
+                                    onClicked: app.stopInterviewGrading()
+                                }
+                                LabButton {
+                                    objectName: "retryInterviewGrading"
+                                    theme: root.theme
+                                    text: app.interviewGrading.failed > 0 ? "重试未完成评分" : "继续未完成评分"
+                                    variant: "secondary"
+                                    visible: app.interviewGrading.can_continue === true
+                                    enabled: !app.busy && !app.interviewGrading.active
+                                    onClicked: app.retryInterviewGrading()
+                                }
+                            }
                             Repeater {
                                 model: Object.keys((app.interview.grading || {}).questions || {})
                                 Column {
@@ -2106,13 +2136,12 @@ Item {
                                     property var record: ((app.interview.grading || {}).questions || {})[modelData] || ({})
                                     width: parent.width; spacing: 4; visible: record.status === "failed"
                                     LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; tone: "warning"; text: parent.modelData + "：" + (parent.record.error || "评分失败，可单独重试") }
-                                    LabButton { theme: root.theme; text: "重试该题评分"; enabled: !app.busy; onClicked: app.retryInterviewQuestionGrading(parent.modelData) }
+                                    LabButton { theme: root.theme; text: "重试该题评分"; enabled: !app.busy && !app.interviewGrading.active; onClicked: app.retryInterviewQuestionGrading(parent.modelData) }
                                 }
                             }
-                            LabButton { objectName: "retryInterviewGrading"; theme: root.theme; text: "继续未完成评分"; enabled: !app.busy; visible: (app.interview.unscored_questions || 0) > 0; onClicked: app.retryInterviewGrading() }
                             LabButton {
                                 theme: root.theme; text: "确认评分发送范围"; variant: "ghost"
-                                visible: (app.interview.unscored_questions || 0) > 0; enabled: !app.busy
+                                visible: (app.interview.unscored_questions || 0) > 0; enabled: !app.busy && !app.interviewGrading.active
                                 onClicked: {
                                     root.aiPreview = app.previewInterviewGrading()
                                     if (root.aiPreview.parts.length) {

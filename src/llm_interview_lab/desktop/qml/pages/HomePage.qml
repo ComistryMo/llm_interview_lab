@@ -327,6 +327,43 @@ Flickable {
         }
 
         RowLayout {
+            objectName: "homeGradingStatus"
+            visible: app.interviewGrading.can_stop === true || app.interviewGrading.can_continue === true
+            Layout.fillWidth: true
+            spacing: 8
+            LabText {
+                objectName: "homeGradingMessage"
+                theme: root.theme
+                Layout.fillWidth: true
+                text: (app.interviewGrading.message || "")
+                      + "\n已评分 " + String(app.interviewGrading.completed || 0)
+                      + " / " + String(app.interviewGrading.total || 0) + " 题"
+                variant: "caption"
+                tone: app.interviewGrading.failed > 0 ? "warning" : "muted"
+                wrapMode: Text.Wrap
+            }
+            LabButton {
+                objectName: "homeStopGrading"
+                theme: root.theme; text: "停止评分"; variant: "ghost"
+                visible: app.interviewGrading.can_stop === true
+                onClicked: app.stopInterviewGrading()
+            }
+            LabButton {
+                objectName: "homeContinueGrading"
+                theme: root.theme; variant: "secondary"
+                text: app.interviewGrading.failed > 0 ? "重试评分" : "继续评分"
+                visible: app.interviewGrading.can_continue === true
+                enabled: !app.busy
+                onClicked: app.continueInterviewGrading()
+            }
+            LabButton {
+                objectName: "homeViewGrading"
+                theme: root.theme; text: "查看记录"; variant: "ghost"
+                onClicked: app.openInterview(app.interviewGrading.interview_id)
+            }
+        }
+
+        RowLayout {
             objectName: "homeCurrentPractice"
             Layout.fillWidth: true
             spacing: 16

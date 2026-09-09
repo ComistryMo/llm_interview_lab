@@ -211,7 +211,7 @@ def test_end_grading_restart_skips_success_and_retries_only_failure(controller, 
             yield ChatEvent("delta", text=json.dumps(result, ensure_ascii=False))
     monkeypatch.setattr("llm_interview_lab.desktop.controller.create_chat_provider", lambda *a, **kw: Provider())
     controller.finishInterview()
-    wait_until(lambda: not controller.busy and len(calls) == 3)
+    wait_until(lambda: not controller.interviewGrading.get("active") and len(calls) == 3)
     session = service.interview_session(profile, iid)
     assert session["grading"]["questions"]["q-001"]["status"] == "failed"
     assert "q-002" in session["assessments"], (calls, session["grading"])
@@ -223,10 +223,10 @@ def test_end_grading_restart_skips_success_and_retries_only_failure(controller, 
         assert calls == ["q-001", "q-002", "q-003"]
         if single_first:
             restored.retryInterviewQuestionGrading("q-001")
-            wait_until(lambda: not restored.busy and len(calls) == 4)
+            wait_until(lambda: not restored.interviewGrading.get("active") and len(calls) == 4)
             assert service.interview_session(profile, iid)["grading"]["questions"]["q-003"]["status"] == "failed"
         restored.retryInterviewGrading()
-        wait_until(lambda: not restored.busy and len(calls) == 5)
+        wait_until(lambda: not restored.interviewGrading.get("active") and len(calls) == 5)
         assert calls == ["q-001", "q-002", "q-003", "q-001", "q-003"]
         assert len(service.interview_session(profile, iid)["assessments"]) == 3
     finally:
@@ -247,7 +247,10 @@ def test_grading_rescope_requires_preview_and_explicit_confirmation(controller, 
     preview = controller.previewInterviewGrading()
     assert preview["parts"] and preview["scope_sha256"]
     assert not controller.authorizeInterviewGrading("stale") and not calls
+    assert controller.stopInterviewGrading()
+    assert controller.interviewGrading["paused"]
     assert controller.authorizeInterviewGrading(preview["scope_sha256"])
+    assert not controller.interviewGrading["paused"]
     assert len(calls) == 1
 
 

@@ -504,6 +504,16 @@ class AppController(QObject):
         self._knowledge_detail: dict[str, Any] = {}
         self._knowledge_loaded = False
         self._pending_ai_assessment: dict[str, Any] | None = None
+        # End-of-interview grading is deliberately independent from the
+        # foreground busy gate.  Keep one explicit identity for the optional
+        # background turn so a late provider/Codex callback can never mutate
+        # whichever interview happens to be visible now.
+        self._interview_grading_identity: tuple[str, str, str, str, str] | None = None
+        self._interview_grading_message = ""
+        self._interview_grading_paused: set[tuple[str, str]] = set()
+        self._interview_grading_provider_operation_id = ""
+        self._provider_interview_tasks: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Task]] = {}
+        self._codex_grading_question: dict[str, Any] | None = None
         self._coach_sessions: list[dict[str, Any]] = []
         self._active_coach_session_id = ""
         self._coach_messages: list[dict[str, Any]] = []
@@ -612,6 +622,7 @@ class AppController(QObject):
         self._codex_interview_operation_id = ""
         self._codex_interview_message_id = ""
         self._interview_provider_operation_id = ""
+        self._provider_interview_task: tuple[asyncio.AbstractEventLoop, asyncio.Task] | None = None
         self._codex_connect_future: Any | None = None
         self._codex_connect_generation = 0
         self._codex_active_connect_token = ""
@@ -1047,6 +1058,176 @@ class AppController(QObject):
     @Property("QVariantMap", notify=interviewChanged)
     def interview(self) -> dict[str, Any]:
         return self._interview
+
+    @Property("QVariantMap", notify=stateChanged)
+    def interviewGrading(self) -> dict[str, Any]:
+        """Expose resumable end-of-interview grading without using ``busy``.
+
+        The map is intentionally derived from the persisted per-question
+        grading states plus one in-memory operation identity.  It is safe for
+        Home and the report page to display while the learner starts practice
+        or navigates elsewhere; a provider callback must still match the
+        identity before it can write evidence.
+        """
+
+        grading = self._interview.get("grading")
+        if not isinstance(grading, Mapping):
+            grading = {}
+        states = grading.get("questions")
+        states = states if isinstance(states, Mapping) else {}
+        values = [state for state in states.values() if isinstance(state, Mapping)]
+        completed = sum(1 for state in values if state.get("status") == "complete")
+        pending = sum(1 for state in values if state.get("status") == "pending")
+        failed = sum(1 for state in values if state.get("status") == "failed")
+        interview_id = str(self._interview.get("interview_id") or "")
+        key = (self._profile_id, interview_id)
+        identity = self._interview_grading_identity
+        active = bool(identity and identity[:2] == key)
+        paused = key in self._interview_grading_paused
+        if not active and not paused and pending == 0 and failed == 0:
+            return {}
+        status = "running" if active else "paused" if paused else "failed" if failed else "pending"
+        message = (
+            self._interview_grading_message
+            if active
+            else str(self._interview.get("grading_message") or "")
+        )
+        if not message:
+            if status == "running":
+                message = "正在后台评分，已评分题目不会重复发送。"
+            elif status == "paused":
+                message = "评分已暂停；可继续未完成题目。"
+            elif status == "failed":
+                message = "部分题目评分失败；可单独重试失败题目。"
+            else:
+                message = "有未完成的题目评分。"
+        return {
+            "active": active,
+            "paused": paused,
+            "status": status,
+            "message": message,
+            "completed": completed,
+            "total": len(values),
+            "pending": pending,
+            "failed": failed,
+            "interview_id": interview_id,
+            "question_id": identity[2] if active else "",
+            "can_stop": active,
+            "can_continue": not active and (paused or pending > 0 or failed > 0),
+        }
+
+    def _begin_interview_grading(
+        self, profile_id: str, interview_id: str, question_id: str,
+        operation_id: str, provider_kind: str,
+    ) -> None:
+        self._interview_grading_identity = (
+            profile_id, interview_id, question_id, operation_id, provider_kind,
+        )
+        self._interview_grading_message = "正在后台评分；首页和训练操作仍可使用。"
+        self._interview_grading_paused.discard((profile_id, interview_id))
+        self.stateChanged.emit()
+
+    def _grading_identity_is_current(
+        self, profile_id: str, interview_id: str, question_id: str, operation_id: str,
+    ) -> bool:
+        identity = self._interview_grading_identity
+        return bool(
+            identity
+            and identity[:4] == (profile_id, interview_id, question_id, operation_id)
+        )
+
+    def _stop_codex_grading_turn(self, identity: tuple[str, str, str, str, str]) -> None:
+        """Interrupt one background grading turn while preserving its queue.
+
+        Codex has one multiplexed event stream in this controller.  Stopping
+        the grading identity before switching the visible interview, then
+        draining the exact server turn, prevents a late delta from becoming a
+        foreground answer or scorecard.
+        """
+
+        operation_id = identity[3]
+        turn_id = self._codex_interview_turn_id
+        if turn_id:
+            self._codex_drain_pending = True
+            self._codex_drain_turn_id = turn_id
+            self._codex_drain_waiting_start = str(turn_id).startswith("pending:")
+            self._codex_cancel_pending_operation = (
+                operation_id if self._codex_drain_waiting_start else ""
+            )
+            self._codex_cancel_pending_kind = "interview" if self._codex_drain_waiting_start else ""
+            self._codex_drain_token = uuid4().hex
+            self._schedule_codex_drain_timeout(self._codex_drain_token)
+            if not self._codex_drain_waiting_start:
+                self._interrupt_codex_turn(str(turn_id))
+        self._codex_interview_identity = None
+        self._codex_interview_turn_id = None
+        self._codex_interview_buffer = ""
+        self._codex_interview_operation_id = ""
+        self._codex_grading_question = None
+        self._finish_codex_event_gate()
+
+    def _pause_active_interview_grading(self, message: str = "评分已暂停；可继续未完成题目。") -> bool:
+        """Cancel the current worker/turn and keep persisted pending states."""
+
+        identity = self._interview_grading_identity
+        if identity is None:
+            return False
+        profile_id, interview_id, _question_id, operation_id, provider_kind = identity
+        self._interview_grading_paused.add((profile_id, interview_id))
+        self._interview_grading_message = message
+        if (self._profile_id, self._interview.get("interview_id")) == (profile_id, interview_id):
+            self._interview["grading_message"] = message
+        if provider_kind == "provider":
+            task_info = self._provider_interview_tasks.get(operation_id)
+            if task_info is not None:
+                loop, task = task_info
+                try:
+                    loop.call_soon_threadsafe(task.cancel)
+                except Exception:
+                    pass
+            if self._interview_grading_provider_operation_id == operation_id:
+                self._interview_grading_provider_operation_id = ""
+        elif provider_kind == "codex" and self._codex_interview_identity == identity:
+            self._stop_codex_grading_turn(identity)
+        self._interview_grading_identity = None
+        self._interview_grading_provider_operation_id = ""
+        self.stateChanged.emit()
+        return True
+
+    @Slot(result=bool)
+    def stopInterviewGrading(self) -> bool:
+        """Pause end-of-interview grading without marking an answer failed."""
+
+        if self._pause_active_interview_grading():
+            return True
+        interview_id = str(self._interview.get("interview_id") or "")
+        if not interview_id:
+            return False
+        try:
+            session = self.service.interview_session(self._profile_id, interview_id)
+        except Exception:
+            return False
+        states = (session.get("grading") or {}).get("questions", {})
+        if not any(isinstance(state, Mapping) and state.get("status") == "pending" for state in states.values()):
+            return False
+        self._interview_grading_paused.add((self._profile_id, interview_id))
+        self._interview_grading_message = "评分已暂停；可继续未完成题目。"
+        self.stateChanged.emit()
+        return True
+
+    @Slot(result=bool)
+    def continueInterviewGrading(self) -> bool:
+        """Resume pending grading after an explicit user action."""
+
+        interview_id = str(self._interview.get("interview_id") or "")
+        if not interview_id:
+            return False
+        grading = self.interviewGrading
+        self._interview_grading_paused.discard((self._profile_id, interview_id))
+        self._interview_grading_message = ""
+        self._start_pending_grading(retry_failed=bool(grading.get("failed")))
+        self.stateChanged.emit()
+        return True
 
     @Property("QVariantMap", notify=stateChanged)
     def interviewPlanPreview(self) -> dict[str, Any]:
@@ -2013,11 +2194,14 @@ class AppController(QObject):
         complete: Callable[[Any], None],
         failed: Callable[[str], None] | None = None,
         progress: Callable[[str], None] | None = None,
+        *,
+        blocks_ui: bool = True,
     ) -> None:
         operation_token = uuid4().hex
         generation = self._background_generation
-        self._background_operations.add(operation_token)
-        self._set_busy(True)
+        if blocks_ui:
+            self._background_operations.add(operation_token)
+            self._set_busy(True)
         worker = StreamingWorker(operation) if progress else Worker(operation)
         if progress:
             worker.signals.progress.connect(progress)
@@ -2025,8 +2209,9 @@ class AppController(QObject):
 
         def done(value: Any) -> None:
             self._workers.discard(worker)
-            self._background_operations.discard(operation_token)
-            self._set_busy(bool(self._background_operations))
+            if blocks_ui:
+                self._background_operations.discard(operation_token)
+                self._set_busy(bool(self._background_operations))
             if generation != self._background_generation:
                 return
             complete(value)
@@ -2035,8 +2220,9 @@ class AppController(QObject):
 
         def on_failed(message: str) -> None:
             self._workers.discard(worker)
-            self._background_operations.discard(operation_token)
-            self._set_busy(bool(self._background_operations))
+            if blocks_ui:
+                self._background_operations.discard(operation_token)
+                self._set_busy(bool(self._background_operations))
             if generation != self._background_generation:
                 return
             if failed_handler is not None:
@@ -2137,6 +2323,9 @@ class AppController(QObject):
         # Results from the previous in-memory snapshot must not repaint a
         # freshly loaded Profile. Workers finish naturally, but their callbacks
         # are ignored by the generation check in _background.
+        self._pause_active_interview_grading(
+            "评分因刷新已暂停；可继续本场未完成题目。"
+        )
         self._background_generation += 1
         self._cancel_coach_stream_for_reload()
         # There is no safe way to merge a worker result into the newly loaded
@@ -2377,6 +2566,9 @@ class AppController(QObject):
             # Validate before changing the active id. This keeps a malformed
             # target from clearing the currently usable snapshot.
             load_profile(target_paths, self.repo_root)
+            self._pause_active_interview_grading(
+                "评分已因切换学习档案暂停；返回原档案后可继续。"
+            )
             # Fence every queued callback before replacing the Profile
             # snapshot.  ``_busy`` normally catches these operations, but the
             # generation is the final correctness boundary for queued events.
@@ -3260,8 +3452,16 @@ class AppController(QObject):
     def _load_interview(self, interview_id: str) -> None:
         # Rebuilding the frozen question snapshot invalidates any provider
         # assessment callback that still belongs to the previous view.
+        target_identity = (self._profile_id, str(interview_id))
         self._interview_provider_operation_id = ""
         session = self.service.interview_session(self._profile_id, interview_id)
+        if (
+            self._interview_grading_identity is not None
+            and self._interview_grading_identity[:2] != target_identity
+        ):
+            self._pause_active_interview_grading(
+                "评分已因切换面试暂停；可返回本场继续未完成题目。"
+            )
         pending = self._pending_interview_draft
         if pending and pending[:2] == (self._profile_id, interview_id) and pending[2] in session["answers"]:
             # Successful submission is already durable. Do not re-save its
@@ -3463,7 +3663,11 @@ class AppController(QObject):
             self._interview["coding_tested_revision"] = ""
             self._interview["coding_test_current"] = False
         self.stateChanged.emit()
-        if session.get("interaction_version") == 2 and session["status"] in {"completed", "incomplete"}:
+        if (
+            session.get("interaction_version") == 2
+            and session["status"] in {"completed", "incomplete"}
+            and (self._profile_id, interview_id) not in self._interview_grading_paused
+        ):
             QTimer.singleShot(0, self._start_pending_grading)
 
     @Slot()
@@ -4258,7 +4462,11 @@ class AppController(QObject):
         if self._profile_id == "demo":
             self.toast.emit("演示 AI 评分需要证据；不会改变刷题掌握状态。")
             return
-        if self._busy or self._interview_provider_operation_id:
+        if (
+            (not _grading_question and self._busy)
+            or (self._interview_provider_operation_id if not _grading_question
+                else self._interview_grading_provider_operation_id)
+        ):
             self._interview_request_failed("已有评估请求正在处理，请等待完成后重试。", "provider_submit")
             return
         profile_id = self._profile_id
@@ -4283,13 +4491,24 @@ class AppController(QObject):
             self._interview_request_failed(error, "provider_context")
             return
         operation_id = uuid4().hex
-        self._interview_provider_operation_id = operation_id
-        self._interview["ai_assessment_state"] = "streaming"
-        self._interview["ai_error"] = ""
-        self._interview["next_question_preview"] = ""
+        if _grading_question:
+            self._interview_grading_provider_operation_id = operation_id
+            self._begin_interview_grading(
+                profile_id, interview_id, question_id, operation_id, "provider"
+            )
+        else:
+            self._interview_provider_operation_id = operation_id
+            self._interview["ai_assessment_state"] = "streaming"
+            self._interview["ai_error"] = ""
+            self._interview["next_question_preview"] = ""
         self.stateChanged.emit()
 
         def operation(emit, cancel) -> dict[str, Any]:
+            if _grading_question:
+                if not self._grading_identity_is_current(
+                    profile_id, interview_id, question_id, operation_id
+                ):
+                    raise RuntimeError("grading operation was stopped before the provider started")
             config = next(
                 (
                     item
@@ -4327,7 +4546,14 @@ class AppController(QObject):
                 instruction = _grading_instruction(dimensions, fatal_issues)
 
             async def collect() -> str:
-                self._provider_interview_task = (asyncio.get_running_loop(), asyncio.current_task())
+                task_info = (asyncio.get_running_loop(), asyncio.current_task())
+                self._provider_interview_tasks[operation_id] = task_info
+                if not _grading_question:
+                    self._provider_interview_task = task_info
+                if _grading_question and not self._grading_identity_is_current(
+                    profile_id, interview_id, question_id, operation_id
+                ):
+                    raise asyncio.CancelledError()
                 chunks: list[str] = []
                 async for event in provider.stream_chat(
                     [
@@ -4352,24 +4578,41 @@ class AppController(QObject):
                 except asyncio.CancelledError as error:
                     raise RuntimeError("已停止本次请求，回答已保存；可以重试。") from error
 
-            response = asyncio.run(collect_with_deadline())
-            return decode_next_question(response) if next_only else _decode_ai_assessment(
-                response, dimensions, fatal_issues, dynamic=session.get("delivery_mode") == "dynamic_ai" and not _grading_question,
-                quote_required=bool(_grading_question))
+            try:
+                response = asyncio.run(collect_with_deadline())
+                return decode_next_question(response) if next_only else _decode_ai_assessment(
+                    response, dimensions, fatal_issues, dynamic=session.get("delivery_mode") == "dynamic_ai" and not _grading_question,
+                    quote_required=bool(_grading_question))
+            finally:
+                self._provider_interview_tasks.pop(operation_id, None)
 
         def release() -> None:
-            if self._interview_provider_operation_id == operation_id:
+            self._provider_interview_tasks.pop(operation_id, None)
+            if _grading_question:
+                if self._interview_grading_provider_operation_id == operation_id:
+                    self._interview_grading_provider_operation_id = ""
+            elif self._interview_provider_operation_id == operation_id:
                 self._interview_provider_operation_id = ""
                 self._provider_interview_task = None
 
         def complete(result: dict[str, Any]) -> None:
             try:
-                if self._interview_provider_operation_id != operation_id:
+                operation_current = (
+                    self._grading_identity_is_current(profile_id, interview_id, question_id, operation_id)
+                    if _grading_question
+                    else self._interview_provider_operation_id == operation_id
+                )
+                if not operation_current:
                     return
                 if (
                     self._profile_id != profile_id
-                    or self._interview.get("interview_id") != interview_id
-                    or (not _grading_question and (self._interview.get("question") or {}).get("question_id") != question_id)
+                    or (
+                        not _grading_question
+                        and (
+                            self._interview.get("interview_id") != interview_id
+                            or (self._interview.get("question") or {}).get("question_id") != question_id
+                        )
+                    )
                 ):
                     return
                 latest = self.service.interview_session(profile_id, interview_id)
@@ -4383,7 +4626,10 @@ class AppController(QObject):
                     if connection["connection_id"] == connection_id:
                         connection.update(ready=True, status="已连接")
                 if _grading_question:
-                    self._complete_interview_grading(question_id, result=result)
+                    self._complete_interview_grading(
+                        question_id, result=result, profile_id=profile_id,
+                        interview_id=interview_id, operation_id=operation_id,
+                    )
                     return
                 if self._interview.get("delivery_mode") == "dynamic_ai":
                     self._advance_dynamic_answer(result, include_materials)
@@ -4419,9 +4665,17 @@ class AppController(QObject):
                     self._interview["ai_error"] = ""
                     self._load_interview(interview_id)
             except Exception as error:
-                if self._interview_provider_operation_id == operation_id:
+                operation_current = (
+                    self._grading_identity_is_current(profile_id, interview_id, question_id, operation_id)
+                    if _grading_question
+                    else self._interview_provider_operation_id == operation_id
+                )
+                if operation_current:
                     if _grading_question:
-                        self._complete_interview_grading(question_id, error=str(error))
+                        self._complete_interview_grading(
+                            question_id, error=str(error), profile_id=profile_id,
+                            interview_id=interview_id, operation_id=operation_id,
+                        )
                     else:
                         self._interview_request_failed(error, "provider_response", operation_id)
             finally:
@@ -4431,10 +4685,18 @@ class AppController(QObject):
                     QTimer.singleShot(0, self._start_pending_grading)
 
         def failed(message: str) -> None:
-            if self._interview_provider_operation_id != operation_id:
+            operation_current = (
+                self._grading_identity_is_current(profile_id, interview_id, question_id, operation_id)
+                if _grading_question
+                else self._interview_provider_operation_id == operation_id
+            )
+            if not operation_current:
                 return
             if _grading_question:
-                self._complete_interview_grading(question_id, error=message)
+                self._complete_interview_grading(
+                    question_id, error=message, profile_id=profile_id,
+                    interview_id=interview_id, operation_id=operation_id,
+                )
             else:
                 self._interview_request_failed(message, "provider_response", operation_id)
             release()
@@ -4443,10 +4705,18 @@ class AppController(QObject):
                 QTimer.singleShot(0, self._start_pending_grading)
 
         def progress(raw: str) -> None:
-            if self._interview_provider_operation_id == operation_id and self._profile_id == profile_id and self._interview.get("interview_id") == interview_id:
+            if (
+                not _grading_question
+                and self._interview_provider_operation_id == operation_id
+                and self._profile_id == profile_id
+                and self._interview.get("interview_id") == interview_id
+            ):
                 self._interview["next_question_preview"] = streamed_question(raw)
                 self.stateChanged.emit()
-        self._background(operation, complete, failed, progress=progress)
+        self._background(
+            operation, complete, failed, progress=progress,
+            blocks_ui=not _grading_question,
+        )
 
     def _advance_dynamic_answer(self, result: dict[str, Any], include_materials: bool) -> None:
         interview_id = self._interview["interview_id"]
@@ -4539,7 +4809,22 @@ class AppController(QObject):
             include_materials=include_materials, assessment_question_id=question_id,
             catalog=self.service.catalog, role_catalog=self.service.roles)
 
-    def _complete_interview_grading(self, question_id: str, *, result=None, error: str = "") -> None:
+    def _complete_interview_grading(
+        self,
+        question_id: str,
+        *,
+        result=None,
+        error: str = "",
+        profile_id: str | None = None,
+        interview_id: str | None = None,
+        operation_id: str = "",
+    ) -> None:
+        profile_id = profile_id or self._profile_id
+        interview_id = interview_id or str(self._interview.get("interview_id") or "")
+        if operation_id and not self._grading_identity_is_current(
+            profile_id, interview_id, question_id, operation_id
+        ):
+            return
         if error:
             raw = str(error)
             error = friendly_error(raw)
@@ -4549,16 +4834,33 @@ class AppController(QObject):
                 error = raw
             elif error == text("error.generic"):
                 error = "本题评分未完成，回答已保留。请重试该题；已评分题目不会重复请求。"
-        update_finished_grading(self.repo_root, self._profile_id, self._interview["interview_id"],
-                                question_id, result=result, error=error)
-        self._load_interview(self._interview["interview_id"])
+        update_finished_grading(
+            self.repo_root, profile_id, interview_id,
+            question_id, result=result, error=error,
+        )
+        if operation_id and self._grading_identity_is_current(
+            profile_id, interview_id, question_id, operation_id
+        ):
+            self._interview_grading_identity = None
+            self._interview_grading_message = ""
+            self._interview_grading_paused.discard((profile_id, interview_id))
+        if self._profile_id == profile_id and self._interview.get("interview_id") == interview_id:
+            self._load_interview(interview_id)
+        else:
+            self.stateChanged.emit()
 
     @Slot()
     def retryInterviewGrading(self) -> None:
+        interview_id = str(self._interview.get("interview_id") or "")
+        self._interview_grading_paused.discard((self._profile_id, interview_id))
+        self._interview_grading_message = ""
         self._start_pending_grading(retry_failed=True)
 
     @Slot(str)
     def retryInterviewQuestionGrading(self, question_id: str) -> None:
+        interview_id = str(self._interview.get("interview_id") or "")
+        self._interview_grading_paused.discard((self._profile_id, interview_id))
+        self._interview_grading_message = ""
         self._start_pending_grading(retry_failed=True, question_id=question_id)
 
     @Slot(result="QVariantMap")
@@ -4583,7 +4885,7 @@ class AppController(QObject):
 
     @Slot(str, result=bool)
     def authorizeInterviewGrading(self, scope_sha256: str) -> bool:
-        if self._busy:
+        if self._busy or self._interview_grading_identity is not None:
             return False
         try:
             grading = self._interview.get("grading", {})
@@ -4592,6 +4894,8 @@ class AppController(QObject):
                 raise RuntimeError("评分发送范围已变化，请重新预览。")
             self._settings.setValue(key, scope)
             self._settings.sync()
+            self._interview_grading_paused.discard((self._profile_id, self._interview["interview_id"]))
+            self._interview_grading_message = ""
             self._start_pending_grading(retry_failed=True)
             return True
         except Exception as error:
@@ -4600,9 +4904,18 @@ class AppController(QObject):
             return False
 
     def _start_pending_grading(self, retry_failed: bool = False, question_id: str = "") -> None:
-        if self._busy or self._interview.get("interaction_version") != 2 or self._interview.get("status") not in {"completed", "incomplete"}:
+        interview_id = str(self._interview.get("interview_id") or "")
+        if (
+            self._shutdown_done
+            or self._busy
+            or self._interview_grading_identity is not None
+            or not interview_id
+            or (self._profile_id, interview_id) in self._interview_grading_paused
+            or self._interview.get("interaction_version") != 2
+            or self._interview.get("status") not in {"completed", "incomplete"}
+        ):
             return
-        session = self.service.interview_session(self._profile_id, self._interview["interview_id"])
+        session = self.service.interview_session(self._profile_id, interview_id)
         grading = session.get("grading", {})
         states = grading.get("questions", {})
         question = next((q for q in session["questions"] if q["question_id"] not in session["assessments"]
@@ -4630,7 +4943,10 @@ class AppController(QObject):
             else:
                 self.assessInterviewWithProvider(answer, connection, include_materials, _grading_question=question)
         except Exception as error:
-            self._complete_interview_grading(question["question_id"], error=str(error))
+            self._complete_interview_grading(
+                question["question_id"], error=str(error),
+                profile_id=self._profile_id, interview_id=interview_id,
+            )
 
     @Slot()
     def stopInterviewGeneration(self) -> None:
@@ -7138,6 +7454,10 @@ class AppController(QObject):
             if pending[:3] == (self._profile_id, self._interview.get("interview_id"),
                                (self._interview.get("question") or {}).get("question_id")):
                 self.sendCodexInterviewAnswer(self._interview["answer_text"], pending[3])
+        elif mode == "interviewer":
+            # A restored result may have been loaded before the saved Codex
+            # connection finished opening. Resume only its authorized queue.
+            QTimer.singleShot(0, self._start_pending_grading)
 
     @Slot(object)
     def _handle_codex_connect_failed(self, error: Any) -> None:
@@ -8002,7 +8322,10 @@ class AppController(QObject):
             if (latest.get("status") != "active" and not grading_question) or question_id in latest.get("assessments", {}):
                 raise RuntimeError("当前问题已经评分或面试已经结束，未重复写入 Codex 结果。")
             if grading_question:
-                self._complete_interview_grading(question_id, result=result)
+                self._complete_interview_grading(
+                    question_id, result=result, profile_id=profile_id,
+                    interview_id=interview_id, operation_id=operation_id,
+                )
             elif self._interview.get("delivery_mode") == "dynamic_ai":
                 self._advance_dynamic_answer(result, self._codex_interview_include_materials)
             elif result["follow_up"]:
@@ -8032,7 +8355,10 @@ class AppController(QObject):
             self._interview["ai_error"] = ""
         except Exception as caught:
             if grading_question and self._profile_id == profile_id and self._interview.get("interview_id") == interview_id:
-                self._complete_interview_grading(question_id, error=str(caught))
+                self._complete_interview_grading(
+                    question_id, error=str(caught), profile_id=profile_id,
+                    interview_id=interview_id, operation_id=operation_id,
+                )
             else:
                 self._interview_request_failed(caught, "codex_response", operation_id)
         finally:
@@ -8103,6 +8429,11 @@ class AppController(QObject):
         )
         self._codex_interview_identity = identity
         self._codex_grading_question = _grading_question
+        if _grading_question:
+            self._begin_interview_grading(
+                self._profile_id, self._interview["interview_id"],
+                str(question.get("question_id") or ""), operation_id, "codex",
+            )
         self._codex_interview_include_materials = include_materials
         self._begin_codex_turn("interview", operation_id)
         self._codex_interview_buffer = ""
@@ -8110,11 +8441,12 @@ class AppController(QObject):
         self._codex_interview_fatal_issues = fatal_issues
         self._codex_interview_operation_id = operation_id
         self._codex_interview_message_id = message_id
-        self._interview["ai_assessment_state"] = "streaming"
-        self._interview["ai_error"] = ""
-        self._interview["next_question_preview"] = ""
-        self._background_operations.add(operation_id)
-        self._set_busy(True)
+        if not _grading_question:
+            self._interview["ai_assessment_state"] = "streaming"
+            self._interview["ai_error"] = ""
+            self._interview["next_question_preview"] = ""
+            self._background_operations.add(operation_id)
+            self._set_busy(True)
         self.stateChanged.emit()
         instruction = (
             "Return JSON only with exactly these fields: scores (one integer 1-5 for "
@@ -8256,6 +8588,9 @@ class AppController(QObject):
 
     @Slot()
     def cancelCodex(self) -> None:
+        if self._codex_grading_question is not None and self._interview_grading_identity is not None:
+            self._pause_active_interview_grading()
+            return
         if self._pending_interview_submission is not None:
             self._pending_interview_submission = None
             self._background_operations.discard("interview-connect")
@@ -8529,6 +8864,9 @@ class AppController(QObject):
             return
         if not self.flushInterviewDraft():
             return
+        self._pause_active_interview_grading(
+            "评分因应用关闭已暂停；下次打开后可继续。"
+        )
         self._shutdown_done = True
         self._updates.close()
         self._suspend_interview_voice()
