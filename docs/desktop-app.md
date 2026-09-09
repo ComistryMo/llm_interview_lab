@@ -1,6 +1,6 @@
 # 桌面应用指南
 
-当前源码候选为 `0.4.0a4`，仍在构建与验收，不代表已经公开发布。更新说明见 [候选说明](release-notes-v0.4.0-alpha.4.md)，公共课程口径见 [覆盖快照](content/release-candidate-coverage-20260909.zh.md)。此前 UI 统一轮只调整字体、控件和页面层级，未改变评分与授权规则。
+当前源码候选为 `0.4.0a4`，Windows/macOS 候选包和技术门禁已完成，等待用户审阅；不代表已经公开发布或通过真实 AI、麦克风、macOS 用户实机验收。实际文件、SHA 与验证见[候选报告](desktop-candidate-20260909-report.zh.md)，更新说明见 [候选说明](release-notes-v0.4.0-alpha.4.md)，公共课程口径见 [覆盖快照](content/release-candidate-coverage-20260909.zh.md)。此前 UI 统一轮只调整字体、控件和页面层级，未改变评分与授权规则。
 
 历史 Alpha 截图（不代表本轮完成度）：[首页](images/desktop-home.png)、[首次使用](images/desktop-onboarding.png)、[答题](images/desktop-exercise.png)、[模拟面试](images/desktop-interview.png)、[连接](images/desktop-connections.png)。本轮正式页面证据另附候选验收报告，不覆盖这些历史文件。
 七个代表页面的深浅主题 Before/After、四尺寸检查和已知限制见 [UI 统一设计与验收](design/product-v1-visual-directions.zh.md#2026-09-08-正式-ui-统一基线-6a1fd20)。源码更新不代表重新发布安装包。

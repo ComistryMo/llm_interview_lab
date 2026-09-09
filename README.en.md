@@ -33,7 +33,7 @@ This is not a random question list, a one-pass mastery badge, or a way for AI to
 
 ## Download
 
-The isolated `candidate/desktop-release-20260909` branch uses source version `0.4.0a4`; `v0.4.0-alpha.4` is **not published**. Candidate packages and platform gates are documented in the report above. `main` and existing releases have not been overwritten. The existing [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) does not include these candidate changes.
+The isolated `candidate/desktop-release-20260909` branch uses source version `0.4.0a4`; `v0.4.0-alpha.4` is **not published**. Windows/macOS candidate packages and technical gates have passed; artifacts, checksums and the remaining live-device limitations are documented in the report above. Publication awaits user review. `main` and existing releases have not been overwritten. The existing [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) does not include these candidate changes.
 
 All 96 ready problem assets are included. The Windows candidate without PyTorch has 27 runtime-eligible validated coding problems, not the development environment's 84. Planned nodes and missing dependencies are not counted as runnable practice. See the [coverage definitions](docs/content/release-candidate-coverage-20260909.zh.md) and [same-host performance measurements](docs/performance/desktop-candidate-20260909.zh.md).
 

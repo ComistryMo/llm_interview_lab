@@ -1,12 +1,12 @@
 # 2026-09-09 桌面候选验收报告
 
-状态：**候选验收进行中，尚不可发布**。Windows 本地实际包已通过执行和原生首用流程；远端矩阵及 macOS 构建结论尚待补齐。没有推送 main、创建 Tag、覆盖旧 Release 或正式发布。
+状态：**候选技术门禁已通过，等待用户审阅发布**（`CANDIDATE_TECHNICAL_GATES_PASSED / WAITING_FOR_MAINTAINER_RELEASE_REVIEW`）。Windows 已有本地及 CI 实际包验证；macOS arm64 的最终 CI 构建、启动与 ZIP/DMG 检查通过。没有推送 main、创建 Tag、覆盖旧 Release 或正式发布；真实模型、麦克风和 macOS 用户实机仍未验收。
 
 ## 1. 范围、源码与数据边界
 
 - 仓库 `ComistryMo/llm_interview_lab`，本地 `E:\hz-llm-interview-lab-codex`。
 - 候选分支 `candidate/desktop-release-20260909`；起点/main 为 `cb3d13bba6368ee26a2efeb660f625e22b43edce`。起点已有的 tracked 流式语音/UI 改动一并保留在 `b319934`，没有从旧源码重建而遗漏近期功能。
-- 最终 Windows 本地包及正式截图的应用源码为 `2729e280d75273df55cdc5e61e3828ea07b1d258`。性能复测来源 `d7791ee21dfd8d3a17edfd9ac3e09729d3c6c107`；后续只调整测试/文档及 macOS 最低系统声明，Windows 应用、公共课程及界面源码未变。包内 `runtime_assets/BUILD-METADATA.json` 保存准确来源及文件 SHA。
+- 最终同源 CI 包来自 `4f939695ce0d411356f6121ea46e5569018366a2`。Windows 本地原生全流程包及正式截图的应用源码为 `2729e280d75273df55cdc5e61e3828ea07b1d258`；性能复测来源 `d7791ee21dfd8d3a17edfd9ac3e09729d3c6c107`。后续只调整测试/文档及 macOS 最低系统声明，Windows 应用、公共课程及界面源码未变，已核对 Git diff。包内 `runtime_assets/BUILD-METADATA.json` 保存准确来源及文件 SHA。
 - 未知未跟踪的反馈、计划书、原图、`test结果.md`、`题目.md`、旧 UAT 目录和临时文件没有被打包、提交、清理或读取。用户原先运行的应用及其数据未触碰。
 - 本轮只使用新建 synthetic 档案、题面公共资产、自己生成的运行探针和可控传输替身；公开测试通过路径的 AUTHOR 验收实现仅放在本轮 ignored 空间。没有读取真实简历、录音、API Key、系统密钥或历史维护者 Oracle。
 
@@ -51,13 +51,29 @@
 
 以上证明没有依赖 PATH 中的 Python，但宿主机器本身安装了开发工具，**不是全新 Windows 虚拟机验收**。没有录制真实麦克风。新版启动数据边界、中断重试及模拟材料/语音缓存保持，另外由直接集成测试覆盖。
 
-此前 `2cc62ad`、`4a987a7` 包在首次建档或执行入口上失败，仅作为 ignored 诊断保留，不是可交付版本。`f0b173c` 是可用的上一候选 checkpoint，最终交付使用 `2729e280`。Artifact 检查已加强为实际执行 script/pytest 两个 worker，不能只凭窗口 smoke 放行。
+此前 `2cc62ad`、`4a987a7` 包在首次建档或执行入口上失败，仅作为 ignored 诊断保留，不是可交付版本。`f0b173c` 是可用的上一候选 checkpoint；`2729e280` 本地包保留上述完整原生验收证据，最终同源 CI 交付见下表。Artifact 检查已加强为实际执行 script/pytest 两个 worker，不能只凭窗口 smoke 放行。
 
 ### Windows CI 的独立构建证据
 
 [MSVC Artifact 10080687734](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34284301760/artifacts/10080687734) 来源 `aed507c`（与本地最终包的应用源码相同），已下载到 `dist/candidate-ci-aed507c/windows/`。内层便携 ZIP 为 172,108,415 字节，SHA-256 `0a74d986f6306fdac4c942ef674ba41a6dc9b933963177668d3896f8877fb0b4`，与生产方清单相符；GitHub 外层 Artifact ZIP 摘要为 `0b7c92acdb16ca354851a8ff6c7400b5a3d933730f64605d4d09173f975c9396`，两者不能混用。
 
-这份实际下载的包也解压到新中文/空格路径，移除 Python 路径后用原生窗口创建 `synthetic-msvc`，进入完整中文 FND-001，保存并运行非题解探针，得到 `9`/退出 0；公开测试如实返回 missing_symbol。没有读取开发机 Profile 或凭证。MSVC 与 MinGW 产物大小、SHA 不同是不同工具链的实际结果，不宣称二进制可重复构建。
+这份实际下载的包也解压到新中文/空格路径，移除 Python 路径后用原生窗口创建 `ci-synthetic-msvc`（显示名“CI 下载包验收 synthetic-msvc”），进入完整中文 FND-001，保存并运行非题解探针，得到 `9`/退出 0；公开测试如实返回 missing_symbol。没有读取开发机 Profile 或凭证。MSVC 与 MinGW 产物大小、SHA 不同是不同工具链的实际结果，不宣称二进制可重复构建。
+
+### 最终同源 CI 交付文件
+
+下面三个文件均已实际下载并与各自生产方 SHA 清单逐字核对，源码都是 `4f939695ce0d411356f6121ea46e5569018366a2`，版本 `0.4.0a4`。本地相对路径均以仓库为根；这些是候选 Artifact，不是已公开的 Release。
+
+| 平台 / 文件 | 本地路径 | 字节数 | SHA-256 |
+|---|---|---:|---|
+| Windows x64 便携 ZIP | `dist/candidate-ci-4f93969/windows/release/LLMInterviewLab-Windows-x64-portable.zip` | 172,108,416 | `a162c20dfe281c6f24f2915b9df4439ca7fcfd3ebc1245a72ddc0f29abed0178` |
+| macOS arm64 app ZIP | `dist/candidate-ci-4f93969/macos/release/LLMInterviewLab-macOS-arm64.app.zip` | 231,667,572 | `1d01879fb1e72973d9cfd45a96b22fcc11becd0b6f60532b2ec25e2d62845090` |
+| macOS arm64 DMG | `dist/candidate-ci-4f93969/macos/release/LLMInterviewLab-macOS-arm64.dmg` | 272,313,332 | `e03bfc10fa280f84cc680548bda113b139ce14a817650503d5ede9bc18e694e2` |
+
+远端：[Windows Artifact 10082008977](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34288557804/artifacts/10082008977)、[macOS Artifact 10081946619](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34288557804/artifacts/10081946619)。GitHub 外层下载 ZIP 的摘要分别为 `d475e08a28074dfd5c1d34edaf74f4da53c1f0c173f34cd444ca22a97f8d9e06`、`7a86765dfde26da967acae57eeeca428f4009ade2cd7f108944ce4f67d5f84e6`，已核对，不与表中内层发行文件的摘要混用。CI Artifact 不是永久 Release 下载链接，当前保留至 2026-12-07。
+
+两平台包内各 641 个公共文件均与本平台 manifest 相符；源码对照无内容差异。macOS `.gitignore` 使用 Git 原始 LF，而本机 Windows checkout 是 CRLF，已单独对照源 commit 验证，没有忽略其他 SHA 差异。macOS 的 plist 版本、14.0 最低系统、arm64 主程序、ad-hoc 签名、事件循环、两个执行 worker 和挂载 DMG 隐私检查均由 macOS 15 CI 实际执行；本地 Windows 只复核 ZIP/DMG 摘要和 ZIP 内容，不冒称在 Windows 上运行 macOS 程序。
+
+最终 `4f93969` Windows 下载包另解压到新中文/空格路径，以无 Python PATH、null Keyring 启动，复用本轮 `ci-synthetic-msvc` 合成数据和 settings。原生窗口点击“继续练习”，代码逐字恢复；正常退出码 0，Profile/events/submission 三个 SHA 与启动前一致。没有重复创建档案或使用源码进程替代最终 EXE。此前完整 17 项公开测试/提交/重启证据来自上文同应用源码的 MinGW 包，不能误称在每一份二进制上都重跑过完整验收。
 
 ## 4. 视觉、内容和性能
 
@@ -66,6 +82,7 @@
 - [公共覆盖](content/release-candidate-coverage-20260909.zh.md)：254 节点，96 ready（84 Oracle、12 contract）、158 planned，255 知识卡、258 来源、24 retention-ready。
 - 641 个公共文件随包 SHA 与源码一致；包内运行同一覆盖脚本确认 **27 道**已验证代码题具备环境资格，开发机有 Torch 时为 84 道。不把 planned、缺依赖或未解锁当成可练。
 - NNL-018 两组 D+2/D+7 AUTHOR 资产已完成 18 个公开目标验证、60 个有限差分 VJP 和 24 个 CPU PyTorch VJP 检查，仍是 `AUTHOR_PENDING_REVIEW`，不计入已准入覆盖。
+- 本轮没有把 planned 或待审内容升级为 ready；ready/retention-ready 计数没有虚增。优先交付已有完整内容、修正中文展示及可发现性，新增待审资产另行审阅。
 - [最终性能数据](performance/desktop-candidate-20260909.zh.md)：5 次新进程，连续搜索 42.19 → 25.12 ms（-40.47%），命中/排序一致；启动 +5.40%、40 轮加载 +2.61%、内存 +1.46%，在预先冻结阈值内。原始值及 p95 保留，不承诺未知机器的秒级速度。
 
 ## 5. 测试与真实传输口径
@@ -96,7 +113,18 @@
 
 ## 6. CI、发布与回退
 
-当前 [候选 CI 34288557804](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34288557804) 验证 `4f939695ce0d411356f6121ea46e5569018366a2`。前一 `d7791ee` 轮 macOS 整套测试已通过并进入构建；更早 `34284301760` 的六个核心 Python/系统矩阵、CPU PyTorch、文档及 Windows 构建均通过，macOS 留下的一个固定 80 ms 布局等待失败已修正，未减断言。Windows core 旧 12 分钟限额延长至 35 分钟，没有减少测试。
+最终 [候选 CI 34288557804](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34288557804) 验证 `4f939695ce0d411356f6121ea46e5569018366a2`，全部技术 Job 成功，发布 Job 按门禁跳过：
+
+| Job | 实际结果 |
+|---|---|
+| Ubuntu / Python 3.10、3.11、3.12 | 每组 650 passed / 32 skipped |
+| Windows core / Python 3.10、3.11、3.12 | 每组 649 passed / 33 skipped |
+| CPU PyTorch | 2 passed |
+| 中文文档契约 | 28 passed |
+| Windows 桌面 / Python 3.11 | 83 passed；MSVC 构建、真实 worker/Artifact 检查、上传成功 |
+| macOS 15 arm64 / Python 3.11 | 944 passed / 8 skipped；构建、ad-hoc 签名/启动、worker、ZIP/DMG 检查、上传成功 |
+
+纯 dev Job 的可选依赖跳过与 macOS 的既有条件跳过保留，没有新增 skip/xfail。先前 macOS 的固定 80 ms 布局等待错误已改为有界等待稳定帧，几何及点击断言仍在；Windows core 旧 12 分钟限额延长至 35 分钟，没有减少测试。各组合有重叠，不相加作为唯一测试数。
 
 最终 macOS 包要求 Apple Silicon / **macOS 14+**。CI 实际安装 Qt 的 13+ wheel 和 NumPy/SciPy 的 14+ Accelerate wheel，不能仅按 Qt 写 13，也不能沿用 Alpha.3 的 12+ 声明。`4f93969` 同步编译参数、plist 和 Artifact 检查为 14；仅更改元数据不能证明在较低系统兼容。仍使用 ad-hoc signing，无 Developer ID、无公证，macOS 15 CI 不能代替用户实机验收。
 
@@ -104,4 +132,6 @@
 
 用户审阅后如需发布，现有工作流要求手动 publish、匹配已存在 Tag、本轮全部测试和两个平台 Artifact 通过；禁止覆盖旧 Release。Windows 解压到新目录再切换入口，macOS 退出后替换 app；保留旧包及原数据目录可回退，不删除 Profile、events、材料、草稿、密钥引用或模型缓存。
 
-剩余事项：补齐最终远端核心与 macOS 平台门禁，核验候选 macOS 产物；公开发布前仍应做目标机器麦克风/真实模型及 macOS 交互验收。Practice 输出标题已统一为“执行输出”，正文明确区分脚本退出码与公开测试结果。另有不阻断执行的 P2 文案：结果尾部“测试版本”实际显示的是被测作答摘要 `tested_revision`，后续可改为“作答版本”；不为这一标签再次重建本轮 Windows 包。
+平台裁决：Windows x64 候选技术验收通过；macOS arm64 候选 CI/Artifact 门禁通过，可交维护者审阅，但没有 Developer ID、公证或 macOS 用户实机验收。**公开发布仍须用户决定，不能自动发布或宣称已通过真实语音/远程 AI 验收。** 最短后续是审阅现有候选包，完成目标机器麦克风/真实模型及 macOS 交互 UAT；有具体问题时只修复并复验受影响路径。
+
+Practice 输出标题已统一为“执行输出”，正文明确区分脚本退出码与公开测试结果。另有不阻断执行的 P2 文案：结果尾部“测试版本”实际显示的是被测作答摘要 `tested_revision`，后续可改为“作答版本”；不为这一标签再次重建本轮 Windows 包。

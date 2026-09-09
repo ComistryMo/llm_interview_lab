@@ -62,7 +62,7 @@ LLM Interview Lab 把三个入口放进同一个本地学习档案（Profile）�
 
 ## 下载与三分钟开始
 
-当前候选分支为 `candidate/desktop-release-20260909`，源码版本 `0.4.0a4`，对应 `v0.4.0-alpha.4`（**未发布**）。候选包和验收门禁仍在核对，不能视为已发布版本。下方 [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) 属于既有发布，不包含候选升级；当前发布状态以官方 Release 页面为准。
+当前候选分支为 `candidate/desktop-release-20260909`，源码版本 `0.4.0a4`，对应 `v0.4.0-alpha.4`（**未发布**）。Windows/macOS 候选包及技术门禁已完成，文件、SHA 和实机验收限制见[候选报告](docs/desktop-candidate-20260909-report.zh.md)，等待用户审阅发布。下方 [Alpha.3 Release](https://github.com/ComistryMo/llm_interview_lab/releases/tag/v0.4.0-alpha.3) 属于既有发布，不包含候选升级；当前发布状态以官方 Release 页面为准。
 
 候选包完整携带 96 道 ready 题资产；未内置 PyTorch 的 Windows 包中，27 道已验证代码题具备运行环境，不能按开发机的 84 道宣传全题可运行。详见[覆盖口径](docs/content/release-candidate-coverage-20260909.zh.md)及[同机性能数据](docs/performance/desktop-candidate-20260909.zh.md)。
 
