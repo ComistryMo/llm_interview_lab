@@ -42,4 +42,9 @@
 
 本轮只做受影响的连接、增量协议、Windows 原生安装/回退脚本、QML 与源码启动验证，结果记录在[执行计划](../plans/active/v1-in-app-updates-and-connection-diagnostics.zh.md)。未运行全量回归、真实付费 AI、Windows/macOS 打包或 CI；不能把模拟 HTTP 与脚本测试说成室友 Mac 或安装包验收。
 
+- 源码入口、更新协议与中文文档：35 passed；新增入口 `--version` 与隔离 `--smoke-test` 均通过。
+- 连接诊断及保存/修改/删除/重启恢复：19 passed；更早的 Provider/DeepSeek 定向验证为 53 passed，两批有重叠。
+- Windows 原生 QML 点击：1 passed；[连接错误](images/source-alpha1/connection-diagnostic-1080.png)与[更新确认](images/source-alpha1/update-install-confirmation-1080.png)已人工查看，状态为合成，非真实安装或付费服务。
+- 文档链接、截图完整性、发布契约：32 passed。旧发布的证据不重新标记为本轮通过。
+
 Field-tested runs：0。本轮不修改题库或增添面试实测完成声明。

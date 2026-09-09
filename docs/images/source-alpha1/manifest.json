@@ -1,0 +1,41 @@
+{
+  "version": "1.0.1a1",
+  "source_commit": "a9769e6f09560779db3ffa515a61d11de2386866",
+  "synthetic": true,
+  "renderer": "Windows Qt / production AppController and QML; synthetic error and prepared update state, not a bundle install",
+  "logical_size": [
+    1080,
+    680
+  ],
+  "screenshots": [
+    {
+      "path": "docs/images/source-alpha1/connection-diagnostic-1080.png",
+      "synthetic": true,
+      "source_commit": "a9769e6f09560779db3ffa515a61d11de2386866",
+      "sha256": "ae22df293a1a67a83141d3b08d415e264c73ca65100c6ed0518a522f81654349",
+      "pixel_size": [
+        1620,
+        1020
+      ]
+    },
+    {
+      "path": "docs/images/source-alpha1/update-install-confirmation-1080.png",
+      "synthetic": true,
+      "source_commit": "a9769e6f09560779db3ffa515a61d11de2386866",
+      "sha256": "f4bc8508cb50c04e7267e4471c7b0d9027d252fcea6775148fd92b8e9715868a",
+      "pixel_size": [
+        1620,
+        1020
+      ]
+    }
+  ],
+  "source_inputs": {
+    "src/llm_interview_lab/desktop/controller.py": "90d1459558f6d6dc3d9467b3f7574a220015e0a31733f351b91dffb73e976fc5",
+    "src/llm_interview_lab/desktop/updates.py": "d7103aa0db0934d7d5b98121e83d4e12d90a15a0966902bc249fbb7f9bd2c43f",
+    "src/llm_interview_lab/desktop/qml/Main.qml": "7b1937d38a5bd676895d12b4678a4eba82af7746233830f5196da8049c27f4a9",
+    "src/llm_interview_lab/desktop/qml/components/UpdateSettings.qml": "2adfede91fb363df8c5f1a9f07936d3d4665c0384f6d00c92191e0e4cd6051bc",
+    "src/llm_interview_lab/desktop/qml/components/LabDialog.qml": "8dca5f1a0ab9729c051898bcd18a42d701daddf13a142f43ea2d6896b342d1d7",
+    "src/llm_interview_lab/desktop/qml/pages/ConnectionsPage.qml": "3246ca2744a1c9da87dc349f127b63162d95453c19d031b827bc47318fecafc3",
+    "src/llm_interview_lab/desktop/qml/pages/SettingsPage.qml": "2713b00f8ef1d36ac79b7c8f7c3defe06ad565f6df856d3c58c3b648dfae6e7f"
+  }
+}
