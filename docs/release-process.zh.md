@@ -12,9 +12,17 @@
 
 [本次构建与验证](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34305123396)使用现有 CI，包含核心检查、中文文档、PyTorch 专项、双平台构建与产物检查。首次构建尝试因一条旧测试强制 README 包含 CLI 长命令而失败；已把命令示例保留在面试指南，测试核对相应链接与指南，未改变应用或 CLI 行为。当前链接为修正后的构建，后续仅文档和发布清单的提交使用 `[skip ci]`，不重复打包。
 
-本次还发现一项 GUI 自动化时序问题：测试在切换页面后立即执行第二次坐标点击，可能早于 QML 完成布局。仅在该测试的两次页面变化后各等待 100 ms，保留原点击与断言；应用代码未变。该定向测试在 Windows 离屏环境通过（1 passed，94 deselected）。远端 macOS 检查仍须通过后才发布，不以本地测试替代平台门禁。
+本次还发现一项 GUI 自动化时序问题：测试在切换页面后立即执行第二次坐标点击，可能早于 QML 完成布局。仅在该测试的两次页面变化后各等待 100 ms，保留原点击与断言；应用代码未变。该定向测试在 Windows 离屏环境通过（1 passed，94 deselected）。同一构建源的 macOS 作业单独重跑后通过：960 passed，8 skipped；Windows 和其他已经通过的作业没有再次执行。
 
-发布前将实际构建源、Artifact ID 和三个包的 SHA 固定在 [release-manifest.json](../.github/release-manifest.json)。工作流失败时不标记为已完成；实际发布状态和剩余限制以本版说明为准。
+实际构建源、Artifact ID 和三个包的 SHA 固定在 [release-manifest.json](../.github/release-manifest.json)。本次 CI 的 10 个必需作业均已通过，后续发布仍需逐包校验。实际发布状态和剩余限制以本版说明为准。
+
+## 实际验证范围
+
+- Windows CI：83 项桌面定向检查通过；standalone 启动、代码及公开测试 worker、压缩包与隐私边界检查通过。
+- macOS 15 arm64 CI：960 passed，8 skipped；APP 启动、ad-hoc 签名、ZIP 和挂载 DMG 检查通过。
+- Ubuntu／Windows 的 Python 3.10、3.11、3.12 核心检查、CPU PyTorch 专项、中文文档作业均通过。
+- 本地文档／版本／截图复用定向检查：23 passed；发布晋级检查：14 passed；旧 CLI 文档链接检查：1 passed；页面布局等待修正：1 passed；中文与链接检查：2 passed。这些是分别执行的目标检查，不包装成额外一轮全量回归。
+- 本次没有新增真实模型付费测试、麦克风识别测试、macOS 用户实机验收或全新 Windows 虚拟机验收；没有重拍 UI 截图。README 使用的正式页面图片保留原来源信息。
 
 ## 发布顺序
 

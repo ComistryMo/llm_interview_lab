@@ -37,7 +37,7 @@ Windows 完整解压后启动 LLMInterviewLab.exe，不能单独移动 exe。mac
 
 ## 验证范围与历史
 
-本次只调整对外版本、README 与发布材料，不改面试、题目、评分或语音逻辑。Windows/macOS 包需从 1.0.0 源码重新构建，发布工作流会核对构建、启动、产物校验与实际版本。
+本次只调整对外版本、README 与发布材料，不改面试、题目、评分或语音逻辑。Windows/macOS 包已从 1.0.0 源码重新构建；Windows 的 83 项桌面检查、macOS 的 960 项检查（8 项跳过），以及启动、ZIP／DMG 产物检查均通过。构建源为 `8fe697c`，完整记录见[本次 CI](https://github.com/ComistryMo/llm_interview_lab/actions/runs/34305123396)与[发布验证说明](https://github.com/ComistryMo/llm_interview_lab/blob/v1.0.0/docs/release-process.zh.md)。
 
 此前的自动化、合成数据与原生验收记录保留在[开发期报告](https://github.com/ComistryMo/llm_interview_lab/blob/v1.0.0/docs/desktop-candidate-20260909-report.zh.md)，不冒充本次新增人工验收。未完成的 macOS 用户实机、全新 Windows 虚拟机及真实模型／麦克风验收仍是限制。
 
@@ -47,4 +47,4 @@ Field-tested runs：0。自动化与合成数据不计作真实学习者验证�
 
 退出旧应用再替换程序，保留应用数据目录、模型和自己的备份。设置页可查看实际数据目录。此次版本命名调整不清空档案、答案、材料、Key 或录音。
 
-此前 GitHub 开发版 Release 页面与附件将在 v1 下载确认就绪后移除；Git 提交与历史标签保留。新用户只需要使用本页的 v1 下载。
+旧开发版不再作为推荐下载入口。本次发布流程先确认 v1 下载就绪，再备份和移除此前七个 GitHub 开发版 Release 的页面与附件；备份保留 90 天，Git 提交与历史标签保留。新用户只需要使用本页的 v1 下载。
