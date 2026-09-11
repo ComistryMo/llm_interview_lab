@@ -634,8 +634,6 @@ def build_role_interview_context_preview(
             json.dumps(frozen_contract, ensure_ascii=False), sensitive=True))
         from .interview_context_budget import bounded_parts
         try:
-            if expert_references:
-                frozen_contract["loaded_knowledge_ids"] = list(dict.fromkeys(r["topic_id"] for r in expert_references))
             parts = bounded_parts(parts, frozen_contract, session)
         except ValueError as error:
             raise ContextBuilderError(str(error)) from None

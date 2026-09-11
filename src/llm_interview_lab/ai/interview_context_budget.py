@@ -78,11 +78,26 @@ def bounded_parts(parts, contract, session):
         "unit_note": "字符/UTF-8字节，不是token。Codex复用线程的累计上下文不在此上限内。",
         "trim_order": ["old_history", "recent_history_oldest_first", "optional_knowledge_candidates"],
         "required_overflow": "reject_before_transport"}
-    # Replace full-history legacy candidates with the few reviewed criteria;
-    # other roles retain their lexical candidates as an optional recall part.
-    optional = [p for p in parts if p.id == "knowledge_candidates"] if not contract["expert_references"] else []
+    # A reviewed criterion does not replace a whole ordinary card. Keep the
+    # original pool/order, deduplicating cards only; it remains budget-optional.
+    optional = []
+    for resource in parts:
+        if resource.id == "knowledge_candidates":
+            content = json.loads(resource.content)
+            seen = set()
+            cards = []
+            for card in content["cards"]:
+                if card["id"] not in seen:
+                    seen.add(card["id"])
+                    cards.append(card)
+            content["cards"] = cards
+            optional.append(part(resource.id, resource.label, content, resource.sensitive))
     required = [p for p in parts if p.id not in ("dialogue_history", "interview_contract", "knowledge_candidates")]
     def assemble():
+        # Recompute before serializing/hashing on EVERY budget iteration.
+        contract["loaded_knowledge_ids"] = list(dict.fromkeys(
+            [c["id"] for p in optional for c in json.loads(p.content)["cards"]]
+            + [r["topic_id"] for r in contract["expert_references"]]))
         scopes = deepcopy(required_ranges)
         for item in recent:
             if item.get("answer"):
@@ -112,6 +127,5 @@ def bounded_parts(parts, contract, session):
             recent.pop(0)
         elif optional:
             optional.clear()
-            contract["loaded_knowledge_ids"] = list(dict.fromkeys(r["topic_id"] for r in contract["expert_references"]))
         else:
             raise ValueError("当前完整回答、材料或必要证据超过上下文预算；请缩短回答或减少本轮材料，未截断原文或发起请求。")

@@ -425,3 +425,27 @@ $env:LLM_LAB_EVIDENCE_ARTIFACT_ROOT = Join-Path (Get-Location) 'workspace/mainta
 完成有限核对后停止扩展结构。后续仅在新授权任务下继续；本轮不自行发起专业质量对照。
 
 最终 `git diff --check` 通过（只有继承的 QML LF→CRLF 策略提示）。新三份合成 trace 的 manifest 与实际 SHA 核对一致；此前失败 JUnit 未覆盖。当前裁决保持 **SLICE3_LOCAL_ACCEPTANCE_PASSED / REAL_MODEL_QUALITY_UNRUN**；切片三有限收尾完成，不再扩展实现。当前 main/HEAD 未变，所有原有及本轮修改留在工作树。
+
+## 2026-09-11 两处定点修复
+
+起始 HEAD 为审查提交 `e5f89af359ad5f7c1c54886b0903d688d4d1a660`，相关已跟踪文件无未提交修改；原有未跟踪资产不动。本轮不是新切片。
+
+- **A 原因与修改**：Context Builder 在专家非空时覆盖知识 ID，预算模块又无条件删除普通候选。删除前者；后者保留原普通池、按 card ID 保序去重，不因同 topic 专家 criterion 存在而删卡。每次预算循环均从实际保留的普通卡和专家参考重算白名单，再序列化、计算 ContextPart hash。超预算仍先裁旧历史/最近历史、再裁可选候选；必需内容超限仍拒绝。未改排名、上限或答辩资源优先级。
+- **B 原因与修改**：全文首次匹配抢占范围内后续匹配，而且预校验之后会再次全文定位。`anchor` 增加可选 source_scope，验证来源 hash 和原始半开区间，在所有允许区间先选最早精确匹配，之后才允许口述的反引号兼容；code/run/test 严格匹配。`merge_decision` 局部复用同一定位结果，覆盖经历、主张、矛盾、显式及自动关闭。历史已存位置不迁移，恢复仍按位置校验。
+- **直接调用兼容**：`role_interviews.py`、`coding_defence.py` 各一行将协议3缺失/None范围转为空授权范围，避免误走 anchor 无范围兼容路径；不是修改时钟、评分或答辩流程。其他生产修改仅 `ai/context_builder.py`、`ai/interview_context_budget.py`、`interviewer_state.py`。
+- **复现与测试**：新增 `tests/infrastructure/test_interview_resource_scope.py`。B 首次即复现误拒绝；A 的合成问答最初误命中“组内优势/缩放”专家主题，移除这些非目标词后确认所有参考 priority=3，仍因缺少 knowledge_candidates 抛出 StopIteration。修复后真实 EGT-QB-002 普通卡与专家兜底共存并可用于事务；同主题普通卡也保留，预算裁掉普通卡后其独有 ID 拒绝、仍有专家的 ID 保留。两种最终传输序列化均检查同一 contract 和原预算，ContextPart hash 与实际内容一致。
+- 引文正例经合法历史经历/矛盾/关闭流程提交，当前主张仍只能引用当前回答；逐项验证保存的是后一次原始位置、decision 未修改、旧引文不重定位、恢复成功。空/缺失范围、错误 hash、范围外、分段拼接、历史回答冒充当前主张均整轮拒绝，Session/revision/下一问不变。轻量参数化覆盖精确匹配优先、反引号兼容、最早合法位置、非法区间和代码/运行/测试严格匹配。
+
+实际命令：
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -m pytest tests/infrastructure/test_interview_resource_scope.py tests/infrastructure/test_interviewer_evidence.py::test_v2_compiled_baseline tests/infrastructure/test_interview_expertise.py::test_grpo_compiled_expertise_and_scripted_transaction tests/infrastructure/test_interview_expertise.py::test_long_actual_compilation_rejects_unsent_old_quotes_and_overflow tests/infrastructure/test_coding_defence.py::test_defence_rejected_sources_restart_and_atomic_retry -q --maxfail=2
+# 27 passed, 1 failed in 75.54s。唯一失败为新测试把回答文件hash误当作去文件格式后的文本hash。
+# 对照既有 _locked_answer_text 契约，断言改用已校验的锁定记录hash；不修改生产存储或指纹。
+.\.venv\Scripts\python.exe -X utf8 -m pytest tests/infrastructure/test_interview_resource_scope.py::test_repeated_sent_quotes_persist_same_locations_in_all_updates -q
+# 1 passed in 8.36s。仅重跑修正断言的用例，其余27例未重复运行。
+git diff --check
+# 通过。
+```
+
+未运行48场景全集、桌面整链、全量回归、真实模型、真实延迟或专家盲审；未重录V2快照。无子Agent、真实档案/材料/密钥读取、依赖安装、提交/推送/构建/发布。真实语义质量继续 UNRUN。本轮两处定点修复完成，到此停止。

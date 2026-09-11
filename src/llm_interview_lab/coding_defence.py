@@ -106,7 +106,7 @@ def advance(repo_root, profile_id, session, question_id, decision, contract, con
     merged = state.merge_decision(session, decision, contract["request_basis"], answers,
         allowed_topics={s["id"] for s in contract["role_skills"]} | set(contract["loaded_knowledge_ids"]),
         allowed_knowledge=contract["loaded_knowledge_ids"], allowed_methods=contract["loaded_method_ids"],
-        source_scope=contract["sent_answer_sources"], allowed_claims=contract["allowed_probe_claim_ids"],
+        source_scope=contract["sent_answer_sources"] or [], allowed_claims=contract["allowed_probe_claim_ids"],
         defence=True)
     probe = decision["probe"]
     if decision["next_stage"] == "coding":

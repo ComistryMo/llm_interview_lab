@@ -176,20 +176,37 @@ def request_basis(session, question_id):
     return value
 
 
-def anchor(source, answers):
+def anchor(source, answers, source_scope=None):
     qid, quote = source["question_id"], source["quote"]
     if qid not in answers:
         raise ValueError("AI 引文不属于本次请求的已锁定回答；请重试。")
     answer, digest = answers[qid]
-    start = answer.find(quote)
+    spans = [(0, len(answer))]
+    if source_scope is not None:
+        permitted = [s for s in source_scope if s["question_id"] == qid]
+        if not permitted or any(s.get("answer_sha256") != digest for s in permitted):
+            raise ValueError("引文未包含在本轮实际发送的原文范围内或来源hash不一致；未写入证据。")
+        spans = [(r.get("start"), r.get("end")) for s in permitted for r in s.get("ranges", [])]
+        if not spans or any(type(a) is not int or type(b) is not int or not 0 <= a < b <= len(answer) for a, b in spans):
+            raise ValueError("本轮实际发送的引文范围无效；未写入证据。")
+    spans = sorted(set(spans))
+    matches = [answer.find(quote, a, b) for a, b in spans]
+    start = min((i for i in matches if i >= 0), default=-1)
     if start < 0 and not qid.startswith(("code:", "run:", "test:")):
-        positions = [i for i, char in enumerate(answer) if char != "`"]
-        plain, selected = "".join(answer[i] for i in positions), quote.replace("`", "")
-        offset = plain.find(selected) if selected else -1
-        if offset >= 0:
-            start, end = positions[offset], positions[offset + len(selected) - 1] + 1
+        matches = []
+        selected = quote.replace("`", "")
+        for a, b in spans:
+            positions = [i for i in range(a, b) if answer[i] != "`"]
+            plain = "".join(answer[i] for i in positions)
+            offset = plain.find(selected) if selected else -1
+            if offset >= 0:
+                matches.append((positions[offset], positions[offset + len(selected) - 1] + 1))
+        if matches:
+            start, end = min(matches)
             quote = answer[start:end]
     if start < 0:
+        if source_scope is not None:
+            raise ValueError("引文未包含在本轮实际发送的原文范围内；未写入证据，请重试。")
         raise ValueError("AI 引文与已锁定回答不一致；未更新证据或下一问，请重试。")
     return {"question_id": qid, "answer_sha256": digest, "quote": quote,
             "start": start, "end": start + len(quote), "quote_verified": True}
@@ -220,18 +237,13 @@ def merge_decision(session, decision, basis, answers, *, allowed_topics, allowed
     stage = next(q for q in session["questions"] if q["question_id"] == qid).get("stage", "introduction")
     refs = {key: key for group in ("experiences", "claims") for key in state[group]}
     update = decision["state_update"]
-    if source_scope is not None:
-        sources = {source["question_id"]: source for source in source_scope}
-        citations = [item["evidence"] for group in ("experiences", "claims", "closures") for item in update[group]]
-        citations += [item[side] for item in update["contradictions"] for side in ("first", "second")]
-        for citation in citations:
-            anchored = anchor(citation, answers)
-            source = sources.get(anchored["question_id"], {})
-            if source.get("answer_sha256") != anchored["answer_sha256"] or not any(
-                span["start"] <= anchored["start"] and anchored["end"] <= span["end"] for span in source.get("ranges", [])):
-                raise ValueError("引文未包含在本轮实际发送的原文范围内；未写入证据，请重试。")
+    citations = [item["evidence"] for group in ("experiences", "claims", "closures") for item in update[group]]
+    citations += [item[side] for item in update["contradictions"] for side in ("first", "second")]
+    anchored = {(c["question_id"], c["quote"]): anchor(c, answers, source_scope) for c in citations}
+    def evidence_for(citation):
+        return anchored[(citation["question_id"], citation["quote"])]
     for item in update["experiences"]:
-        evidence = anchor(item["evidence"], answers)
+        evidence = evidence_for(item["evidence"])
         key = next((key for key, old in state["experiences"].items() if old["evidence"] == evidence), None)
         key = key or _id("exp", state["experiences"])
         if not item["ref"].startswith("new:") or item["ref"] in refs:
@@ -243,7 +255,7 @@ def merge_decision(session, decision, basis, answers, *, allowed_topics, allowed
         current_sources = {qid, "code:" + qid} if defence else {qid}
         if item["evidence"]["question_id"] not in current_sources or not item["statement"].strip():
             raise ValueError("主张更新必须引用当前已锁定回答并说明具体主张，请重试。")
-        evidence = anchor(item["evidence"], answers)
+        evidence = evidence_for(item["evidence"])
         experience = refs.get(item["experience_ref"], "") if item["experience_ref"] else ""
         if item["experience_ref"] and experience not in state["experiences"]:
             raise ValueError("AI 主张引用了未知经历，请重试。")
@@ -279,7 +291,7 @@ def merge_decision(session, decision, basis, answers, *, allowed_topics, allowed
         claim = refs.get(item["claim_ref"])
         if claim not in state["claims"]:
             raise ValueError("矛盾记录缺少实际主张，请重试。")
-        first, second = anchor(item["first"], answers), anchor(item["second"], answers)
+        first, second = evidence_for(item["first"]), evidence_for(item["second"])
         if first == second or not item["ambiguity"].strip() or (item["resolved"] and (
             not item["resolution"].strip() or second["question_id"] != qid
         )):
@@ -293,7 +305,7 @@ def merge_decision(session, decision, basis, answers, *, allowed_topics, allowed
         key = refs.get(item["claim_ref"])
         if key not in state["claims"]:
             raise ValueError("关闭条件引用了未知主张，请重试。")
-        evidence = anchor(item["evidence"], answers)
+        evidence = evidence_for(item["evidence"])
         status, reason = state["claims"][key]["criterion_status"], item["reason"]
         if reason == "sufficient" and status != "model_supported":
             raise ValueError("无支持证据的主张不能标为充分。")

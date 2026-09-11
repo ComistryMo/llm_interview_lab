@@ -1192,7 +1192,7 @@ def advance_dynamic_role_interview(
             merged_state = interviewer_state.merge_decision(session, assessment, basis, answers,
                 allowed_topics=role_topics | set(knowledge_ids), allowed_knowledge=knowledge_ids,
                 allowed_methods=request_contract.get("loaded_method_ids", []),
-                source_scope=request_contract.get("sent_answer_sources"),
+                source_scope=request_contract.get("sent_answer_sources") or [],
                 allowed_claims=request_contract.get("allowed_probe_claim_ids"),
                 time_forced=time_forced)
         except ValueError as error:
