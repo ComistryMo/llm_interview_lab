@@ -198,9 +198,29 @@ v1.0.0 可直接选择 **DeepSeek**，模型与推理强度位于表单首屏，
 
 ## 源码运行
 
-无需编译 exe 或 `.app`。推荐 **Python 3.11**；下载源码或克隆仓库后，在仓库根目录操作。
+无需编译 exe 或 `.app`。首次是“安装 Python → 获取代码 → 准备项目环境 → 启动”，之后只需最后一步。推荐 **Python 3.11**：项目最低要求为 3.10，但部分 AI 适配依赖只在 3.11+ 安装。不要因为机器上有 `python` 命令就假定版本正确。
+
+### 先获取代码并找到根目录
+
+新机器需要 Git；首次安装依赖需要联网。打开终端执行：
+
+```bash
+git --version
+git clone https://github.com/ComistryMo/llm_interview_lab.git
+cd llm_interview_lab
+```
+
+已有仓库不必重复克隆，进入原目录即可。下面所有命令都从包含 `pyproject.toml`、`src` 和 `scripts/run_desktop.py` 的目录执行。macOS / Linux 可用 `pwd`、Windows PowerShell 可用 `Get-Location` 确认当前位置。复制命令时不要带上用户名、目录前缀或终端的 `%` / `$` 提示符。
 
 ### Windows
+
+先确认解释器：
+
+```powershell
+py -3.11 --version
+```
+
+应显示 `Python 3.11.x`。没有 `py` 或没有该版本时，先通过 Python 官方发行渠道安装 Python 3.11，并重新打开 PowerShell。若只有 `python` 命令，先执行 `python --version` 核实版本；只有确认是合适的 Python 3 后才用它替换下面的 `py -3.11`。
 
 首次准备（新机器或依赖变化时执行一次）：
 
@@ -214,16 +234,107 @@ py -3.11 scripts/run_desktop.py --setup
 .\.venv\Scripts\python.exe scripts/run_desktop.py
 ```
 
-不需要 `Activate.ps1`、更改 PowerShell 执行策略或设置 `PYTHONPATH`。没有 `py` 但已安装 Python 3.11 时，可用 `python scripts/run_desktop.py --setup`。
+不需要 `Activate.ps1`、更改 PowerShell 执行策略或设置 `PYTHONPATH`。首次准备失败时先处理安装错误，不要直接跳到启动命令。
 
-### macOS / Linux
+### macOS：先准备 Python，再启动
+
+这些步骤用于源码，不是 DMG 安装。尤其不要复制另一台机器的 `.venv`，Windows 的虚拟环境不能拿到 Mac 使用。
+
+**1. 检查现有 Python。**
+
+```bash
+command -v python3.11
+python3.11 --version
+```
+
+能显示 `Python 3.11.x`，就跳到第 3 步。找不到命令，表示没有安装这个版本或它不在 PATH 中；不要改用未经核实的 `python`，它可能指向旧解释器。
+
+**2. 缺少 Python 3.11 时安装。**
+
+已有 Homebrew 时：
+
+```bash
+brew --version
+brew install python@3.11
+"$(brew --prefix python@3.11)/bin/python3.11" --version
+```
+
+安装命令及版本命令见 [Homebrew Python 3.11 官方页面](https://formulae.brew.sh/formula/python@3.11)。没有 `brew` 时，先按 [Homebrew 官网](https://brew.sh/)安装，阅读并完成安装结束时的 PATH 配置提示，然后重新打开终端。公司设备如有安装限制，请使用获准的安装方式，不绕过管理策略。
+
+下面使用 Homebrew 返回的安装路径，不依赖 `python` 别名，也不用自己猜 `/opt/homebrew` 或 `/usr/local`。
+
+**3. 在仓库根目录准备环境。两种方式选一种。**
+
+已有可用的 `python3.11`：
+
+```bash
+python3.11 scripts/run_desktop.py --setup
+```
+
+通过 Homebrew 安装、但 `python3.11` 仍不在 PATH 中：
+
+```bash
+"$(brew --prefix python@3.11)/bin/python3.11" scripts/run_desktop.py --setup
+```
+
+等命令成功结束、回到终端提示符后再继续；下载依赖需要时间。若出现 `ERROR` 或安装失败，先处理该错误。此时不会自动弹出应用窗口。
+
+**4. 检查项目环境并启动。**
+
+```bash
+.venv/bin/python --version
+.venv/bin/python scripts/run_desktop.py
+```
+
+以后通常只需第二条。启动时保留终端窗口，出错时可查看提示。macOS 首次录音可能需要在“系统设置 → 隐私与安全性 → 麦克风”中授权实际承载启动的终端或 IDE；权限问题与 Python 环境安装问题分开处理。
+
+### Linux
+
+需要可用的图形桌面，以及 Python 3.11 的 pip / venv 支持；具体安装命令由发行版决定。先核实 `python3.11 --version`，再执行：
 
 ```bash
 python3.11 scripts/run_desktop.py --setup
 .venv/bin/python scripts/run_desktop.py
 ```
 
-`--setup` 只创建缺失的 `.venv` 并安装 `.[desktop,ai,dev]` 可编辑依赖，不启动应用、不打包、不下载语音权重。macOS 首次录音需授予运行 Python 的程序麦克风权限；本轮未进行 macOS 实机验证。
+### `--setup` 到底做什么？
+
+它使用执行脚本的 Python 创建缺失的 `.venv`，再向该环境安装 `.[desktop,ai,dev]` 可编辑依赖；不安装系统 Python、不启动应用、不打包、不下载语音权重。
+
+如果 `.venv` 已存在，它会复用该环境，**不会因为你改用 Python 3.11 执行 `--setup` 就自动升级旧虚拟环境的 Python**。检查 `.venv` 自身的 `--version` 才能确定应用实际使用哪个版本。
+
+初始化与启动是两个步骤：`.venv/bin/python`（Windows 为 `.venv\Scripts\python.exe`）不存在时，说明环境还没创建成功；即便它存在，也需确认依赖安装成功。正常启动不会重复运行 pip。
+
+### 拉取新版与保留数据
+
+先关闭应用，在仓库根目录检查：
+
+```bash
+git status --short
+git branch --show-current
+```
+
+若有自己的源码或文档改动，先保存并按自己的 Git 工作流处理；不要用 `reset --hard`、强制切换或删除工作区来更新。确认可以切到 main 后：
+
+```bash
+git switch main
+git pull --ff-only origin main
+git log -1 --oneline
+```
+
+如果提示不能快进或存在冲突，停止并处理分支差异，不强推或覆盖本地修改。通过 ZIP 下载的源码不带 Git 历史，不能直接 `git pull`；需要更新前先保留自己的数据和改动。
+
+只改 Python / QML 时重新启动即可。依赖声明变更或维护者明确要求时，在已确认版本正确的 `.venv` 内重新准备：
+
+```powershell
+# Windows
+.\.venv\Scripts\python.exe scripts/run_desktop.py --setup
+```
+
+```bash
+# macOS / Linux
+.venv/bin/python scripts/run_desktop.py --setup
+```
 
 ### 日常修改与数据
 
@@ -235,6 +346,35 @@ python3.11 scripts/run_desktop.py --setup
 - **语音：** 在应用内下载本地权重后使用；正常启动不反复下载。
 
 脚本始终从当前仓库 `src` 加载代码，避免旧 Worktree 的可编辑安装影响测试。原来的 `python -m llm_interview_lab.desktop.main` 与环境变量启动方式仍可使用。不要用 `--smoke-test` 或 `--screenshot` 做人工验收，它们使用合成状态。
+
+例如，希望在独立目录验收，不影响原档案：
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\python.exe scripts/run_desktop.py --data-root "E:\InterviewLabData\manual-check"
+```
+
+```bash
+# macOS / Linux：请替换成你自己拥有且可写的绝对路径
+.venv/bin/python scripts/run_desktop.py --data-root "/Users/你的用户名/InterviewLabData/manual-check"
+```
+
+换目录后看不到旧档案通常是数据位置不同，不表示旧数据被删除。源码默认目录与已安装 `.app` / exe 的数据目录可能不同；实际位置在设置页核对。不要为修启动问题删除 `workspace`、材料目录或系统密钥环。
+
+### 常见启动报错
+
+| 提示或现象 | 含义与处理 |
+|---|---|
+| `python3.11: command not found` | 系统找不到指定解释器；先安装或使用上面的 Homebrew 完整路径，项目脚本不能替你安装系统 Python。 |
+| `python scripts/run_desktop.py` 在类型标注处 `SyntaxError` | 解释器不支持脚本语法；先查看 `python --version`，再使用确认过的 Python 3.11。不要删脚本类型标注来兼容旧 Python。 |
+| `.venv/bin/python: no such file or directory` | 先确认在正确仓库根目录；再检查 `--setup` 是否真正成功。新克隆的仓库不会包含 `.venv`。 |
+| `can't open file ... scripts/run_desktop.py` | 通常是目录不对或源码不完整；进入包含 `pyproject.toml` 的目录。 |
+| 安装出现证书、网络超时或包下载失败 | 这是依赖准备失败，不是面试 API 故障。保留首个明确错误，检查网络/获准的代理及证书配置；不要关闭证书校验或反复尝试启动半安装环境。 |
+| 找不到 `PySide6` / `httpx` 等模块 | 检查是否使用本仓库 `.venv`，并用它重新执行 `--setup`；不要把依赖装到另一个全局 Python。 |
+| `.venv` 的 Python 版本不对或环境来自另一台机器 | 先关闭应用，核实当前仓库位置，仅将本仓库 `.venv` 重命名备份，再用 Python 3.11 重新 `--setup`；不要动 `workspace`。脚本不会自动迁移已有环境。 |
+| 程序打开但 AI 连接失败 | 已越过源码启动阶段。去“AI 连接”检查配置并复制脱敏诊断，不要通过重装 Python 代替 API 排查。 |
+
+反馈时附操作系统/芯片、当前提交（`git log -1 --oneline`）、执行命令、Python 版本及首个错误片段即可。终端截图先遮住用户名、个人路径、API Key 和简历内容；不要发送整个数据目录。
 
 2026-09-09 已在 Windows 上用上述脚本正常启动（仅指定独立数据目录和窗口尺寸，未使用演示模式）：通过系统无障碍接口输入中文名称、选择岗位、点击开始训练，成功打开真实 `ATT-022` 题面与代码编辑器，随后正常关闭，退出码为 0。此检查未调用付费 AI、未运行题目测试，不代表 macOS 实机验收。
 

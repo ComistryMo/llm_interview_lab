@@ -8,7 +8,7 @@
 
 - Apple Silicon（M1、M2、M3、M4 或更新）；
 - **macOS 14 或更新**（完整 Qt / NumPy / SciPy 运行时要求）；
-- 不要求 Python；
+- 使用 DMG / APP ZIP 安装包不要求自行安装 Python；从源码运行需单独准备 Python，见[源码启动步骤](desktop-app.md#源码运行)；
 - AI 连接可选，无网络也能使用本地课程；个性化模拟面试需要 AI，No-AI 下显示连接说明，不创建假面试。
 
 构建参数和 `LSMinimumSystemVersion=14.0` 与 CI 实际安装的最高 wheel 平台要求一致。[Qt 6.11](https://doc.qt.io/qt-6/supported-platforms.html#macos) 自身要求 13，[NumPy 的 Accelerate wheel](https://numpy.org/doc/2.0/release/2.0.0-notes.html#macos-accelerate-support-including-the-ilp64) 则区分 14+。旧 Alpha.3 元数据不回写；项目不宣称已实测全部 macOS 版本。

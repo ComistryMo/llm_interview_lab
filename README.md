@@ -92,14 +92,18 @@ LLM Interview Lab 是面向 AI 求职者的桌面练习工具。你可以独立�
 
 ## 从源码运行
 
-推荐 **Python 3.11**。源码运行不需要构建 exe / mac 应用，适合快速测试与修改。先获取仓库（已有代码可跳过）：
+源码运行不需要构建 exe / mac 应用，适合快速测试与修改。首次需要 **Git、Python 和联网安装依赖**；推荐 **Python 3.11**（项目最低要求 3.10，部分 AI 依赖需 3.11+）。安装包用户不需要自行安装 Python，但源码用户需要。
+
+先获取仓库（已有代码可跳过）。以下命令都在包含 `pyproject.toml` 和 `scripts` 的仓库根目录执行，不要复制终端的 `%`、`$` 提示符：
 
 ~~~bash
 git clone https://github.com/ComistryMo/llm_interview_lab.git
 cd llm_interview_lab
 ~~~
 
-Windows PowerShell：
+### Windows PowerShell
+
+先运行 `py -3.11 --version`，应显示 `Python 3.11.x`。找不到命令或该版本时，先安装 Python 3.11，再重新打开终端；已有其他 Python 并不代表已安装 3.11。
 
 ~~~powershell
 # 首次准备环境；只有依赖变化时才需要再执行
@@ -109,14 +113,50 @@ py -3.11 scripts/run_desktop.py --setup
 .\.venv\Scripts\python.exe scripts/run_desktop.py
 ~~~
 
-macOS / Linux：
+### macOS（包括 M1 / M2 等 Apple Silicon）
+
+先运行 `python3.11 --version`。如果提示 `command not found`，不要换成不明版本的 `python` 继续尝试。已安装 Homebrew 的用户可按[官方说明](https://formulae.brew.sh/formula/python@3.11)安装：
+
+~~~bash
+brew install python@3.11
+"$(brew --prefix python@3.11)/bin/python3.11" --version
+"$(brew --prefix python@3.11)/bin/python3.11" scripts/run_desktop.py --setup
+~~~
+
+没有 Homebrew 时，先按 [Homebrew 官网](https://brew.sh/)安装并完成其终端 PATH 提示。已经能执行 `python3.11` 的用户，无需安装 Homebrew，直接运行 `python3.11 scripts/run_desktop.py --setup`。
+
+**等 `--setup` 安装成功后，再启动：**
+
+~~~bash
+.venv/bin/python scripts/run_desktop.py
+~~~
+
+`.venv` 是首次准备时生成的本项目 Python 环境，不包含在 Git 仓库中。初始化失败时，`.venv/bin/python` 可能不存在，或依赖尚未装齐；这时继续运行启动命令不会解决问题。
+
+### Linux
+
+在有图形桌面的环境中，先准备 Python 3.11、pip 和 venv 支持，然后执行：
 
 ~~~bash
 python3.11 scripts/run_desktop.py --setup
 .venv/bin/python scripts/run_desktop.py
 ~~~
 
-**改代码 → 保存 → 关闭并重新启动应用**，无需重新打包。不需要激活环境或手动设置环境变量；普通启动不会重复安装依赖。数据固定保留在 `workspace/maintainer/manual-uat`，重启不会清空；已有环境变量指定的数据目录继续有效。
+### 以后启动与更新
+
+日常只执行对应平台的 `.venv` 启动命令，不需要每次 `--setup`。**改代码 → 保存 → 关闭并重新启动应用**，无需重新打包、激活环境或设置 `PYTHONPATH`。
+
+拉取新版前先关闭应用，在仓库根目录检查工作区；没有需要保留的代码改动时：
+
+~~~bash
+git status --short
+git switch main
+git pull --ff-only origin main
+~~~
+
+有本地改动或 Git 报冲突时先处理，不要用强制覆盖命令。依赖有更新时再执行一次 `--setup`，然后启动。ZIP 下载的源码没有 Git 历史，不能直接用 `git pull` 更新。
+
+默认数据保存在 `workspace/maintainer/manual-uat`，重启不会清空；已有 `LLM_LAB_DESKTOP_DATA_ROOT` 设置仍有效。**不要为解决启动问题删除 `workspace`**。语音权重、AI 连接配置与 Python 环境不是同一回事。
 
 需要 PyTorch 时，用 `.venv` 的 Python 安装 `-e ".[torch,dev]"`；语音模型在应用内按需下载。源码模式不使用安装包更新器覆盖工作区。
 
