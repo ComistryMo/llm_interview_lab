@@ -8991,6 +8991,32 @@ cards:
     provenance: 用户整理资料中的日期口径：正文明确面试日 2026-08-14；约 70 分钟。页面显示 `09-04 13:56 已编辑`，完整发布日期未核验。 样本分组：单篇作者自述，不是公司官方标准；MJ15-MJ16-MJ17
       同作者；后两篇同岗位续轮。本轮未完成原页全文独立复核，保留为 anecdotal / unverified，不补造缺失年份。
   - id: EGT-QB-001
+    expert_reference:
+      version: 1
+      assumptions: "AdamW论文v3的解耦衰减；具体epsilon/grad=None行为需说明实现，非通用常量。"
+      source_pins: ["https://arxiv.org/html/1711.05101v3"]
+      criteria:
+        decay:
+          mechanism: "耦合L2进入Adam矩估计；AdamW显式参数收缩不进入任务梯度矩。"
+          variants: "参数组排除bias/norm是工程选择，不是算法定义。"
+          misconceptions: "AdamW不是去掉动量；学习率与衰减仍共同决定实际收缩。"
+          discriminator: "两个二阶矩尺度不同的坐标，其衰减路径有何不同？"
+          adjacent: "梯度进入矩估计前加了什么？"
+          stop: "更新顺序和预条件差异清楚即可认可。"
+        implementation:
+          mechanism: "恢复训练需参数、m/v、step及调度状态，偏差校正依赖step。"
+          variants: "零梯度与grad=None是否跳过需查所用实现。"
+          misconceptions: "仅恢复参数不能声称下一步轨迹相同。"
+          discriminator: "lambda=0且其余实现一致时两种更新是否退化一致？"
+          adjacent: "丢失step会改变哪项？"
+          stop: "具体恢复状态和一步自测明确即结束。"
+        validation:
+          mechanism: "同预算、调度与数据对照评估泛化和参数范数。"
+          variants: "不预设AdamW在所有任务优于所有正则。"
+          misconceptions: "最终loss低不单独证明衰减策略更优。"
+          discriminator: "改变衰减同时改变学习率，如何隔离收益？"
+          adjacent: "有哪些变量必须固定？"
+          stop: "有可证伪对照即可认可；未做记未验证。"
     interview_guidance:
       entry_signals:
       - 回答中提到调 weight decay、AdamW 参数组、恢复训练后 loss 变化；先核实本人改过哪一项。
@@ -9632,6 +9658,32 @@ cards:
     provenance:
     - 用户题目集编号：T010、T081
   - id: EGT-QB-011
+    expert_reference:
+      version: 1
+      assumptions: "Transformers v4.46.0因果解码cache说明：固定权重、相同前缀/位置/mask，比较整段与增量。"
+      source_pins: ["https://huggingface.co/docs/transformers/v4.46.0/kv_cache"]
+      criteria:
+        cache:
+          mechanism: "历史因果隐藏状态不依赖未来token，缓存各层K/V，新query读取历史。"
+          variants: "不同位置编码/滑窗策略可能只保留窗口，需明确适用范围。"
+          misconceptions: "双向encoder追加token不能直接套用因果不变性；旧Q无需持久用于下一位置。"
+          discriminator: "改变早期前缀或adapter后哪些缓存失效？"
+          adjacent: "追加一个token，哪些量必须重新计算？"
+          stop: "不变性和身份条件清楚即认可。"
+        implementation:
+          mechanism: "KV字节约2*B*L*S*Hkv*d*元素字节；位置和mask长度覆盖past+current。"
+          variants: "变长/分页需按实际长度加元数据；量化另计尺度。"
+          misconceptions: "误用Hq计算GQA缓存，或增量position每次归零。"
+          discriminator: "B1 L32 S8192 Hkv8 d128 fp16的字节账本。"
+          adjacent: "逐层分别存了哪些张量？"
+          stop: "形状、字节和位置对照成立即结束。"
+        validation:
+          mechanism: "整段和逐token输出数值对照先验证正确性，再独立测延迟和容量。"
+          variants: "融合kernel有数值误差容忍，不能要求所有dtype逐bit相等。"
+          misconceptions: "分页减少碎片不消除唯一KV固有容量。"
+          discriminator: "输出首次分歧出现在哪个位置，如何缩小排查范围？"
+          adjacent: "缓存关闭时同输入输出怎样？"
+          stop: "正确性证据与性能证据分离即换点。"
     interview_guidance:
       entry_signals:
       - 回答中涉及长上下文、推理吞吐、GQA、前缀复用或 rollout 显存；选实际形状来问。
@@ -9829,6 +9881,32 @@ cards:
     provenance:
     - 用户题目集编号：T013
   - id: EGT-QB-014
+    expert_reference:
+      version: 1
+      assumptions: "Causal LM监督；PyTorch v2.5.1 CrossEntropyLoss ignore_index与Transformers v4.46.0缓存/因果语义。"
+      source_pins: ["https://github.com/pytorch/pytorch/blob/v2.5.1/torch/nn/modules/loss.py"]
+      criteria:
+        mask:
+          mechanism: "loss mask只控制监督位置；attention mask控制可见性。"
+          variants: "response-only、全部token、最后一轮assistant监督均可，只要明确任务。"
+          misconceptions: "忽略user的loss不等于从前向删除user；-100不是所有框架通用规范。"
+          discriminator: "user的loss被忽略后，assistant还能不能读取user？"
+          adjacent: "标出哪个token预测计入损失。"
+          stop: "监督与可见性分清即可换点。"
+        shift:
+          mechanism: "logit位置t通常预测t+1；shift可以在模型内部或数据侧，但只做一次。"
+          variants: "不同库可能内置shift，不能仅看标签复制就判错。"
+          misconceptions: "重复shift或预测当前输入导致错位或泄漏。"
+          discriminator: "在六个token上逐一画出logit到label的箭头。"
+          adjacent: "第一个回答token由哪个位置预测？"
+          stop: "逐位置关系成立即认可，不考死记字段名。"
+        packing:
+          mechanism: "样本拼接需明确跨样本attention、position和监督边界，loss mask不能隔离attention。"
+          variants: "有意连续文档训练与独立样本block mask是不同任务契约。"
+          misconceptions: "loss正常不证明无跨样本泄漏。"
+          discriminator: "只改第一个样本，第二个独立样本输出是否应该变化？"
+          adjacent: "两个样本是否允许互相看到？"
+          stop: "能给隔离自测和全mask分母处理即结束。"
     interview_guidance:
       entry_signals:
       - 简历提到 SFT、多轮对话、数据清洗、packing 或训练 loss 异常；从实际模板开始。
@@ -10440,6 +10518,32 @@ cards:
     provenance:
     - 用户题目集编号：T025、T036
   - id: EGT-QB-026
+    expert_reference:
+      version: 1
+      assumptions: "Rafailov 2023 v2 的原始DPO：同prompt偏好对、Bradley–Terry与正支持reference。"
+      source_pins: ["https://arxiv.org/html/2305.18290v2"]
+      criteria:
+        mechanism:
+          mechanism: "归一化最优策略含Z(x)，同prompt奖励差中Z抵消。"
+          variants: "其他偏好链接函数需重推目标；不以符号不同判错。"
+          misconceptions: "不同prompt的配分项不能直接抵消。"
+          discriminator: "两个回答若属于不同prompt，哪项不再共同？"
+          adjacent: "同一个问题的两个回答究竟比较什么？"
+          stop: "能解释相同条件、奖励参数化和消去即可认可。"
+        reference:
+          mechanism: "相对reference的序列logprob差进入偏好logit，reference不随当前梯度更新。"
+          variants: "reference-free等变体应明确不是原始推导。"
+          misconceptions: "reference不是PPO/GRPO rollout的old快照。"
+          discriminator: "交换chosen/rejected，梯度方向应怎样改变？"
+          adjacent: "哪一个回答被标为偏好？"
+          stop: "方向和参考职责明确即换点。"
+        reduction:
+          mechanism: "原始条件回答概率用目标token logprob之和；排除prompt/padding并对齐shift。"
+          variants: "改均值是可研究变体，但改变目标与长度权重。"
+          misconceptions: "均值与求和不总等价；beta不能普遍抵消变长差异。"
+          discriminator: "回答长度2与8，统一beta能否消除sum/mean差异？"
+          adjacent: "分母统计哪些位置？"
+          stop: "范围、归约和条件变化已清楚即停止。"
     interview_guidance:
       entry_signals:
       - 简历或回答包含偏好对、DPO、reference、长度偏差；先问本人处理过的数据或损失路径。
@@ -10575,6 +10679,46 @@ cards:
     provenance:
     - 用户题目集编号：T027、T041
   - id: EGT-QB-028
+    expert_reference:
+      version: 1
+      assumptions: "DeepSeekMath v3 §4.1 的 outcome GRPO；区分后续去标准差、token级归约和无KL变体，先问版本与采样条件。"
+      source_pins: ["https://arxiv.org/html/2402.03300v3#S4.SS1"]
+      criteria:
+        advantage:
+          mechanism: "同prompt组内奖励中心化/尺度化；等额奖励不产生相对区分信号。"
+          variants: "总体或样本标准差、加epsilon、去标准差均先明确约定；不是名字不同就错误。"
+          misconceptions: "全零优势不等于任务已掌握，也不等于KL等所有梯度必为零。"
+          discriminator: "对比[0,0,1,1]与[1,1,1,1]，只核实所选方差约定。"
+          adjacent: "多个回答得到同样奖励时，有什么依据区分它们？"
+          stop: "能算例子并说明退化组边界可认可；相邻问法仍未知则记录未知，不扩成GRPO全主题支持。"
+        reference:
+          mechanism: "old是生成rollout/比率分母的策略快照；reference是偏移约束锚点。"
+          variants: "初始化相同不代表职责相同；无KL变体可以不算reference。"
+          misconceptions: "每步把reference替换为当前策略不等价于固定参考KL。"
+          discriminator: "复用同一rollout多次更新时，分别问两个策略何时更新。"
+          adjacent: "这些样本由哪个版本生成？"
+          stop: "角色和更新时机明确即可换点；冲突须引用两处原话澄清。"
+        ratio:
+          mechanism: "当前策略对old的条件token概率比参与clip目标；在旧参数点比率为1但梯度仍可非零。"
+          variants: "sequence ratio或重要性修正需说明目标，不能冒充原始token目标。"
+          misconceptions: "数值等于1不代表可以detach当前概率；clip不是强制所有更新处于硬信赖域。"
+          discriminator: "同一采样批第二次优化时哪些量必须重新计算？"
+          adjacent: "参数更新后某token的概率会不会变化？"
+          stop: "计算图、分母和更新关系清楚即停止；已定位detach错误记争议，不继续同义质问。"
+        reduction:
+          mechanism: "原始目标先按回答长度归约再组均值；全batch有效token均值对变长回答的权重不同。"
+          variants: "长度归一、固定分母和token均值是不同目标约定，不以单一库默认判对错。"
+          misconceptions: "相同token损失下不同长度不代表两种归约对梯度权重总等价。"
+          discriminator: "两段长度2和8、平均损失不同的回答，比较两种归约的样本权重。"
+          adjacent: "这个分母数的是回答数还是有效token数？"
+          stop: "能明确目标与长度条件并解释权重即可换点。"
+        validation:
+          mechanism: "训练奖励是代理信号；独立评测、预算和数据隔离才能支持能力收益。"
+          variants: "可验证奖励或人工评分各有误差，不要求商业敏感数字。"
+          misconceptions: "reward提高不直接证明泛化或推理能力提高。"
+          discriminator: "固定采样token预算，如何区分组大小变化与验证器漏洞？"
+          adjacent: "除了训练奖励，还观察了什么独立现象？"
+          stop: "对照和证据足够可认可；未做独立评测记未验证，不伪造收益。"
     interview_guidance:
       entry_signals:
       - 回答提到 GRPO、组采样、可验证奖励、CoT 或 rollout；从其实际 group size 和奖励定义切入。
@@ -10730,6 +10874,32 @@ cards:
     provenance:
     - 用户题目集编号：T029、T043
   - id: EGT-QB-030
+    expert_reference:
+      version: 1
+      assumptions: "KL按DPO v2目标及DeepSeekMath v3估计式讨论，区分采样分布和log-ratio方向。"
+      source_pins: ["https://arxiv.org/html/2305.18290v2","https://arxiv.org/html/2402.03300v3#S4.SS1"]
+      criteria:
+        reference:
+          mechanism: "KL(pi||ref)的期望在pi下；old控制更新近端性，ref控制锚点。"
+          variants: "迭代更换ref可有定义，但不能说是固定锚点。"
+          misconceptions: "小KL不是安全或无奖励投机保证。"
+          discriminator: "奖励整体放大而beta不变，约束相对强度如何变化？"
+          adjacent: "谁生成采样，谁是参考？"
+          stop: "方向、采样与锚点已区分即换点。"
+        numerics:
+          mechanism: "单样本log(pi/ref)可负；令r=ref/pi，r-log(r)-1非负，其无偏条件涉及采样和支持。"
+          variants: "全词表KL、采样log-ratio和控制变量估计不同，先明确估计量。"
+          misconceptions: "不要把负log-ratio判成负期望KL；非负估计也不保证数值不溢出。"
+          discriminator: "pi=.2、ref=.4的单样本log-ratio符号能说明什么？"
+          adjacent: "样本数值与平均值是同一对象吗？"
+          stop: "能分清估计量与期望，说明支持假设即可认可。"
+        reduction:
+          mechanism: "序列KL需对当前策略前缀和token取期望；长度求和与均值尺度不同。"
+          variants: "目标KL调度或固定beta均需注明单位。"
+          misconceptions: "不注明reward与KL尺度就给万能beta不成立。"
+          discriminator: "两倍响应长度而每token偏移不变时比较两种口径。"
+          adjacent: "惩罚是每token还是每回答？"
+          stop: "尺度与调参的独立验证清楚即结束。"
     interview_guidance:
       entry_signals:
       - 实际回答出现 KL penalty、beta、reference drift 或 GRPO/PPO 稳定性；先问实现采用哪个方向和归约。
@@ -11052,6 +11222,32 @@ cards:
     provenance:
     - 用户题目集编号：T047、T054
   - id: EGT-QB-048
+    expert_reference:
+      version: 1
+      assumptions: "Vaswani 2017 v7 §3.2.1；独立零均值单位方差是缩放动机而非训练中恒等式。"
+      source_pins: ["https://arxiv.org/html/1706.03762v7#S3.SS2.SSS1"]
+      criteria:
+        scaling:
+          mechanism: "独立乘积方差相加得dk，除sqrt(dk)保持常数阶logit方差。"
+          variants: "QK归一化、可学习温度可改变假设和尺度。"
+          misconceptions: "减最大值防溢出但不改变softmax饱和；相关输入不必方差dk。"
+          discriminator: "dk从64变256，除dk与sqrt(dk)的方差分别如何变化？"
+          adjacent: "比较两个类别的logit差变大时概率。"
+          stop: "假设、尺度和梯度关系清楚即认可。"
+        mask:
+          mechanism: "因果/填充mask在归一化之前限制可见键；全屏蔽行须有明确输出约定。"
+          variants: "bool mask真值语义随接口不同；可用加性mask。"
+          misconceptions: "对全-inf行直接普通softmax不保证有效；把padding mask当causal不成立。"
+          discriminator: "增量query长度1、历史键长度5时，应允许哪些位置？"
+          adjacent: "先画可见性矩阵而不是背API。"
+          stop: "可见关系与全屏蔽边界明确即可停止。"
+        numerics:
+          mechanism: "softmax的数值稳定、梯度饱和和尺度是不同问题。"
+          variants: "融合kernel可以处理边界，须核对约定与测试。"
+          misconceptions: "有限输出不等于梯度或mask逻辑正确。"
+          discriminator: "减最大值后概率不变，为什么不能解除饱和？"
+          adjacent: "极大logit时有哪些独立风险？"
+          stop: "能区分三类现象并提出小测试即换点。"
     interview_guidance:
       entry_signals:
       - 用户介绍 Attention 实现、head 维度、训练不稳定或 QK norm；从实际 Q/K shape 与 logit 范围切入。
@@ -11432,6 +11628,32 @@ cards:
     provenance:
     - 用户题目集编号：T057、T060
   - id: EGT-QB-058
+    expert_reference:
+      version: 1
+      assumptions: "GQA论文v3常规等大小分组：Hq能整除Hkv，端点为MHA与MQA。"
+      source_pins: ["https://arxiv.org/html/2305.13245v3"]
+      criteria:
+        implementation:
+          mechanism: "多个Q头共享KV，各Q仍产生不同权重；常规映射floor(h/(Hq/Hkv))。"
+          variants: "布局或kernel广播不同可以等价，先核对轴。"
+          misconceptions: "共享KV不意味着共享Q或输出恒相同。"
+          discriminator: "Hq=8、Hkv=2，列出Q头5对应KV头。"
+          adjacent: "从MHA与MQA两端比较共享什么。"
+          stop: "映射、shape和输出差异解释成立即可认可。"
+        cache:
+          mechanism: "持久缓存Hkv个头才保留容量优势；逻辑广播不必等于物理复制。"
+          variants: "临时展开与长期缓存展开的成本不同。"
+          misconceptions: "KV节省四倍不是整模型显存或速度四倍。"
+          discriminator: "先repeat到Hq再落缓存，还节省什么？"
+          adjacent: "显存公式中到底哪个头数变化？"
+          stop: "存储与计算/带宽区别清楚即换点。"
+        validation:
+          mechanism: "从MHA转换及继续训练的质量/延迟要独立测量。"
+          variants: "论文配置中的恢复效果不是所有模型保证。"
+          misconceptions: "不能从容量公式推导真实加速倍率。"
+          discriminator: "prefill和decode、不同batch对照如何区分瓶颈？"
+          adjacent: "你测的是容量还是延迟？"
+          stop: "质量与性能证据都有边界即可停止。"
     interview_guidance:
       entry_signals:
       - 简历或回答提到 GQA/MQA、KV 显存、decode 带宽或模型结构转换；先问实际头数。

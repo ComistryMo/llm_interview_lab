@@ -76,8 +76,11 @@ def next_stages(session: Mapping[str, Any], *, coding_available: bool, now: date
     stage the AI chooses the next question from the actual candidate answer.
     """
     current = question_stage(session["questions"][-1])
-    if session.get("interaction_version") == 2:
+    if session.get("interaction_version") in (2, 3):
         if current == "coding":
+            from .coding_defence import active, should_close
+            if active(session) and not should_close(session, candidate_remaining(session, now)):
+                return ["coding"] if not session["coding_defence"]["question_ids"] else ["coding", "finish"]
             return ["finish"]
         remaining_ratio = candidate_remaining(session, now) / (session["duration_minutes"] * 60)
         # Time limits reserve coding even when earlier coverage is insufficient.
@@ -103,6 +106,39 @@ def next_stages(session: Mapping[str, Any], *, coding_available: bool, now: date
 
 
 def flow_coverage(session: Mapping[str, Any]) -> dict[str, Any]:
+    if session.get("interaction_version") == 3:
+        from .interviewer_state import claim_stages
+        claims = session["interviewer_state"]["claims"].values()
+        supported = [c for c in claims if c["criterion_status"] == "model_supported"]
+        angles = sorted({c["angle"] for c in supported if "experience" in claim_stages(session, c)})
+        topics = sorted({c["topic_id"] for c in supported if "theory" in claim_stages(session, c)})
+        targets = coverage_targets(session)
+        state = session["interviewer_state"]
+        stage_gaps = {stage for key, claim in state["claims"].items()
+                      if state["gaps"][key]["status"] == "open" for stage in claim_stages(session, claim)}
+        deep = {c["criterion"] for c in supported if "experience" in claim_stages(session, c)}
+        depth_complete = session["difficulty"] != "hard" or (
+            {"mechanism", "implementation"} <= deep and bool(deep & {"validation", "boundary"}))
+        missing = []
+        if "q-001" not in session["answers"]:
+            missing.append("introduction")
+        if len(angles) < targets["experience_angles"] or "experience" in stage_gaps or not depth_complete:
+            missing.append("experience")
+        if len(topics) < targets["theory_topics"] or "theory" in stage_gaps:
+            missing.append("theory")
+        if not any(q["kind"] == "coding" and q["question_id"] in session["answers"] for q in session["questions"]):
+            missing.append("coding")
+        return {"complete": not missing, "missing_stages": missing,
+                "missing_labels": [STAGE_LABELS[s] for s in missing],
+                "experience_angles": angles, "theory_topics": topics, "targets": targets,
+                "assessment_source": "model",
+                "experience_depth_complete": depth_complete,
+                "criterion_states": [{"claim_id": key, "topic_id": c["topic_id"], "criterion": c["criterion"],
+                    "status": c["criterion_status"], "gap_status": state["gaps"][key]["status"],
+                    "closure_reasons": [x["reason"] for x in state["closures"] if x["claim_id"] == key]}
+                    for key, c in state["claims"].items()],
+                "discussed_topics": sorted({c["topic_id"] for c in claims}),
+                "unresolved_gaps": [g for g in session["interviewer_state"]["gaps"].values() if g["status"] == "open"]}
     if session.get("interaction_version") == 2:
         records = session.get("turn_decisions", {})
         angles, topics = set(), set()
@@ -158,7 +194,10 @@ def dialogue_instruction(dimensions: set[str], fatal_issues: set[str]) -> str:
     )
 
 
-def next_question_instruction() -> str:
+def next_question_instruction(version: int = 2) -> str:
+    if version == 3:
+        from .interviewer_state import instruction
+        return instruction()
     return (
         "这是实时逐问面试。阅读已锁定回答、已发生问答、岗位技能与获准背景，只提出一个下一问，不生成未来题单，不评分。"
         "先邀请讲一段实际经历，再沿实现、选择依据、实验或结果取证。角度讲清后换另一个；答不上来换具体例子或相邻机制。"
@@ -175,7 +214,10 @@ def next_question_instruction() -> str:
     )
 
 
-def decode_next_question(text: str) -> dict[str, Any]:
+def decode_next_question(text: str, *, version: int = 2) -> dict[str, Any]:
+    if version == 3:
+        from .interviewer_state import decode_decision
+        return decode_decision(text)
     try:
         value = json.loads(text[text.index("{"):text.rindex("}") + 1])
     except (ValueError, TypeError) as error:

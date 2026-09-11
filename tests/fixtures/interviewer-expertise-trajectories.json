@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "semantic_quality": "UNRUN",
+  "trajectories": [
+    {"id": "resolved_to_new_criterion", "status": "runnable", "rounds": ["邀请经历", "优势仍需实现证据", "认可优势并转ratio", "只核实ratio"], "test": "test_four_round_evidence_trajectories"},
+    {"id": "unknown_adjacent", "status": "runnable", "rounds": ["邀请经历", "确认未知并换相邻问法", "确认未知边界后换criterion", "取证新的更新点"], "test": "test_four_round_evidence_trajectories"},
+    {"id": "contradiction_resolution", "status": "runnable", "rounds": ["原始系数表述", "不同系数导致争议", "引用新说明消歧", "补充验证而非重复责问"], "test": "test_four_round_evidence_trajectories"},
+    {"id": "time_transition", "status": "runnable", "rounds": ["邀请经历", "继续经历取证", "本地时间触发原理转场", "原理继续取证并保留缺口"], "test": "test_four_round_evidence_trajectories"},
+    {"id": "restart_retry", "status": "runnable", "rounds": ["邀请经历", "拒绝假引文后重启重试", "恢复同一主张继续取证", "不重复增加已处理回答"], "test": "test_four_round_evidence_trajectories"},
+    {"id": "coding_defence", "status": "runnable", "rounds": ["自我介绍", "经历取证", "原理转真实手撕", "锁定代码并生成首问", "口头回答后结束或生成第二问", "第二答本地结束并合并父题证据"], "test": "test_formal_coding_defence_whole_chain", "reason": "Fake Provider/Codex 走正式生产事务与评分；至多两道答辩。执行事实单独记录，不从脚本响应推断模型语义质量。"}
+  ]
+}

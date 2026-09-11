@@ -1,0 +1,1550 @@
+{
+  "schema_version": 1,
+  "semantic_quality": "UNRUN",
+  "cases": [
+    {
+      "id": "s001",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的GRPO怎样计算组内优势？说明奖励相同时的行为和依据。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的GRPO怎样计算组内优势相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于你实现的GRPO怎样计算组内优势，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "采用总体标准差，奖励[0,0,1,1]的优势约为[-1,-1,1,1]，全相同奖励中心化为零，epsilon避免零除；无相对信号不意味着KL梯度也为零。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-028",
+        "criterion": "advantage",
+        "answer_type": "correct_sufficient",
+        "expected_gap": null,
+        "accept_direction": "认可当前criterion的具体证据，允许转新criterion或满足条件后转场，不强迫挑错。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文",
+          "无依据强制挑错"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-028.expert_reference"
+      }
+    },
+    {
+      "id": "s002",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的GRPO怎样计算组内优势？说明奖励相同时的行为和依据。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的GRPO怎样计算组内优势相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于你实现的GRPO怎样计算组内优势，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "GRPO、PPO、CoT、reward都熟悉，训练效果非常好。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-028",
+        "criterion": "advantage",
+        "answer_type": "vague",
+        "expected_gap": "零方差/优势",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-028.expert_reference"
+      }
+    },
+    {
+      "id": "s003",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的GRPO怎样计算组内优势？说明奖励相同时的行为和依据。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的GRPO怎样计算组内优势相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于你实现的GRPO怎样计算组内优势，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "GRPO奖励全相同时必须把优势都设为正一，否则没法保证正确更新。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-028",
+        "criterion": "advantage",
+        "answer_type": "confident_wrong",
+        "expected_gap": "零方差/优势",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-028.expert_reference"
+      }
+    },
+    {
+      "id": "s004",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的GRPO怎样计算组内优势？说明奖励相同时的行为和依据。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的GRPO怎样计算组内优势相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于你实现的GRPO怎样计算组内优势，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "GRPO零方差处理我不知道，采样接口是我接的，但优势实现不是我负责。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-028",
+        "criterion": "advantage",
+        "answer_type": "honest_unknown",
+        "expected_gap": "零方差/优势",
+        "accept_direction": "承认未知，从相邻具体输入取证；不得同义反复。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-028.expert_reference"
+      }
+    },
+    {
+      "id": "s005",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的GRPO怎样计算组内优势？说明奖励相同时的行为和依据。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的GRPO怎样计算组内优势相关实现。GRPO reference在这次训练全程冻结。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "GRPO reference在同一训练的每步都随当前参数更新。"
+          }
+        ],
+        "answer": "前面两处说的是同一个实验。我现在还不能解释GRPO reference在这次训练全程冻结。与GRPO reference在同一训练的每步都随当前参数更新。的差别。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-028",
+        "criterion": "advantage",
+        "answer_type": "contradictory",
+        "expected_gap": "零方差/优势",
+        "accept_direction": "用两处原话澄清reference的适用条件，不替用户选择版本。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-028.expert_reference"
+      }
+    },
+    {
+      "id": "s006",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的GRPO怎样计算组内优势？说明奖励相同时的行为和依据。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的GRPO怎样计算组内优势相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于你实现的GRPO怎样计算组内优势，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "GRPO的这些公式先不讨论，我们团队最终交付得很漂亮。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-028",
+        "criterion": "advantage",
+        "answer_type": "evasive",
+        "expected_gap": "零方差/优势",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-028.expert_reference"
+      }
+    },
+    {
+      "id": "s007",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "原始DPO为什么要求同prompt偏好对？解释比较量及其假设。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责原始DPO为什么要求同prompt偏好对相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于原始DPO为什么要求同prompt偏好对，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "同prompt下最优策略奖励重参数化中的beta log Z(x)在奖励差抵消；在Bradley–Terry假设下形成相对冻结reference的logprob差，再用logsigmoid。不同prompt不能直接消掉Z。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-026",
+        "criterion": "mechanism",
+        "answer_type": "correct_sufficient",
+        "expected_gap": null,
+        "accept_direction": "认可当前criterion的具体证据，允许转新criterion或满足条件后转场，不强迫挑错。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文",
+          "无依据强制挑错"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-026.expert_reference"
+      }
+    },
+    {
+      "id": "s008",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "原始DPO为什么要求同prompt偏好对？解释比较量及其假设。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责原始DPO为什么要求同prompt偏好对相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于原始DPO为什么要求同prompt偏好对，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "DPO、RLHF、偏好学习和alignment都做过，知道是一个分类问题。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-026",
+        "criterion": "mechanism",
+        "answer_type": "vague",
+        "expected_gap": "配分函数/同prompt",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-026.expert_reference"
+      }
+    },
+    {
+      "id": "s009",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "原始DPO为什么要求同prompt偏好对？解释比较量及其假设。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责原始DPO为什么要求同prompt偏好对相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于原始DPO为什么要求同prompt偏好对，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "DPO任意两个prompt的配分函数都相等，所以跨prompt的chosen和rejected可以直接相减。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-026",
+        "criterion": "mechanism",
+        "answer_type": "confident_wrong",
+        "expected_gap": "配分函数/同prompt",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-026.expert_reference"
+      }
+    },
+    {
+      "id": "s010",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "原始DPO为什么要求同prompt偏好对？解释比较量及其假设。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责原始DPO为什么要求同prompt偏好对相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于原始DPO为什么要求同prompt偏好对，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "DPO的配分函数推导我不清楚，我只做过偏好对去重。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-026",
+        "criterion": "mechanism",
+        "answer_type": "honest_unknown",
+        "expected_gap": "配分函数/同prompt",
+        "accept_direction": "承认未知，从相邻具体输入取证；不得同义反复。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-026.expert_reference"
+      }
+    },
+    {
+      "id": "s011",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "原始DPO为什么要求同prompt偏好对？解释比较量及其假设。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责原始DPO为什么要求同prompt偏好对相关实现。我的DPO训练中reference全程冻结。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "刚才那次DPO训练reference每个梯度步更新。"
+          }
+        ],
+        "answer": "前面两处说的是同一个实验。我现在还不能解释我的DPO训练中reference全程冻结。与刚才那次DPO训练reference每个梯度步更新。的差别。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-026",
+        "criterion": "mechanism",
+        "answer_type": "contradictory",
+        "expected_gap": "配分函数/同prompt",
+        "accept_direction": "用两处原话澄清reference的适用条件，不替用户选择版本。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-026.expert_reference"
+      }
+    },
+    {
+      "id": "s012",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "原始DPO为什么要求同prompt偏好对？解释比较量及其假设。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责原始DPO为什么要求同prompt偏好对相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于原始DPO为什么要求同prompt偏好对，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "DPO已经上线，为什么还要纠结推导，结果好就行。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-026",
+        "criterion": "mechanism",
+        "answer_type": "evasive",
+        "expected_gap": "配分函数/同prompt",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-026.expert_reference"
+      }
+    },
+    {
+      "id": "s013",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的KL项用什么采样分布和方向？单个负值说明什么？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的KL项用什么采样分布和方向相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于你实现的KL项用什么采样分布和方向，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "在当前策略pi下采样，log(pi/ref)可出现负值，但期望为KL(pi||ref)且非负；全支持下r=ref/pi的r-log r-1是另一估计，旧rollout不能直接冒充当前分布。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-030",
+        "criterion": "numerics",
+        "answer_type": "correct_sufficient",
+        "expected_gap": null,
+        "accept_direction": "认可当前criterion的具体证据，允许转新criterion或满足条件后转场，不强迫挑错。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文",
+          "无依据强制挑错"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-030.expert_reference"
+      }
+    },
+    {
+      "id": "s014",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的KL项用什么采样分布和方向？单个负值说明什么？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的KL项用什么采样分布和方向相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于你实现的KL项用什么采样分布和方向，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "KL、beta、reference、PPO这些稳定性配置都加了。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-030",
+        "criterion": "numerics",
+        "answer_type": "vague",
+        "expected_gap": "采样量与期望",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-030.expert_reference"
+      }
+    },
+    {
+      "id": "s015",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的KL项用什么采样分布和方向？单个负值说明什么？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的KL项用什么采样分布和方向相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于你实现的KL项用什么采样分布和方向，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "KL定义非负，所以任何采样token出现负log-ratio都证明代码错了。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-030",
+        "criterion": "numerics",
+        "answer_type": "confident_wrong",
+        "expected_gap": "采样量与期望",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-030.expert_reference"
+      }
+    },
+    {
+      "id": "s016",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的KL项用什么采样分布和方向？单个负值说明什么？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的KL项用什么采样分布和方向相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于你实现的KL项用什么采样分布和方向，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "KL采样估计我记不清，只观察过监控曲线。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-030",
+        "criterion": "numerics",
+        "answer_type": "honest_unknown",
+        "expected_gap": "采样量与期望",
+        "accept_direction": "承认未知，从相邻具体输入取证；不得同义反复。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-030.expert_reference"
+      }
+    },
+    {
+      "id": "s017",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的KL项用什么采样分布和方向？单个负值说明什么？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的KL项用什么采样分布和方向相关实现。KL在当前策略下采样，reference固定。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "同一批KL样本其实全由旧策略产生，没有做修正。"
+          }
+        ],
+        "answer": "前面两处说的是同一个实验。我现在还不能解释KL在当前策略下采样，reference固定。与同一批KL样本其实全由旧策略产生，没有做修正。的差别。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-030",
+        "criterion": "numerics",
+        "answer_type": "contradictory",
+        "expected_gap": "采样量与期望",
+        "accept_direction": "用两处原话澄清reference的适用条件，不替用户选择版本。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-030.expert_reference"
+      }
+    },
+    {
+      "id": "s018",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "你实现的KL项用什么采样分布和方向？单个负值说明什么？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责你实现的KL项用什么采样分布和方向相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于你实现的KL项用什么采样分布和方向，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "KL曲线很好看，暂时不展开采样细节了。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-030",
+        "criterion": "numerics",
+        "answer_type": "evasive",
+        "expected_gap": "采样量与期望",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-030.expert_reference"
+      }
+    },
+    {
+      "id": "s019",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "SFT中loss mask和attention mask分别控制什么？以用户和回答token说明。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责SFT中loss mask和attention mask分别控制什么相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于SFT中loss mask和attention mask分别控制什么，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "SFT中user token不计交叉熵，仍可作为assistant的上下文；attention mask限制可见性而不是哪些label计loss。response-only是任务选择，shift要核对模型是否已做。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-014",
+        "criterion": "mask",
+        "answer_type": "correct_sufficient",
+        "expected_gap": null,
+        "accept_direction": "认可当前criterion的具体证据，允许转新criterion或满足条件后转场，不强迫挑错。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文",
+          "无依据强制挑错"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-014.expert_reference"
+      }
+    },
+    {
+      "id": "s020",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "SFT中loss mask和attention mask分别控制什么？以用户和回答token说明。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责SFT中loss mask和attention mask分别控制什么相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于SFT中loss mask和attention mask分别控制什么，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "SFT做了mask、padding、chat template、packing，数据很干净。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-014",
+        "criterion": "mask",
+        "answer_type": "vague",
+        "expected_gap": "监督与可见性",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-014.expert_reference"
+      }
+    },
+    {
+      "id": "s021",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "SFT中loss mask和attention mask分别控制什么？以用户和回答token说明。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责SFT中loss mask和attention mask分别控制什么相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于SFT中loss mask和attention mask分别控制什么，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "SFT把user的label设为ignore_index以后，assistant注意力就看不到user了。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-014",
+        "criterion": "mask",
+        "answer_type": "confident_wrong",
+        "expected_gap": "监督与可见性",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-014.expert_reference"
+      }
+    },
+    {
+      "id": "s022",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "SFT中loss mask和attention mask分别控制什么？以用户和回答token说明。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责SFT中loss mask和attention mask分别控制什么相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于SFT中loss mask和attention mask分别控制什么，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "SFT的attention mask我不熟悉，我只标注过assistant片段。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-014",
+        "criterion": "mask",
+        "answer_type": "honest_unknown",
+        "expected_gap": "监督与可见性",
+        "accept_direction": "承认未知，从相邻具体输入取证；不得同义反复。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-014.expert_reference"
+      }
+    },
+    {
+      "id": "s023",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "SFT中loss mask和attention mask分别控制什么？以用户和回答token说明。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责SFT中loss mask和attention mask分别控制什么相关实现。我的SFT样本要求不同对话互不可见。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "同一SFT实现只有loss mask，没有任何跨样本attention隔离。"
+          }
+        ],
+        "answer": "前面两处说的是同一个实验。我现在还不能解释我的SFT样本要求不同对话互不可见。与同一SFT实现只有loss mask，没有任何跨样本attention隔离。的差别。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-014",
+        "criterion": "mask",
+        "answer_type": "contradictory",
+        "expected_gap": "监督与可见性",
+        "accept_direction": "用两处原话澄清packing的适用条件，不替用户选择版本。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-014.expert_reference"
+      }
+    },
+    {
+      "id": "s024",
+      "input": {
+        "role_id": "post_training_engineer",
+        "difficulty": "hard",
+        "question": "SFT中loss mask和attention mask分别控制什么？以用户和回答token说明。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责SFT中loss mask和attention mask分别控制什么相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于SFT中loss mask和attention mask分别控制什么，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "SFT loss一直下降，没必要逐token解释了。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-014",
+        "criterion": "mask",
+        "answer_type": "evasive",
+        "expected_gap": "监督与可见性",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-014.expert_reference"
+      }
+    },
+    {
+      "id": "s025",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Attention为什么除以sqrt(dk)？说清方差假设和它不能解决什么。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Attention为什么除以sqrt(dk)相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于Attention为什么除以sqrt(dk)，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "Attention在各乘积独立、q/k独立且零均值单位方差下，点积方差为dk，缩放后为1。减最大值不改概率，不能解决饱和；QK相关时不能照搬推导。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-048",
+        "criterion": "scaling",
+        "answer_type": "correct_sufficient",
+        "expected_gap": null,
+        "accept_direction": "认可当前criterion的具体证据，允许转新criterion或满足条件后转场，不强迫挑错。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文",
+          "无依据强制挑错"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-048.expert_reference"
+      }
+    },
+    {
+      "id": "s026",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Attention为什么除以sqrt(dk)？说清方差假设和它不能解决什么。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Attention为什么除以sqrt(dk)相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于Attention为什么除以sqrt(dk)，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "Attention、softmax、QKV、Transformer和FlashAttention都用过。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-048",
+        "criterion": "scaling",
+        "answer_type": "vague",
+        "expected_gap": "缩放与饱和",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-048.expert_reference"
+      }
+    },
+    {
+      "id": "s027",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Attention为什么除以sqrt(dk)？说清方差假设和它不能解决什么。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Attention为什么除以sqrt(dk)相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于Attention为什么除以sqrt(dk)，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "Attention减去最大值后梯度饱和就完全消失，sqrt(dk)只为了防溢出。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-048",
+        "criterion": "scaling",
+        "answer_type": "confident_wrong",
+        "expected_gap": "缩放与饱和",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-048.expert_reference"
+      }
+    },
+    {
+      "id": "s028",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Attention为什么除以sqrt(dk)？说清方差假设和它不能解决什么。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Attention为什么除以sqrt(dk)相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于Attention为什么除以sqrt(dk)，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "Attention方差推导不会，我调用过模块但没推过独立性条件。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-048",
+        "criterion": "scaling",
+        "answer_type": "honest_unknown",
+        "expected_gap": "缩放与饱和",
+        "accept_direction": "承认未知，从相邻具体输入取证；不得同义反复。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-048.expert_reference"
+      }
+    },
+    {
+      "id": "s029",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Attention为什么除以sqrt(dk)？说清方差假设和它不能解决什么。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Attention为什么除以sqrt(dk)相关实现。Attention推导里我假设Q和K各维独立。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "刚才的Attention推导完全不需要任何独立假设。"
+          }
+        ],
+        "answer": "前面两处说的是同一个实验。我现在还不能解释Attention推导里我假设Q和K各维独立。与刚才的Attention推导完全不需要任何独立假设。的差别。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-048",
+        "criterion": "scaling",
+        "answer_type": "contradictory",
+        "expected_gap": "缩放与饱和",
+        "accept_direction": "用两处原话澄清scaling的适用条件，不替用户选择版本。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-048.expert_reference"
+      }
+    },
+    {
+      "id": "s030",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Attention为什么除以sqrt(dk)？说清方差假设和它不能解决什么。",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Attention为什么除以sqrt(dk)相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于Attention为什么除以sqrt(dk)，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "Attention是成熟组件，理解到这里足够了，没必要追公式。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-048",
+        "criterion": "scaling",
+        "answer_type": "evasive",
+        "expected_gap": "缩放与饱和",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-048.expert_reference"
+      }
+    },
+    {
+      "id": "s031",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "GQA里Hq=8、Hkv=2时如何共享？哪些成本改变？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责GQA里Hq=8、Hkv=2时如何共享相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于GQA里Hq=8、Hkv=2时如何共享，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "GQA每4个Q头对应一个KV头，Q头5映射KV头1。不同Q仍产生不同权重，缓存只存2个KV头；不把KV容量四分之一等同整模型四倍加速。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-058",
+        "criterion": "implementation",
+        "answer_type": "correct_sufficient",
+        "expected_gap": null,
+        "accept_direction": "认可当前criterion的具体证据，允许转新criterion或满足条件后转场，不强迫挑错。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文",
+          "无依据强制挑错"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-058.expert_reference"
+      }
+    },
+    {
+      "id": "s032",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "GQA里Hq=8、Hkv=2时如何共享？哪些成本改变？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责GQA里Hq=8、Hkv=2时如何共享相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于GQA里Hq=8、Hkv=2时如何共享，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "GQA、MQA、MHA都了解，就是能加速推理。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-058",
+        "criterion": "implementation",
+        "answer_type": "vague",
+        "expected_gap": "共享KV与独立Q",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-058.expert_reference"
+      }
+    },
+    {
+      "id": "s033",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "GQA里Hq=8、Hkv=2时如何共享？哪些成本改变？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责GQA里Hq=8、Hkv=2时如何共享相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于GQA里Hq=8、Hkv=2时如何共享，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "GQA四个Query共享KV，所以它们的attention权重和输出必然完全相同。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-058",
+        "criterion": "implementation",
+        "answer_type": "confident_wrong",
+        "expected_gap": "共享KV与独立Q",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-058.expert_reference"
+      }
+    },
+    {
+      "id": "s034",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "GQA里Hq=8、Hkv=2时如何共享？哪些成本改变？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责GQA里Hq=8、Hkv=2时如何共享相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于GQA里Hq=8、Hkv=2时如何共享，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "GQA头映射我不知道，我只改过配置没核对实现。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-058",
+        "criterion": "implementation",
+        "answer_type": "honest_unknown",
+        "expected_gap": "共享KV与独立Q",
+        "accept_direction": "承认未知，从相邻具体输入取证；不得同义反复。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-058.expert_reference"
+      }
+    },
+    {
+      "id": "s035",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "GQA里Hq=8、Hkv=2时如何共享？哪些成本改变？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责GQA里Hq=8、Hkv=2时如何共享相关实现。GQA缓存只保存Hkv个头。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "同一GQA实现先repeat成Hq个头再永久存入缓存。"
+          }
+        ],
+        "answer": "前面两处说的是同一个实验。我现在还不能解释GQA缓存只保存Hkv个头。与同一GQA实现先repeat成Hq个头再永久存入缓存。的差别。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-058",
+        "criterion": "implementation",
+        "answer_type": "contradictory",
+        "expected_gap": "共享KV与独立Q",
+        "accept_direction": "用两处原话澄清cache的适用条件，不替用户选择版本。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-058.expert_reference"
+      }
+    },
+    {
+      "id": "s036",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "GQA里Hq=8、Hkv=2时如何共享？哪些成本改变？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责GQA里Hq=8、Hkv=2时如何共享相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于GQA里Hq=8、Hkv=2时如何共享，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "GQA benchmarks很好，我不觉得有必要画shape。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-058",
+        "criterion": "implementation",
+        "answer_type": "evasive",
+        "expected_gap": "共享KV与独立Q",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-058.expert_reference"
+      }
+    },
+    {
+      "id": "s037",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "KV cache复用历史的前提是什么？位置或前缀改变会怎样？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责KV cache复用历史的前提是什么相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于KV cache复用历史的前提是什么，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "固定权重的因果解码器旧位置不依赖未来token，因此复用各层K/V；前缀、position或adapter变化要检查失效。新query读旧KV，不需存旧Q；用整段对增量输出核对。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-011",
+        "criterion": "cache",
+        "answer_type": "correct_sufficient",
+        "expected_gap": null,
+        "accept_direction": "认可当前criterion的具体证据，允许转新criterion或满足条件后转场，不强迫挑错。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文",
+          "无依据强制挑错"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-011.expert_reference"
+      }
+    },
+    {
+      "id": "s038",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "KV cache复用历史的前提是什么？位置或前缀改变会怎样？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责KV cache复用历史的前提是什么相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于KV cache复用历史的前提是什么，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "KV cache、分页、batching、吞吐优化都做了。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-011",
+        "criterion": "cache",
+        "answer_type": "vague",
+        "expected_gap": "因果与失效",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-011.expert_reference"
+      }
+    },
+    {
+      "id": "s039",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "KV cache复用历史的前提是什么？位置或前缀改变会怎样？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责KV cache复用历史的前提是什么相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于KV cache复用历史的前提是什么，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "KV cache在双向encoder里追加token也始终保证所有旧层K/V不变，与mask无关。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-011",
+        "criterion": "cache",
+        "answer_type": "confident_wrong",
+        "expected_gap": "因果与失效",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-011.expert_reference"
+      }
+    },
+    {
+      "id": "s040",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "KV cache复用历史的前提是什么？位置或前缀改变会怎样？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责KV cache复用历史的前提是什么相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于KV cache复用历史的前提是什么，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "KV cache的失效条件我不知道，我只测过显存。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-011",
+        "criterion": "cache",
+        "answer_type": "honest_unknown",
+        "expected_gap": "因果与失效",
+        "accept_direction": "承认未知，从相邻具体输入取证；不得同义反复。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-011.expert_reference"
+      }
+    },
+    {
+      "id": "s041",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "KV cache复用历史的前提是什么？位置或前缀改变会怎样？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责KV cache复用历史的前提是什么相关实现。KV cache的RoPE position随历史长度递增。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "刚才那个KV cache实现每次新token的position都从零开始。"
+          }
+        ],
+        "answer": "前面两处说的是同一个实验。我现在还不能解释KV cache的RoPE position随历史长度递增。与刚才那个KV cache实现每次新token的position都从零开始。的差别。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-011",
+        "criterion": "cache",
+        "answer_type": "contradictory",
+        "expected_gap": "因果与失效",
+        "accept_direction": "用两处原话澄清implementation的适用条件，不替用户选择版本。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-011.expert_reference"
+      }
+    },
+    {
+      "id": "s042",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "KV cache复用历史的前提是什么？位置或前缀改变会怎样？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责KV cache复用历史的前提是什么相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于KV cache复用历史的前提是什么，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "KV cache已经省了显存，先不谈一致性了。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-011",
+        "criterion": "cache",
+        "answer_type": "evasive",
+        "expected_gap": "因果与失效",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-011.expert_reference"
+      }
+    },
+    {
+      "id": "s043",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Adam和AdamW中衰减项经过哪条更新路径？什么条件下才等价？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Adam和AdamW中衰减项经过哪条更新路径相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于Adam和AdamW中衰减项经过哪条更新路径，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "Adam的耦合L2先加到梯度再进入m/v，AdamW的显式收缩不进任务矩；lambda=0且其余实现一致则退化相同。不同自适应分母使两维耦合正则不等于统一参数收缩。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-001",
+        "criterion": "decay",
+        "answer_type": "correct_sufficient",
+        "expected_gap": null,
+        "accept_direction": "认可当前criterion的具体证据，允许转新criterion或满足条件后转场，不强迫挑错。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文",
+          "无依据强制挑错"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-001.expert_reference"
+      }
+    },
+    {
+      "id": "s044",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Adam和AdamW中衰减项经过哪条更新路径？什么条件下才等价？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Adam和AdamW中衰减项经过哪条更新路径相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于Adam和AdamW中衰减项经过哪条更新路径，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "AdamW、momentum、weight decay、scheduler都调过。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-001",
+        "criterion": "decay",
+        "answer_type": "vague",
+        "expected_gap": "耦合与解耦",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-001.expert_reference"
+      }
+    },
+    {
+      "id": "s045",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Adam和AdamW中衰减项经过哪条更新路径？什么条件下才等价？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Adam和AdamW中衰减项经过哪条更新路径相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于Adam和AdamW中衰减项经过哪条更新路径，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "AdamW就是删除Adam动量，只加L2到loss，其余数学完全相同。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-001",
+        "criterion": "decay",
+        "answer_type": "confident_wrong",
+        "expected_gap": "耦合与解耦",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-001.expert_reference"
+      }
+    },
+    {
+      "id": "s046",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Adam和AdamW中衰减项经过哪条更新路径？什么条件下才等价？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Adam和AdamW中衰减项经过哪条更新路径相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于Adam和AdamW中衰减项经过哪条更新路径，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "AdamW的矩估计我记不清，我只做过参数扫描。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-001",
+        "criterion": "decay",
+        "answer_type": "honest_unknown",
+        "expected_gap": "耦合与解耦",
+        "accept_direction": "承认未知，从相邻具体输入取证；不得同义反复。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-001.expert_reference"
+      }
+    },
+    {
+      "id": "s047",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Adam和AdamW中衰减项经过哪条更新路径？什么条件下才等价？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Adam和AdamW中衰减项经过哪条更新路径相关实现。AdamW在我这份实现中衰减项不进入m和v。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "同一AdamW实现先把衰减项加进梯度，再用这个梯度计算m和v。"
+          }
+        ],
+        "answer": "前面两处说的是同一个实验。我现在还不能解释AdamW在我这份实现中衰减项不进入m和v。与同一AdamW实现先把衰减项加进梯度，再用这个梯度计算m和v。的差别。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-001",
+        "criterion": "decay",
+        "answer_type": "contradictory",
+        "expected_gap": "耦合与解耦",
+        "accept_direction": "用两处原话澄清decay的适用条件，不替用户选择版本。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-001.expert_reference"
+      }
+    },
+    {
+      "id": "s048",
+      "input": {
+        "role_id": "ai_algorithm_research_engineer",
+        "difficulty": "hard",
+        "question": "Adam和AdamW中衰减项经过哪条更新路径？什么条件下才等价？",
+        "history": [
+          {
+            "question": "请介绍你本人在这次合成实验中完成的工作。",
+            "answer": "这是公开合成练习，我负责Adam和AdamW中衰减项经过哪条更新路径相关实现。实现细节还需要逐步核对。"
+          },
+          {
+            "question": "请说明你刚才描述的实现采用什么约定。",
+            "answer": "关于Adam和AdamW中衰减项经过哪条更新路径，我们按既定配置实现，具体关系稍后解释。"
+          }
+        ],
+        "answer": "AdamW是默认优化器，调出来能用就没必要展开了。"
+      },
+      "evaluation": {
+        "topic_id": "EGT-QB-001",
+        "criterion": "decay",
+        "answer_type": "evasive",
+        "expected_gap": "耦合与解耦",
+        "accept_direction": "沿当前主张核实机制、实现或可证伪条件；不根据语气和术语数量作结论。",
+        "forbidden": [
+          "泄露参考答案",
+          "将未验证标为掌握",
+          "捏造经历或引文"
+        ],
+        "technical_basis": "curriculum/interviews/knowledge.yaml#EGT-QB-001.expert_reference"
+      }
+    }
+  ]
+}

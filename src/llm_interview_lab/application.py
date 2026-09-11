@@ -1489,6 +1489,8 @@ class ApplicationService:
         material_ids: Iterable[str] = (),
         consent_materials: bool = False,
         duration_minutes: int = 60,
+        interaction_version: int = 3,
+        coding_defence: bool = True,
     ) -> dict[str, Any]:
         refs: list[dict[str, Any]] = []
         selected = tuple(material_ids)
@@ -1519,6 +1521,8 @@ class ApplicationService:
             plan_context_sha256=context_sha256,
             material_refs=refs,
             duration_minutes=duration_minutes,
+            interaction_version=interaction_version,
+            coding_defence=coding_defence,
         )
 
     def append_dynamic_interview_question(
@@ -1541,10 +1545,12 @@ class ApplicationService:
     def advance_dynamic_interview(
         self, profile_id: str, interview_id: str, question_id: str,
         assessment: Mapping[str, Any], *, context_sha256: str,
+        request_contract: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         return advance_dynamic_role_interview(
             self.repo_root, profile_id, interview_id, self.catalog, self.roles,
             question_id, assessment, context_sha256=context_sha256,
+            request_contract=request_contract,
         )
 
     def preview_personalized_interview(
@@ -1859,6 +1865,9 @@ class ApplicationService:
             current = self.current_interview(profile_id, interview_id)["question"]
         if current is None or current["kind"] != "coding":
             raise ApplicationError("the current interview question is not coding")
+        if session.get("coding_defence") and current["question_id"] in session["answers"]:
+            snapshot = json.loads(self.interview_answer_text(profile_id, interview_id, current["question_id"]))
+            return {"question_id": current["question_id"], "sha256": snapshot["submission_sha256"], "text": snapshot["code"]}
         paths = profile_paths(self.repo_root, profile_id)
         root = paths.interviews_root / interview_id / "coding" / current["question_id"]
         path = ensure_profile_path_is_safe(
@@ -2056,6 +2065,10 @@ class ApplicationService:
                 execution = "未运行" if run["status"] == "not_run" else (
                     "超时" if run["status"] == "timed_out" else "输出过多，已停止" if run["status"] == "output_limited" else f"退出码 {run['exit_code']}")
                 test_status = {"not_run": "未运行", "passed": "通过", "failed": "未通过"}.get(tests["status"], tests["status"])
+                if run["status"] != "not_run" and run.get("submission_sha256") != snapshot["submission_sha256"]:
+                    execution += "（其他代码版本，当前锁定代码未据此验证）"
+                if tests["status"] != "not_run" and tests.get("submission_sha256") != snapshot["submission_sha256"]:
+                    test_status += "（其他代码版本，不能视为当前通过）"
                 evidence_view["coding_execution_summary"] = (
                     f"本地执行：{execution} · 公开测试：{test_status} · revision {snapshot['submission_sha256'][:7]}。"
                     "以下为面试官主观评价，不将自测退出码或评分作为单测通过结论。"
@@ -2105,9 +2118,19 @@ class ApplicationService:
             "summary": result["summary"],
             "finished_at": result["finished_at"],
         }
+        if session.get("coding_defence"):
+            d = session["coding_defence"]
+            view["coding_defence"] = dict(d)
+            for q in session["questions"]:
+                if q.get("parent_coding_question_id"):
+                    qid = q["question_id"]
+                    followups.append({"followup_id": qid, "parent_question_id": d["parent_question_id"],
+                        "parent_title": question_titles[d["parent_question_id"]], "prompt": q["prompt"],
+                        "answer": self.interview_answer_text(profile_id, interview_id, qid) if qid in session["answers"] else "未回答",
+                        "source": "coding_defence", "recorded_at": session["answers"].get(qid, {}).get("recorded_at", "")})
         if "seniority" in session:
             view["seniority"] = session["seniority"]
-        if session.get("interaction_version") == 2:
+        if session.get("interaction_version") in (2, 3):
             view.update(self._interview_learning_actions(profile_id, session, assessment_evidence))
         if session.get("delivery_mode") == "non_coding_fallback":
             view["delivery_mode"] = "non_coding_fallback"

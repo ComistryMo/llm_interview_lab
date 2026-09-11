@@ -239,6 +239,30 @@
       "properties": {
         "id": {"$ref": "#/$defs/card_id"},
         "kind": {"enum": ["eight_stock", "experience_pattern", "coding_prompt"]},
+        "expert_reference": {
+          "type": "object", "additionalProperties": false,
+          "required": ["version", "assumptions", "source_pins", "criteria"],
+          "properties": {
+            "version": {"type": "integer", "minimum": 1},
+            "assumptions": {"type": "string", "minLength": 1},
+            "source_pins": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+            "criteria": {
+              "type": "object", "minProperties": 1,
+              "additionalProperties": {
+                "type": "object", "additionalProperties": false,
+                "required": ["mechanism", "variants", "misconceptions", "discriminator", "adjacent", "stop"],
+                "properties": {
+                  "mechanism": {"type": "string", "minLength": 1},
+                  "variants": {"type": "string", "minLength": 1},
+                  "misconceptions": {"type": "string", "minLength": 1},
+                  "discriminator": {"type": "string", "minLength": 1},
+                  "adjacent": {"type": "string", "minLength": 1},
+                  "stop": {"type": "string", "minLength": 1}
+                }
+              }
+            }
+          }
+        },
         "interview_guidance": {
           "type": "object", "additionalProperties": false,
           "required": ["entry_signals", "deepen", "weak_answer", "variations", "stop_when"],

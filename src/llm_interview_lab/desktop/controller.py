@@ -14,6 +14,7 @@ import re
 from pathlib import Path
 from queue import Queue, Empty
 import threading
+from time import perf_counter
 from typing import Any, Callable, Mapping
 from uuid import uuid4
 
@@ -189,6 +190,13 @@ def _grading_instruction(dimensions: set[str], fatal_issues: set[str]) -> str:
 def _dynamic_response_schema(preview, dimensions: set[str], fatal_issues: set[str]) -> dict[str, Any]:
     """Constrain the existing Codex response, using this turn's actual scope."""
     contract = json.loads(next(part.content for part in preview.parts if part.id == "interview_contract"))
+    if contract.get("interaction_version") == 3:
+        from ..interviewer_state import response_schema
+        schema = response_schema(contract.get("loaded_method_ids", []))
+        schema["properties"]["next_stage"]["enum"] = contract["allowed_next_stages"]
+        schema["properties"]["next_skill_ids"]["items"]["enum"] = [s["id"] for s in contract["role_skills"]]
+        schema["properties"]["coding_problem_id"]["enum"] = ["", *(p["id"] for p in contract["coding_candidates"])]
+        return schema
     fields = {
         "scores": {"type": "object", "properties": {d: {"type": "integer", "minimum": 1, "maximum": 5} for d in sorted(dimensions)},
                    "required": sorted(dimensions), "additionalProperties": False},
@@ -2196,7 +2204,7 @@ class AppController(QObject):
         progress: Callable[[str], None] | None = None,
         *,
         blocks_ui: bool = True,
-    ) -> None:
+    ) -> str:
         operation_token = uuid4().hex
         generation = self._background_generation
         if blocks_ui:
@@ -2233,6 +2241,7 @@ class AppController(QObject):
         worker.signals.completed.connect(done)
         worker.signals.failed.connect(on_failed)
         self._thread_pool.start(worker)
+        return operation_token
 
     @Slot(str)
     def navigate(self, page: str) -> None:
@@ -3472,6 +3481,22 @@ class AppController(QObject):
             return
         if session.get("ai_wait_started_at") and not self._busy:
             session = set_role_ai_wait(self.repo_root, self._profile_id, interview_id, False)
+        from .. import coding_defence
+        if (
+            session["status"] == "active"
+            and coding_defence.active(session)
+            and session["coding_defence"]["status"] == "closed"
+            and not self._busy
+            and self._codex_interview_identity is None
+        ):
+            # Closing the defence is durable; the queued GUI finish is not.
+            # Recover that committed intent after restart via the same
+            # idempotent finish, without generating or reassessing an answer.
+            # A live transport callback must release its own operation first.
+            session = self.service.finish_interview(
+                self._profile_id, interview_id, confirm_incomplete=True,
+                summary="代码答辩已关闭；恢复完成本场收尾，原始回答与证据保持不变。",
+            )
         if session.get("status") in {"completed", "incomplete"}:
             current = {"question": None, "remaining_seconds": 0}
         elif session.get("status") == "paused":
@@ -3534,6 +3559,7 @@ class AppController(QObject):
             "delivery_mode": session.get("delivery_mode", "full_blueprint"),
             "blueprint_coverage": session.get("blueprint_coverage", {}),
             "ai_mode": session["ai_mode"],
+            "coding_defence": session.get("coding_defence", {}),
             "material_refs": session["material_refs"],
             "total_questions": len(questions),
             "dialogue": [item for item in self.service.interview_dialogue(self._profile_id, session)
@@ -3554,6 +3580,10 @@ class AppController(QObject):
         self._interview["connection_id"] = str(self._settings.value(
             self._interview_consent_key(interview_id) + "/connection", "",
         ))
+        if session.get("coding_defence"):
+            parent = session["coding_defence"]["parent_question_id"]
+            snapshot = json.loads(self.service.interview_answer_text(self._profile_id, interview_id, parent))
+            self._interview["locked_code"] = snapshot["code"]
         if session.get("delivery_mode") == "dynamic_ai":
             self._interview["flow_coverage"] = flow_coverage(session)
             self._interview["stage_label"] = STAGE_LABELS[question_stage(current["question"])] if current.get("question") else "本场复盘"
@@ -3664,7 +3694,7 @@ class AppController(QObject):
             self._interview["coding_test_current"] = False
         self.stateChanged.emit()
         if (
-            session.get("interaction_version") == 2
+            session.get("interaction_version") in (2, 3)
             and session["status"] in {"completed", "incomplete"}
             and (self._profile_id, interview_id) not in self._interview_grading_paused
         ):
@@ -3681,6 +3711,10 @@ class AppController(QObject):
             current = self.service.current_interview(self._profile_id, interview_id)
         except Exception as error:
             if "expired" in str(error).lower():
+                if self._interview.get("coding_defence"):
+                    self._suspend_interview_voice()
+                    self.finishInterview()
+                    return
                 self._suspend_interview_voice()
                 self._interview["remaining_seconds"] = 0
                 self._interview["expired"] = True
@@ -3698,6 +3732,10 @@ class AppController(QObject):
                 "interview_clock_refresh_failed error_type=%s",
                 type(error).__name__,
             )
+            return
+        if current.get("remaining_seconds", 0) <= 0 and self._interview.get("coding_defence"):
+            self._suspend_interview_voice()
+            self.finishInterview()
             return
         current_question = self._interview.get("question") or {}
         next_question = current.get("question") or {}
@@ -3730,7 +3768,11 @@ class AppController(QObject):
         if not interview_id or self._interview.get("status") != "active":
             return False
         try:
-            if self._interview_provider_operation_id or self._codex_interview_operation_id:
+            if self._codex_interview_operation_id:
+                # Fence the finished session immediately; the exact interrupt
+                # acknowledgement gates reuse of the shared Codex stream.
+                self._cancel_coach_stream_for_reload()
+            elif self._interview_provider_operation_id:
                 self.stopInterviewGeneration()
             self.service.pause_interview(self._profile_id, interview_id)
             self._suspend_interview_voice()
@@ -3829,6 +3871,19 @@ class AppController(QObject):
                 raise RuntimeError("面试已暂停、超时或结束，请先恢复面试或开始新场次。")
             # A retry reuses the saved answer; it never rewrites or scores it twice.
             submitted = self._interview.get("answer_text") if self._interview.get("answer_locked") else answer
+            from .. import coding_defence
+            current_session = self.service.interview_session(self._profile_id, self._interview["interview_id"])
+            if coding_defence.active(current_session):
+                from ..interview_flow import candidate_remaining
+                last = question.get("parent_coding_question_id") and len(current_session["coding_defence"]["question_ids"]) == 2
+                if last or coding_defence.should_close(current_session, candidate_remaining(current_session)):
+                    if not self._interview.get("answer_locked"):
+                        self.service.answer_interview(self._profile_id, self._interview["interview_id"], question["question_id"], submitted)
+                    configure_interview_grading(self.repo_root, self._profile_id, self._interview["interview_id"],
+                        connection_id=connection_id, include_materials=include_materials)
+                    self._load_interview(self._interview["interview_id"])
+                    self.finishInterview()
+                    return True
             preview = build_role_interview_context_preview(
                 self.repo_root, self._profile_id, self._interview["interview_id"],
                 candidate_answer=submitted, include_materials=include_materials,
@@ -3845,10 +3900,13 @@ class AppController(QObject):
                 self.service.answer_interview(self._profile_id, self._interview["interview_id"],
                                               question["question_id"], submitted)
                 self._load_interview(self._interview["interview_id"])
-            if self._interview.get("interaction_version") == 2:
+            if self._interview.get("interaction_version") in (2, 3):
                 configure_interview_grading(self.repo_root, self._profile_id, self._interview["interview_id"],
                     connection_id=connection_id, include_materials=include_materials)
-                if question.get("kind") == "coding":
+                from .. import coding_defence
+                current_session = self.service.interview_session(self._profile_id, self._interview["interview_id"])
+                defence = coding_defence.active(current_session)
+                if (question.get("kind") == "coding" and not defence) or (defence and coding_defence.should_close(current_session, self._interview.get("remaining_seconds", 0))):
                     # Coding is the final stage. No model request is needed to
                     # decide that there is no next question; grade after finish.
                     self.finishInterview()
@@ -3883,7 +3941,7 @@ class AppController(QObject):
     ) -> None:
         """Keep interview failures local and actionable; never log answer bodies."""
         raw = str(error)
-        if self._interview.get("interaction_version") == 2 and self._interview.get("interview_id"):
+        if self._interview.get("interaction_version") in (2, 3) and self._interview.get("interview_id"):
             set_role_ai_wait(self.repo_root, self._profile_id, self._interview["interview_id"], False)
         lower = raw.lower()
         code, message = "INTERVIEW_REQUEST_FAILED", friendly_error(error)
@@ -4362,6 +4420,8 @@ class AppController(QObject):
         if self._busy or self._pending_interview_submission:
             return False
         try:
+            if (self._interview.get("question") or {}).get("kind") != "coding":
+                raise RuntimeError("答辩使用口头回答，不能重新提交代码。")
             if not self._interview.get("answer_locked"):
                 self.service.save_interview_coding_submission(self._profile_id, self._interview["interview_id"], code)
                 self.service.lock_interview_code(self._profile_id, self._interview["interview_id"])
@@ -4561,10 +4621,10 @@ class AppController(QObject):
                 "or an empty string). Do not infer missing career facts."
             )
 
-            next_only = session.get("interaction_version") == 2 and not _grading_question
+            next_only = session.get("interaction_version") in (2, 3) and not _grading_question
             if session.get("delivery_mode") == "dynamic_ai" and not _grading_question:
-                instruction = next_question_instruction() if next_only else dialogue_instruction(dimensions, fatal_issues)
-                if config.provider_id == "deepseek":
+                instruction = next_question_instruction(session.get("interaction_version", 2)) if next_only else dialogue_instruction(dimensions, fatal_issues)
+                if config.provider_id == "deepseek" and session.get("interaction_version") != 3:
                     instruction += "\nJSON 字段与类型必须符合以下 Schema：\n" + json.dumps(
                         _dynamic_response_schema(preview, dimensions, fatal_issues), ensure_ascii=False,
                     )
@@ -4572,6 +4632,13 @@ class AppController(QObject):
                 instruction = _grading_instruction(dimensions, fatal_issues)
 
             async def collect() -> str:
+                if not _grading_question and self._interview_provider_operation_id != operation_id:
+                    raise asyncio.CancelledError()
+                messages = [{"role": "system", "content": preview.selected_text},
+                            {"role": "user", "content": instruction}]
+                if session.get("interaction_version") == 3:
+                    from ..ai.interview_context_budget import enforce_wire_budget
+                    request_diagnostic["request_size"] = enforce_wire_budget(json.dumps(messages, ensure_ascii=False))
                 task_info = (asyncio.get_running_loop(), asyncio.current_task())
                 self._provider_interview_tasks[operation_id] = task_info
                 if not _grading_question:
@@ -4582,15 +4649,12 @@ class AppController(QObject):
                     raise asyncio.CancelledError()
                 chunks: list[str] = []
                 async for event in provider.stream_chat(
-                    [
-                        {"role": "system", "content": preview.selected_text},
-                        {"role": "user", "content": instruction},
-                    ],
+                    messages,
                     **({"json_mode": True} if config.provider_id == "deepseek" else {}),
                 ):
                     if event.text:
                         chunks.append(event.text)
-                        if next_only:
+                        if next_only and session.get("interaction_version") == 2:
                             emit("".join(chunks))
                 return "".join(chunks)
 
@@ -4607,7 +4671,7 @@ class AppController(QObject):
 
             try:
                 response = asyncio.run(collect_with_deadline())
-                return decode_next_question(response) if next_only else _decode_ai_assessment(
+                return decode_next_question(response, version=session.get("interaction_version", 2)) if next_only else _decode_ai_assessment(
                     response, dimensions, fatal_issues, dynamic=session.get("delivery_mode") == "dynamic_ai" and not _grading_question,
                     quote_required=bool(_grading_question))
             finally:
@@ -4664,7 +4728,7 @@ class AppController(QObject):
                     )
                     return
                 if self._interview.get("delivery_mode") == "dynamic_ai":
-                    self._advance_dynamic_answer(result, include_materials)
+                    self._advance_dynamic_answer(result, include_materials, preview=preview)
                     return
                 elif result["follow_up"]:
                     self._pending_ai_assessment = {
@@ -4753,22 +4817,45 @@ class AppController(QObject):
             ):
                 self._interview["next_question_preview"] = streamed_question(raw)
                 self.stateChanged.emit()
-        self._background(
+        background_token = self._background(
             operation, complete, failed, progress=progress,
             blocks_ui=not _grading_question,
         )
+        if not _grading_question:
+            self._interview_background_token = background_token
 
-    def _advance_dynamic_answer(self, result: dict[str, Any], include_materials: bool) -> None:
+    def _advance_dynamic_answer(self, result: dict[str, Any], include_materials: bool, *, preview=None) -> None:
+        validation_started = perf_counter()
         interview_id = self._interview["interview_id"]
         question_id = self._interview["question"]["question_id"]
-        preview = self._confirmed_interview_context(include_materials)
+        if self._interview.get("interaction_version") == 3 and preview is None:
+            raise RuntimeError("本轮缺少请求启动快照；回答已保留，请重试。")
+        if self._interview.get("interaction_version") == 3:
+            latest_preview = self._confirmed_interview_context(include_materials)
+            if latest_preview.selected_text != preview.selected_text:
+                raise RuntimeError("本轮证据或授权已变化；旧请求没有写入，请重试。")
+        else:
+            # Legacy completion retains its original consent recheck semantics.
+            preview = self._confirmed_interview_context(include_materials)
+        preview = preview or self._confirmed_interview_context(include_materials)
+        contract = json.loads(next(p.content for p in preview.parts if p.id == "interview_contract"))
         self.service.advance_dynamic_interview(
             self._profile_id, interview_id, question_id, result,
             context_sha256=hashlib.sha256(preview.selected_text.encode("utf-8")).hexdigest(),
+            request_contract=contract,
         )
         self._load_interview(interview_id)
-        if self._interview.get("interaction_version") == 2 and result["next_stage"] == "finish":
-            self.finishInterview()
+        if self._interview.get("interaction_version") == 3:
+            # Local buffering/validation only; not a real provider latency claim.
+            self._interview["decision_validation_ms"] = round((perf_counter() - validation_started) * 1000, 2)
+        if self._interview.get("interaction_version") in (2, 3) and result["next_stage"] == "finish":
+            # This response is already terminal. Let its owned operation be
+            # released before finish's user-cancellation guard runs.
+            profile_id = self._profile_id
+            def finish_completed_turn():
+                if self._profile_id == profile_id and self._interview.get("interview_id") == interview_id:
+                    self.finishInterview()
+            QTimer.singleShot(0, finish_completed_turn)
 
     @Slot(str)
     def answerAIFollowup(self, answer: str) -> None:
@@ -4830,6 +4917,12 @@ class AppController(QObject):
             self.toast.emit("这场面试已经结束；可查看报告或开始新场次。")
             return
         try:
+            if self._codex_interview_operation_id:
+                # Persist user finish now, but fence the old event consumer
+                # until its exact stop acknowledgement or existing timeout.
+                self._cancel_coach_stream_for_reload()
+            elif self._interview_provider_operation_id:
+                self.stopInterviewGeneration()
             if not self.flushInterviewDraft():
                 return
             session = self.service.finish_interview(
@@ -4907,12 +5000,12 @@ class AppController(QObject):
     def previewInterviewGrading(self) -> dict[str, Any]:
         try:
             session = self.service.interview_session(self._profile_id, self._interview["interview_id"])
-            if session.get("interaction_version") != 2 or session["status"] not in {"completed", "incomplete"}:
+            if session.get("interaction_version") not in (2, 3) or session["status"] not in {"completed", "incomplete"}:
                 return {"parts": []}
             grading = session.get("grading", {})
             connection, materials = grading.get("connection_id", ""), grading.get("include_materials", False)
             _, scope = self._interview_conversation_consent(connection, materials)
-            qid = next(q["question_id"] for q in session["questions"] if q["question_id"] in session["answers"] and q["question_id"] not in session["assessments"])
+            qid = next(q["question_id"] for q in session["questions"] if q["question_id"] in session["answers"] and q["question_id"] not in session["assessments"] and not q.get("parent_coding_question_id"))
             preview = self._grading_context(qid, materials)
             parts = [{"id": p.id, "label": p.label, "selected": p.selected, "sensitive": p.sensitive, "sha256": p.sha256} for p in preview.parts]
             parts.append({"id": "remaining_answers", "label": "同一场次其余未评分题目的已保存回答（逐题发送，不重评成功项）", "selected": True, "sensitive": True})
@@ -4951,7 +5044,7 @@ class AppController(QObject):
             or self._interview_grading_identity is not None
             or not interview_id
             or (self._profile_id, interview_id) in self._interview_grading_paused
-            or self._interview.get("interaction_version") != 2
+            or self._interview.get("interaction_version") not in (2, 3)
             or self._interview.get("status") not in {"completed", "incomplete"}
         ):
             return
@@ -4975,6 +5068,10 @@ class AppController(QObject):
             if retry_failed:
                 requeue_finished_grading(self.repo_root, self._profile_id, session["interview_id"], question_id=question_id)
             if session["ai_mode"] == "codex":
+                if self._codex_drain_pending:
+                    self._interview["grading_message"] = "问答已保存；等待当前 Codex 请求停止确认后继续评分。"
+                    self.stateChanged.emit()
+                    return
                 if not self._codex_backend or not self._codex_thread_id:
                     self._interview["grading_message"] = "问答已保存；连接 Codex 后可继续未完成评分，已评分题目不会重评。"
                     self.stateChanged.emit()
@@ -4994,6 +5091,14 @@ class AppController(QObject):
             self.cancelCodex()
             return
         task = getattr(self, "_provider_interview_task", None)
+        if self._interview_provider_operation_id:
+            operation_id = self._interview_provider_operation_id
+            self._interview_provider_operation_id = ""
+            self._provider_interview_task = None
+            self._background_operations.discard(getattr(self, "_interview_background_token", ""))
+            self._set_busy(bool(self._background_operations))
+            self._interview_request_failed(RuntimeError("已停止本次请求，回答已保存；可以重试。"), "cancel", operation_id)
+            self.stateChanged.emit()
         if task and not task[0].is_closed():
             task[0].call_soon_threadsafe(task[1].cancel)
 
@@ -7582,6 +7687,7 @@ class AppController(QObject):
                 self._codex_drain_waiting_start = False
                 self._codex_drain_token = ""
                 self.toast.emit("Codex 已确认停止，可以开始下一次请求。")
+                QTimer.singleShot(0, self._start_pending_grading)
             return
 
         active_kind = (
@@ -8350,8 +8456,8 @@ class AppController(QObject):
             ):
                 raise RuntimeError(error or "当前面试问题已经切换，已丢弃旧的 Codex 评分。")
             question = grading_question or self._interview.get("question") or {}
-            next_only = self._interview.get("interaction_version") == 2 and not grading_question
-            result = decode_next_question(self._codex_interview_buffer) if next_only else _decode_ai_assessment(
+            next_only = self._interview.get("interaction_version") in (2, 3) and not grading_question
+            result = decode_next_question(self._codex_interview_buffer, version=self._interview.get("interaction_version", 2)) if next_only else _decode_ai_assessment(
                 self._codex_interview_buffer,
                 set(question.get("rubric", {}).get("dimensions", {})),
                 set(question.get("rubric", {}).get("fatal_issues", [])),
@@ -8367,7 +8473,7 @@ class AppController(QObject):
                     interview_id=interview_id, operation_id=operation_id,
                 )
             elif self._interview.get("delivery_mode") == "dynamic_ai":
-                self._advance_dynamic_answer(result, self._codex_interview_include_materials)
+                self._advance_dynamic_answer(result, self._codex_interview_include_materials, preview=self._codex_interview_request_preview)
             elif result["follow_up"]:
                 self._pending_ai_assessment = {
                     **result,
@@ -8475,6 +8581,7 @@ class AppController(QObject):
                 str(question.get("question_id") or ""), operation_id, "codex",
             )
         self._codex_interview_include_materials = include_materials
+        self._codex_interview_request_preview = preview
         self._begin_codex_turn("interview", operation_id)
         self._codex_interview_buffer = ""
         self._codex_interview_dimensions = dimensions
@@ -8497,7 +8604,7 @@ class AppController(QObject):
             "the answer, and do not claim Practice mastery."
         )
         if self._interview.get("delivery_mode") == "dynamic_ai" and not _grading_question:
-            instruction = next_question_instruction() if self._interview.get("interaction_version") == 2 else dialogue_instruction(dimensions, fatal_issues)
+            instruction = next_question_instruction(self._interview.get("interaction_version", 2)) if self._interview.get("interaction_version") in (2, 3) else dialogue_instruction(dimensions, fatal_issues)
         if _grading_question:
             instruction = _grading_instruction(dimensions, fatal_issues)
         prompt = preview.selected_text + "\n\n## Frozen scorecard contract\n" + instruction
@@ -8520,6 +8627,10 @@ class AppController(QObject):
         )
 
         async def start_interview_turn():
+            if self._interview.get("interaction_version") == 3:
+                from ..ai.interview_context_budget import enforce_wire_budget
+                self._interview["request_size"] = enforce_wire_budget(json.dumps(
+                    {"prompt": prompt, **output_options}, ensure_ascii=False))
             thread_id = reusable_thread
             if thread_id is None:
                 thread = await backend.start_thread(mode="interviewer", model=model)

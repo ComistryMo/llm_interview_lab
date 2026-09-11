@@ -16,6 +16,7 @@ Item {
     readonly property bool conversationalAnswer: root.dynamicInterview && !!activeQuestion && !root.codingQuestion
     property bool showVoiceOptions: false
     property bool showVoiceSettings: false
+    property bool showLockedDefenceCode: false
     readonly property bool voiceRecording: app.interviewVoice.state === "recording"
     readonly property bool voiceTranscribing: app.interviewVoice.transcription_state === "transcribing"
                                               || app.interviewVoice.transcription_state === "loading"
@@ -1610,6 +1611,24 @@ Item {
                         variant: "ghost"
                         onClicked: root.showEnglishQuestion = !root.showEnglishQuestion
                     }
+                    LabButton {
+                        objectName: "viewDefenceCode"
+                        theme: root.theme; variant: "ghost"
+                        visible: !!activeQuestion && !!activeQuestion.parent_coding_question_id
+                        text: root.showLockedDefenceCode ? "收起已锁定代码" : "查看父题已锁定代码"
+                        onClicked: root.showLockedDefenceCode = !root.showLockedDefenceCode
+                    }
+                    ScrollView {
+                        objectName: "defenceCodeViewport"
+                        visible: !!activeQuestion && !!activeQuestion.parent_coding_question_id && root.showLockedDefenceCode
+                        width: parent.width; height: visible ? 180 : 0; clip: true
+                        LabTextArea {
+                            objectName: "lockedDefenceCode"; theme: root.theme
+                            width: parent.width; readOnly: true
+                            font.family: root.theme.monospaceFontFamily
+                            text: app.interview.locked_code || ""
+                        }
+                    }
                     Item {
                         id: answerInlineHost
                         width: parent.width
@@ -2028,7 +2047,7 @@ Item {
                         padding: 0
                         Column {
                             width: parent.width; spacing: 12
-                            visible: app.interview.interaction_version === 2
+                            visible: [2, 3].indexOf(app.interview.interaction_version) !== -1
                             LabText { theme: root.theme; text: "本场复盘 · 先看证据，再安排练习"; variant: "section"; strong: true; width: parent.width; wrapMode: Text.Wrap }
                             LabText { theme: root.theme; text: "有证据支持的表现"; strong: true }
                             LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; tone: "muted"; visible: !(root.interviewResult.strengths || []).length; text: "当前尚无足够评分证据支持优势结论；不会用未完成项目补分。" }
@@ -2096,7 +2115,7 @@ Item {
                         }
                         Column {
                             width: parent.width; spacing: 8
-                            visible: app.interview.interaction_version === 2
+                            visible: [2, 3].indexOf(app.interview.interaction_version) !== -1
                             LabText { theme: root.theme; width: parent.width; wrapMode: Text.Wrap; text: "问答已保存。详细评分在后台逐题完成；没有证据的项目保持未评分。" }
                             LabText {
                                 objectName: "interviewGradingStatus"
@@ -2513,7 +2532,7 @@ Item {
                         LabButton {
                             objectName: "submitInterviewCode"; theme: root.theme; variant: "primary"
                             visible: root.dynamicInterview
-                            text: app.busy ? "正在处理…" : root.answerLocked ? "重试代码评价" : "提交给面试官"
+                            text: app.busy ? "正在处理…" : root.answerLocked ? (app.interview.coding_defence ? "重试生成答辩问题" : "重试代码评价") : "提交给面试官"
                             enabled: root.interviewCanEdit && !app.busy && codingEditor.text.trim().length > 0
                             onClicked: root.submitAnswer()
                         }

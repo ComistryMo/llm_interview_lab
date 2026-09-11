@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .base import ContextPart, ContextPreview
+from .. import interviewer_state
 from ..catalog import Catalog, load_catalog
 from ..interview_flow import CODING_EVIDENCE_DIRECTIVE, CODING_REVIEW_DIRECTIVE, DIFFICULTY_DIRECTIVES, ROLE_PROBE_FOCUS, STAGES, TIME_BUDGETS, coverage_targets, dialogue_instruction, next_question_instruction, next_stages, question_stage, stage_minimums
 from ..events import read_events, reduce_events
@@ -20,6 +21,7 @@ from ..role_interviews import (
     role_interview_state,
     role_interview_answer_text,
     dynamic_coding_candidates,
+    _locked_answer_text,
 )
 from ..roles import RoleCatalog, RoleCatalogError, load_role_catalog
 from ..submissions import inspect_submission
@@ -403,7 +405,7 @@ def build_role_interview_context_preview(
     # keep the frozen question visible so the user can inspect what would be
     # sent, while Controller send/assessment entry points continue to reject
     # network turns until the clock is resumed.
-    if assessment_question_id is not None and (session.get("interaction_version") != 2 or session["status"] not in {"completed", "incomplete"}):
+    if assessment_question_id is not None and (session.get("interaction_version") not in (2, 3) or session["status"] not in {"completed", "incomplete"}):
         raise ContextBuilderError("只能在已结束的新动态面试中读取逐题评分上下文。")
     current = {"question": next((q for q in session["questions"] if q["question_id"] == assessment_question_id), None)} if assessment_question_id else (
         role_interview_state(repo_root, profile_id, interview_id, now=now)
@@ -413,6 +415,16 @@ def build_role_interview_context_preview(
     question = current["question"]
     if question is None:
         raise ContextBuilderError("the interview has no unanswered question")
+    if assessment_question_id and question.get("parent_coding_question_id"):
+        raise ContextBuilderError("答辩子题不独立评分，请使用父代码题的聚合评分上下文。")
+    from .. import coding_defence
+    defence = coding_defence.active(session) and question_stage(question) == "coding"
+    if defence and not assessment_question_id:
+        from ..interview_flow import candidate_remaining
+        if coding_defence.should_close(session, candidate_remaining(session, now)):
+            raise ContextBuilderError("代码答辩已到收尾边界，不再生成下一问；代码和回答已保留，请结束本场。")
+    if defence and question["kind"] == "coding":
+        candidate_answer = None  # Code is a typed source, not an invented oral answer.
     paused_note = (
         " The session is paused and read-only; do not ask, assess, or mutate "
         "anything until the user explicitly resumes the clock."
@@ -476,7 +488,7 @@ def build_role_interview_context_preview(
                 "在原理阶段核对已问主题：先保证三个（困难四个）不同的相关主题，再按薄弱处追深；一次只问一个问题，不在一个问题里凑三个考点。"
             ),
         })
-        if session.get("interaction_version") == 2:
+        if session.get("interaction_version") in (2, 3):
             frozen_contract.pop("stage_minimums", None)
             frozen_contract.update(
                 coverage_targets=coverage_targets(session),
@@ -488,7 +500,7 @@ def build_role_interview_context_preview(
             set(question["rubric"]["dimensions"]), set(question["rubric"]["fatal_issues"]),
         ) + "\n\n" + strategy + "\n\n本轮提问重点：" + frozen_contract["turn_focus"]
             + ("\n\n" + CODING_REVIEW_DIRECTIVE if question["kind"] == "coding" else "") + paused_note)
-        if session.get("interaction_version") == 2:
+        if session.get("interaction_version") in (2, 3):
             parts[0] = _part("policy", "逐问面试规则", next_question_instruction() + "\n\n" + strategy + "\n" + frozen_contract["turn_focus"] + paused_note)
             parts[1] = _part("question", "当前已展示的问题", f"{question['question_id']} {question['prompt']}")
         parts.extend([
@@ -500,8 +512,11 @@ def build_role_interview_context_preview(
             if previous["question_id"] == question["question_id"]:
                 break
             item = {"question_id": previous["question_id"], "stage": question_stage(previous), "question": previous["prompt"]}
-            if previous["question_id"] in session["answers"]:
-                item["answer"] = role_interview_answer_text(repo_root, profile_id, interview_id, previous["question_id"])
+            if defence and previous["kind"] == "coding":
+                item["note"] = "锁定代码见本轮具名来源，不是候选人口述。"
+            elif previous["question_id"] in session["answers"]:
+                item["answer"] = _locked_answer_text(repo_root, profile_id, interview_id, previous["question_id"],
+                    session["answers"][previous["question_id"]])
             elif previous["kind"] == "coding":
                 item["coding_evidence"] = session["coding_evidence"].get(previous["question_id"])
             history.append(item)
@@ -569,6 +584,61 @@ def build_role_interview_context_preview(
                            "related_problems": knowledge.related_coding_problems(card.id)} for card in pool],
             }, ensure_ascii=False),
         ))
+    if session.get("interaction_version") == 3 and not assessment_question_id:
+        from ..interview_expertise import retrieve, route_methods, load_methods
+        knowledge = knowledge or load_knowledge(repo_root, curriculum=catalog)
+        role = role_catalog.resolve_role(session["role_id"])
+        routing_text, reference_question = candidate_answer or "", question["prompt"]
+        if defence:
+            answers = {qid: (_locked_answer_text(repo_root, profile_id, interview_id, qid, rec), rec["sha256"])
+                       for qid, rec in session["answers"].items()}
+            registry = coding_defence.sources(session, answers)
+            parent = next(q for q in session["questions"] if q["question_id"] == session["coding_defence"]["parent_question_id"])
+            review = knowledge.coding_review(parent["source"]["id"], parent["prompt"])
+            routing_text += "\n" + registry[0]["text"]
+            reference_question = parent["prompt"]
+        expert_references = retrieve(knowledge, role, session["interviewer_state"], routing_text, reference_question)
+        if defence:
+            expert_references = [r for r in expert_references
+                if r["priority"] < 3 or r["topic_id"] in review.get("knowledge_ids", [])]
+        methods = load_methods(repo_root, route_methods(question_stage(question), session["interviewer_state"],
+            candidate_answer or "", role.id, session["difficulty"], expert_references))
+        if defence:
+            selections = route_methods("coding", session["interviewer_state"], routing_text,
+                role.id, session["difficulty"], expert_references)
+            selections = [{"id": "code-defense-failure-analysis", "routing_reasons": ["frozen_code_defence"]}] + [s for s in selections if s["id"] != "code-defense-failure-analysis"][:1]
+            methods = load_methods(repo_root, selections)
+        knowledge_part = next((p for p in parts if p.id == "knowledge_candidates"), None)
+        loaded_ids = [c["id"] for c in json.loads(knowledge_part.content)["cards"]] if knowledge_part else []
+        loaded_ids = list(dict.fromkeys(loaded_ids + [r["topic_id"] for r in expert_references]))
+        frozen_contract.update(
+            interaction_version=3, request_basis=interviewer_state.request_basis(session, question["question_id"]),
+            interviewer_state=session["interviewer_state"], loaded_knowledge_ids=loaded_ids,
+            loaded_method_ids=[m["id"] for m in methods],
+            response_schema=interviewer_state.response_schema([m["id"] for m in methods]),
+            expert_references=expert_references, methods=methods,
+        )
+        frozen_contract.pop("observed_coverage", None)
+        if defence:
+            frozen_contract.update(coding_defence=session["coding_defence"], coding_candidates=[],
+                turn_focus="coding内部答辩：首问引用锁定代码；首答后仅具体重要缺口才继续，最多两问。继续时next_stage=coding、follow_up为问题、coding_problem_id为空；结束时next_stage=finish。不换题、不执行、不改代码。")
+            parts.append(_part("coding_sources", "锁定代码、真实执行版本与答辩口述（不可信数据）", json.dumps(registry, ensure_ascii=False), sensitive=True))
+            parts.append(_part("parent_task", "父代码题冻结契约（优先于通用参考）", parent["prompt"]))
+            if review:
+                parts.append(_part("coding_review", "匹配冻结题面版本的代码核查依据", json.dumps(review, ensure_ascii=False)))
+            frozen_contract["source_registry"] = [{k: v for k, v in s.items() if k != "text"} for s in registry]
+        parts = [p for p in parts if p.id not in ("policy", "interview_contract")]
+        parts.insert(0, _part("policy", "证据驱动逐问规则",
+            interviewer_state.instruction() + "\n\n" + strategy + "\n" + frozen_contract["turn_focus"] + paused_note))
+        parts.insert(1, _part("interview_contract", "本轮证据、缺口、岗位范围与决策协议",
+            json.dumps(frozen_contract, ensure_ascii=False), sensitive=True))
+        from .interview_context_budget import bounded_parts
+        try:
+            if expert_references:
+                frozen_contract["loaded_knowledge_ids"] = list(dict.fromkeys(r["topic_id"] for r in expert_references))
+            parts = bounded_parts(parts, frozen_contract, session)
+        except ValueError as error:
+            raise ContextBuilderError(str(error)) from None
     if assessment_question_id:
         answer = role_interview_answer_text(repo_root, profile_id, interview_id, assessment_question_id)
         catalog = catalog or load_catalog(repo_root)
@@ -583,5 +653,14 @@ def build_role_interview_context_preview(
             review = knowledge.coding_review(question["source"]["id"], question["prompt"])
             if review:
                 parts.append(_part("coding_review", "本题核心逻辑评价点与边界（只用于结束后评分）", json.dumps(review, ensure_ascii=False)))
+            if defence:
+                answers = {qid: (_locked_answer_text(repo_root, profile_id, interview_id, qid, rec), rec["sha256"])
+                           for qid, rec in session["answers"].items()}
+                sources = coding_defence.sources(session, answers)
+                parts.append(_part("coding_defence", "父题聚合证据：代码/执行/解释不可互相代替", json.dumps({
+                    "state": session["coding_defence"], "sources": sources,
+                    "questions": [q for q in session["questions"] if q.get("parent_coding_question_id") == question["question_id"]]
+                }, ensure_ascii=False), sensitive=True))
+                parts.append(_part("grading_sources", "评分须在evidence_quote引用上述某一来源的连续原文，在evidence中注明source_id；口头修复不改变代码与测试", "不得给子题独立权重；未运行仍是未运行。"))
         parts[0] = _part("policy", "结束后逐题评分", "本场已经结束，只评分当前指定题目的真实证据，不生成下一问。相同证据使用相同锚点，不根据难度、学历、身份或年限改变评分。evidence必须引用回答或代码；没有证据标记未评分。不能编造运行通过、公司事实、Offer概率或Mastery。" + (CODING_EVIDENCE_DIRECTIVE if question["kind"] == "coding" else ""))
     return ContextPreview("interviewer", profile_id, tuple(parts))

@@ -24,6 +24,8 @@ from uuid import uuid4
 import yaml
 from jsonschema import Draft202012Validator
 
+from . import interviewer_state
+
 from .catalog import Catalog, Problem, compute_problem_fingerprint
 from .grader import GraderResult, run_public_tests
 from .interview_flow import STAGE_LABELS, STAGE_WEIGHTS, flow_coverage, next_stages, question_stage
@@ -95,9 +97,16 @@ def _validate(repo_root: Path, session: Any) -> dict[str, Any]:
     )
     if errors:
         location = ".".join(str(part) for part in errors[0].path) or "<root>"
+        if session.get("interaction_version") == 3:
+            raise RoleInterviewError(f"面试证据协议数据无效：{location}；不会自动重建。")
         raise RoleInterviewError(
             f"invalid role interview session at {location}: {errors[0].message}"
         )
+    if session.get("interaction_version") == 3:
+        try:
+            interviewer_state.validate_saved_state(session["interviewer_state"])
+        except ValueError as error:
+            raise RoleInterviewError(str(error)) from error
     return session
 
 
@@ -148,6 +157,7 @@ def _plan_value(session: Mapping[str, Any]) -> dict[str, Any]:
         "plan_mode",
         "plan_context_sha256",
         "interaction_version",
+        "coding_defence_version",
     ):
         if key in session:
             value[key] = session[key]
@@ -897,6 +907,7 @@ def _create_session_from_plan(
     plan_context_sha256: str | None,
     now: datetime | None,
     interaction_version: int = 1,
+    coding_defence: bool = False,
 ) -> dict[str, Any]:
     paths = profile_paths(repo_root, profile_id)
     paths.interviews_root.mkdir(exist_ok=True)
@@ -932,9 +943,13 @@ def _create_session_from_plan(
         "timeline": [{"event": "created", "timestamp": created_at}],
         "result": None,
     }
-    if interaction_version == 2:
+    if interaction_version in (2, 3):
         session.pop("seniority")
-        session["interaction_version"] = 2
+        session["interaction_version"] = interaction_version
+    if interaction_version == 3:
+        session["interviewer_state"] = interviewer_state.empty_state()
+        if coding_defence:
+            session["coding_defence_version"] = 1
     if delivery_mode == "non_coding_fallback" and blueprint_coverage is not None:
         session["delivery_mode"] = delivery_mode
         session["blueprint_coverage"] = dict(blueprint_coverage)
@@ -973,6 +988,8 @@ def create_dynamic_role_interview(
     material_refs: list[dict[str, Any]],
     now: datetime | None = None,
     duration_minutes: int = 60,
+    interaction_version: int = 3,
+    coding_defence: bool = True,
 ) -> dict[str, Any]:
     """Create a dynamic interview containing only its first real question.
 
@@ -983,6 +1000,8 @@ def create_dynamic_role_interview(
 
     if ai_mode not in {"provider", "codex"}:
         raise RoleInterviewError("dynamic interviews require provider or codex AI")
+    if interaction_version not in (2, 3):
+        raise RoleInterviewError("新动态面试只支持明确的协议版本 2 或 3。")
     if not isinstance(plan_context_sha256, str) or len(plan_context_sha256) != 64:
         raise RoleInterviewError("dynamic interview needs a valid context SHA-256")
     if any(character not in "0123456789abcdef" for character in plan_context_sha256):
@@ -1029,7 +1048,8 @@ def create_dynamic_role_interview(
         blueprint_coverage=None,
         plan_context_sha256=plan_context_sha256,
         now=now,
-        interaction_version=2,
+        interaction_version=interaction_version,
+        coding_defence=coding_defence,
     )
 
 
@@ -1046,6 +1066,8 @@ def append_dynamic_role_question(
     """Append exactly one provider question after the current turn completes."""
 
     session = load_role_interview(repo_root, profile_id, interview_id)
+    if session.get("interaction_version") == 3:
+        raise RoleInterviewError("证据协议必须同时提交证据与下一问，不能单独追加问题。")
     if session.get("delivery_mode") != "dynamic_ai":
         raise RoleInterviewError("only dynamic AI interviews accept generated turns")
     if session.get("status") != "active":
@@ -1058,7 +1080,7 @@ def append_dynamic_role_question(
         raise RoleInterviewError("dynamic interview context is stale; start a new turn")
     role = role_catalog.resolve_role(session["role_id"])
     blueprint = (role_catalog.dynamic_blueprint_for(role.id, session["duration_minutes"])
-                 if session.get("interaction_version") == 2
+                 if session.get("interaction_version") in (2, 3)
                  else role_catalog.blueprint_for(role.id, session["seniority"]))
     requested_kind = question.get("kind")
     matching = [
@@ -1099,7 +1121,7 @@ def dynamic_coding_candidates(
     role = role_catalog.resolve_role(session["role_id"])
     # Coding difficulty follows seniority; pressure lives in the interview
     # prompt. An intern choosing high pressure must still have runnable tasks.
-    unified = session.get("interaction_version") == 2
+    unified = session.get("interaction_version") in (2, 3)
     band = session["difficulty"] if unified else {"intern": "easy", "new_grad": "medium", "mid": "hard"}[session["seniority"]]
     candidates = _coding_candidates(
         catalog, role_catalog, tuple(role.required_tracks), band,
@@ -1132,16 +1154,55 @@ def advance_dynamic_role_interview(
     repo_root: Path, profile_id: str, interview_id: str,
     catalog: Catalog, role_catalog: RoleCatalog, question_id: str,
     assessment: Mapping[str, Any], *, context_sha256: str,
+    request_contract: Mapping[str, Any] | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Validate one AI decision and commit its score + next turn together."""
     session = load_role_interview(repo_root, profile_id, interview_id)
     if session.get("delivery_mode") != "dynamic_ai":
         raise RoleInterviewError("this operation requires a dynamic interview")
+    from . import coding_defence
+    if coding_defence.active(session):
+        current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
+        if not current or current["question_id"] != question_id or request_contract is None:
+            raise RoleInterviewError("答辩请求已过期；未写入。")
+        try:
+            decision = interviewer_state.decode_decision(json.dumps(dict(assessment), ensure_ascii=False))
+            return coding_defence.advance(repo_root, profile_id, session, question_id, decision, request_contract, context_sha256, now)
+        except ValueError as error:
+            raise RoleInterviewError(str(error)) from None
+    if session.get("interaction_version") == 3:
+        assessment = interviewer_state.decode_decision(json.dumps(dict(assessment), ensure_ascii=False))
+        if request_contract is None or request_contract.get("interaction_version") != 3:
+            raise RoleInterviewError("证据请求缺少启动时的版本快照；请重新提交。")
+        current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
+        if not current or current["question_id"] != question_id:
+            raise RoleInterviewError("只能继续当前已锁定回答；未重复写入。")
+        basis = request_contract["request_basis"]
+        if basis.get("question_id") != question_id:
+            raise RoleInterviewError("请求问题与当前回答不匹配。")
+        answers = {qid: (_locked_answer_text(repo_root, profile_id, interview_id, qid, record), record["sha256"])
+                   for qid, record in session["answers"].items()}
+        role_topics = set(role_catalog.resolve_role(session["role_id"]).skill_weights)
+        knowledge_ids = request_contract.get("loaded_knowledge_ids", [])
+        from .interview_flow import candidate_remaining
+        ratio = candidate_remaining(session, now) / (session["duration_minutes"] * 60)
+        time_forced = ratio <= (0.55 if question_stage(current) in ("introduction", "experience") else 0.30)
+        try:
+            merged_state = interviewer_state.merge_decision(session, assessment, basis, answers,
+                allowed_topics=role_topics | set(knowledge_ids), allowed_knowledge=knowledge_ids,
+                allowed_methods=request_contract.get("loaded_method_ids", []),
+                source_scope=request_contract.get("sent_answer_sources"),
+                allowed_claims=request_contract.get("allowed_probe_claim_ids"),
+                time_forced=time_forced)
+        except ValueError as error:
+            raise RoleInterviewError(str(error)) from error
     candidates = dynamic_coding_candidates(catalog, role_catalog, session)
     stage = assessment.get("next_stage")
     allowed = next_stages(session, coding_available=bool(candidates), now=now)
     if stage == "coding" and not candidates and "finish" in allowed:
+        if session.get("interaction_version") == 3:
+            raise RoleInterviewError("当前没有可运行手撕候选；请按本轮允许的转场状态重试。")
         # No actual exercise is available: leave coding explicitly incomplete,
         # instead of inventing a task or forcing a model retry with the same ID.
         stage = "finish"
@@ -1153,7 +1214,7 @@ def advance_dynamic_role_interview(
     selection_corrected = False
     if stage == "coding":
         chosen = next((value for value in candidates if value[0].id == assessment.get("coding_problem_id")), None)
-        if chosen is None and session.get("interaction_version") == 2:
+        if chosen is None and session.get("interaction_version") in (2, 3):
             raise RoleInterviewError("AI 建议的手撕题不在本场可运行候选中；回答已保留，请重试选题。")
         if chosen is None:
             # AI suggests; local runnable assets remain authoritative. An
@@ -1204,7 +1265,20 @@ def advance_dynamic_role_interview(
         appended["stage"] = stage
     # Reuse all existing answer/rubric/identity checks. Defer persistence so a
     # malformed next question cannot leave an assessed, unresumable last turn.
-    if session.get("interaction_version") == 2:
+    if session.get("interaction_version") == 3:
+        session["interviewer_state"] = merged_state
+        session.setdefault("turn_decisions", {})[question_id] = {
+            "next_stage": stage, "state_revision": merged_state["revision"],
+            "transition_reason": assessment["transition_reason"],
+            "context_sha256": context_sha256,
+            "methods": [{key: m[key] for key in ("id", "version", "sha256", "path")}
+                        for m in request_contract.get("methods", [])],
+            "expert_references": [{key: r[key] for key in ("topic_id", "criterion", "version", "sha256")}
+                                  for r in request_contract.get("expert_references", [])],
+            "sent_answer_sources": request_contract.get("sent_answer_sources", []),
+        }
+        _end_ai_wait(session, now)
+    elif session.get("interaction_version") == 2:
         from .interview_flow import decode_next_question
         decision = decode_next_question(json.dumps(dict(assessment), ensure_ascii=False))
         current = current_role_question(repo_root, profile_id, interview_id, now=now)["question"]
@@ -1504,6 +1578,15 @@ def load_role_interview(
         raise RoleInterviewError("role interview identity does not match its Profile")
     if session["plan_fingerprint"] != _plan_fingerprint(session):
         raise RoleInterviewError("role interview plan changed after it was frozen")
+    if session.get("interaction_version") == 3:
+        try:
+            answers = {qid: (_locked_answer_text(repo_root, profile_id, interview_id, qid, record), record["sha256"])
+                       for qid, record in session["answers"].items()}
+            interviewer_state.validate_saved_sources(session, answers)
+        except RoleInterviewError:
+            raise RoleInterviewError("已锁定回答缺失或校验失败；请恢复该场次的有效备份，不会重新创建。") from None
+        except ValueError as error:
+            raise RoleInterviewError(str(error)) from None
     return session
 
 
@@ -1575,7 +1658,7 @@ def start_role_interview(
 
 
 def _remaining_seconds(session: Mapping[str, Any], now: datetime | None = None) -> int:
-    if session.get("interaction_version") == 2:
+    if session.get("interaction_version") in (2, 3):
         from .interview_flow import candidate_remaining
         return int(candidate_remaining(session, now))
     if session["deadline"] is None:
@@ -1604,7 +1687,7 @@ def _is_complete(session: Mapping[str, Any], question: Mapping[str, Any]) -> boo
     """A question advances only after response evidence and assessment exist."""
 
     question_id = question["question_id"]
-    if session.get("interaction_version") == 2:
+    if session.get("interaction_version") in (2, 3):
         return _has_response(session, question) and question_id in session.get("turn_decisions", {})
     return _has_response(session, question) and question_id in session["assessments"]
 
@@ -1621,7 +1704,7 @@ def _end_ai_wait(session: dict[str, Any], now: datetime | None = None) -> None:
 
 def set_role_ai_wait(repo_root: Path, profile_id: str, interview_id: str, waiting: bool, *, now: datetime | None = None) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
-    if session.get("interaction_version") != 2:
+    if session.get("interaction_version") not in (2, 3):
         return session
     if waiting:
         if session["status"] != "active" or _remaining_seconds(session, now) <= 0:
@@ -1790,6 +1873,11 @@ def _store_answer(repo_root, profile_id, session, question_id, answer, *, now=No
     session["timeline"].append(
         {"event": "answered", "question_id": question_id, "timestamp": recorded_at}
     )
+    from . import coding_defence
+    if coding_defence.active(session):
+        reason = coding_defence.should_close(session, _remaining_seconds(session, now))
+        if reason:
+            coding_defence.close(session, reason, _remaining_seconds(session, now))
     _save(repo_root, profile_id, session)
     return session
 
@@ -1835,14 +1923,25 @@ def record_role_coding_answer(repo_root: Path, profile_id: str, interview_id: st
     if session.get("delivery_mode") != "dynamic_ai" or not question or question["kind"] != "coding":
         raise RoleInterviewError("只有动态面试的当前手撕题可以提交给 AI 面试官。")
     qid = question["question_id"]
+    if qid in session["answers"]:
+        raise RoleInterviewError("代码已经锁定；只能重试生成，不能重新提交。")
     path = _coding_path(repo_root, profile_id, interview_id, qid)
     sha = inspect_submission(path, path.parent).sha256
     run = role_coding_run(repo_root, profile_id, interview_id, qid)
     tests = session["coding_evidence"].get(qid, {})
-    snapshot = {"submission_sha256": sha, "code": path.read_text(encoding="utf-8"),
+    snapshot = {"submission_sha256": sha, "code": path.read_bytes().decode("utf-8"),
                 "self_run": run if run.get("submission_sha256") == sha else {"status": "not_run"},
                 "public_tests": tests if tests.get("submission_sha256") == sha else {"status": "not_run"},
                 "scope": "用户手撕代码与本地执行事实。自测退出码不是算法正确性结论；AI 仅提供有依据的主观评价。"}
+    from . import coding_defence
+    if coding_defence.enabled(session):
+        snapshot["self_run"] = run or {"status": "not_run"}
+        snapshot["public_tests"] = tests or {"status": "not_run"}
+        session["coding_defence"] = {"parent_question_id": qid, "task_sha256": question["source"]["sha256"],
+            "submission_sha256": sha, "status": "pending", "question_ids": [], "close_reason": "",
+            "locked_remaining_seconds": _remaining_seconds(session)}
+        if not snapshot["code"].strip():
+            coding_defence.close(session, "no_code_evidence", _remaining_seconds(session))
     return _store_answer(repo_root, profile_id, session, qid, json.dumps(snapshot, ensure_ascii=False, indent=2))
 
 
@@ -1858,6 +1957,11 @@ def role_interview_answer_text(
     record = session.get("answers", {}).get(question_id)
     if not isinstance(record, Mapping):
         raise RoleInterviewError("interview answer evidence is missing")
+    return _locked_answer_text(repo_root, profile_id, interview_id, question_id, record)
+
+
+def _locked_answer_text(repo_root, profile_id, interview_id, question_id, record):
+    """Canonical answer reader; also used during recovery without recursive loads."""
     try:
         path = ensure_profile_path_is_safe(
             repo_root,
@@ -2079,7 +2183,9 @@ def record_role_assessment(
     _finished: bool = False,
 ) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
-    post_interview = _finished and session.get("interaction_version") == 2 and session["status"] in {"completed", "incomplete"}
+    post_interview = _finished and session.get("interaction_version") in (2, 3) and session["status"] in {"completed", "incomplete"}
+    if session.get("interaction_version") == 3 and not post_interview:
+        raise RoleInterviewError("证据协议的详细评分只在结束后进行；请在应用提交回答并继续。")
     if session["status"] != "active" and not post_interview:
         raise RoleInterviewError("assessment may only be recorded for an active interview")
     if question_id in session["assessments"]:
@@ -2092,6 +2198,8 @@ def record_role_assessment(
     )
     if question is None or not _has_response(session, question):
         raise RoleInterviewError("assessment requires completed question evidence")
+    if question.get("parent_coding_question_id"):
+        raise RoleInterviewError("代码答辩只作为父代码题的评分证据，不单独计分。")
     if source == "grader" and question["kind"] != "coding":
         raise RoleInterviewError(
             "grader evidence is only valid for coding interview questions"
@@ -2199,11 +2307,17 @@ def finish_role_interview(
 ) -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
     paused = session["status"] == "paused" or bool(_refresh and (session.get("result") or {}).get("ended_while_paused"))
-    refreshing = _refresh and session.get("interaction_version") == 2 and session["status"] in {"completed", "incomplete"}
+    refreshing = _refresh and session.get("interaction_version") in (2, 3) and session["status"] in {"completed", "incomplete"}
+    from . import coding_defence
+    if coding_defence.enabled(session) and session["status"] in {"completed", "incomplete"} and not _refresh:
+        return session
     if session["status"] not in {"active", "paused"} and not refreshing:
         raise RoleInterviewError("only an active or paused role interview can be finished")
     if not refreshing:
         _end_ai_wait(session, now)
+        if coding_defence.active(session):
+            remaining = _remaining_seconds(session, now)
+            coding_defence.close(session, coding_defence.should_close(session, remaining) or "user_end", remaining)
     if paused and not confirm_incomplete:
         raise RoleInterviewError("paused interview requires explicit incomplete confirmation")
     unanswered = [
@@ -2212,7 +2326,7 @@ def finish_role_interview(
     unscored = [
         q["question_id"]
         for q in session["questions"]
-        if _has_response(session, q) and q["question_id"] not in session["assessments"]
+        if _has_response(session, q) and q["question_id"] not in session["assessments"] and not q.get("parent_coding_question_id")
     ]
     expired = session["result"]["expired"] if refreshing else (not paused) and _remaining_seconds(session, now) == 0
     if (unanswered or unscored) and not (confirm_incomplete or expired):
@@ -2223,10 +2337,12 @@ def finish_role_interview(
     weighted_total = 0.0
     completed_weight = 0.0
     dynamic = session.get("delivery_mode") == "dynamic_ai"
-    stage_counts = {stage: sum(question_stage(q) == stage for q in session["questions"])
+    stage_counts = {stage: sum(question_stage(q) == stage and not q.get("parent_coding_question_id") for q in session["questions"])
                     for stage in STAGE_WEIGHTS} if dynamic else {}
     for question in session["questions"]:
         question_id = question["question_id"]
+        if question.get("parent_coding_question_id"):
+            continue
         assessment = session["assessments"].get(question_id)
         if assessment is None:
             continue
@@ -2284,13 +2400,13 @@ def finish_role_interview(
         "summary": summary.strip(),
         "finished_at": session["result"]["finished_at"] if refreshing else _timestamp(now),
         "expired": expired,
-        **({"ended_while_paused": paused} if session.get("interaction_version") == 2 else {}),
+        **({"ended_while_paused": paused} if session.get("interaction_version") in (2, 3) else {}),
     }
     session["result"] = result
     session["status"] = "completed" if completed else "incomplete"
     if not refreshing:
         session["timeline"].append({"event": "finished", "timestamp": result["finished_at"]})
-    if session.get("interaction_version") == 2:
+    if session.get("interaction_version") in (2, 3):
         session.setdefault("grading", {}).setdefault("questions", {})
         for qid in unscored:
             session["grading"]["questions"].setdefault(qid, {"status": "pending", "error": ""})
@@ -2302,12 +2418,14 @@ def finish_role_interview(
 def update_finished_grading(repo_root: Path, profile_id: str, interview_id: str, question_id: str,
                             *, result: Mapping[str, Any] | None = None, error: str = "") -> dict[str, Any]:
     session = load_role_interview(repo_root, profile_id, interview_id)
-    if session.get("interaction_version") != 2 or session["status"] not in {"completed", "incomplete"}:
+    if session.get("interaction_version") not in (2, 3) or session["status"] not in {"completed", "incomplete"}:
         raise RoleInterviewError("详细评分只能在本场结束后进行。")
     if question_id in session["assessments"]:
         return session
     if question_id not in session["answers"]:
         raise RoleInterviewError("没有已保存回答，不能评分。")
+    if any(q["question_id"] == question_id and q.get("parent_coding_question_id") for q in session["questions"]):
+        raise RoleInterviewError("答辩仅归入父代码题评分，不能独立加权。")
     if result is not None:
         answer = role_interview_answer_text(repo_root, profile_id, interview_id, question_id)
         question = next(q for q in session["questions"] if q["question_id"] == question_id)
@@ -2316,6 +2434,15 @@ def update_finished_grading(repo_root: Path, profile_id: str, interview_id: str,
             # not its escaped serialization (notably multiline code and quotes).
             answer = json.loads(answer)["code"]
         quote = _quoted_answer_span(answer, result.get("evidence_quote", ""))
+        from . import coding_defence
+        if coding_defence.active(session) and question["kind"] == "coding":
+            records = {qid: (_locked_answer_text(repo_root, profile_id, interview_id, qid, rec), rec["sha256"])
+                       for qid, rec in session["answers"].items()}
+            registry = coding_defence.sources(session, records)
+            match = next((s for s in registry if result.get("evidence_quote") and result["evidence_quote"] in s["text"] and s["source_id"] in result.get("evidence", "")), None)
+            if not match:
+                raise RoleInterviewError("代码评分须引用具名来源的连续原文，并注明来源 ID。")
+            quote = result["evidence_quote"]
         if not quote:
             raise RoleInterviewError("评分引用的原文不在本题回答中；该题保持未评分，可单独重试。")
         session = record_role_assessment(repo_root, profile_id, interview_id, question_id, result["scores"],
@@ -2333,7 +2460,7 @@ def requeue_finished_grading(repo_root: Path, profile_id: str, interview_id: str
                              *, question_id: str = "") -> None:
     """One explicit retry queues failed answers once, never successful scores."""
     session = load_role_interview(repo_root, profile_id, interview_id)
-    if session.get("interaction_version") != 2 or session["status"] not in {"completed", "incomplete"}:
+    if session.get("interaction_version") not in (2, 3) or session["status"] not in {"completed", "incomplete"}:
         raise RoleInterviewError("只能重试已结束面试的评分。")
     for qid, state in session.get("grading", {}).get("questions", {}).items():
         if (not question_id or qid == question_id) and qid not in session["assessments"] and state["status"] == "failed":
@@ -2344,7 +2471,7 @@ def requeue_finished_grading(repo_root: Path, profile_id: str, interview_id: str
 def configure_interview_grading(repo_root: Path, profile_id: str, interview_id: str,
                                 *, connection_id: str, include_materials: bool) -> None:
     session = load_role_interview(repo_root, profile_id, interview_id)
-    if session.get("interaction_version") == 2:
+    if session.get("interaction_version") in (2, 3):
         session.setdefault("grading", {}).update(connection_id=connection_id, include_materials=include_materials)
         _save(repo_root, profile_id, session)
 
@@ -2454,7 +2581,21 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
                 snapshot = json.loads(role_interview_answer_text(repo_root, profile_id, session["interview_id"], qid))
                 lines.append(f"- {qid} · SHA `{snapshot['submission_sha256']}` · 自测 `{snapshot['self_run']['status']}`"
                              f" · 退出码 `{snapshot['self_run'].get('exit_code', '未运行')}` · 公开测试 `{snapshot['public_tests']['status']}`")
+                for key, label in (("self_run", "自测"), ("public_tests", "公开测试")):
+                    value = snapshot[key]
+                    if value["status"] != "not_run":
+                        lines.append(f"  - {label}执行版本 `{value.get('submission_sha256', '未知')}`；"
+                            + ("对应锁定代码。" if value.get("submission_sha256") == snapshot["submission_sha256"] else "不是当前锁定版本的验证事实。"))
         lines.append("自测完成只说明脚本退出，不代表算法或公开测试通过。未完成实现也可根据已锁定代码获得有依据的主观评价。")
+    if session.get("coding_defence"):
+        d = session["coding_defence"]
+        lines.extend(["", "## 代码答辩（归入父题，不独立加权）", "",
+            f"父题 `{d['parent_question_id']}` · 状态 `{d['status']}` · 原因 `{d['close_reason']}`"])
+        for q in session["questions"]:
+            if q.get("parent_coding_question_id") == d["parent_question_id"]:
+                answer = role_interview_answer_text(repo_root, profile_id, session["interview_id"], q["question_id"]) if q["question_id"] in session["answers"] else "未回答"
+                lines.extend(["", f"### {q['question_id']}", "", q["prompt"], "", answer])
+        lines.append("口头改法不改写锁定代码，也不产生新的运行或测试通过事实。完整代码及来源版本保存在同目录 report.json。")
     lines.extend(
         [
             "",
@@ -2480,6 +2621,12 @@ def _write_role_report(repo_root: Path, profile_id: str, session: Mapping[str, A
         "coding_test_evidence": dict(session["coding_evidence"]),
         "followups": list(followups),
     }
+    if session.get("coding_defence"):
+        from .coding_defence import sources
+        records = {qid: (_locked_answer_text(repo_root, profile_id, session["interview_id"], qid, rec), rec["sha256"])
+                   for qid, rec in session["answers"].items()}
+        report_payload["coding_defence"] = {**session["coding_defence"], "sources": sources(session, records),
+            "questions": [q for q in session["questions"] if q.get("parent_coding_question_id")]}
     if session.get("delivery_mode") == "non_coding_fallback":
         report_payload["delivery_mode"] = "non_coding_fallback"
         report_payload["blueprint_coverage"] = session["blueprint_coverage"]

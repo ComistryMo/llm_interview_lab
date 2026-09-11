@@ -47,7 +47,7 @@ def interview(public_repo, tmp_path):
         path.write_text(body, encoding="utf-8")
         refs.append(add_material(public_repo, profile, path, kind=kind, ai_access=True).id)
     preview = service.dynamic_interview_context(profile, role_id="post_training_engineer", seniority="intern", difficulty="hard", material_ids=refs, consent_materials=True)
-    session = service.create_dynamic_interview(profile, role_id="post_training_engineer", seniority="intern", difficulty="hard", ai_mode="codex",
+    session = service.create_dynamic_interview(profile, role_id="post_training_engineer", seniority="intern", difficulty="hard", ai_mode="codex", interaction_version=2,
         initial_question={"kind": "oral", "title": "自我介绍", "prompt": "请先介绍你本人在后训练项目中完成的工作。", "source_kind": "process_opening"},
         context_sha256=hashlib.sha256(preview.selected_text.encode()).hexdigest(), material_ids=refs, consent_materials=True)
     # Historical protocol: frozen stage bucket and immediate per-turn scores.

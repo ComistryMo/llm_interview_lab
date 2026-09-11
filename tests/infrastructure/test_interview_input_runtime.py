@@ -55,11 +55,18 @@ def public_repo(tmp_path_factory):
 
 
 @pytest.fixture
-def controller(qapp, public_repo, tmp_path, monkeypatch):
+def controller(qapp, public_repo, tmp_path, monkeypatch, request):
     # The explicit organization/application constructor uses NativeFormat on
     # Windows even after setDefaultFormat. Redirect that constructor as well.
     monkeypatch.setattr("llm_interview_lab.desktop.controller.QSettings", lambda *args: QSettings(str(tmp_path / "settings.ini"), QSettings.IniFormat))
     monkeypatch.setattr(AppController, "refreshCodexAvailability", lambda self: None)
+    # Old UI regressions exercise saved protocol 2 semantics explicitly.
+    # Evidence-protocol tests opt into version 3 through this isolated fixture.
+    from llm_interview_lab.application import ApplicationService
+    original_create = ApplicationService.create_dynamic_interview
+    version = getattr(request, "param", 2)
+    monkeypatch.setattr(ApplicationService, "create_dynamic_interview",
+        lambda self, *args, **kwargs: original_create(self, *args, **{**kwargs, "interaction_version": version}))
     profile = "input-" + uuid4().hex[:10]
     controller = AppController(public_repo, profile_id=profile, log_root=tmp_path / "logs")
     assert controller.completeOnboarding(profile, "post_training_engineer", "intern", "codex", "{}")

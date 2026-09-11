@@ -24,7 +24,7 @@ def create(service, profile, **overrides):
     settings.update(overrides)
     preview = service.dynamic_interview_context(profile, **settings)
     return service.create_dynamic_interview(
-        profile, **settings, ai_mode="provider",
+        profile, **settings, ai_mode="provider", interaction_version=2,
         initial_question={"kind": "oral", "title": "自我介绍", "prompt": "请介绍你亲自完成的一段经历。", "source_kind": "process_opening"},
         context_sha256=hashlib.sha256(preview.selected_text.encode()).hexdigest(),
     )

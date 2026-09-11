@@ -12,7 +12,33 @@
     "timeline", "result"
   ],
   "properties": {
-    "interaction_version": {"const": 2},
+    "interaction_version": {"enum": [2, 3]},
+    "coding_defence_version": {"const": 1},
+    "coding_defence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["parent_question_id", "task_sha256", "submission_sha256", "status", "question_ids", "close_reason", "locked_remaining_seconds"],
+      "properties": {
+        "parent_question_id": {"type": "string", "pattern": "^q-[0-9]{3}$"},
+        "task_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "submission_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "status": {"enum": ["pending", "answering", "closed"]},
+        "question_ids": {"type": "array", "maxItems": 2, "uniqueItems": true, "items": {"type": "string", "pattern": "^q-[0-9]{3}$"}},
+        "close_reason": {"enum": ["", "time_deferred", "question_limit", "no_code_evidence", "user_end", "sufficient", "identified_error", "confirmed_unknown"]},
+        "locked_remaining_seconds": {"type": "integer", "minimum": 0},
+        "closed_remaining_seconds": {"type": "integer", "minimum": 0}
+      }
+    },
+    "interviewer_state": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "revision", "experiences", "claims", "gaps", "contradictions", "probes", "closures", "applied_answers"],
+      "properties": {
+        "schema_version": {"const": 1}, "revision": {"type": "integer", "minimum": 0},
+        "experiences": {"type": "object"}, "claims": {"type": "object"},
+        "gaps": {"type": "object"}, "contradictions": {"type": "object"},
+        "probes": {"type": "array"}, "closures": {"type": "array"},
+        "applied_answers": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+      }
+    },
     "ai_wait_started_at": {"type": "string", "format": "date-time"},
     "ai_wait_seconds": {"type": "number", "minimum": 0},
     "turn_decisions": {"type": "object", "patternProperties": {"^q-[0-9]{3}$": {"type": "object"}}, "additionalProperties": false},
@@ -129,7 +155,17 @@
   },
   "allOf": [
     {
-      "if": {"required": ["interaction_version"], "properties": {"interaction_version": {"const": 2}}},
+      "if": {"required": ["coding_defence_version"]},
+      "then": {"required": ["interaction_version"], "properties": {"interaction_version": {"const": 3}}},
+      "else": {"not": {"required": ["coding_defence"]}}
+    },
+    {
+      "if": {"required": ["interaction_version"], "properties": {"interaction_version": {"const": 3}}},
+      "then": {"required": ["interviewer_state"], "properties": {"delivery_mode": {"const": "dynamic_ai"}}},
+      "else": {"not": {"required": ["interviewer_state"]}}
+    },
+    {
+      "if": {"required": ["interaction_version"], "properties": {"interaction_version": {"enum": [2, 3]}}},
       "then": {"not": {"required": ["seniority"]}},
       "else": {"required": ["seniority"]}
     },
@@ -220,6 +256,7 @@
       "required": ["question_id", "round_index", "kind", "title", "timebox_minutes", "round_weight", "skills", "source", "prompt", "rubric"],
       "properties": {
         "stage": {"enum": ["introduction", "experience", "theory", "coding"]},
+        "parent_coding_question_id": {"type": "string", "pattern": "^q-[0-9]{3}$"},
         "question_id": {"type": "string", "pattern": "^q-[0-9]{3}$"},
         "round_index": {"type": "integer", "minimum": 0},
         "kind": {"enum": ["coding", "debugging", "product_case", "system_design", "evaluation_case", "project_deep_dive", "behavioral", "oral"]},

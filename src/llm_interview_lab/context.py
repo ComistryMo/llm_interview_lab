@@ -577,7 +577,7 @@ def _build_role_interview_context(
             "status": "ready",
             "configuration": {
                 "role_id": session["role_id"],
-                "seniority": session["seniority"],
+                **({"seniority": session["seniority"]} if "seniority" in session else {}),
                 "difficulty": session["difficulty"],
                 "duration_minutes": session["duration_minutes"],
                 "ai_mode": session["ai_mode"],
@@ -713,11 +713,13 @@ def _build_role_interview_context(
             if not paused and question_id not in session["assessments"] and (
                 question_id in session["answers"]
                 or question_id in session["coding_evidence"]
-            ):
+            ) and session.get("interaction_version") != 3:
                 commands["next"] = (
                     f"llm-lab interview role-score {interview_id} --profile {profile_id} "
                     f"--question {question_id} --help"
                 )
+            if session.get("interaction_version") == 3 and question_id in session["answers"]:
+                current["continuation"] = "回到应用点击提交并继续；证据与下一问必须由同一事务校验，不要提前逐题评分。"
             for reference in session["material_refs"]:
                 read_allowlist.append(
                     _role_material_ref(repo_root, profile_id, reference)
